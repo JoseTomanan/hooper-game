@@ -1,0 +1,18 @@
+# Godot 4 .NET
+.godot/
+.import/
+export.cfg
+export_presets.cfg
+
+# .NET build output
+.mono/
+bin/
+obj/
+*.user
+
+# IDE / OS
+.vs/
+.vscode/
+*.suo
+Thumbs.db
+.DS_Store
