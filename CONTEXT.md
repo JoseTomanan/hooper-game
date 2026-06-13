@@ -58,6 +58,8 @@ Do not add design reasoning here. If a decision belongs somewhere, it belongs in
 
 **Right-stick committed-move vocabulary** — The set of committed moves expressed via right-stick gestures, modeled on NBA 2K's Pro Stick system. Familiar input surface; moves resolve as locked commitments with startup/active/recovery frames, not flow. The full gesture-to-move list is a content decision deferred to later milestones; the mechanic is locked. see: [ADR-0003](docs/adr/0003-input-model-hybrid.md)
 
+**Size-up-as-feint** — Deliberately inputting a right-stick dribble move (hesitation, crossover, between-the-legs, spin, etc.) for its startup animation only, then aborting it via the feint-cancel window before the active phase fires. The startup frames play and telegraph a threat; the defender reads and commits; the move does not complete; the ball-handler exploits the resulting opening. Modeled on NBA 2K14's Pro Stick, where every right-stick input is already a discrete committed move with visible startup — there is no held size-up stance, so every size-up is inherently committed. All right-stick moves are feint-eligible. The feint-cancel input is the same modifier used for all committed-move feints. see: [ADR-0003](docs/adr/0003-input-model-hybrid.md)
+
 **Flow-cancel** — Prohibited. The ability to cancel a committed move mid-execution by redirecting input (the model of modern "smooth" sports games). Explicitly rejected because it eliminates the punish window and therefore the mind game. see: [ADR-0003](docs/adr/0003-input-model-hybrid.md)
 
 **Clunky-but-readable / legibility** — A design value, not a bug. Committed moves use deliberately clunkier animation than a "polished" title so startup frames remain readable by the opponent. Smoothing them away is an explicit anti-goal. see: [CLAUDE.md §1](CLAUDE.md), [ADR-0003](docs/adr/0003-input-model-hybrid.md)
@@ -122,8 +124,3 @@ Do not add design reasoning here. If a decision belongs somewhere, it belongs in
 
 ---
 
-## Needs definition
-
-The following terms appear in design discussions but are not clearly defined in CLAUDE.md or any ADR. Do not guess their meaning — resolve with the human before using them in code or documentation.
-
-- **Size-up-as-feint** — Referenced as a named mechanic but not defined anywhere. Appears to mean using a size-up move as a deliberate feint to bait a defender's commitment, but inputs and frame behaviour are unspecified.
