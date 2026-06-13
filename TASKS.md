@@ -65,6 +65,6 @@ Split into two sessions (decided 2026-05-28):
 - M5 — Win condition / scoring for minimal 1v1.
 - M6 — Dedicated-server export + basic server browser.
 
-> Reconcile open thread: the handoff doc from the original design chat still describes
-> the S&box/Source 2 stack. ADR-0001 (docs/adr/0001-engine-godot-csharp.md) supersedes
-> it (Godot/C#). If that handoff is ever fed to a session, it must not reintroduce S&box.
+> **Standing guard — S&box / Source 2 is permanently rejected (ADR-0001).** If any
+> pre-Godot design or handoff text is ever pasted into a session as context, it must not
+> override that decision — flag the contradiction, do not reintroduce S&box.
