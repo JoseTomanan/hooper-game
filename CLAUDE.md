@@ -89,6 +89,15 @@ Do not build ahead of the current milestone unless asked.
   any) they must do to see it run — you cannot do them.
 - Prefer one clear path; explain the tradeoff in a sentence and proceed.
 
+### Issue tracker
+
+GitHub Issues is the sole task tracker. TASKS.md no longer exists.
+
+- Issues labeled `afk` are Claude Code's to implement.
+- Issues labeled `hitl` require a human editor step (see EDITOR_TASKS.md) before they can close.
+- **Done means proven, not written.** A `hitl` issue is only closed after the human confirms it in the editor (the relevant EDITOR_TASKS steps). Do not close it on code alone.
+- When finishing a unit of work, tell the human which issue(s) to close and which EDITOR_TASKS steps (if any) they must complete first.
+
 ### Decision Discipline
 
 If during a session we make or change an architectural decision (engine,
