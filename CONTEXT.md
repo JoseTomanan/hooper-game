@@ -40,11 +40,13 @@ Do not add design reasoning here. If a decision belongs somewhere, it belongs in
 
 **Committed move** — A discrete action (crossover, spin, hesitation, drive, etc.) with real startup and recovery frames. Once initiated it runs to completion — it cannot be flow-cancelled. The mechanism of the mind-game layer. see: [ADR-0003](docs/adr/0003-input-model-hybrid.md)
 
-**Startup frames** — The wind-up phase of a committed move before it becomes active. Must be visibly telegraphed by animation; do not blend them away. see: [ADR-0003](docs/adr/0003-input-model-hybrid.md)
+**Startup frames** — The wind-up phase of a committed move before the active phase begins. Borrowed directly from Tekken's frame data model. Must be visibly telegraphed by animation; do not blend them away. see: [ADR-0003](docs/adr/0003-input-model-hybrid.md)
 
-**Recovery frames** — The cooldown phase after a committed move's active phase. The punish window falls here. see: [ADR-0003](docs/adr/0003-input-model-hybrid.md)
+**Active frames** — The frames where the move's effect is live (in Tekken: hitbox present; here: the move executes — the drive attempt lands, the crossover passes through, etc.). Borrowed from Tekken's frame data model. see: [ADR-0003](docs/adr/0003-input-model-hybrid.md)
 
-**Startup / active / recovery state machine** — The three-phase frame structure of a committed move: wind-up → execution → cooldown. Startup and recovery are named in ADR-0003; "active" as the formal middle-state name is implied but not written down — see [Needs definition](#needs-definition). see: [ADR-0003](docs/adr/0003-input-model-hybrid.md)
+**Recovery frames** — Frames after the active phase during which the player cannot act. The punish window falls here. Borrowed from Tekken's frame data model: a move that is "negative on whiff" gives the opponent free frames to punish. see: [ADR-0003](docs/adr/0003-input-model-hybrid.md)
+
+**Startup / active / recovery state machine** — The three-phase frame structure of every committed move: wind-up → execution → cooldown. Taken from Tekken's frame data system. Startup and recovery are named in ADR-0003; active is the locked middle-state name adopted from Tekken. see: [ADR-0003](docs/adr/0003-input-model-hybrid.md)
 
 **Right-stick committed-move vocabulary** — The set of committed moves expressed via right-stick gestures (crossover, spin, hesitation, drive are listed as examples). Familiar surface to NBA 2K players, but moves resolve as locked commitments, not flow. Full gesture-to-move mapping not yet enumerated — see [Needs definition](#needs-definition). see: [ADR-0003](docs/adr/0003-input-model-hybrid.md)
 
@@ -118,7 +120,6 @@ The following terms appear in design discussions but are not clearly defined in 
 
 - **Feint-cancel window** — Referenced as a named mechanic but never defined. Unclear whether it is a subcase of the punish window or a separate window within startup where a deliberate false commitment can be recognised and cancelled.
 - **Size-up-as-feint** — Referenced as a named mechanic but not defined anywhere. Appears to mean using a size-up move as a deliberate feint to bait a defender's commitment, but inputs and frame behaviour are unspecified.
-- **"Active" frame phase** — Startup and recovery are named in ADR-0003. "Active" as the formal name for the middle phase of a committed move is implied but not written down. Confirm the three-state naming before using it in code.
 - **Stamina / resource** — Listed in CLAUDE.md §1 as a subordinate system but never elaborated: meter shape, depletion triggers, and recovery mechanics are all undefined.
 - **Shot release timing window** — Named in CLAUDE.md §1 but not specified: which inputs open it, how wide it is, and what success/failure produces are undefined.
 - **Steal / block timing windows** — Named alongside shot release in CLAUDE.md §1 but not specified.
