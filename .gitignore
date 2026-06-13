@@ -1,4 +1,5 @@
 ## IDE shlock
+.claude/*
 !.claude/skills/doubt-driven-development/
 !.claude/skills/source-driven-development/
 
