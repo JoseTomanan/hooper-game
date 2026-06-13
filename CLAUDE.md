@@ -110,5 +110,6 @@ contradiction before writing code; don't silently comply.
 - Custom prediction + lag compensation on Godot's thin multiplayer layer is the
   hardest part of the project. Prove it in isolation (Milestone 1) first.
 - The deterministic mini-physics ball is second-hardest. Self-contained, tested.
-- Godot C# API churn + GDScript-centric examples: verify against live C# docs;
-  don't copy GDScript patterns without translating.
+- Godot C# API churn + GDScript-centric examples: use the **Context7 MCP
+  server** to fetch live Godot docs before writing unfamiliar engine-facing
+  calls. Don't copy GDScript patterns without translating.

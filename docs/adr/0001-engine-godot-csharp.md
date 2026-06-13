@@ -60,9 +60,12 @@ Steam Deck remain possible later without committing to them now.
   be guessed wrong more often than a Unity equivalent would be. Mitigation:
   **always verify nontrivial engine-facing code against the live Godot C# docs**
   (https://docs.godotengine.org, C# tab) and the class reference before writing
-  it. Many community examples are GDScript — translate carefully. C# naming is
-  PascalCase; signals and exports differ; `partial` is mandatory on node scripts.
-  Flag any API you are unsure about rather than guessing.
+  it. The **Context7 MCP server** (`@upstash/context7-mcp`, installed globally)
+  is the primary tool for fetching up-to-date Godot API docs mid-session — use
+  it before writing any unfamiliar engine-facing call. Many community examples
+  are GDScript — translate carefully. C# naming is PascalCase; signals and
+  exports differ; `partial` is mandatory on node scripts. Flag any API you are
+  unsure about rather than guessing.
 - Godot's high-level multiplayer is a thin replication/RPC layer, not a finished
   netcode solution. This is accepted because we were always building custom
   netcode (see ADR-0002).
