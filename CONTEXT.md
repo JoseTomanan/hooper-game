@@ -22,7 +22,13 @@ Do not add design reasoning here. If a decision belongs somewhere, it belongs in
 
 **Timing windows** — A subordinate system: discrete input windows for shot release, steal, and block. They live inside the spacing spine and are not co-equal with it. see: [CLAUDE.md §1](CLAUDE.md)
 
-**Stamina / resource** — A subordinate system governing player capacity. Mechanics not yet defined — see [Needs definition](#needs-definition). see: [CLAUDE.md §1](CLAUDE.md)
+**Shot release timing window** — During a shot attempt, the window of frames where releasing the shoot input produces a "perfect" (green) result with maximum accuracy; early or late releases degrade the shot. Modeled on NBA 2K's shot meter / green-window system. see: [CLAUDE.md §1](CLAUDE.md)
+
+**Steal timing window** — When a ball-handler is exposed (mid-dribble, off-balance, etc.), the discrete window where a steal attempt succeeds cleanly; outside it the attempt produces a foul or a failed reach. Modeled on NBA 2K's steal system. see: [CLAUDE.md §1](CLAUDE.md)
+
+**Block timing window** — During a shot attempt, the discrete window where pressing block legally contests or rejects the shot; outside it the attempt results in a foul or a miss. Modeled on NBA 2K's block system. see: [CLAUDE.md §1](CLAUDE.md)
+
+**Stamina / resource** — A visible resource bar that degrades from executing committed moves and active defense, modeled on UFC Undisputed 3's stamina system. Depleted stamina slows and weakens committed moves. Subordinate to the spacing spine — it constrains options without replacing the commitment/mind-game layer. see: [CLAUDE.md §1](CLAUDE.md)
 
 ---
 
@@ -48,7 +54,9 @@ Do not add design reasoning here. If a decision belongs somewhere, it belongs in
 
 **Startup / active / recovery state machine** — The three-phase frame structure of every committed move: wind-up → execution → cooldown. Taken from Tekken's frame data system. Startup and recovery are named in ADR-0003; active is the locked middle-state name adopted from Tekken. see: [ADR-0003](docs/adr/0003-input-model-hybrid.md)
 
-**Right-stick committed-move vocabulary** — The set of committed moves expressed via right-stick gestures (crossover, spin, hesitation, drive are listed as examples). Familiar surface to NBA 2K players, but moves resolve as locked commitments, not flow. Full gesture-to-move mapping not yet enumerated — see [Needs definition](#needs-definition). see: [ADR-0003](docs/adr/0003-input-model-hybrid.md)
+**Feint-cancel window** — A discrete window within a committed move's startup phase where the player can deliberately abort the move, turning it into a feint: the startup animation plays (telegraphing a threat and baiting the opponent's read) but the move does not complete. Modeled on UFC Undisputed 3's feint mechanic (modifier + strike button to abort mid-startup). see: [ADR-0003](docs/adr/0003-input-model-hybrid.md)
+
+**Right-stick committed-move vocabulary** — The set of committed moves expressed via right-stick gestures, modeled on NBA 2K's Pro Stick system. Familiar input surface; moves resolve as locked commitments with startup/active/recovery frames, not flow. The full gesture-to-move list is a content decision deferred to later milestones; the mechanic is locked. see: [ADR-0003](docs/adr/0003-input-model-hybrid.md)
 
 **Flow-cancel** — Prohibited. The ability to cancel a committed move mid-execution by redirecting input (the model of modern "smooth" sports games). Explicitly rejected because it eliminates the punish window and therefore the mind game. see: [ADR-0003](docs/adr/0003-input-model-hybrid.md)
 
@@ -118,9 +126,4 @@ Do not add design reasoning here. If a decision belongs somewhere, it belongs in
 
 The following terms appear in design discussions but are not clearly defined in CLAUDE.md or any ADR. Do not guess their meaning — resolve with the human before using them in code or documentation.
 
-- **Feint-cancel window** — Referenced as a named mechanic but never defined. Unclear whether it is a subcase of the punish window or a separate window within startup where a deliberate false commitment can be recognised and cancelled.
 - **Size-up-as-feint** — Referenced as a named mechanic but not defined anywhere. Appears to mean using a size-up move as a deliberate feint to bait a defender's commitment, but inputs and frame behaviour are unspecified.
-- **Stamina / resource** — Listed in CLAUDE.md §1 as a subordinate system but never elaborated: meter shape, depletion triggers, and recovery mechanics are all undefined.
-- **Shot release timing window** — Named in CLAUDE.md §1 but not specified: which inputs open it, how wide it is, and what success/failure produces are undefined.
-- **Steal / block timing windows** — Named alongside shot release in CLAUDE.md §1 but not specified.
-- **Right-stick committed-move vocabulary (full set)** — ADR-0003 lists crossover, spin, hesitation, drive as examples. The complete gesture-to-move mapping is not enumerated.
