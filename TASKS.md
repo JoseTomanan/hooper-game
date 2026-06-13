@@ -6,7 +6,7 @@ this file tracks *state*: what's done, what's in flight, what's next, what's blo
 
 Rules of the road:
 - Claude Code updates this file when it finishes a unit of work, in the same commit
-  as the code. (See CLAUDE.md §6 — Decision Discipline.)
+  as the code. (See CLAUDE.md §3 — Decision Discipline.)
 - "Done" means proven, not written. A networking task isn't done until the human has
   confirmed it in two editor instances (EDITOR_TASKS step 8).
 - Keep it terse. One line per item. Move finished items to DONE with the date.
@@ -66,5 +66,5 @@ Split into two sessions (decided 2026-05-28):
 - M6 — Dedicated-server export + basic server browser.
 
 > Reconcile open thread: the handoff doc from the original design chat still describes
-> the S&box/Source 2 stack. CLAUDE.md §2 supersedes it (Godot/C#). If that handoff is
-> ever fed to a session, it must not reintroduce S&box.
+> the S&box/Source 2 stack. ADR-0001 (docs/adr/0001-engine-godot-csharp.md) supersedes
+> it (Godot/C#). If that handoff is ever fed to a session, it must not reintroduce S&box.
