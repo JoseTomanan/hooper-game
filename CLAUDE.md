@@ -98,7 +98,35 @@ GitHub Issues is the sole task tracker. TASKS.md no longer exists.
 - Issues labeled `hitl` require a human editor step (see EDITOR_TASKS.md) before they can close.
 - **Done means proven, not written.** A `hitl` issue is only closed after the human confirms it in the editor (the relevant EDITOR_TASKS steps). Do not close it on code alone.
 - When finishing a unit of work, tell the human which issue(s) to close and which EDITOR_TASKS steps (if any) they must complete first.
-- Commits that resolve an issue must include `Closes #X` in the commit description (not the subject line) so GitHub auto-closes the issue and the closing commit is traceable from the issue thread.
+- **Closing keyword placement.** Exactly one artifact closes an issue, and it carries `Closes #X` in its *description/body* (never the subject line), so GitHub auto-closes the issue and the close is traceable:
+  - **Single-commit fix → straight to `main`:** that commit's body carries `Closes #X` (the M1a pattern).
+  - **Multi-commit work → branch + PR:** the *PR body* carries `Closes #X`; the commits do not (see Branching below).
+
+### Branching & multi-commit issues
+
+Default to small: if an issue is one focused commit, commit straight to `main`.
+When an issue's solution naturally spans several commits — most M1b+ work will —
+isolate it on a branch and land it via a PR. This keeps `main` releasable and
+gives the change a single review surface.
+
+- **Branch per issue.** Name it `<type>/<issue#>-<slug>`, e.g. `feat/5-host-join`.
+  One branch per issue, or per epic if its sub-issues are tightly coupled.
+- **Keep commits single-concern on the branch.** The commit-clean discipline
+  still applies to each commit; several focused commits is the goal, NOT one
+  mega-commit. Subjects stay conventional (`feat(net): ...`). A commit body may
+  link the issue with `Refs #X`, but must NOT use a closing keyword — only the
+  PR closes.
+- **The PR closes the issue.** Put `Closes #X` (plus any sibling sub-issues the
+  PR fully resolves) in the PR *body*. Merging to `main` is what closes them.
+- **Merge, don't squash.** Preserve the focused commit history — the per-step
+  rationale is the documentation trail for a big change; squashing discards it.
+- **`hitl` still means proven.** A PR may merge the *code*, but must not
+  auto-close a `hitl` issue before the human verifies in-editor. For a `hitl`
+  issue, omit its `Closes` from the PR and let the human close it after the
+  EDITOR_TASKS step (or have them verify before merge). `Done means proven`
+  overrides auto-close.
+- **The human owns merges**, as they own commits: open the PR with `gh`, but let
+  the human review and merge.
 
 ### Decision Discipline
 
