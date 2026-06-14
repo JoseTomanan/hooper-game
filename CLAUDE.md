@@ -114,6 +114,18 @@ numbered ADR file following the template in `docs/adr/0000-template.md`.
 If I ask you to do something that contradicts a locked ADR, stop and flag the
 contradiction before writing code; don't silently comply.
 
+### Handoffs (cross-session work)
+
+When work spans more than one session — typically a big change like networking or
+the ball physics — leave the next session a handoff at
+`docs/handoffs/<topic>.md` (e.g. `docs/handoffs/M1b-networking.md`). That folder
+is **gitignored** (handoffs are scratch in-flight state, not durable docs); only
+its `README.md` is tracked. Put *only* what isn't already in CLAUDE.md, the ADRs,
+the issues, or the code: where you were interrupted, build/run state, anything
+verified the hard way, gotchas, and remaining `hitl` editor steps. See
+`docs/handoffs/README.md` for the full convention. At session start, check
+`docs/handoffs/` for an existing handoff before assuming a cold start.
+
 ---
 
 ## 4. Open technical risks
