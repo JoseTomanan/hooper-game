@@ -1,15 +1,15 @@
-## IDE shlock
+## IDE / Claude
 .claude/*
 !.claude/skills/doubt-driven-development/
 !.claude/skills/source-driven-development/
 
-# Godot 4 .NET
+# Godot 4
 .godot/
-.import/
+/android/
 export.cfg
 export_presets.cfg
 
-# .NET build output
+# .NET build output (generated once the C# solution exists)
 .mono/
 bin/
 obj/
