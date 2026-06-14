@@ -42,14 +42,14 @@ Architecture decisions are documented in full in [`docs/adr/`](docs/adr/).
 
 ### Milestone roadmap
 
-| # | Goal | Status |
-|---|------|--------|
-| **M1** | Networked movement proof (two capsules, prediction, no lag) | 🔨 In progress |
-| M2 | Local-only ball mini-physics (dribble attach + shot arc) | Planned |
-| M3 | Hybrid input: analog movement + one discrete committed move with frames | Planned |
-| M4 | Networking the ball + committed moves (prediction over the hard cases) | Planned |
-| M5 | Win condition / scoring for a minimal 1v1 | Planned |
-| M6 | Dedicated-server export + basic server browser | Planned |
+| # | Goal |
+|---|------|
+| **M1** | Networked movement proof (two capsules, prediction, no lag) |
+| **M2** | Local-only ball mini-physics (dribble attach + shot arc) |
+| **M3** | Hybrid input: analog movement + one discrete committed move with frames |
+| **M4** | Networking the ball + committed moves (prediction over the hard cases) |
+| **M5** | Win condition / scoring for a minimal 1v1 |
+| **M6** | Dedicated-server export + basic server browser |
 
 ---
 
