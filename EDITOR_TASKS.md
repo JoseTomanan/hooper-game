@@ -29,34 +29,112 @@ until much later — none of it is needed to prove the game works.
 
 ---
 
-## Milestone 1 editor tasks: two networked capsules on a plane
+## Milestone 1a editor tasks (DONE — issue #3, closed)
 
-Do these in order. Each is a few clicks. Claude Code tells you the exact node
-types and script names as it writes them.
+These were completed when the single-player movement was proven. They are kept
+here as reference for the scene structure M1b builds on.
 
-1. **Create the main scene.** Scene → New Scene → add a root node (a `Node3D`).
-   Save as `scenes/Main.tscn`.
-2. **Add a floor.** Add a `StaticBody3D` with a `CSGBox3D` (or a MeshInstance3D +
-   collision) scaled wide and flat as a placeholder ground. No material needed.
-3. **Build the player scene.** New Scene → root node `CharacterBody3D`, add a
-   child mesh (a capsule mesh) so you can see it, and a `CollisionShape3D`. Save
-   as `scenes/Player.tscn` — this is the prefab spawned for each connected player.
-4. **Attach the player script.** Select the `CharacterBody3D` → Attach Script →
-   choose the C# script Claude Code wrote in `scripts/Player/` (e.g.
-   `PlayerController.cs`). Godot links the node to the class.
-5. **Add a camera.** Either a `Camera3D` child of the player, or let Claude Code's
-   code position it.
-6. **Set the main scene to run.** Project → Project Settings → set
-   `scenes/Main.tscn` as the main scene (or press F6 to run the current scene).
-7. **Test locally first.** Run the scene; confirm one capsule moves with the
-   input, and that movement feels immediate (prediction).
-8. **Test networking.** Godot can run two debug instances at once (Debug → Run
-   Multiple Instances → 2). Follow Claude Code's host/join instructions: one
-   instance hosts, the other joins over localhost. Confirm the second capsule
-   appears and moves smoothly on both windows.
+1. Created `scenes/Main.tscn` with a `Node3D` root.
+2. Added a `StaticBody3D` floor with a `BoxMesh` + `CollisionShape3D`.
+3. Built `scenes/Player.tscn`: root `CharacterBody3D` + `MeshInstance3D` (capsule)
+   + `CollisionShape3D`. Script: `PlayerController.cs`.
+4. Added a fixed overhead `Camera3D` and a `DirectionalLight3D` to `Main.tscn`.
 
-When step 8 looks right in both windows, Milestone 1 is proven. Tell Claude Code
-and move to Milestone 2.
+---
+
+## Milestone 1b editor tasks — two networked capsules (issue #7)
+
+**Do these only after Claude Code has pushed the `feat/networking` branch and you
+have merged the PR.** The C# must compile before you wire it.
+
+The overall change to `Main.tscn` is: remove the static Player instance (players
+are spawned at runtime now) and add the three networking nodes.
+
+### Step 1 — Build first
+Click the **hammer icon** (top-right of the editor). Godot must see the new C#
+classes (`NetworkManager`, `Lobby`) before they appear in the Attach Script list.
+If there are build errors, read the Output panel and tell Claude Code.
+
+### Step 2 — Update Main.tscn
+
+**Remove the static Player instance:**
+In the Scene panel, select the `Player` node that is a direct child of `Main`
+(it's there from M1a). Right-click → Delete. Players are now spawned at runtime
+by `NetworkManager` — you do NOT need a pre-placed one.
+
+**Add a `Node3D` named `Players` (the spawn root):**
+Right-click `Main` in the Scene panel → Add Child Node → `Node3D`. Rename it
+`Players`. This is where runtime player nodes will appear.
+
+**Add a `MultiplayerSpawner`:**
+Right-click `Main` → Add Child Node → `MultiplayerSpawner`. In the Inspector:
+- Set **Spawn Path** to the `Players` node (click the NodePath field, navigate
+  to `/root/Main/Players`).
+- Under **Auto Spawn List**, click the `+` button and add `res://scenes/Player.tscn`.
+
+This is the critical step: the spawner watches `Players` and replicates any child
+added there by the server to all clients automatically. Without this, only the
+host ever sees player nodes.
+
+**Add a `Node` named `NetworkManager`:**
+Right-click `Main` → Add Child Node → `Node`. Rename it `NetworkManager`.
+Attach Script → navigate to `scripts/Networking/NetworkManager.cs`.
+In the Inspector, assign:
+- **Players** → drag the `Players` node in.
+- **Player Scene Path** → leave as `res://scenes/Player.tscn` (pre-filled).
+
+### Step 3 — Build the Lobby scene
+
+Create a new scene: Scene → New Scene → root node `CanvasLayer`. Save as
+`scenes/Lobby.tscn`.
+
+Add these children to the `CanvasLayer`:
+- `VBoxContainer` (to stack controls vertically — optional but tidy)
+  - `LineEdit` — rename to `IpField`; placeholder text: `127.0.0.1`
+  - `LineEdit` — rename to `PortField`; placeholder text: `7777`
+  - `Button`   — rename to `HostButton`; text: `Host`
+  - `Button`   — rename to `JoinButton`; text: `Join`
+
+Attach Script on the root `CanvasLayer` → `scripts/Networking/Lobby.cs`.
+
+In the Inspector for the `CanvasLayer`, assign all five exports:
+- **Ip Field** → `IpField` node
+- **Port Field** → `PortField` node
+- **Host Button** → `HostButton` node
+- **Join Button** → `JoinButton` node
+- **Network Manager** → the `NetworkManager` node in `Main.tscn`
+  (drag from the Main scene's Scene panel — you may need to expand the tree).
+
+### Step 4 — Instance Lobby in Main
+
+Back in `Main.tscn`: right-click `Main` → Instantiate Child Scene → choose
+`scenes/Lobby.tscn`. The lobby overlay will now appear when the game runs.
+
+### Step 5 — Verify the proof (issue #7 acceptance criteria)
+
+1. Press **F5** to run. The lobby overlay should appear over the empty court.
+2. Now open **Debug → Run Multiple Instances → 2** and run again.
+   - **Window 1 (Host):** type nothing (defaults are fine) → click **Host**.
+     The lobby disappears; you are on the court with one capsule.
+   - **Window 2 (Join):** IP is already `127.0.0.1`, port `7777` → click **Join**.
+     The lobby disappears; a second capsule appears in both windows.
+3. Move each player in its own window. Confirm:
+   - ✅ Your own capsule responds instantly (zero perceptible lag — prediction working).
+   - ✅ The other capsule moves smoothly with no rubber-banding or visible snap.
+   - ✅ Both windows show both capsules.
+
+When all three are true, **Milestone 1 is proven**. Close issue #7, then close
+the epic issue #4. Tell Claude Code and we move to Milestone 2.
+
+### Troubleshooting
+
+| Symptom | Likely cause |
+|---------|--------------|
+| Build errors on open | C# classes not found — hit the hammer icon first |
+| Lobby appears but Host/Join do nothing | Export fields not assigned in Inspector |
+| Only one capsule visible after joining | MultiplayerSpawner not configured (step 2) |
+| Remote capsule teleports / snaps | Check Output for `[PlayerController]` errors |
+| "Unauthorized SubmitInput" in Output | Node naming mismatch — confirm NetworkManager spawns by peer ID |
 
 ---
 
