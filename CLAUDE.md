@@ -16,6 +16,7 @@ locked unless explicitly revisited (see Decision Discipline in §4 below).
 | [ADR-0003](docs/adr/0003-input-model-hybrid.md) | Input: hybrid analog movement + discrete committed moves, no flow-cancel |
 | [ADR-0004](docs/adr/0004-deterministic-ball-physics.md) | Ball physics: custom deterministic mini-physics (not Godot Physics/Jolt) |
 | [ADR-0005](docs/adr/0005-community-model-dedicated-servers.md) | Community: self-hosted dedicated servers + server browser (CS 1.6 style) |
+| [ADR-0006](docs/adr/0006-renderer-mobile.md) | Renderer: Godot Mobile (D3D12), not Compatibility/Forward+ |
 
 ---
 
@@ -97,6 +98,7 @@ GitHub Issues is the sole task tracker. TASKS.md no longer exists.
 - Issues labeled `hitl` require a human editor step (see EDITOR_TASKS.md) before they can close.
 - **Done means proven, not written.** A `hitl` issue is only closed after the human confirms it in the editor (the relevant EDITOR_TASKS steps). Do not close it on code alone.
 - When finishing a unit of work, tell the human which issue(s) to close and which EDITOR_TASKS steps (if any) they must complete first.
+- Commits that resolve an issue must include `Closes #X` in the commit description (not the subject line) so GitHub auto-closes the issue and the closing commit is traceable from the issue thread.
 
 ### Decision Discipline
 
