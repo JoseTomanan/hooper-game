@@ -1,12 +1,7 @@
-[gd_scene load_steps=6 format=3 uid="uid://c047mrir711mo"]
+[gd_scene format=3 uid="uid://c047mrir711mo"]
 
-[ext_resource type="PackedScene" uid="uid://damgpdajv4xlf" path="res://scenes/Player.tscn" id="1_player"]
-
-[sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
-size = Vector3(40, 1, 40)
-
-[sub_resource type="BoxMesh" id="BoxMesh_floor"]
-size = Vector3(40, 1, 40)
+[ext_resource type="Script" uid="uid://biijolqmsdytp" path="res://scripts/Networking/NetworkManager.cs" id="1_elqb8"]
+[ext_resource type="PackedScene" uid="uid://bmins3cwajctr" path="res://scenes/Lobby.tscn" id="2_rvslj"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
 
@@ -17,28 +12,44 @@ sky_material = SubResource("ProceduralSkyMaterial_1")
 background_mode = 2
 sky = SubResource("Sky_1")
 ambient_light_source = 3
-ambient_light_sky_contribution = 1.0
 
-[node name="Main" type="Node3D"]
+[sub_resource type="BoxMesh" id="BoxMesh_floor"]
+size = Vector3(40, 1, 40)
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+[sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
+size = Vector3(40, 1, 40)
+
+[node name="Main" type="Node3D" unique_id=1204416892]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=2092479985]
 environment = SubResource("Environment_1")
 
-[node name="Floor" type="StaticBody3D" parent="."]
+[node name="Floor" type="StaticBody3D" parent="." unique_id=1764956560]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="Floor"]
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Floor" unique_id=1898698934]
 mesh = SubResource("BoxMesh_floor")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor" unique_id=391624559]
 shape = SubResource("BoxShape3D_floor")
 
-[node name="Player" parent="." instance=ExtResource("1_player")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
-
-[node name="Camera3D" type="Camera3D" parent="."]
+[node name="Camera3D" type="Camera3D" parent="." unique_id=1898710017]
 transform = Transform3D(1, 0, 0, 0, 0.707, 0.707, 0, -0.707, 0.707, 0, 8, 8)
 current = true
 
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=10074499]
 transform = Transform3D(1, 0, 0, 0, 0.707, 0.707, 0, -0.707, 0.707, 0, 10, 0)
+
+[node name="Players" type="Node3D" parent="." unique_id=1470573220]
+
+[node name="MultiplayerSpawner" type="MultiplayerSpawner" parent="." unique_id=603481057]
+_spawnable_scenes = PackedStringArray("uid://damgpdajv4xlf")
+spawn_path = NodePath("../Players")
+spawn_limit = 2
+
+[node name="NetworkManager" type="Node" parent="." unique_id=783149953 node_paths=PackedStringArray("Players")]
+script = ExtResource("1_elqb8")
+Players = NodePath("../Players")
+
+[node name="Lobby" parent="." unique_id=1910977576 node_paths=PackedStringArray("NetworkManager") instance=ExtResource("2_rvslj")]
+NetworkManager = NodePath("../NetworkManager")
