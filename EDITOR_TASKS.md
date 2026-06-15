@@ -126,6 +126,57 @@ Back in `Main.tscn`: right-click `Main` → Instantiate Child Scene → choose
 When all three are true, **Milestone 1 is proven**. Close issue #7, then close
 the epic issue #4. Tell Claude Code and we move to Milestone 2.
 
+---
+
+## Milestone 2 editor tasks — the ball (issue #12)
+
+**Do these only after the `feat/8-ball-mini-physics` PR is merged.** The ball
+math is finished and unit-tested (94 tests); this step proves it in a live
+scene. Milestone 2 is single-player and local — no networking is involved.
+
+### Step 1 — Build first
+Click the **hammer icon**. Godot must see the new `BallController` class before
+it appears in the Attach Script list. If the build fails, read the Output panel
+and tell Claude Code.
+
+### Step 2 — Add the shoot input action
+**Project → Project Settings → Input Map.** Add a new action named exactly
+`ball_shoot` and bind a key to it (e.g. the spacebar). The ball script reads
+this action to fire a shot. (The name is the `ShootAction` export — change one
+to match the other if you prefer a different name.)
+
+### Step 3 — Build the Ball scene
+1. New scene, root node type **Node3D**, rename it `Ball`. Save as `scenes/Ball.tscn`.
+2. Add a child **MeshInstance3D** with a **SphereMesh**; set its radius to
+   ~0.12 (matches the `BallRadius` export). Gray placeholder material is fine.
+3. Select the `Ball` root → **Attach Script** → `BallController.cs`.
+
+### Step 4 — Place a hoop and wire the geometry
+1. In `Main.tscn`, add a simple visual hoop (a `Node3D` with a torus/cylinder
+   mesh for the rim and a box mesh for the backboard) so you can see where the
+   basket is. Note its world position.
+2. Instance `Ball.tscn` into `Main.tscn`.
+3. Select the `Ball` instance and, in the **Inspector**, fill in the exports so
+   they match the scene:
+   - **Holder** → drag the player node the ball should attach to.
+   - **Rim Center** → the world-space centre of your rim mesh (also the aim point).
+   - **Board Center / Board Normal** → centre of the backboard face, and its
+     normal pointing toward the court (for a board at +Z, normal is `(0, 0, -1)`).
+   - Leave the other tunables (radii, restitution, apex, gravity) at defaults
+     unless the feel needs tuning.
+
+### Step 5 — Verify (the acceptance criteria for #12)
+Run `Main.tscn` and confirm:
+- ✅ The ball is visible and **dribbles** (bounces in a cycle) at the holder.
+- ✅ Pressing `ball_shoot` fires the ball in a **parabolic arc** toward the rim.
+- ✅ An off-target shot **bounces** off the rim/backboard and the ball goes
+  **loose**, then settles on the floor.
+- ✅ An on-target shot drops **cleanly through** the hoop (Output prints
+  `[Ball] Clean make.`).
+
+When all four are true, **Milestone 2 is proven**. Close issue #12, then the
+epic issue #8. (Issues #9, #10, #11 are code-only and close with the PR merge.)
+
 ### Troubleshooting
 
 | Symptom | Likely cause |
