@@ -2,7 +2,7 @@
 
 > **The duel is the space between two players — and who breaks first.**
 
-A competitive 1v1 basketball game built around **footwork, spacing, and commitment**. Not an arcade game. Not a simulation. Closer in spirit to a fighting game (Tekken) crossed with the clunky-but-readable texture of *Undisputed 3* — every move has a telegraphed wind-up, wrong reads are punished, and the mind game lives in the gap between two players.
+A competitive 1v1 basketball game built around **footwork, spacing, and commitment**. Not an arcade game. Not a simulation. Closer in spirit to a fighting game (Tekken) crossed with the competitive legibility of *Undisputed 3* — every move has a telegraphed wind-up, wrong reads are punished, and the mind game lives in the gap between two players.
 
 ---
 
@@ -12,7 +12,7 @@ A competitive 1v1 basketball game built around **footwork, spacing, and commitme
 |--------|---------------|
 | **Spine — Spacing** | Separation creation vs. denial is the core 1v1 interaction. Footwork is the neutral game. |
 | **Commitment layer** | Discrete moves have real startup and recovery frames. Once you commit, you cannot cancel. Wrong reads are punished. |
-| **Legibility** | Moves are deliberately readable — wind-ups are clunkier than a "polished" game on purpose. Those frames are the product. |
+| **Legibility** | A competitive requirement, not an aesthetic. Startup frames are clunkier than a "polished" game so both players can make fair reads. Bounded: never smoothed away (destroys the mind game); never comedic (Undisputed 3, not Goat Simulator). |
 | **Defense** | Symmetric core (mirror footwork + committed reads) with a deliberate asymmetric tilt toward reaction. |
 
 Systems like timing windows (shot release, steal/block) and stamina live **inside** the spacing spine — they are not co-equal pillars.

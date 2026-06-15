@@ -35,7 +35,7 @@ Use the **Mobile** rendering method. On Windows it runs over the **D3D12** drive
 
 Mobile is far lighter than Forward+ — satisfying ADR-0001's low-spec requirement
 in practice — while retaining better lighting/material fidelity than
-Compatibility. The deliberately clunky, legibility-first art direction
+Compatibility. The competitive-legibility art direction
 (ADR-0003) does not need any Forward+-exclusive feature, so Forward+ is rejected
 outright. Compatibility is rejected as the daily renderer because Mobile's
 fidelity headroom is judged worth the cost below.

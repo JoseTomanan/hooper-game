@@ -39,12 +39,27 @@ Use a **hybrid input model**:
 - **No flow-cancel on committed moves.** A committed move runs to completion (or
   to its punish window). This is the source of the mind game.
 
-### Legibility is a technical requirement, not just style
+### Frame legibility is a competitive requirement
 
-Committed moves **must** have visibly telegraphed wind-up animations. Animation
-may be deliberately clunkier than a "polished" game to keep moves readable by
-the opponent. Do **not** smooth away startup frames in the name of feel — those
-frames are the product.
+Clunkiness in committed-move animation is not an aesthetic preference — it is a
+direct consequence of prioritising competitive integrity. Both players must be
+able to read the opponent's startup frames in real time. If startup frames are
+smoothed away for "feel," the mind game becomes invisible; the opponent cannot
+make a fair read and the core interaction collapses.
+
+This is bounded on both sides:
+
+- **Floor:** animation must be clunky *enough* that startup frames are readable
+  in real time. Never smooth them toward a polished sports-game feel — that is
+  the anti-goal.
+- **Ceiling:** clunkiness must not be exaggerated or comedic. It exists only to
+  the precise degree legibility requires.
+
+**Reference axis:** target feel is *UFC Undisputed 3* — clunky because
+competitive and readable, not as a stylistic statement. Anti-target is *Goat
+Simulator* — clunkiness as comedy/jank. Animation notes, playtest requests, or
+assets pushing toward the comedic end contradict this decision; they do not
+refine it.
 
 ## Consequences
 
