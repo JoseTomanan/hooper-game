@@ -40,6 +40,8 @@
     <Compile Include="..\..\scripts\Ball\BallStateMachine.cs" />
     <Compile Include="..\..\scripts\Ball\DribbleCycle.cs" />
     <Compile Include="..\..\scripts\Ball\ShotArc.cs" />
+    <Compile Include="..\..\scripts\Ball\ContactResult.cs" />
+    <Compile Include="..\..\scripts\Ball\RimBackboard.cs" />
   </ItemGroup>
 
   <ItemGroup>
