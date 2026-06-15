@@ -25,8 +25,8 @@ locked unless explicitly revisited (see Decision Discipline in §4 below).
 A **competitive 1v1 basketball game**. The design identity in one sentence:
 **the duel is the space between two players and who breaks first.** It is
 deliberately NOT arcade like NBA 2K — it is technical and skill-based, closer in
-spirit to a fighting game (Tekken) crossed with the "clunky-but-readable"
-texture of Undisputed 3.
+spirit to a fighting game (Tekken) crossed with the competitive legibility of
+Undisputed 3.
 
 The developer building this has **no prior game-dev experience** and is driving
 the project primarily through AI-written code (Claude Code). Therefore: explain
@@ -41,9 +41,12 @@ game-dev knowledge on the human's part.
   commit; wrong reads are punished.
 - **Subordinate systems** (live INSIDE the spacing spine, not co-equal pillars):
   timing windows (shot release, steal, block) and stamina / resource.
-- **Legibility is a design VALUE, not just code:** committed moves must have
-  visibly telegraphed wind-ups. Animation may be deliberately clunkier to keep
-  moves readable. Do not "smooth away" commitment frames.
+- **Legibility is a competitive requirement, not an aesthetic:** startup frames
+  must be visibly telegraphed so both players can make fair reads. Clunkiness is
+  bounded — floor: never smoothed to the point of hiding commitment frames
+  (polished sports-game feel destroys the mind game); ceiling: never exaggerated
+  or comedic (Undisputed 3, not Goat Simulator). See
+  [ADR-0003](docs/adr/0003-input-model-hybrid.md).
 - **Defense:** symmetric core (mirror footwork + committed reads) with a
   deliberate asymmetric tilt toward reaction.
 

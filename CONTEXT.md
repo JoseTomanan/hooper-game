@@ -62,7 +62,7 @@ Do not add design reasoning here. If a decision belongs somewhere, it belongs in
 
 **Flow-cancel** — Prohibited. The ability to cancel a committed move mid-execution by redirecting input (the model of modern "smooth" sports games). Explicitly rejected because it eliminates the punish window and therefore the mind game. see: [ADR-0003](docs/adr/0003-input-model-hybrid.md)
 
-**Clunky-but-readable / legibility** — A design value, not a bug. Committed moves use deliberately clunkier animation than a "polished" title so startup frames remain readable by the opponent. Smoothing them away is an explicit anti-goal. see: [CLAUDE.md §1](CLAUDE.md), [ADR-0003](docs/adr/0003-input-model-hybrid.md)
+**Clunky-but-readable / legibility** — A competitive requirement, not an aesthetic or a bug. Animation is deliberately clunkier than a "polished" title so startup frames are readable in real time — bounded on both sides: never smoothed to the point of hiding commitment frames (anti-goal: polished sports-game feel), never exaggerated into comedy (Undisputed 3, not Goat Simulator). see: [CLAUDE.md §1](CLAUDE.md), [ADR-0003](docs/adr/0003-input-model-hybrid.md)
 
 ---
 
