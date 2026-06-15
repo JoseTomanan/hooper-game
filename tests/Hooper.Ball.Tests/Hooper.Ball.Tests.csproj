@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.5.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.3" />
+
+    <!--
+      Fallback approach (ProjectReference to the Godot.NET.Sdk project fails:
+      Godot's SDK causes xunit attributes to be resolved against the game project
+      rather than the test project, producing CS0246 errors for [Fact] etc.).
+
+      Instead we reference GodotSharp directly as a NuGet package — this gives
+      us the Godot.* managed types (Vector3, etc.) without pulling in the
+      Godot.NET.Sdk build machinery.  We then compile only the pure Ball source
+      files via Compile Include, keeping BallController.cs out because it
+      references Node3D which requires GodotSharpEditor support not present here.
+    -->
+    <PackageReference Include="GodotSharp" Version="4.6.3" />
+  </ItemGroup>
+
+  <!--
+    Compile the pure Ball source files directly into the test assembly.
+    BallState.cs and BallStateMachine.cs are pure C# — no Node inheritance,
+    no engine singletons.  BallController.cs IS excluded because it extends
+    Node3D (a Godot engine type that cannot be instantiated headlessly).
+  -->
+  <ItemGroup>
+    <Compile Include="..\..\scripts\Ball\BallState.cs" />
+    <Compile Include="..\..\scripts\Ball\BallStateMachine.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>
