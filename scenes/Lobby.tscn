@@ -1,0 +1,30 @@
+[gd_scene format=3 uid="uid://bmins3cwajctr"]
+
+[ext_resource type="Script" uid="uid://d1irk3nq6t76k" path="res://scripts/Networking/Lobby.cs" id="1_6jt0u"]
+
+[node name="Lobby" type="CanvasLayer" unique_id=1910977576 node_paths=PackedStringArray("IpField", "PortField", "HostButton", "JoinButton")]
+script = ExtResource("1_6jt0u")
+IpField = NodePath("VBoxContainer/IpField")
+PortField = NodePath("VBoxContainer/PortField")
+HostButton = NodePath("VBoxContainer/HostButton")
+JoinButton = NodePath("VBoxContainer/JoinButton")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=546885023]
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="IpField" type="LineEdit" parent="VBoxContainer" unique_id=546835867]
+layout_mode = 2
+placeholder_text = "127.0.0.1"
+
+[node name="PortField" type="LineEdit" parent="VBoxContainer" unique_id=1407440637]
+layout_mode = 2
+placeholder_text = "7777"
+
+[node name="HostButton" type="Button" parent="VBoxContainer" unique_id=90517407]
+layout_mode = 2
+text = "Host Game"
+
+[node name="JoinButton" type="Button" parent="VBoxContainer" unique_id=1767081707]
+layout_mode = 2
+text = "Join Game"
