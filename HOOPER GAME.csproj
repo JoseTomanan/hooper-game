@@ -5,4 +5,12 @@
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <RootNamespace>HOOPERGAME</RootNamespace>
   </PropertyGroup>
+  <!--
+    The Godot.NET.Sdk globs **/*.cs from this directory (the repo root), which
+    would otherwise pull the xUnit test sources under tests/ into the GAME
+    assembly and break the build. The tests are their own project; exclude them.
+  -->
+  <ItemGroup>
+    <Compile Remove="tests/**/*.cs" />
+  </ItemGroup>
 </Project>
