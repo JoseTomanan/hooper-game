@@ -44,6 +44,22 @@
     <Compile Include="..\..\scripts\Ball\RimBackboard.cs" />
   </ItemGroup>
 
+  <!--
+    Pure Input source files (M3 committed-move framework, issue #14-#17).
+    RightStickGestureRecognizer.cs and Crossover.cs use Godot.Vector2 from
+    the GodotSharp NuGet already referenced above; neither extends a Node.
+    PlayerInputGlue.cs IS excluded — it references Input singleton and Node3D.
+  -->
+  <ItemGroup>
+    <Compile Include="..\..\scripts\Input\MovePhase.cs" />
+    <Compile Include="..\..\scripts\Input\MoveFrameData.cs" />
+    <Compile Include="..\..\scripts\Input\CommittedMove.cs" />
+    <Compile Include="..\..\scripts\Input\CommittedMoveMachine.cs" />
+    <Compile Include="..\..\scripts\Input\Crossover.cs" />
+    <Compile Include="..\..\scripts\Input\GestureResult.cs" />
+    <Compile Include="..\..\scripts\Input\RightStickGestureRecognizer.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>

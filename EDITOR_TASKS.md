@@ -192,6 +192,101 @@ epic issue #8. (Issues #9, #10, #11 are code-only and close with the PR merge.)
 
 ---
 
+## Milestone 3 editor tasks — committed moves (issue #18)
+
+**Do these only after the `feat/milestone-3` PR is merged.** The C# must
+compile before committed-move input is wired.
+
+### Step 1 — Build first
+
+Click the **hammer icon** (top-right). Godot must see the new classes
+(`CommittedMoveMachine`, `RightStickGestureRecognizer`, etc.) before the
+new `PlayerController` exports appear in the Inspector.
+
+### Step 2 — Verify input actions exist
+
+**Project → Project Settings → Input Map.** Confirm these six actions are
+present (they were added by text-edit to `project.godot` in the PR):
+
+| Action | Binding |
+|---|---|
+| `aim_right` | Joypad Axis 2 (+1.0, deadzone 0.5) — right stick right |
+| `aim_left` | Joypad Axis 2 (−1.0, deadzone 0.5) — right stick left |
+| `aim_down` | Joypad Axis 3 (+1.0, deadzone 0.5) — right stick down |
+| `aim_up` | Joypad Axis 3 (−1.0, deadzone 0.5) — right stick up |
+| `move_crossover` | Keyboard **Q** (keyboard fallback, no gamepad needed) |
+| `move_feint` | Keyboard **E** + Joypad L1 button (index 9) |
+
+If any are missing, add them manually in the Input Map tab and save.
+
+### Step 3 — Confirm the BurstSpeed export is wired
+
+In the scene panel, select the Player node. In the Inspector you should see:
+- **Burst Speed** = 12 (the default — leave it for now)
+
+If the Inspector shows no committed-move exports, the build from Step 1 did
+not succeed. Hit the hammer again.
+
+### Step 4 — Verify the committed-move pipeline (issue #18 acceptance criteria)
+
+Run `Main.tscn` with a single instance:
+
+**Test A — Crossover via keyboard (no gamepad required):**
+1. Move the capsule with WASD to confirm normal movement still works.
+2. Press **Q**. The capsule should:
+   - **Freeze** for ~6 physics ticks (~0.1 s) — this is the startup telegraph.
+     The freeze must be visible and readable. If it blinks and you miss it,
+     the startup window is too short — raise `StartupFrames` in `Crossover.DefaultFrameData`.
+   - **Burst laterally** (to the right) for ~3 ticks (~0.05 s) — the Active phase.
+     The burst should cover noticeable ground (default BurstSpeed = 12 m/s).
+   - **Decelerate** for ~12 ticks (~0.2 s) — the Recovery phase.
+     The capsule should be noticeably slower and still moving right, then stop.
+   - **Return to normal** movement. WASD should work again cleanly.
+   - ✅ All four stages must be visible. If recovery is invisible, the burst
+     velocity isn't being sustained into Recovery (bug: burst wasn't SET before
+     Recovery; check git diff on `TickCommittedMoveBehavior`).
+
+**Test B — Feint during startup:**
+1. Press **Q** to start the crossover.
+2. Immediately (within the first 4 physics ticks ≈ first 0.07 s) press **E**.
+3. Expected: the capsule unfreezes immediately, returns to normal movement.
+   The burst and recovery do NOT occur.
+4. If feint has no effect, the feint-window may have passed — practice pressing
+   E sooner after Q. The window is `FeintWindowFrames = 4` ticks.
+
+**Test C — Recovery blocks re-input:**
+1. Press **Q** to trigger a full crossover (do NOT feint).
+2. During the recovery slide, press **Q** again.
+3. Expected: the second Q has no effect. A new crossover only starts after
+   the recovery phase fully completes.
+
+**Test D — Gamepad (if a controller is connected):**
+1. Flick the **right stick** left or right quickly (less than ~0.07 s hold)
+   while keeping the stick deflection past center: this is a **gesture feint**
+   (stick returned to deadzone within 4 ticks). Expected: no committed move
+   starts (the machine was never Begin()-ed; the quick return is a micro-fake).
+2. Flick the **right stick** left or right and hold it past center for ~0.1 s
+   (more than 4 ticks): this confirms a crossover. The startup telegraph,
+   burst, and recovery should all fire.
+3. To feint an in-progress crossover on a gamepad: trigger the crossover with
+   the right stick (hold >4 ticks so it confirms), then press **L1** during the
+   startup freeze. Expected: freeze ends immediately, no burst.
+
+When all four tests pass, **Milestone 3 is proven**. Close issues #14, #15,
+#16, #17, then close the epic #13.
+
+### Troubleshooting M3
+
+| Symptom | Likely cause |
+|---|---|
+| Q does nothing | `move_crossover` action not in Input Map — add it (Step 2) |
+| Capsule freezes but never bursts | `ActiveFrames` = 0 or Crossover.DefaultFrameData wrong |
+| Burst fires but recovery instant | `RecoveryFrames` = 0 in DefaultFrameData |
+| Feint (E) never works | `FeintWindowFrames` = 0, or pressing E after the window closes |
+| Normal WASD broken after crossover | Machine stuck in non-Inactive phase — check Output for errors |
+
+---
+
 ## What to deliberately NOT touch yet
 
 - Materials / shaders — gray placeholder surfaces are fine.
