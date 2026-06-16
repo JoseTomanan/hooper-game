@@ -159,7 +159,10 @@ to match the other if you prefer a different name.)
 3. Select the `Ball` instance and, in the **Inspector**, fill in the exports so
    they match the scene:
    - **Holder** → drag the player node the ball should attach to.
-   - **Rim Center** → the world-space centre of your rim mesh (also the aim point).
+   - **Rim Center** → the world-space centre of your rim mesh (collision geometry).
+   - **Shot Target** → where the shot arc aims. Defaults to the same value as Rim
+     Center (a clean make). To test a rim bounce, offset this slightly off-centre
+     (e.g. add 0.5 to X) while leaving Rim Center unchanged.
    - **Board Center / Board Normal** → centre of the backboard face, and its
      normal pointing toward the court (for a board at +Z, normal is `(0, 0, -1)`).
    - Leave the other tunables (radii, restitution, apex, gravity) at defaults
