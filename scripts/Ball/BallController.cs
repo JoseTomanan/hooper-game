@@ -61,8 +61,16 @@ public partial class BallController : Node3D
 
 	// ── Basket geometry (must match the hoop node's placement) ────────────
 
-	/// <summary>World-space centre of the rim ring; also the shot's aim point.</summary>
+	/// <summary>World-space centre of the rim ring. Used for collision geometry only.</summary>
 	[Export] public Vector3 RimCenter { get; set; } = new(0f, 3.05f, 0f);
+
+	/// <summary>
+	/// World-space point the shot arc aims for. Defaults to RimCenter (a clean make).
+	/// Offset this independently to aim the shot off-centre and test rim bounces.
+	/// In M3+, the game will compute this from shot quality/timing; for M2 it is
+	/// an editor export so both outcomes can be verified manually.
+	/// </summary>
+	[Export] public Vector3 ShotTarget { get; set; } = new(0f, 3.05f, 0f);
 
 	/// <summary>Rim ring radius (metres). Regulation ≈ 0.23.</summary>
 	[Export] public float RimRadius { get; set; } = 0.23f;
@@ -220,6 +228,6 @@ public partial class BallController : Node3D
 		if (!Input.IsActionJustPressed(ShootAction)) return;
 		if (!StateMachine.Shoot()) return;
 
-		_arc = new ShotArc(GlobalPosition, RimCenter, ShotApexHeight, Gravity);
+		_arc = new ShotArc(GlobalPosition, ShotTarget, ShotApexHeight, Gravity);
 	}
 }
