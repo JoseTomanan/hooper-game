@@ -1,5 +1,6 @@
 using Godot;
 using System.Collections.Generic;
+using Hooper.Moves;
 
 namespace Hooper.Player;
 
@@ -52,6 +53,18 @@ namespace Hooper.Player;
 /// authoritative replayed position; the MeshInstance3D child is offset by
 /// _smoothOffset and lerps back to local zero each frame, hiding the snap.
 ///
+/// ── Committed-move integration (M3, local-only) ──────────────────────────────
+/// From M3, local players drive a CommittedMoveMachine + RightStickGestureRecognizer
+/// alongside the existing prediction loop. The machine and recognizer live directly
+/// here so they share Velocity ownership without a second node fighting for it.
+///
+/// M3 limitation (Doubt cycle 2): committed moves are not networked. The server
+/// always runs Move() — during a committed move the client sends Vector2.Zero as
+/// movement input, so the server decelerates while the client runs startup/burst/
+/// recovery behavior. The remaining divergence (especially during the Active burst)
+/// is corrected by the existing reconcile smooth-correction mechanism. Full server
+/// authority over committed moves is M4 work (#21).
+///
 /// Source: https://docs.godotengine.org/en/stable/tutorials/networking/high_level_multiplayer.html
 /// </summary>
 public partial class PlayerController : CharacterBody3D
@@ -83,6 +96,29 @@ public partial class PlayerController : CharacterBody3D
 	/// on a typical display, so no lerp is needed.
 	/// </summary>
 	[Export] public float ReconcileSnapThreshold { get; set; } = 0.001f;
+
+	// ── Committed-move tuning (M3) ────────────────────────────────────────────
+
+	/// <summary>
+	/// Lateral speed of the crossover's Active-phase burst (m/s).
+	/// Applied for the full ActiveFrames duration. Intentionally higher than
+	/// MoveSpeed to create visible separation — that is the point of the move.
+	/// </summary>
+	[Export] public float BurstSpeed { get; set; } = 12.0f;
+
+	// ── Committed-move state (M3, local-only) ─────────────────────────────────
+
+	/// <summary>
+	/// Sequences the startup / active / recovery phases for local committed moves.
+	/// One instance per player node; starts Inactive (machine.IsActive = false).
+	/// </summary>
+	private readonly CommittedMoveMachine _machine = new();
+
+	/// <summary>
+	/// Recognizes right-stick gestures (horizontal flick) for the local player.
+	/// Pure and engine-free — fed Vector2 samples from hardware each tick.
+	/// </summary>
+	private readonly RightStickGestureRecognizer _recognizer = new();
 
 	// ── Visual-correction mesh reference ─────────────────────────────────────
 
@@ -197,8 +233,15 @@ public partial class PlayerController : CharacterBody3D
 	/// </summary>
 	private void TickServerOwnPlayer(double delta)
 	{
-		Vector2 input = ReadInput();
-		Move(input, delta);
+		SampleMoveInput(); // reads gesture + feint, advances machine one tick
+
+		if (_machine.IsActive)
+			TickCommittedMoveBehavior(delta);
+		else
+		{
+			Vector2 input = ReadInput();
+			Move(input, delta);
+		}
 
 		// Broadcast authoritative state to all clients.
 		// ackSeq = 0 because the host has no client-input queue to acknowledge.
@@ -234,18 +277,29 @@ public partial class PlayerController : CharacterBody3D
 
 		// Prediction step.
 		_seq++;
-		Vector2 input = ReadInput();
+		SampleMoveInput(); // reads gesture + feint, advances machine one tick
+
+		// During a committed move, send Vector2.Zero to the server so it
+		// runs Move(zero) → deceleration, which approximates the locked/recovering
+		// state and bounds server/client divergence in M3. The Active burst still
+		// diverges; reconciliation smooths it via _smoothOffset.
+		// (Doubt cycle 2, finding: Valid trade-off, documented above.)
+		Vector2 moveInput = _machine.IsActive ? Vector2.Zero : ReadInput();
 
 		if (_pending.Count >= PendingCap)
 			_pending.Dequeue(); // oldest evicted; 2-s silence required to hit this
 
-		_pending.Enqueue((_seq, input));
-		Move(input, delta);
+		_pending.Enqueue((_seq, moveInput));
+
+		if (_machine.IsActive)
+			TickCommittedMoveBehavior(delta);
+		else
+			Move(moveInput, delta);
 
 		// Send input to server. UnreliableOrdered: dropped packets are gone,
 		// but arriving packets are always in seq order (no regress to stale input).
 		// Source: RpcId(peerId, MethodName.X) — peerId 1 = server.
-		RpcId(1, MethodName.SubmitInput, _seq, input.X, input.Y);
+		RpcId(1, MethodName.SubmitInput, _seq, moveInput.X, moveInput.Y);
 	}
 
 	/// <summary>
@@ -431,6 +485,85 @@ public partial class PlayerController : CharacterBody3D
 	private static Vector2 ReadInput()
 	{
 		return Input.GetVector("move_left", "move_right", "move_forward", "move_backward");
+	}
+
+	// ── Committed-move input and behavior (M3) ───────────────────────────────
+
+	/// <summary>
+	/// Samples gesture input, feeds the recognizer, and advances the committed-
+	/// move machine one tick. Called at the top of every local-player tick so
+	/// JustEnteredActive is correct when TickCommittedMoveBehavior reads it.
+	///
+	/// Right-stick gestures (gamepad): routed through RightStickGestureRecognizer.
+	/// Keyboard fallback (Q): triggers a crossover (right burst) directly,
+	/// bypassing the recognizer — simpler timing without a gamepad.
+	/// Feint modifier (E key / L1): aborts a crossover during its startup window.
+	///
+	/// Note: Input.GetVector / IsActionJustPressed read the local machine's hardware.
+	/// This is correct for listen-server (the host IS the local player). If a
+	/// dedicated server (M6) runs this path, it would need refactoring — but that
+	/// scenario is excluded by the IsLocalPlayer guard in _PhysicsProcess.
+	/// </summary>
+	private void SampleMoveInput()
+	{
+		Vector2 aim = Input.GetVector("aim_left", "aim_right", "aim_up", "aim_down");
+		GestureResult gesture = _recognizer.Sample(aim);
+
+		// Keyboard Q = immediate crossover (right burst). Takes precedence over
+		// the recognizer so the keyboard and gamepad paths don't double-Begin().
+		if (Input.IsActionJustPressed("move_crossover"))
+			_machine.Begin(new Crossover(burstDirection: +1f));
+		else if (gesture.Kind == GestureKind.Crossover)
+			_machine.Begin(new Crossover(gesture.Direction));
+
+		// Feint modifier: abort during the startup window.
+		// The machine enforces the feint-window guard; false return is silent.
+		if (Input.IsActionJustPressed("move_feint"))
+			_machine.Feint();
+
+		_machine.Tick(); // advance one frame — always called, including Inactive (no-op)
+	}
+
+	/// <summary>
+	/// Applies the committed-move velocity effect for the current phase and calls
+	/// MoveAndSlide(). Called instead of Move() while _machine.IsActive.
+	///
+	/// Startup  — Velocity zeroed: movement locked so the telegraph is readable.
+	///            Do NOT smooth or blend — clunky startup is intentional (ADR-0003).
+	/// Active   — Burst velocity SET on JustEnteredActive; maintained through all
+	///            Active ticks so the lateral separation spans the full duration.
+	///            SET not += : additive velocity would overshoot on reconcile replay.
+	///            (Doubt cycle 2, finding #4 — actionable: sustain burst.)
+	/// Recovery — Decelerate toward zero: the punish window (ADR-0003). Player
+	///            cannot re-input; wrong reads are paid for here.
+	///
+	/// Note: MoveAndSlide() may clip Velocity on wall contact (finding #9, valid
+	/// trade-off). Recovery decelerates from whatever clipped value results —
+	/// acceptable for M3.
+	/// </summary>
+	private void TickCommittedMoveBehavior(double delta)
+	{
+		switch (_machine.Phase)
+		{
+			case MovePhase.Startup:
+				Velocity = Vector3.Zero;
+				MoveAndSlide();
+				break;
+
+			case MovePhase.Active:
+				// Set the burst velocity on the first Active tick; on subsequent
+				// Active ticks the same velocity is maintained (no else-zero here).
+				// MoveAndSlide() applies it each tick, producing sustained separation.
+				if (_machine.JustEnteredActive && _machine.CurrentMove is Crossover crossover)
+					Velocity = new Vector3(crossover.BurstDirection * BurstSpeed, 0f, 0f);
+				MoveAndSlide();
+				break;
+
+			case MovePhase.Recovery:
+				Velocity = Velocity.MoveToward(Vector3.Zero, Decel * (float)delta);
+				MoveAndSlide();
+				break;
+		}
 	}
 
 	// ── Shared motion step ────────────────────────────────────────────────────
