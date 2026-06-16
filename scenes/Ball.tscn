@@ -1,0 +1,17 @@
+[gd_scene format=3 uid="uid://deqwcrx0qbthi"]
+
+[ext_resource type="Script" uid="uid://daoimm0eih1jf" path="res://scripts/Ball/BallController.cs" id="1_d73vv"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_d73vv"]
+albedo_color = Color(0.8980392, 0.36078432, 0.05490196, 1)
+
+[sub_resource type="SphereMesh" id="SphereMesh_ig1eg"]
+material = SubResource("StandardMaterial3D_d73vv")
+radius = 0.12
+height = 0.24
+
+[node name="Ball" type="Node3D" unique_id=783251786]
+script = ExtResource("1_d73vv")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=2001365288]
+mesh = SubResource("SphereMesh_ig1eg")
