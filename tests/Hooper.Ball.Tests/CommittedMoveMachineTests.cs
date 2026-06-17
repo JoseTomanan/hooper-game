@@ -458,4 +458,161 @@ public class CommittedMoveMachineTests
 
         Assert.Equal(MovePhase.Inactive, m.Phase);
     }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // ForceState — unconditional network resync (M4, issue #21)
+    // ═════════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void ForceState_FromInactive_SetsPhaseRegardlessOfLegality()
+    {
+        // Active is not reachable directly from Inactive in the legal phase
+        // graph, but ForceState must bypass that graph entirely — this is
+        // exactly the divergence-repair scenario reconciliation needs.
+        var m = NewMachine();
+
+        m.ForceState(MovePhase.Active, frameInPhase: 1, TestMove());
+
+        Assert.Equal(MovePhase.Active, m.Phase);
+    }
+
+    [Fact]
+    public void ForceState_SetsFrameInPhase()
+    {
+        var m = NewMachine();
+
+        m.ForceState(MovePhase.Startup, frameInPhase: 3, TestMove());
+
+        Assert.Equal(3, m.FrameInPhase);
+    }
+
+    [Fact]
+    public void ForceState_SetsCurrentMove()
+    {
+        var m = NewMachine();
+        var move = TestMove();
+
+        m.ForceState(MovePhase.Startup, frameInPhase: 0, move);
+
+        Assert.Same(move, m.CurrentMove);
+    }
+
+    [Fact]
+    public void ForceState_ToInactive_ClearsCurrentMove()
+    {
+        // Simulates a client whose local prediction lagged the server: the
+        // server says the move already completed back to Inactive.
+        var m = NewMachine();
+        m.Begin(TestMove());
+
+        m.ForceState(MovePhase.Inactive, frameInPhase: 0, move: null);
+
+        Assert.Null(m.CurrentMove);
+    }
+
+    [Fact]
+    public void ForceState_ToActive_JustEnteredActiveIsFalse()
+    {
+        // A forced resync is the machine catching up to where the server
+        // already is, not "entering Active this tick" — JustEnteredActive
+        // must stay false even when phase == Active, so the caller doesn't
+        // incorrectly re-fire the one-shot Active effect (e.g. the burst).
+        var m = NewMachine();
+
+        m.ForceState(MovePhase.Active, frameInPhase: 1, TestMove());
+
+        Assert.False(m.JustEnteredActive);
+    }
+
+    [Fact]
+    public void ForceState_OverwritesPriorLocalPrediction()
+    {
+        // Local prediction ran ahead (Begin + a few ticks); the server
+        // disagrees (still Inactive, e.g. Begin() was rejected server-side
+        // because the server's copy was still in Recovery). ForceState must
+        // win over whatever the local machine predicted.
+        var m = NewMachine();
+        m.Begin(TestMove());
+        TickN(m, 2);
+
+        m.ForceState(MovePhase.Inactive, frameInPhase: 0, move: null);
+
+        Assert.Equal(MovePhase.Inactive, m.Phase);
+        Assert.Null(m.CurrentMove);
+    }
+
+    [Fact]
+    public void ForceState_NonInactivePhaseWithNullMove_NormalizesToInactive()
+    {
+        // Doubt cycle 1, finding #6: a non-Inactive phase with no move is
+        // nonsensical (Tick() dereferences CurrentMove! unconditionally
+        // whenever Phase != Inactive) and would crash the physics loop on the
+        // next Tick(). ForceState must defend against this combination rather
+        // than trust the caller — normalizing to Inactive instead of crashing.
+        var m = NewMachine();
+
+        m.ForceState(MovePhase.Active, frameInPhase: 1, move: null);
+
+        Assert.Equal(MovePhase.Inactive, m.Phase);
+        Assert.Null(m.CurrentMove);
+    }
+
+    // ═════════════════════════════════════════════════════════════════════
+    // ShouldForceInactive — reconciliation gate (M4, issue #21, doubt cycle 2)
+    // ═════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void ShouldForceInactive_ServerInactiveClientInStartup_ReturnsFalse()
+    {
+        // Startup grace window: a transient one-RTT confirmation delay is
+        // expected on every legitimate move attempt and has no visible
+        // effect yet (Velocity is zero during Startup either way).
+        bool result = CommittedMoveMachine.ShouldForceInactive(
+            localPhase: MovePhase.Startup, localIsActive: true, serverPhase: MovePhase.Inactive);
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void ShouldForceInactive_ServerInactiveClientInActive_ReturnsTrue()
+    {
+        // The real punish-window-violation case: the client's Begin() was
+        // rejected server-side (still mid-Recovery from a prior move) but the
+        // client predicted ahead into Active anyway.
+        bool result = CommittedMoveMachine.ShouldForceInactive(
+            localPhase: MovePhase.Active, localIsActive: true, serverPhase: MovePhase.Inactive);
+
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void ShouldForceInactive_ServerInactiveClientInRecovery_ReturnsTrue()
+    {
+        bool result = CommittedMoveMachine.ShouldForceInactive(
+            localPhase: MovePhase.Recovery, localIsActive: true, serverPhase: MovePhase.Inactive);
+
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void ShouldForceInactive_ServerActiveClientInActive_ReturnsFalse()
+    {
+        // Both sides agree a move is running — FrameInPhase is deliberately
+        // not compared (doubt cycle 1, finding #2), so no correction fires
+        // even though the broadcast is structurally stale.
+        bool result = CommittedMoveMachine.ShouldForceInactive(
+            localPhase: MovePhase.Active, localIsActive: true, serverPhase: MovePhase.Active);
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void ShouldForceInactive_ServerInactiveClientInactive_ReturnsFalse()
+    {
+        // Nothing to correct — both already agree.
+        bool result = CommittedMoveMachine.ShouldForceInactive(
+            localPhase: MovePhase.Inactive, localIsActive: false, serverPhase: MovePhase.Inactive);
+
+        Assert.False(result);
+    }
 }
