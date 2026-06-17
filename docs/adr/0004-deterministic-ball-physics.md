@@ -2,6 +2,9 @@
 
 - **Status:** Accepted
 - **Date:** 2026-05-28
+- **Refined:** 2026-06-17 — clarified that the cosmetic-only / never-authoritative
+  rule for visual effects generalises beyond the ball to **player visual
+  representation** (mesh, facing, lean). See the last bullet under *Consequences*.
 - **Superseded-by:** —
 
 ---
@@ -59,3 +62,17 @@ and must be unit-testable without a running Godot instance.
   leaking into the authoritative state. If visual secondary effects are needed
   (ball spin, cloth, etc.), keep them purely cosmetic and client-side only,
   never part of the authoritative state.
+- **This cosmetic-only rule is not ball-specific — it governs all visual
+  representation, including the player.** The player's visual mesh, its
+  [cosmetic facing][] (rotation toward movement direction), and its [burst
+  lean][] during a committed move are presentation only: derived locally, never
+  networked, and never read back into authoritative state or netcode. The
+  authoritative player is a capsule collider driven by deterministic movement
+  and the committed-move machine; the humanoid mesh hangs off that as decoration.
+  A swap of the visual (capsule → humanoid) or an added facing/lean must never
+  change what the server simulates or what reconciliation corrects. Identical
+  reasoning to the ball: anything that influences authoritative state must be
+  deterministic and server-owned; anything cosmetic stays client-side.
+
+[cosmetic facing]: ../../CONTEXT.md
+[burst lean]: ../../CONTEXT.md
