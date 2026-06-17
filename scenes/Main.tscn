@@ -34,7 +34,7 @@ albedo_color = Color(0.63529414, 0.1254902, 0.12156863, 1)
 size = Vector3(0.92, 0.61, 0.05)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rarhs"]
-albedo_color = Color(0, 0.77254903, 0, 1)
+albedo_color = Color(0.5176471, 0.5176471, 0.5019608, 1)
 
 [node name="Main" type="Node3D" unique_id=1204416892]
 
