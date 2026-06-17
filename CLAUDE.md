@@ -41,11 +41,13 @@ game-dev knowledge on the human's part.
   commit; wrong reads are punished.
 - **Subordinate systems** (live INSIDE the spacing spine, not co-equal pillars):
   timing windows (shot release, steal, block) and stamina / resource.
-- **Legibility is a competitive requirement, not an aesthetic:** startup frames
-  must be visibly telegraphed so both players can make fair reads. Clunkiness is
-  bounded — floor: never smoothed to the point of hiding commitment frames
-  (polished sports-game feel destroys the mind game); ceiling: never exaggerated
-  or comedic (Undisputed 3, not Goat Simulator). See
+- **Legibility is a competitive requirement, not an aesthetic:** committed moves
+  must engage the whole body (planted feet, weight, recovery) so startup frames
+  are visibly telegraphed and both players can make fair reads. Bounded — primary
+  anti-goal: *arcade decoupling* of action from physical commitment (unplanted
+  shots, move-and-strike, free cancels — *EA UFC 5*), which kills realism and the
+  mind game at once; secondary anti-goal: manufactured comedic jank (*Goat
+  Simulator*). Polish itself is fine. Target feel is *Undisputed 3*. See
   [ADR-0003](docs/adr/0003-input-model-hybrid.md).
 - **Defense:** symmetric core (mirror footwork + committed reads) with a
   deliberate asymmetric tilt toward reaction.

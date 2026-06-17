@@ -2,6 +2,9 @@
 
 - **Status:** Accepted
 - **Date:** 2026-05-28
+- **Refined:** 2026-06-17 — anti-goal reframed from "polished sports-game feel" to
+  *arcade decoupling of action from physical commitment*; polish is no longer
+  treated as the enemy. See *Frame legibility* below.
 - **Superseded-by:** —
 
 ---
@@ -41,25 +44,45 @@ Use a **hybrid input model**:
 
 ### Frame legibility is a competitive requirement
 
-Clunkiness in committed-move animation is not an aesthetic preference — it is a
-direct consequence of prioritising competitive integrity. Both players must be
-able to read the opponent's startup frames in real time. If startup frames are
-smoothed away for "feel," the mind game becomes invisible; the opponent cannot
-make a fair read and the core interaction collapses.
+A committed move must engage the **whole body**: feet plant, weight transfers, and
+the action runs a startup → active → recovery arc that cannot be decoupled or
+cancelled mid-way. This physical commitment does double duty — it is what makes the
+game read as *real*, and it is simultaneously the source of the read-and-punish
+mind game. Both players must be able to see the opponent's startup in real time; if
+a move can fire without the body committing to it, the punish window disappears and
+the core interaction collapses.
+
+Realism and competitive integrity therefore point the **same** direction. We are
+not trading one against the other — the body honestly committing is what buys us
+both at once.
 
 This is bounded on both sides:
 
-- **Floor:** animation must be clunky *enough* that startup frames are readable
-  in real time. Never smooth them toward a polished sports-game feel — that is
-  the anti-goal.
-- **Ceiling:** clunkiness must not be exaggerated or comedic. It exists only to
-  the precise degree legibility requires.
+- **The anti-goal — arcade decoupling.** Action that floats free of physical
+  constraint: a shot released with the feet unplanted, moving and striking at the
+  same time, any move that can be started and freely cancelled. This is the
+  *arcadey* feel we are avoiding. It fails twice over — it looks unreal *and* it
+  erases the commitment frames the duel is built on. **Smoothness/polish is not the
+  enemy:** a highly polished animation is welcome *as long as* it honestly shows
+  the body committing. The fault is decoupling action from the body, never
+  rendering that action cleanly.
+- **The other bound — manufactured jank.** Commitment must not be exaggerated into
+  comedy or clunkiness-as-style. Weight and recovery exist only to the precise
+  degree realism and legibility require — not as an aesthetic statement.
 
-**Reference axis:** target feel is *UFC Undisputed 3* — clunky because
-competitive and readable, not as a stylistic statement. Anti-target is *Goat
-Simulator* — clunkiness as comedy/jank. Animation notes, playtest requests, or
-assets pushing toward the comedic end contradict this decision; they do not
-refine it.
+**Reference axis:**
+- **Target — *UFC Undisputed 3*.** Strikes are committed: the body plants, the
+  player is accountable to startup and recovery, and reads are fair because the
+  commitment is visible.
+- **Primary anti-target — recent *EA Sports UFC* (UFC 5).** Feet not planted on
+  strikes, movement and striking decoupled, actions that cost no bodily
+  commitment — it reads as arcadey and poorly grounded, and it would destroy the
+  mind game.
+- **Secondary anti-target — *Goat Simulator*.** The opposite failure: clunkiness
+  as comedy/jank. Do not manufacture exaggerated clunk for its own sake.
+
+Animation notes, playtest requests, or assets pushing toward either anti-target
+contradict this decision; they do not refine it.
 
 ## Consequences
 
