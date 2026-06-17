@@ -418,4 +418,55 @@ public class BallStateMachineTests
 
         Assert.True(caught);
     }
+
+    // ═════════════════════════════════════════════════════════════════════
+    // ForceState — unconditional network resync (M4, issue #20)
+    // ═════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void ForceState_FromHeld_SetsStateRegardlessOfLegality()
+    {
+        // InFlight is not a legal direct edge from Held in the transition
+        // graph, but ForceState must bypass that graph entirely — this is
+        // exactly the divergence-repair scenario reconciliation needs.
+        var sm = NewMachine(holderId: 1);
+
+        sm.ForceState(BallState.InFlight, holderPeerId: 0);
+
+        Assert.Equal(BallState.InFlight, sm.Current);
+    }
+
+    [Fact]
+    public void ForceState_FromHeld_SetsHolderRegardlessOfLegality()
+    {
+        var sm = NewMachine(holderId: 1);
+
+        sm.ForceState(BallState.InFlight, holderPeerId: 0);
+
+        Assert.Equal(0, sm.HolderPeerId);
+    }
+
+    [Fact]
+    public void ForceState_ToHeldWithNewHolder_OverwritesHolderId()
+    {
+        // Simulates a client whose local prediction lagged the server: the
+        // server says the ball is already Held by peer 2, force-resync.
+        var sm = NewMachine(holderId: 1);
+        sm.Shoot(); // Held -> InFlight, holder cleared
+
+        sm.ForceState(BallState.Held, holderPeerId: 2);
+
+        Assert.Equal(2, sm.HolderPeerId);
+    }
+
+    [Fact]
+    public void ForceState_SameStateDifferentHolder_UpdatesHolderOnly()
+    {
+        var sm = NewMachine(holderId: 1);
+        sm.StartDribble();
+
+        sm.ForceState(BallState.Dribbling, holderPeerId: 1);
+
+        Assert.Equal(BallState.Dribbling, sm.Current);
+    }
 }
