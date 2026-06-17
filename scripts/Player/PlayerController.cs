@@ -53,17 +53,45 @@ namespace Hooper.Player;
 /// authoritative replayed position; the MeshInstance3D child is offset by
 /// _smoothOffset and lerps back to local zero each frame, hiding the snap.
 ///
-/// ── Committed-move integration (M3, local-only) ──────────────────────────────
+/// ── Committed-move integration (M3 local-only → M4 server-authoritative) ─────
 /// From M3, local players drive a CommittedMoveMachine + RightStickGestureRecognizer
 /// alongside the existing prediction loop. The machine and recognizer live directly
 /// here so they share Velocity ownership without a second node fighting for it.
 ///
-/// M3 limitation (Doubt cycle 2): committed moves are not networked. The server
-/// always runs Move() — during a committed move the client sends Vector2.Zero as
-/// movement input, so the server decelerates while the client runs startup/burst/
-/// recovery behavior. The remaining divergence (especially during the Active burst)
-/// is corrected by the existing reconcile smooth-correction mechanism. Full server
-/// authority over committed moves is M4 work (#21).
+/// M4 (#21): the server now runs an authoritative CommittedMoveMachine for EVERY
+/// player node, not just its own. A remote player's machine cannot be driven by
+/// SampleMoveInput() — that reads local hardware (Input.GetVector / IsActionJustPressed),
+/// which on the server would read the SERVER's own gamepad, not the remote client's.
+/// Instead the remote client reports discrete move-start/feint events over RPC
+/// (RequestBeginMove / RequestFeint); the server applies them to its own _machine
+/// copy for that node, which enforces the legal phase graph for free — in
+/// particular, Begin() returning false while the server's copy is still mid-Recovery
+/// IS the server-authoritative punish window: a client cannot self-report being out
+/// of recovery, because the server's own frame count is what Begin()/Feint() check.
+/// _machine.Tick() is called once per physics tick for every player node regardless
+/// of role (it no-ops while Inactive), separately from SampleMoveInput() which is
+/// only ever called for the locally-controlled player.
+///
+/// The client still predicts its own _machine locally for zero perceived lag
+/// (Begin()/Feint() succeed immediately client-side), then asks the server via the
+/// same RPCs. If the server's copy is still mid-Recovery when the RPC arrives (e.g.
+/// high latency), the server's Begin() fails and the server stays Inactive/Recovery
+/// while the client briefly believes it started a new move — ReconcileFromServer's
+/// Step 0 repairs exactly this case (server confirms Inactive once the client has
+/// progressed past Startup) via CommittedMoveMachine.ForceState(). It deliberately
+/// does NOT force-match FrameInPhase every tick the way BallController forces
+/// BallState (#20) — ReceiveState is ~1-RTT stale, so a strict-equality force would
+/// rewind the predicted phase continuously under any nonzero latency. See Step 0's
+/// comment in ReconcileFromServer for the full reasoning (#21 doubt cycle 1, finding #2).
+///
+/// The Vector2.Zero-during-a-move behavior in TickClientOwnPlayer (below) is kept
+/// as-is for the regular Move() path. Phase/punish-window correctness no longer
+/// depends on it (the server independently drives _machine/TickCommittedMoveBehavior
+/// for remote players now), but it is still the input the reconciliation replay
+/// (Step 3) reproduces for any buffered tick during Active — that replay calls
+/// Move() only, never TickCommittedMoveBehavior, so the burst itself still isn't
+/// reconstructed on replay. That residual position-only divergence is the same
+/// accepted, _smoothOffset-covered trade-off this file already had before M4.
 ///
 /// Source: https://docs.godotengine.org/en/stable/tutorials/networking/high_level_multiplayer.html
 /// </summary>
@@ -178,6 +206,17 @@ public partial class PlayerController : CharacterBody3D
 	private Vector3 _serverPos;
 	private Vector3 _serverVel;
 
+	/// <summary>
+	/// Authoritative committed-move phase received from the server, staged for
+	/// reconcile (M4, #21). ReceiveState's payload also carries frameInPhase/
+	/// moveId/moveParam (the wire format includes them, satisfying "frames
+	/// remaining... in the server tick broadcast" literally) but only Phase is
+	/// stored — see ReconcileFromServer's Step 0 comment for why FrameInPhase
+	/// is deliberately not compared, which leaves nothing else to act on here
+	/// for the one move type that exists today.
+	/// </summary>
+	private MovePhase _serverMovePhase;
+
 	/// <summary>True once ReceiveState has arrived since the last _PhysicsProcess.</summary>
 	private bool _hasNewState;
 
@@ -233,7 +272,7 @@ public partial class PlayerController : CharacterBody3D
 	/// </summary>
 	private void TickServerOwnPlayer(double delta)
 	{
-		SampleMoveInput(); // reads gesture + feint, advances machine one tick
+		SampleMoveInput(isServer: true); // reads gesture + feint, advances machine one tick
 
 		if (_machine.IsActive)
 			TickCommittedMoveBehavior(delta);
@@ -246,18 +285,36 @@ public partial class PlayerController : CharacterBody3D
 		// Broadcast authoritative state to all clients.
 		// ackSeq = 0 because the host has no client-input queue to acknowledge.
 		// Source: Rpc(MethodName.X) broadcasts to all peers.
-		Rpc(MethodName.ReceiveState, 0, GlobalPosition, Velocity);
+		Rpc(MethodName.ReceiveState, 0, GlobalPosition, Velocity,
+			(int)_machine.Phase, _machine.FrameInPhase, MoveIdOf(_machine.CurrentMove), MoveParamOf(_machine.CurrentMove));
 	}
 
 	/// <summary>
 	/// SERVER's copy of a REMOTE PLAYER. Apply the latest input received via
 	/// SubmitInput, then broadcast authoritative state back to the client.
+	///
+	/// M4 (#21): mirrors TickServerOwnPlayer's structure — the server's own
+	/// _machine copy for this remote player is now authoritative, so Move()
+	/// is skipped while a committed move is active, exactly like the own-player
+	/// path. _machine.Tick() advances every tick regardless of role (it no-ops
+	/// while Inactive); the events that drive Begin()/Feint() arrive via
+	/// RequestBeginMove/RequestFeint, NOT SampleMoveInput() — there is no local
+	/// hardware to sample for someone else's player on this machine.
 	/// </summary>
 	private void TickServerRemotePlayer(double delta)
 	{
-		Move(_pendingInput, delta);
-		// Echo _serverAckedSeq so the client prunes its pending buffer.
-		Rpc(MethodName.ReceiveState, _serverAckedSeq, GlobalPosition, Velocity);
+		_machine.Tick();
+
+		if (_machine.IsActive)
+			TickCommittedMoveBehavior(delta);
+		else
+			Move(_pendingInput, delta);
+
+		// Echo _serverAckedSeq so the client prunes its pending buffer, plus
+		// the committed-move state piggybacked on the same broadcast (see
+		// ReceiveState below for the payload rationale).
+		Rpc(MethodName.ReceiveState, _serverAckedSeq, GlobalPosition, Velocity,
+			(int)_machine.Phase, _machine.FrameInPhase, MoveIdOf(_machine.CurrentMove), MoveParamOf(_machine.CurrentMove));
 	}
 
 	/// <summary>
@@ -277,13 +334,20 @@ public partial class PlayerController : CharacterBody3D
 
 		// Prediction step.
 		_seq++;
-		SampleMoveInput(); // reads gesture + feint, advances machine one tick
+		SampleMoveInput(isServer: false); // reads gesture + feint, advances machine one tick, RPCs server
 
-		// During a committed move, send Vector2.Zero to the server so it
-		// runs Move(zero) → deceleration, which approximates the locked/recovering
-		// state and bounds server/client divergence in M3. The Active burst still
-		// diverges; reconciliation smooths it via _smoothOffset.
-		// (Doubt cycle 2, finding: Valid trade-off, documented above.)
+		// During a committed move, send Vector2.Zero to the server as this
+		// tick's regular movement input (independent of the RequestBeginMove/
+		// RequestFeint RPCs that now carry the move itself, #21). This still
+		// matters for one specific path post-M4: Step 3 of ReconcileFromServer
+		// replays buffered pending inputs through Move() only — it does not
+		// replay TickCommittedMoveBehavior — so a replayed tick during Active
+		// reproduces a zero-input decel, not the burst. The PHASE/punish-window
+		// divergence this once stood in for is now fully resolved server-side
+		// (#21); this residual is purely positional and was already an
+		// accepted, _smoothOffset-covered trade-off before M4 (originally
+		// "Doubt cycle 2" on this file) — M4 narrows what it's compensating
+		// for but doesn't need to eliminate it.
 		Vector2 moveInput = _machine.IsActive ? Vector2.Zero : ReadInput();
 
 		if (_pending.Count >= PendingCap)
@@ -364,6 +428,96 @@ public partial class PlayerController : CharacterBody3D
 		_pendingInput   = new Vector2(inputX, inputY);
 	}
 
+	/// <summary>
+	/// Called BY THE CLIENT on the SERVER's copy of this node, requesting the
+	/// authoritative start of a committed move.
+	///
+	/// Transfer mode: Reliable — a deliberate deviation from SubmitInput's
+	/// UnreliableOrdered, mirroring BallController.RequestShoot (#20). This is a
+	/// ONE-TIME discrete event with no redundancy: a dropped packet means the
+	/// player pressed crossover and nothing happened, a correctness bug, not a
+	/// smoothing concern. Reliable's head-of-line-blocking risk (the reason
+	/// ReceiveState/SubmitInput avoid it) doesn't apply because this fires
+	/// rarely — once per committed move attempt, not every physics tick — so
+	/// there is no continuous stream for a retransmit to stall.
+	///
+	/// moveId/param is the minimal payload to reconstruct a move. Only one
+	/// concrete move exists today ("crossover", carrying BurstDirection as
+	/// param) so a small if-chain is correct and proportionate — see
+	/// CommittedMove.Id's doc comment, which already anticipated this exact use.
+	/// Do not generalize into a move registry/factory until a second move exists.
+	///
+	/// Security: same sender check as SubmitInput — PlayerController has a
+	/// per-peer node identity (Name == peer ID), unlike the Ball, which had to
+	/// validate against HolderPeerId instead.
+	///
+	/// _machine.Begin() enforces the legal phase graph using the SERVER's own
+	/// frame count: if the server's copy is still mid-Recovery from a prior
+	/// move, Begin() returns false here and the request is silently dropped.
+	/// THIS is what makes the punish window server-authoritative — a client
+	/// cannot self-report being out of recovery, because the server never
+	/// takes the client's word for its own phase.
+	///
+	/// (#21 doubt cycle 1, finding #1) Exactly which physics tick this RPC is
+	/// processed on relative to this node's own _machine.Tick() that same
+	/// frame is not something Godot's MultiplayerApi guarantees — the accept/
+	/// reject boundary can land on either side of a single tick depending on
+	/// packet arrival timing. This is a ±1-tick (≈16ms) nondeterminism inherent
+	/// to ANY RPC-plus-fixed-tick-loop design (it equally affects SubmitInput
+	/// and BallController.RequestShoot); resolving it would require lockstep
+	/// simulation, well beyond M4's scope. Begin()'s own legality check is
+	/// still the sole authority regardless of which side of that boundary the
+	/// packet lands on.
+	///
+	/// (#21 doubt cycle 1, finding #5) No sequence/idempotency guard, unlike
+	/// SubmitInput's seq check — none is needed: Begin() is already idempotent
+	/// under duplicate or out-of-order delivery (a second call while already
+	/// active just no-ops and returns false), so there is no stale-input-regression
+	/// risk the way continuous movement input has.
+	/// </summary>
+	[Rpc(MultiplayerApi.RpcMode.AnyPeer,
+		 CallLocal = false,
+		 TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void RequestBeginMove(string moveId, float param)
+	{
+		int senderId = Multiplayer.GetRemoteSenderId();
+		if (senderId.ToString() != Name)
+		{
+			GD.PrintErr($"[PlayerController] Unauthorized RequestBeginMove from peer {senderId} for node '{Name}'");
+			return;
+		}
+
+		if (moveId == "crossover")
+			_machine.Begin(new Crossover(burstDirection: param));
+		// Unrecognized moveId: silently ignored. No other move type exists yet;
+		// a malformed/forged moveId from a tampered client simply does nothing.
+	}
+
+	/// <summary>
+	/// Called BY THE CLIENT on the SERVER's copy of this node, requesting the
+	/// authoritative feint abort. Same transfer-mode rationale as
+	/// RequestBeginMove above — a one-shot discrete event, Reliable is correct.
+	///
+	/// _machine.Feint() enforces the feint window using the SERVER's own frame
+	/// count (FrameInPhase), not anything the client reports — so a client
+	/// attempting to feint outside the legal window simply gets a no-op here,
+	/// exactly like a local Feint() call would.
+	/// </summary>
+	[Rpc(MultiplayerApi.RpcMode.AnyPeer,
+		 CallLocal = false,
+		 TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void RequestFeint()
+	{
+		int senderId = Multiplayer.GetRemoteSenderId();
+		if (senderId.ToString() != Name)
+		{
+			GD.PrintErr($"[PlayerController] Unauthorized RequestFeint from peer {senderId} for node '{Name}'");
+			return;
+		}
+
+		_machine.Feint();
+	}
+
 	// ── Client RPC: receive server state ─────────────────────────────────────
 
 	/// <summary>
@@ -382,16 +536,35 @@ public partial class PlayerController : CharacterBody3D
 	/// CallLocal = false: the host's own player is already authoritative,
 	/// so the host must not reconcile against its own broadcasts.
 	/// Source: https://docs.godotengine.org/en/stable/tutorials/networking/high_level_multiplayer.html
+	///
+	/// M4 (#21): committed-move state piggybacks on this EXISTING broadcast
+	/// rather than a parallel channel — it already fires every server tick with
+	/// the same staleness/redundancy properties committed-move state needs.
+	/// movePhase is sent as int, not the MovePhase enum directly — same
+	/// Variant-safety reasoning BallController.ReceiveState already uses for
+	/// BallState (#20): Godot's [Rpc] Variant marshaling is not guaranteed to
+	/// box a raw C# enum cleanly. moveId is empty string for Inactive/no move;
+	/// moveParam is the move's reconstruction payload (today: Crossover's
+	/// BurstDirection), 0 when not applicable.
+	///
+	/// (#21 doubt cycle 1, finding #2) frameInPhase/moveId/moveParam are received
+	/// but deliberately NOT stored — only movePhase feeds reconciliation (see
+	/// ReconcileFromServer's Step 0). They still travel on the wire because the
+	/// issue text literally asks for "frames remaining" in the broadcast and a
+	/// future second move type may need them for richer reconciliation; storing
+	/// fields nothing reads today would just be dead state.
 	/// </summary>
 	[Rpc(MultiplayerApi.RpcMode.Authority,
 		 CallLocal = false,
 		 TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
-	private void ReceiveState(int ackSeq, Vector3 pos, Vector3 vel)
+	private void ReceiveState(int ackSeq, Vector3 pos, Vector3 vel,
+		int movePhase, int frameInPhase, string moveId, float moveParam)
 	{
-		_serverPos      = pos;
-		_serverVel      = vel;
-		_serverAckedSeq = ackSeq;
-		_hasNewState    = true;
+		_serverPos       = pos;
+		_serverVel       = vel;
+		_serverAckedSeq  = ackSeq;
+		_serverMovePhase = (MovePhase)movePhase;
+		_hasNewState     = true;
 	}
 
 	// ── Reconciliation ────────────────────────────────────────────────────────
@@ -412,9 +585,75 @@ public partial class PlayerController : CharacterBody3D
 	/// Why replay? The server state is ~1 RTT old when it arrives. Snapping to
 	/// it without replay shows the player jumping backward by 1 RTT of movement.
 	/// Replay brings the prediction forward to "now".
+	///
+	/// Step 0 (M4, #21): committed-move correction is narrower than a naive
+	/// "force to match the broadcast" — see the long comment on Step 0 below
+	/// for why FrameInPhase is deliberately NOT part of the trigger condition
+	/// (#21 doubt cycle 1, finding #2: comparing it for equality against a
+	/// structurally ~1-RTT-stale broadcast force-rewinds every active move
+	/// under any nonzero latency, since the client's local FrameInPhase is
+	/// *always* further along than the last snapshot once a move is running).
 	/// </summary>
 	private void ReconcileFromServer(Vector3 authPos, Vector3 authVel, int ackSeq, double delta)
 	{
+		// Step 0: only correct the ONE divergence that actually matters for
+		// the contract — the server confirms the move the client predicted
+		// never took hold (rejected because the server's own copy was still
+		// mid-Recovery, i.e. a real punish-window violation the client
+		// mispredicted past). We deliberately do NOT compare FrameInPhase, and
+		// we do NOT correct while the client is still in Startup:
+		//
+		//   - FrameInPhase: ReceiveState is ~1 RTT stale, same as position.
+		//     Once Phase/move identity agree, Tick() is a pure function of
+		//     elapsed ticks with no further network dependency — exactly like
+		//     the Ball's InFlight arc, which is never force-rewound to a stale
+		//     frame count, only its position is smoothed. Forcing FrameInPhase
+		//     to the stale broadcast value every tick would yank the predicted
+		//     phase backward continuously for the entire duration of any move,
+		//     visibly mangling the Active burst's timing — the opposite of
+		//     "client predicts committed-move phase locally."
+		//
+		//   - Startup grace: a transient one-RTT delay before the server's
+		//     confirming broadcast arrives is expected on EVERY legitimate
+		//     move attempt (RequestBeginMove takes one-way latency to reach
+		//     the server, then another to come back). Nothing externally
+		//     visible has happened yet during Startup — Velocity is zero
+		//     either way — so reverting before the confirmation has had a
+		//     fair chance to arrive would falsely flicker every single
+		//     committed move, not just mispredicted ones. By the time the
+		//     client's local Active phase begins, StartupFrames worth of
+		//     one-way trip time has already elapsed, which covers all but
+		//     pathological RTTs — consistent with the latency tolerance the
+		//     rest of this prediction system already assumes.
+		//
+		// Only one move type exists today, so a "different move Id while both
+		// sides are active" case is unreachable; revisit this gate when a
+		// second move type makes that distinguishable from this check.
+		//
+		// (#21 doubt cycle 2, finding #1) Known bounded gap: if the client begins
+		// a SECOND move right as its own local Recovery from a FIRST move
+		// ends, while the server's copy of the first move is still finishing
+		// Recovery (not yet Inactive — the server's Recovery end is itself up
+		// to ~1 RTT behind the client's belief that it ended), the server
+		// rejects the second Begin() and stays in the (truthful) Recovery
+		// phase, not Inactive — so this gate, which only fires on
+		// serverSaysInactive, does not fire immediately. The client runs a
+		// fully local "phantom" second move (including a one-tick burst
+		// glimpse) until its own local copy ticks past Startup while the
+		// server is STILL reporting (the real) Inactive for that phantom
+		// move — at which point this gate correctly reverts it, typically
+		// within one tick of the burst applying. This is a bounded, self-
+		// correcting, LOCAL-ONLY visual artifact: the server's truth (what
+		// every other player and the actual game outcome depend on) was never
+		// wrong, and the phantom move's local duration roughly matches the
+		// real wait the player would have needed anyway, so there is no
+		// recovery-frame skip to exploit. Handling this perfectly would
+		// require tracking "is there an unconfirmed Begin in flight" the way
+		// the seq/ack system does for movement — more machinery than this
+		// milestone calls for; documented here as an accepted trade-off.
+		if (CommittedMoveMachine.ShouldForceInactive(_machine.Phase, _machine.IsActive, _serverMovePhase))
+			_machine.ForceState(MovePhase.Inactive, frameInPhase: 0, move: null);
+
 		// Step 1: prune confirmed inputs.
 		while (_pending.Count > 0 && _pending.Peek().seq <= ackSeq)
 			_pending.Dequeue();
@@ -487,7 +726,7 @@ public partial class PlayerController : CharacterBody3D
 		return Input.GetVector("move_left", "move_right", "move_forward", "move_backward");
 	}
 
-	// ── Committed-move input and behavior (M3) ───────────────────────────────
+	// ── Committed-move input and behavior (M3 local-only → M4 networked) ─────
 
 	/// <summary>
 	/// Samples gesture input, feeds the recognizer, and advances the committed-
@@ -503,23 +742,34 @@ public partial class PlayerController : CharacterBody3D
 	/// This is correct for listen-server (the host IS the local player). If a
 	/// dedicated server (M6) runs this path, it would need refactoring — but that
 	/// scenario is excluded by the IsLocalPlayer guard in _PhysicsProcess.
+	///
+	/// M4 (#21): after a local Begin()/Feint() succeeds, also tell the server —
+	/// UNLESS this machine IS the server (TickServerOwnPlayer), in which case the
+	/// local _machine call above already happened on the authoritative copy and
+	/// no RPC is needed. This mirrors BallController.TryShoot's split: the
+	/// server-own-player path applies directly; only a client predicting ahead
+	/// of the server needs to ask for the authoritative transition.
 	/// </summary>
-	private void SampleMoveInput()
+	private void SampleMoveInput(bool isServer)
 	{
 		Vector2 aim = Input.GetVector("aim_left", "aim_right", "aim_up", "aim_down");
 		GestureResult gesture = _recognizer.Sample(aim);
 
 		// Keyboard Q = immediate crossover (right burst). Takes precedence over
 		// the recognizer so the keyboard and gamepad paths don't double-Begin().
+		float crossoverDir = float.NaN;
 		if (Input.IsActionJustPressed("move_crossover"))
-			_machine.Begin(new Crossover(burstDirection: +1f));
+			crossoverDir = +1f;
 		else if (gesture.Kind == GestureKind.Crossover)
-			_machine.Begin(new Crossover(gesture.Direction));
+			crossoverDir = gesture.Direction;
+
+		if (!float.IsNaN(crossoverDir) && _machine.Begin(new Crossover(crossoverDir)) && !isServer)
+			RpcId(1, MethodName.RequestBeginMove, "crossover", crossoverDir);
 
 		// Feint modifier: abort during the startup window.
 		// The machine enforces the feint-window guard; false return is silent.
-		if (Input.IsActionJustPressed("move_feint"))
-			_machine.Feint();
+		if (Input.IsActionJustPressed("move_feint") && _machine.Feint() && !isServer)
+			RpcId(1, MethodName.RequestFeint);
 
 		_machine.Tick(); // advance one frame — always called, including Inactive (no-op)
 	}
@@ -565,6 +815,32 @@ public partial class PlayerController : CharacterBody3D
 				break;
 		}
 	}
+
+	// ── Committed-move network serialization helpers (M4, #21) ───────────────
+
+	/// <summary>
+	/// The moveId to broadcast for the current move, or "" if none — the
+	/// ReceiveState payload's sentinel for "Inactive / no move running".
+	/// Only one concrete move type exists today (see RequestBeginMove's doc
+	/// comment for why a small if-chain, not a registry, is appropriate here).
+	/// </summary>
+	private static string MoveIdOf(CommittedMove move) => move?.Id ?? "";
+
+	/// <summary>
+	/// The move's reconstruction payload to broadcast — today, Crossover's
+	/// BurstDirection. 0 when there is no current move or the move type
+	/// carries no extra payload.
+	///
+	/// (#21 doubt cycle 1, finding #2) _serverMoveId/_serverMoveParam are stored
+	/// from every broadcast — satisfying "active move included in the server
+	/// tick broadcast" — but Step 0 of ReconcileFromServer deliberately does
+	/// not reconstruct a CommittedMove from them today; only _serverMovePhase
+	/// is consulted (see that method's comment). They are reserved for a
+	/// richer reconciliation once a second move type makes "client and server
+	/// agree a move is active, but disagree on WHICH one" a reachable case.
+	/// </summary>
+	private static float MoveParamOf(CommittedMove move) =>
+		move is Crossover crossover ? crossover.BurstDirection : 0f;
 
 	// ── Shared motion step ────────────────────────────────────────────────────
 

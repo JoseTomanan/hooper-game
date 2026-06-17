@@ -149,6 +149,90 @@ public sealed class CommittedMoveMachine
         return true;
     }
 
+    // ── Network reconciliation ───────────────────────────────────────────────
+
+    /// <summary>
+    /// Unconditionally overwrites Phase, FrameInPhase, and CurrentMove to match
+    /// a server snapshot (M4, issue #21) — same role as BallStateMachine.ForceState
+    /// (M4, issue #20).
+    ///
+    /// Why this exists alongside Begin()/Tick()/Feint(): those methods enforce
+    /// the legal phase graph from the CALLER's current phase, which is correct
+    /// for locally-driven gameplay but wrong for reconciliation. A client's
+    /// locally predicted phase can legitimately disagree with the server (e.g.
+    /// the client predicted Begin() a tick before the server's copy left
+    /// Recovery, so the server rejected it and stayed Inactive while the client
+    /// believes it is in Startup). Calling Begin()/Feint() to force a resync
+    /// would fail exactly when the edge graph doesn't already allow it — the
+    /// precise situation reconciliation needs to repair. A discrete phase has
+    /// no "smooth" partial-correction the way position does, so the only
+    /// correct fix is to snap directly to the authoritative value.
+    /// </summary>
+    /// <param name="phase">Authoritative phase from the server broadcast.</param>
+    /// <param name="frameInPhase">Authoritative frame-in-phase from the server broadcast.</param>
+    /// <param name="move">
+    /// Authoritative move reconstructed from the broadcast's moveId/payload, or
+    /// null when phase is Inactive (no move running).
+    /// </param>
+    public void ForceState(MovePhase phase, int frameInPhase, CommittedMove? move)
+    {
+        // (Doubt cycle 1, finding #6) A non-Inactive phase with no move is
+        // nonsensical — Tick() dereferences CurrentMove! unconditionally
+        // whenever Phase != Inactive, so a caller passing this combination
+        // (e.g. a malformed broadcast) would crash the physics loop on the
+        // very next Tick(). Normalize defensively rather than trust the
+        // caller, mirroring this class's own stated design value: returning
+        // false/normalizing instead of throwing keeps _PhysicsProcess safe.
+        if (phase != MovePhase.Inactive && move == null)
+            phase = MovePhase.Inactive;
+
+        Phase        = phase;
+        FrameInPhase = phase == MovePhase.Inactive ? 0 : frameInPhase;
+        CurrentMove  = phase == MovePhase.Inactive ? null : move;
+        // JustEnteredActive is a one-shot, single-tick signal for the LOCAL
+        // Tick() loop to apply an Active-phase effect (e.g. the crossover
+        // burst). A forced resync is not "entering Active this tick" in that
+        // sense — it is the machine catching up to where the server already
+        // is — so JustEnteredActive is always cleared here, never set, even
+        // when phase == Active. The caller (PlayerController) does not depend
+        // on this RPC to trigger the burst; the server's own Tick() already
+        // raised it locally inside the server's authoritative simulation.
+        JustEnteredActive = false;
+    }
+
+    /// <summary>
+    /// Decides whether a client's local prediction should be force-corrected
+    /// back to Inactive, given the server's last-known phase (M4, issue #21,
+    /// second doubt cycle — extracted from PlayerController.ReconcileFromServer
+    /// so this decision is unit-testable; PlayerController itself cannot be,
+    /// since it extends a Godot Node and is excluded from the pure-class test
+    /// project by design).
+    ///
+    /// Deliberately narrow — see PlayerController.ReconcileFromServer's Step 0
+    /// comment for the full reasoning this codifies:
+    ///   - Only ever corrects TOWARD Inactive, never INTO a non-Inactive phase
+    ///     (there is no scenario where the server broadcast should make a
+    ///     client predict a move it didn't locally begin).
+    ///   - Ignores FrameInPhase entirely — ReceiveState is structurally ~1 RTT
+    ///     stale, so comparing exact frame counts would force-rewind every
+    ///     active move under any nonzero latency.
+    ///   - Gives Startup a grace window: a transient one-RTT delay before the
+    ///     server's confirmation arrives is expected on every legitimate move
+    ///     attempt and has no visible effect yet (Velocity is zero during
+    ///     Startup either way), so correcting during Startup would falsely
+    ///     flicker every committed move, not just mispredicted ones.
+    /// </summary>
+    /// <param name="localPhase">This machine's current Phase.</param>
+    /// <param name="localIsActive">This machine's current IsActive (equivalent to localPhase != Inactive, passed separately so callers don't need to duplicate that check).</param>
+    /// <param name="serverPhase">The phase from the most recent server broadcast.</param>
+    /// <returns>True if ForceState(Inactive, ...) should be called.</returns>
+    public static bool ShouldForceInactive(MovePhase localPhase, bool localIsActive, MovePhase serverPhase)
+    {
+        bool serverSaysInactive = serverPhase == MovePhase.Inactive;
+        bool clientPastStartup  = localIsActive && localPhase != MovePhase.Startup;
+        return serverSaysInactive && clientPastStartup;
+    }
+
     // ── Private helpers ───────────────────────────────────────────────────────
 
     private void EnterPhase(MovePhase next)
