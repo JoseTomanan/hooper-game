@@ -82,5 +82,5 @@ Players = NodePath("../Players")
 [node name="Lobby" parent="." unique_id=1910977576 node_paths=PackedStringArray("NetworkManager") instance=ExtResource("2_rvslj")]
 NetworkManager = NodePath("../NetworkManager")
 
-[node name="Ball" parent="." unique_id=783251786 node_paths=PackedStringArray("Holder") instance=ExtResource("3_0bbpv")]
-Holder = NodePath("../Players")
+[node name="Ball" parent="." unique_id=783251786 node_paths=PackedStringArray("Players") instance=ExtResource("3_0bbpv")]
+Players = NodePath("../Players")
