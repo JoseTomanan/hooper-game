@@ -40,6 +40,10 @@ Do not add design reasoning here. If a decision belongs somewhere, it belongs in
 
 **Change of pace** — Varying movement speed within the continuous neutral game to manipulate the defender's positioning. Driven by left stick. see: [ADR-0003](docs/adr/0003-input-model-hybrid.md)
 
+**Cosmetic facing** — The player visual's rotation to face its horizontal movement direction, holding the last facing when stationary. Derived locally each frame from velocity; never networked and never part of authoritative state. see: [ADR-0004](docs/adr/0004-deterministic-ball-physics.md), issue #39
+
+**Burst lean** — A cosmetic tilt of the player visual toward the crossover's burst direction during the Active phase, returning upright in Recovery. Counters the decoupled-from-body "slide" look (ADR-0003 anti-goal) without a rig. Visual-only; never affects velocity or authoritative state. see: [ADR-0003](docs/adr/0003-input-model-hybrid.md), [ADR-0004](docs/adr/0004-deterministic-ball-physics.md), issue #39
+
 ---
 
 ## Committed moves / input
@@ -121,6 +125,8 @@ Do not add design reasoning here. If a decision belongs somewhere, it belongs in
 **Locked ADR** — An ADR with `Status: Accepted`. Its decision may not be changed without explicitly revisiting it and updating the status and superseded-by fields. see: [CLAUDE.md §3](CLAUDE.md)
 
 **partial class** — Every Godot node script is a C# `partial` class extending a Godot node type (e.g. `public partial class PlayerController : CharacterBody3D`). Mandatory; Godot's source-generator tooling requires it. see: [ADR-0001](docs/adr/0001-engine-godot-csharp.md)
+
+**Readability pass** — The presentation track that swaps the placeholder capsule for a humanoid visual and adds cosmetic facing, burst lean, and directional shadows for legibility — without advancing the gameplay milestone spine. Visual changes only; authoritative state and netcode are untouched. see: issues #37–#41
 
 ---
 
