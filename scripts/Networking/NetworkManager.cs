@@ -38,6 +38,13 @@ public partial class NetworkManager : Node
 	/// </summary>
 	private const int MaxClients = 2;
 
+	/// <summary>
+	/// Players in a full match — the 1v1 cap, reported in discovery beacons so a
+	/// browser can show "1/2" (ADR-0007). The real ceiling is enforced by the
+	/// MultiplayerSpawner's spawn_limit (=2) in Main.tscn, not by MaxClients.
+	/// </summary>
+	public const int MaxPlayersPerMatch = 2;
+
 	// ── Exports ─────────────────────────────────────────────────────────────
 
 	/// <summary>
@@ -65,6 +72,14 @@ public partial class NetworkManager : Node
 	/// Emitted when the connection fails (client side only).
 	/// </summary>
 	[Signal] public delegate void ConnectionFailedEventHandler();
+
+	/// <summary>
+	/// Emitted on the SERVER (both listen-server and dedicated) once the ENet
+	/// server is up, carrying the game port. DiscoveryBroadcaster listens for this
+	/// to begin advertising the server on the LAN (ADR-0007). A pure client never
+	/// starts a server, so it never fires there.
+	/// </summary>
+	[Signal] public delegate void ServerStartedEventHandler(int port);
 
 	// ── State ───────────────────────────────────────────────────────────────
 
@@ -177,6 +192,11 @@ public partial class NetworkManager : Node
 		Multiplayer.PeerDisconnected += OnPeerDisconnected;
 
 		GD.Print("[NetworkManager] Server up on port ", port);
+
+		// Tell the discovery broadcaster (if any) to start advertising on the LAN.
+		// Fires for both topologies, so listen-server host games are discoverable
+		// too — a free win, same code path (ADR-0007).
+		EmitSignal(SignalName.ServerStarted, port);
 		return true;
 	}
 
