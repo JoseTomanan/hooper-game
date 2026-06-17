@@ -287,6 +287,85 @@ When all four tests pass, **Milestone 3 is proven**. Close issues #14, #15,
 
 ---
 
+## Milestone 4 editor tasks — networked ball + committed moves (issue #22)
+
+**Do these only after PR #36 (`feat/milestone-4`) is merged, or checked out
+locally for verification before merge.** The C# must compile before you can
+re-wire the changed export.
+
+### Step 1 — Build first
+
+Click the **hammer icon**. Godot must see the updated `BallController` class
+(its old `Holder` export was renamed to `Players`) before the Inspector shows
+the new field.
+
+### Step 2 — Re-wire the Ball's `Players` export
+
+`Main.tscn`'s `Ball` node was wired to the old `Holder` export, which no
+longer exists on the script — that wiring is now stale and the new `Players`
+field is empty.
+
+1. Open `Main.tscn`. Select the `Ball` node in the Scene panel.
+2. In the **Inspector**, find the **Players** field (under the script's
+   exported properties). It should be empty/unassigned.
+3. Drag the existing `Players` node (the spawn root, direct child of `Main`
+   — the same node `NetworkManager`'s own **Players** export already points
+   to) into this field.
+4. Save the scene (**Ctrl+S**). This is the same spawn-root node-path pattern
+   already used by `NetworkManager` and `MultiplayerSpawner` — the ball now
+   resolves its holder at runtime by peer ID instead of a fixed node.
+
+If the Inspector still shows no `Players` field, the build in Step 1 did not
+succeed — check the Output panel for errors.
+
+### Step 3 — Verify (issue #22 acceptance criteria)
+
+Open **Debug → Run Multiple Instances → 2**, then run.
+
+- **Window 1 (Host):** click **Host**.
+- **Window 2 (Join):** click **Join** (defaults to `127.0.0.1:7777`).
+
+With both windows on the court:
+
+1. **Dribble sync** — move the host's player around. In both windows, confirm
+   the ball tracks the host's hand smoothly with no snapping.
+2. **Shot sync** — as the current holder, press the shoot input
+   (`ball_shoot`, from M2). Confirm in both windows: the ball leaves on a
+   parabolic arc, and the arc looks the same in both windows (small
+   release-point differences under latency are expected and self-correct —
+   see code comment on `BallController.ApplyShootLocally`). Off-target shots
+   should bounce off the rim/backboard and go loose; on-target shots should
+   print `[Ball] Clean make.`
+   - Note (M4 known limit, not a bug to chase): the ball can only be shot
+     once per session right now — there's no catch/possession-contest yet
+     (future issue). One shot per window is enough to verify sync.
+3. **Committed move sync** — on EITHER player, trigger a crossover
+   (`move_crossover` / right-stick flick, from M3). Confirm in the OTHER
+   window:
+   - The startup freeze, lateral burst, and recovery slide all appear,
+     matching what the triggering window shows.
+   - No visible desync or teleport/snap during any phase.
+4. **Punish window consistency** — during a player's Recovery phase (from
+   step 3), confirm in both windows that the player cannot start a second
+   committed move or otherwise act until Recovery completes. This should be
+   true on both the triggering window AND the other window's view of that
+   player.
+
+When all four are true, **issue #22 is proven** — close it, then close the
+epic #19.
+
+### Troubleshooting M4
+
+| Symptom | Likely cause |
+|---|---|
+| `[BallController] Players is not assigned` in Output | Step 2 wiring missed or scene not saved |
+| Ball stays at world origin / doesn't follow holder | Same as above — `Players` export empty |
+| `[BallController] Unauthorized RequestShoot from peer X` | A non-holder tried to shoot — expected if input fired on the wrong window, not a bug |
+| Remote crossover never appears on the other window | Confirm both windows are on the merged `feat/milestone-4` build (old client code never sent `RequestBeginMove`) |
+| Ball or player snaps instead of smoothing | Check Output for `[BallController]`/`[PlayerController]` reconciliation errors |
+
+---
+
 ## What to deliberately NOT touch yet
 
 - Materials / shaders — gray placeholder surfaces are fine.
