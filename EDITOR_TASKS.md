@@ -391,11 +391,48 @@ when launched with `--dedicated` — and stay a normal client/host otherwise.
 3. In the **Inspector**, assign its two exports:
    - **Network Manager** → drag in the `NetworkManager` node (sibling in Main).
    - **Lobby** → drag in the `Lobby` instance (sibling in Main).
-4. Save the scene (**Ctrl+S**).
 
-On a normal launch (no `--dedicated`) this node does nothing and the Lobby behaves
-exactly as before. You can confirm that now: press **F5** — the lobby should still
-appear and Host/Join still work.
+Then add the **DiscoveryBroadcaster** (so the server advertises itself on the LAN):
+
+4. Right-click `Main` → Add Child Node → `Node`. Rename it `DiscoveryBroadcaster`.
+5. **Attach Script** → `scripts/Networking/DiscoveryBroadcaster.cs`.
+6. In the **Inspector**, assign:
+   - **Network Manager** → the `NetworkManager` node.
+   - **Players** → the `Players` spawn root (same node `NetworkManager.Players`
+     points at).
+   - **Server Name** → optional; defaults to "Hooper Server".
+7. Save the scene (**Ctrl+S**).
+
+On a normal launch (no `--dedicated`) the bootstrap does nothing and the Lobby
+behaves exactly as before; the broadcaster only starts advertising once a server
+actually comes up (Host or `--dedicated`). Confirm now: press **F5** — the lobby
+should still appear and Host/Join still work.
+
+### Step 2b — Build the server browser scene (Server Browser, ADR-0007)
+
+This is the discovery-driven join UI. It lists servers found on the LAN and joins
+the one you pick — no IP typing.
+
+1. **Scene → New Scene** → root node `CanvasLayer`. Save as `scenes/ServerBrowser.tscn`.
+2. Add a child **ItemList** (rename it `ServerListUi`). Size/position it so rows are
+   visible; leave it empty (rows are added at runtime).
+3. Add a child **Node** and **Attach Script** →
+   `scripts/Networking/DiscoveryListener.cs`. (This is the UDP listener the browser
+   reads from.)
+4. Select the root `CanvasLayer` → **Attach Script** →
+   `scripts/Networking/ServerBrowser.cs`.
+5. In the root's **Inspector**, assign:
+   - **Discovery** → the `DiscoveryListener` child you just added.
+   - **Network Manager** → the `NetworkManager` node in `Main.tscn` (drag from the
+     Main scene tree — you may need both scenes open, or instance the browser into
+     Main first, then assign).
+   - **Server List Ui** → the `ServerListUi` ItemList child.
+6. Back in `Main.tscn`: right-click `Main` → Instantiate Child Scene →
+   `scenes/ServerBrowser.tscn`. Position it where you want the list to appear
+   (e.g. beside or below the Lobby). Save.
+
+To **use** it: run a client, and discovered servers appear in the list. Double-click
+a row (or select + Enter) to join. On success the browser hides, same as the Lobby.
 
 ### Step 3 — Create the dedicated-server export preset
 
@@ -442,9 +479,10 @@ press **Join** (on one machine use `127.0.0.1`).
 2. Two clients **Join by IP** → both capsules appear on both clients, the ball's
    tipoff goes to a real client (it does NOT sit frozen at the court centre/origin),
    and M4 movement/ball/committed-move sync still works.
-3. The server browser (its wiring steps are added in the Stage 4 update to this
-   section) **may** list the local server, depending on whether your OS loops the
-   LAN broadcast back to the same machine.
+3. The server browser (wired in Step 2b) **may** list the local server,
+   depending on whether your OS loops the LAN broadcast back to the same machine.
+   If it appears, double-clicking the row should join it — proving the
+   discovery→JoinGame handoff end to end on one box.
 
 **NOT provable on one machine — needs a second LAN box (leave unproven until then):**
 - A server on machine A appearing in the browser on machine B (true LAN discovery).

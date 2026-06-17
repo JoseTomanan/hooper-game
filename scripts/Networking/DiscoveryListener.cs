@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Godot;
 
 namespace Hooper.Networking;
@@ -30,9 +31,10 @@ public partial class DiscoveryListener : Node
 	/// <summary>Seconds without a beacon before a server is dropped from the list.</summary>
 	[Export] public float TimeoutSeconds { get; set; } = 3.0f;
 
-	/// <summary>The live discovered-server list. The browser reads this to draw rows.</summary>
-	public ServerList Servers { get; } = new();
+	/// <summary>A fresh snapshot of currently-discovered servers, for the browser to draw rows.</summary>
+	public IReadOnlyList<ServerListEntry> DiscoveredServers => _servers.Servers;
 
+	private readonly ServerList _servers = new();
 	private PacketPeerUdp _udp;
 	private bool _listening;
 
@@ -87,10 +89,10 @@ public partial class DiscoveryListener : Node
 
 			// Strict decode: any non-beacon UDP traffic on this port is dropped.
 			if (ServerBeacon.TryDecode(data, out ServerBeacon beacon))
-				Servers.Observe(senderIp, beacon, now);
+				_servers.Observe(senderIp, beacon, now);
 		}
 
 		// Expire servers that stopped broadcasting (closed / left the network).
-		Servers.PruneExpired(now, TimeoutSeconds);
+		_servers.PruneExpired(now, TimeoutSeconds);
 	}
 }
