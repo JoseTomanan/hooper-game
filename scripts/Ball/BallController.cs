@@ -19,29 +19,52 @@ namespace Hooper.Ball;
 /// This class only sequences those per tick and copies the result into
 /// GlobalPosition. Keep it that way: new ball behaviour goes in a pure class.
 ///
-/// ── M2 scope (local, single-player, no networking) ────────────────────────
-/// For Milestone 2 there is no possession system or netcode yet. The ball
-/// starts attached to an exported Holder and immediately begins dribbling, so
-/// the human can see the dribble cycle. Pressing the "ball_shoot" input fires
-/// a shot toward the rim; on a rim/backboard contact the ball goes Loose and
-/// settles on the floor; an on-target shot swishes through cleanly.
-/// Possession hand-off and the shot/dribble inputs proper move to M3/M4.
+/// ── M4 scope: networking the ball (ADR-0002, issue #20) ───────────────────
+/// Unlike PlayerController, the Ball is a SINGLE shared node identical in
+/// every peer's copy of Main.tscn — there is no "remote copy of someone
+/// else's object" the way other players' capsules are. The role split is
+/// keyed on "is this machine the server" and "is the local peer the current
+/// holder", not on node identity:
 ///
-/// ── Determinism note ──────────────────────────────────────────────────────
-/// _PhysicsProcess delta is variable; the pure steppers take dt as a parameter.
-/// We pass the FIXED tick (1/PhysicsTicksPerSecond) — not the wall-clock delta —
-/// so the trajectory is reproducible and will match a server replay in M4.
+///   EVERY peer predicts the ball locally, every tick, via the same Tick*
+///   methods used here for M2 (TickHeld/TickDribbling/TickInFlight/TickLoose).
+///   The ball's motion is a pure function of elapsed time and fixed inputs
+///   (dribble phase, arc integration, rim/backboard math) — not of per-peer
+///   hardware — so there is nothing to "interpolate" the way a remote
+///   player's capsule needs lerping. The one exception is the shoot trigger,
+///   which has real input-authority rules (see TryShoot below).
+///
+///   The SERVER additionally broadcasts an authoritative snapshot
+///   (state, position, velocity, holder) every tick by calling the
+///   ReceiveState RPC on all peers. Every other peer reconciles to that
+///   snapshot: discrete state is forced
+///   to match (no partial-correction is meaningful for an enum); continuous
+///   position uses the same mesh-offset smooth-correction trick
+///   PlayerController uses for capsules, so a divergence drifts into place
+///   rather than snapping.
+///
+/// ── Holder resolution ──────────────────────────────────────────────────
+/// The ball has no fixed holder node — possession changes at runtime as
+/// StateMachine.HolderPeerId changes. Players are an editor-wired Players export
+/// (the same spawn-root NodePath pattern NetworkManager uses) and the actual
+/// holder node is looked up by peer ID string each tick via GetNodeOrNull.
+/// This replaces the old static Holder export, which pointed at the spawn
+/// root itself (Main.tscn wired it to "../Players", not an actual player
+/// node — there was never a static node to drag in M2 because Players is
+/// populated by runtime spawning, not authored in the editor).
 /// </summary>
 public partial class BallController : Node3D
 {
 	// ── Holder / aim wiring (set in the editor) ───────────────────────────
 
 	/// <summary>
-	/// The player node the ball attaches to while Held / Dribbling. The dribble
-	/// cycle tracks this node's XZ each tick. Null-guarded: if unset the ball
-	/// simply dribbles in place at the origin.
+	/// Spawn root whose children are player nodes, named by peer ID — the
+	/// same identity contract NetworkManager.Players relies on. The ball
+	/// resolves its current holder node from here each tick via
+	/// StateMachine.HolderPeerId, because possession changes at runtime and
+	/// there is no single static node to wire in the editor.
 	/// </summary>
-	[Export] public Node3D Holder { get; set; }
+	[Export] public Node Players { get; set; }
 
 	// ── Dribble tunables ──────────────────────────────────────────────────
 
@@ -102,6 +125,20 @@ public partial class BallController : Node3D
 	/// </summary>
 	[Export] public string ShootAction { get; set; } = "ball_shoot";
 
+	// ── Reconciliation tuning (mirrors PlayerController's tunables) ───────
+
+	/// <summary>
+	/// Fraction of the visual snap distance corrected per physics frame.
+	/// Same role as PlayerController.ReconcileLerpRate.
+	/// </summary>
+	[Export] public float ReconcileLerpRate { get; set; } = 0.3f;
+
+	/// <summary>
+	/// Divergence smaller than this (metres) is accepted silently.
+	/// Same role as PlayerController.ReconcileSnapThreshold.
+	/// </summary>
+	[Export] public float ReconcileSnapThreshold { get; set; } = 0.001f;
+
 	// ── Composed pure logic ───────────────────────────────────────────────
 
 	/// <summary>The state machine that tracks which ball moment we're in.</summary>
@@ -120,7 +157,50 @@ public partial class BallController : Node3D
 	/// </summary>
 	private ShotArc _arc;
 
-	// ── Lifecycle ─────────────────────────────────────────────────────────
+	// ── Visual-correction mesh reference ───────────────────────────────────
+
+	/// <summary>
+	/// The MeshInstance3D child whose local Position is offset during smooth
+	/// correction — same trick PlayerController uses. This node (the root
+	/// Node3D) snaps immediately to the authoritative position on reconcile
+	/// so any future position-based logic never reads a stale value; only the
+	/// mesh drifts visually.
+	/// </summary>
+	private Node3D _mesh;
+
+	/// <summary>
+	/// Visual-only offset applied to the MeshInstance3D child. SET to the
+	/// divergence when reconciliation finds a mismatch; lerped to zero each
+	/// frame. SET, not accumulated — mirrors PlayerController._smoothOffset.
+	/// </summary>
+	private Vector3 _smoothOffset;
+
+	// ── Authoritative snapshot staging (client + server's own broadcast) ──
+
+	/// <summary>Latest broadcast received from the server, staged for reconcile.</summary>
+	private BallState _serverState;
+	private Vector3 _serverPos;
+	private Vector3 _serverVel;
+	private int _serverHolderPeerId;
+
+	/// <summary>True once ReceiveState has arrived since the last _PhysicsProcess.</summary>
+	private bool _hasNewState;
+
+	// ── Role helpers ──────────────────────────────────────────────────────
+
+	private bool IsServer => Multiplayer.IsServer();
+
+	/// <summary>
+	/// True when the LOCAL peer is the ball's current holder. Drives shoot-
+	/// input authority (see TryShoot) — only the holder's machine may
+	/// legally trigger a shot, mirroring PlayerController's IsLocalPlayer
+	/// check but keyed on ball possession rather than node identity (the
+	/// Ball has no per-peer node to compare Name against).
+	/// </summary>
+	private bool IsLocalHolder =>
+		Multiplayer.GetUniqueId().ToString() == StateMachine.HolderPeerId.ToString();
+
+	// ── Lifecycle ───────────────────────────────────────────────────────────
 
 	public override void _Ready()
 	{
@@ -129,19 +209,48 @@ public partial class BallController : Node3D
 			RimCenter, RimRadius, BallRadius, RimRestitution,
 			BoardCenter, BoardNormal, BoardHalfWidth, BoardHalfHeight, BoardRestitution);
 
-		// M2: ball starts in the holder's possession and immediately dribbles,
-		// so the dribble cycle is visible the moment the scene runs. (Possession
-		// hand-off becomes the network layer's job in M4.)
-		StateMachine = new BallStateMachine(initialHolderPeerId: 0);
+		// M4: peer 1 (host) starts with the ball — simplest sensible tipoff
+		// default. This is not a rules system, just a starting condition;
+		// a real tipoff/possession system is future-issue territory.
+		StateMachine = new BallStateMachine(initialHolderPeerId: 1);
 		StateMachine.StartDribble();
+
+		_mesh = GetNodeOrNull<Node3D>("MeshInstance3D");
+		if (_mesh == null)
+			GD.PrintErr("[BallController] MeshInstance3D child not found; smooth correction disabled.");
+
+		// (Doubt cycle 1, finding #6/#9) Players is unassigned → HolderPosition()
+		// would silently fall back to world origin every tick with no diagnostic,
+		// which is exactly the kind of failure CLAUDE.md asks us to surface loudly
+		// rather than let a non-game-dev human chase a silently teleporting ball.
+		// Must be wired to the SAME spawn-root node as NetworkManager.Players —
+		// the peer-ID-as-name identity contract only holds if both point at it.
+		if (Players == null)
+			GD.PrintErr("[BallController] Players is not assigned. Wire it in the Inspector to the same spawn root as NetworkManager.Players.");
 	}
 
 	// ── Tick loop ─────────────────────────────────────────────────────────
 
 	public override void _PhysicsProcess(double delta)
 	{
+		// Reconcile against the freshest server snapshot BEFORE predicting
+		// this tick, same ordering rationale as PlayerController.TickClientOwnPlayer:
+		// the correction baseline should be the latest authoritative data we have.
+		//
+		// (Doubt cycle 1, finding #5) The server itself never reaches this
+		// branch: ReceiveState has CallLocal = false, so _hasNewState stays
+		// false on the server. The server's StateMachine IS the ground truth
+		// it just broadcast — there is nothing for it to reconcile against,
+		// unlike every other peer. This mirrors PlayerController exactly (the
+		// host's own player never reconciles against its own broadcast either).
+		if (_hasNewState)
+		{
+			ReconcileFromServer();
+			_hasNewState = false;
+		}
+
 		// Fixed timestep — NOT the variable wall-clock delta — so the arc is
-		// deterministic and reproducible by a future server replay (M4).
+		// deterministic and reproducible identically on server and every client.
 		float dt = 1.0f / Engine.PhysicsTicksPerSecond;
 
 		switch (State)
@@ -151,6 +260,31 @@ public partial class BallController : Node3D
 			case BallState.InFlight:  TickInFlight(dt);  break;
 			case BallState.Loose:     TickLoose(dt);     break;
 		}
+
+		// Only the server broadcasts authoritative truth. Every peer (server
+		// included) already predicted its own copy above; the server's
+		// broadcast is what every OTHER peer reconciles against.
+		if (IsServer)
+		{
+			Rpc(MethodName.ReceiveState,
+				(int)StateMachine.Current, GlobalPosition, CurrentVelocity(), StateMachine.HolderPeerId);
+		}
+
+		ApplySmoothCorrection();
+	}
+
+	/// <summary>
+	/// Velocity to report in the broadcast. Held/Dribbling have no ShotArc
+	/// (_arc is only constructed on Shoot), so report Zero rather than a
+	/// stale value from a previous flight.
+	/// </summary>
+	private Vector3 CurrentVelocity() => _arc?.Velocity ?? Vector3.Zero;
+
+	/// <summary>Resolves the current holder's world position, or the origin if none.</summary>
+	private Vector3 HolderPosition()
+	{
+		Node holder = Players?.GetNodeOrNull(StateMachine.HolderPeerId.ToString());
+		return (holder as Node3D)?.GlobalPosition ?? Vector3.Zero;
 	}
 
 	// ── Per-state behaviour ───────────────────────────────────────────────
@@ -158,8 +292,7 @@ public partial class BallController : Node3D
 	/// <summary>Ball cradled at hand height above the holder. Shoot to release.</summary>
 	private void TickHeld()
 	{
-		Vector3 origin = Holder?.GlobalPosition ?? Vector3.Zero;
-		GlobalPosition = origin + Vector3.Up * DribbleHandHeight;
+		GlobalPosition = HolderPosition() + Vector3.Up * DribbleHandHeight;
 		TryShoot();
 	}
 
@@ -167,8 +300,7 @@ public partial class BallController : Node3D
 	private void TickDribbling(float dt)
 	{
 		_dribble.Advance(dt);
-		Vector3 origin = Holder?.GlobalPosition ?? Vector3.Zero;
-		GlobalPosition = _dribble.GetBallPosition(origin);
+		GlobalPosition = _dribble.GetBallPosition(HolderPosition());
 		TryShoot();
 	}
 
@@ -216,18 +348,222 @@ public partial class BallController : Node3D
 		GlobalPosition = _arc.Position;
 	}
 
-	// ── Shot trigger ──────────────────────────────────────────────────────
+	// ── Shot trigger / input authority (M4) ─────────────────────────────────
 
 	/// <summary>
-	/// Releases a shot toward the rim if the shoot input is pressed this tick.
-	/// Legal only from Held / Dribbling; Shoot() enforces that and returns false
-	/// otherwise, in which case we leave the arc untouched.
+	/// Releases a shot toward the rim if the local shoot input fires this tick
+	/// AND the local peer holds shoot authority.
+	///
+	/// Authority rules (mirrors PlayerController's server-vs-client split,
+	/// but keyed on ball possession rather than node identity):
+	///   - If this machine is the SERVER and also the current holder: apply
+	///     the shot directly. The server IS the input source for its own
+	///     player, exactly like TickServerOwnPlayer reads hardware directly —
+	///     no RPC needed because there is no authority to defer to.
+	///   - If this machine is a CLIENT and the LOCAL peer is the current
+	///     holder: predict the shot immediately against the local _arc/
+	///     StateMachine copy (zero perceived lag), AND send RequestShoot to
+	///     the server so it can apply the authoritative transition. The
+	///     server's later broadcast reconciles away any divergence.
+	///   - Otherwise (this machine doesn't hold the ball): no local action.
+	///     A remote client's shot reaches us only via the server's broadcast.
+	///
+	/// (Doubt cycle 1, finding #1/#2) Known M4 limitation, inherited from M2:
+	/// Shoot() clears HolderPeerId to 0, and no peer's unique ID is ever 0, so
+	/// IsLocalHolder can never be true again after a shot until something calls
+	/// Catch() to hand the ball back — which nothing does yet (TickLoose only
+	/// settles the ball on the floor; pickup/possession-contest input is a
+	/// future issue, not #20's scope). One shot per match session is the
+	/// current ceiling; this is acceptable for #20/#22's verification scope
+	/// (one dribble/shot/crossover pass) but is NOT a full possession loop.
 	/// </summary>
 	private void TryShoot()
 	{
 		if (!Input.IsActionJustPressed(ShootAction)) return;
-		if (!StateMachine.Shoot()) return;
+		if (!IsLocalHolder) return;
+
+		if (!ApplyShootLocally()) return;
+
+		// Clients additionally ask the server to make it official. The server
+		// (when it IS the holder) needed no RPC — it just applied the shot above.
+		if (!IsServer)
+			RpcId(1, MethodName.RequestShoot);
+	}
+
+	/// <summary>
+	/// Shared shot-application step: transitions the state machine and builds
+	/// the ShotArc. Used both by the predicting holder (TryShoot) and by the
+	/// server when fulfilling a RequestShoot from a remote holder.
+	/// </summary>
+	/// <returns>True if the shot was legal (Held/Dribbling) and applied.</returns>
+	///
+	/// (Doubt cycle 1, finding #3) The release point used here is whichever
+	/// GlobalPosition this machine currently has for the ball — the client's
+	/// own predicted position when the client is the holder, or the server's
+	/// (possibly up-to-1-RTT-different) view of that same holder's position
+	/// when the server applies a remote RequestShoot. These two release
+	/// points can briefly differ; this is expected, not a new failure mode —
+	/// the standard ReconcileFromServer pass on the next broadcast absorbs it
+	/// exactly like any other position divergence.
+	private bool ApplyShootLocally()
+	{
+		if (!StateMachine.Shoot()) return false;
 
 		_arc = new ShotArc(GlobalPosition, ShotTarget, ShotApexHeight, Gravity);
+		return true;
+	}
+
+	// ── Server RPC: receive shoot request from the holder ───────────────────
+
+	/// <summary>
+	/// Called BY A CLIENT (the current ball holder) on the SERVER, requesting
+	/// the authoritative shot transition.
+	///
+	/// Transfer mode: Reliable — a deliberate deviation from SubmitInput's
+	/// UnreliableOrdered. SubmitInput is continuous per-tick state: a dropped
+	/// packet is harmless because the next tick's packet supersedes it. A
+	/// shoot request is the opposite — a ONE-TIME discrete event with no
+	/// redundancy. If it's dropped, the player pressed the shoot button and
+	/// nothing happened, which is a correctness bug, not a smoothing concern.
+	/// Reliable's head-of-line-blocking risk (the reason ReceiveState and
+	/// SubmitInput avoid it) doesn't apply here because this RPC fires
+	/// rarely — once per shot, not 60 times a second — so there is no
+	/// continuous stream for a retransmit to stall.
+	///
+	/// Security: validate the sender against StateMachine.HolderPeerId, not
+	/// against Name — the Ball node has no peer-ID name (it is one shared
+	/// node, not one-per-peer like PlayerController), so HolderPeerId is the
+	/// only available authority record.
+	/// </summary>
+	[Rpc(MultiplayerApi.RpcMode.AnyPeer,
+		 CallLocal = false,
+		 TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void RequestShoot()
+	{
+		int senderId = Multiplayer.GetRemoteSenderId();
+		if (senderId != StateMachine.HolderPeerId)
+		{
+			GD.PrintErr($"[BallController] Unauthorized RequestShoot from peer {senderId} (holder is {StateMachine.HolderPeerId})");
+			return;
+		}
+
+		// The server may already be ahead of this request if its own tick
+		// got here first (e.g. extremely low latency) — ApplyShootLocally
+		// returns false harmlessly via StateMachine.Shoot()'s legality guard
+		// if the ball is no longer Held/Dribbling.
+		ApplyShootLocally();
+	}
+
+	// ── Client RPC: receive server state ────────────────────────────────────
+
+	/// <summary>
+	/// Called BY THE SERVER on all peers, broadcasting the authoritative ball
+	/// state. Mirrors PlayerController.ReceiveState's reasoning exactly:
+	///
+	/// Transfer mode: UnreliableOrdered — only the LATEST snapshot is useful,
+	/// and at 60 Hz Reliable's head-of-line blocking would cause exactly the
+	/// rubber-banding this broadcast exists to prevent. A dropped packet is
+	/// fine; the next tick's broadcast is fresher anyway.
+	///
+	/// state is sent as int, not the BallState enum directly: Godot's Variant
+	/// marshaling for [Rpc] parameters is not guaranteed to box a raw C# enum
+	/// cleanly, so we cast out and back in, mirroring how SubmitInput avoided
+	/// passing a raw Vector2 by splitting into floats.
+	///
+	/// CallLocal = false: the server already ran this exact tick's prediction
+	/// above (every peer always predicts), so the server must not re-apply
+	/// its own broadcast as if it were a correction — it is already
+	/// authoritative and reconciling against itself would be a no-op at best
+	/// and a redundant smoothing pass at worst.
+	///
+	/// (Doubt cycle 1, finding #4) The payload is trusted with no validation
+	/// in ReconcileFromServer below — RpcMode.Authority is engine-enforced:
+	/// only this node's multiplayer authority (the server, by default) can
+	/// successfully invoke this RPC at all, so a non-server peer cannot forge
+	/// a state/holder pair here. This is the same trust boundary
+	/// PlayerController.ReceiveState already relies on for its own payload.
+	/// </summary>
+	[Rpc(MultiplayerApi.RpcMode.Authority,
+		 CallLocal = false,
+		 TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
+	private void ReceiveState(int state, Vector3 pos, Vector3 vel, int holderPeerId)
+	{
+		_serverState         = (BallState)state;
+		_serverPos           = pos;
+		_serverVel           = vel;
+		_serverHolderPeerId  = holderPeerId;
+		_hasNewState         = true;
+	}
+
+	// ── Reconciliation ───────────────────────────────────────────────────
+
+	/// <summary>
+	/// Reconciles local prediction to the latest server snapshot.
+	///
+	/// Discrete state: forced to match exactly — there is no meaningful
+	/// "partial correction" of an enum, unlike continuous position. A
+	/// mismatch here means the local prediction took a different transition
+	/// than the server (e.g. it predicted a shot the server hasn't applied
+	/// yet, or missed a transition due to a dropped RequestShoot) — ForceState
+	/// repairs it unconditionally rather than silently keeping the stale
+	/// local value.
+	///
+	/// Continuous position: same mesh-offset smooth-correction trick
+	/// PlayerController uses. This node (treated as the "physics body" the
+	/// way CharacterBody3D is for PlayerController) snaps immediately to the
+	/// authoritative position so nothing reads a stale GlobalPosition;
+	/// the divergence is instead absorbed by the mesh child's local offset,
+	/// which lerps back to zero in ApplySmoothCorrection.
+	///
+	/// Velocity: resynced directly into _arc.Velocity (when in flight) so the
+	/// integrator's next Step() continues from the server's value rather than
+	/// drifting further from a stale local one.
+	/// </summary>
+	private void ReconcileFromServer()
+	{
+		if (StateMachine.Current != _serverState || StateMachine.HolderPeerId != _serverHolderPeerId)
+			StateMachine.ForceState(_serverState, _serverHolderPeerId);
+
+		Vector3 renderedPos = GlobalPosition;
+		GlobalPosition = _serverPos;
+
+		if (_serverState == BallState.InFlight || _serverState == BallState.Loose)
+		{
+			// _arc may be null on a client that hasn't predicted its own
+			// Shoot() yet (e.g. it just received the server's transition to
+			// InFlight before its own TryShoot ever ran) — construct a
+			// matching arc rather than dereferencing null.
+			if (_arc == null)
+				_arc = new ShotArc(_serverPos, ShotTarget, ShotApexHeight, Gravity);
+			_arc.Position = _serverPos;
+			_arc.Velocity = _serverVel;
+		}
+
+		Vector3 divergence = renderedPos - GlobalPosition;
+		if (divergence.Length() > ReconcileSnapThreshold)
+			_smoothOffset = divergence; // SET, not accumulated — see PlayerController.
+	}
+
+	/// <summary>
+	/// Lerps the visual-only MeshInstance3D offset toward zero each frame.
+	/// Identical mechanism to PlayerController.ApplySmoothCorrection.
+	/// </summary>
+	private void ApplySmoothCorrection()
+	{
+		if (_mesh == null)
+		{
+			_smoothOffset = Vector3.Zero;
+			return;
+		}
+
+		if (_smoothOffset.LengthSquared() < ReconcileSnapThreshold * ReconcileSnapThreshold)
+		{
+			_smoothOffset  = Vector3.Zero;
+			_mesh.Position = Vector3.Zero;
+			return;
+		}
+
+		_smoothOffset  = _smoothOffset.Lerp(Vector3.Zero, ReconcileLerpRate);
+		_mesh.Position = _smoothOffset;
 	}
 }

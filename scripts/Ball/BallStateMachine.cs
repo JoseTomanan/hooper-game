@@ -153,4 +153,31 @@ public sealed class BallStateMachine
         HolderPeerId = 0;
         return true;
     }
+
+    // ── Network reconciliation ───────────────────────────────────────────
+
+    /// <summary>
+    /// Unconditionally overwrites Current and HolderPeerId to match a server
+    /// snapshot (M4, issue #20).
+    ///
+    /// Why this exists alongside the transition methods above: those methods
+    /// enforce the legal edge graph from the CALLER's current state, which is
+    /// correct for locally-driven gameplay but wrong for reconciliation. A
+    /// client's locally predicted state can legitimately disagree with the
+    /// server (e.g. the client predicted Held→InFlight via Shoot() a tick
+    /// before the server did, or a dropped packet left the client one state
+    /// behind). Calling, say, Catch() to force a resync would fail and return
+    /// false whenever the client's CURRENT state doesn't have that edge —
+    /// exactly the situation reconciliation needs to repair. A discrete enum
+    /// has no "smooth" partial-correction the way position does; the only
+    /// correct fix for a mismatch is to snap directly to the authoritative
+    /// value, so this method bypasses the edge graph entirely.
+    /// </summary>
+    /// <param name="state">Authoritative state from the server broadcast.</param>
+    /// <param name="holderPeerId">Authoritative holder peer ID from the server broadcast.</param>
+    public void ForceState(BallState state, int holderPeerId)
+    {
+        Current      = state;
+        HolderPeerId = holderPeerId;
+    }
 }
