@@ -1,6 +1,7 @@
 using Godot;
 using System.Collections.Generic;
 using Hooper.Moves;
+using Hooper.Systems;
 
 namespace Hooper.Player;
 
@@ -231,6 +232,25 @@ public partial class PlayerController : CharacterBody3D
 	/// </summary>
 	private Vector3 _smoothOffset;
 
+	// ── Game-over freeze (#25) ──────────────────────────────────────────────────
+
+	/// <summary>
+	/// Cached GameManager reference, discovered via the "game_manager" group
+	/// (see GameManager's class doc "Discovery" — same pattern BallController
+	/// uses). Null-guarded loudly in _Ready; GetGameManager() below adds a
+	/// lazy re-lookup fallback for the (expected-rare) case a player node's
+	/// _Ready races ahead of GameManager's in the scene tree.
+	/// </summary>
+	private GameManager _gameManager;
+
+	/// <summary>Resolves _gameManager, re-querying the group if still null. See field doc.</summary>
+	private GameManager GetGameManager()
+	{
+		if (_gameManager == null)
+			_gameManager = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+		return _gameManager;
+	}
+
 	// ── Role helpers ──────────────────────────────────────────────────────────
 
 	private bool IsServer      => Multiplayer.IsServer();
@@ -245,12 +265,52 @@ public partial class PlayerController : CharacterBody3D
 		_mesh = GetNodeOrNull<Node3D>("MeshInstance3D");
 		if (_mesh == null)
 			GD.PrintErr("[PlayerController] MeshInstance3D child not found; smooth correction disabled.");
+
+		_gameManager = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+		if (_gameManager == null)
+			GD.PrintErr("[PlayerController] No node in group 'game_manager' found. Game-over freeze will not work until GameManager is added to the scene (issue #27).");
 	}
 
 	// ── Tick loop ─────────────────────────────────────────────────────────────
 
 	public override void _PhysicsProcess(double delta)
 	{
+		// (#25) Game-over freeze: skip movement entirely once the match has
+		// ended, on EVERY role (server's own player, server's remote-player
+		// copy, client's own player, client's remote-player copy) — a frozen
+		// match must look frozen for both players regardless of which
+		// machine is asking.
+		//
+		// Read off GameManager.IsGameOver, which itself reads the server's
+		// live Scoreboard on the server and the broadcast mirror everywhere
+		// else (see GameManager). This is deliberately NOT predicted: a
+		// player could not legally "predict" game-over locally without first
+		// predicting the score, and score is never predicted (see
+		// GameManager's class doc and BallController's matching freeze
+		// guard). The alternative — freezing based on a locally-predicted
+		// score threshold — would let a client freeze itself (or, worse,
+		// the OTHER player's remote copy) before the server agrees the game
+		// actually ended, which is a far worse user-facing bug than the
+		// ~1-RTT delay below.
+		//
+		// (#25 doubt cycle 1, finding #1) Doubt-checked the ~1-RTT delay
+		// before a client observes game-over: during that window the losing/
+		// winning client keeps moving for up to one round trip after the
+		// server has already decided the match. Is that acceptable, or
+		// should movement be predicted-frozen too? Predicting the freeze
+		// would require the client to independently know the score crossed
+		// TargetScore — which requires predicting the score — which is
+		// exactly the asymmetry GameManager's class doc rules out. A
+		// mispredicted freeze (player freezes, then a moment later un-freezes
+		// because the server says the game ISN'T over — e.g. the client
+		// misjudged its own score) is more jarring and harder to reason
+		// about than a brief continued-movement window before the broadcast
+		// arrives. ~1 RTT (tens of ms on a LAN, the target topology per
+		// ADR-0005) is not perceptible as "the game kept going" the way a
+		// freeze/unfreeze flicker would be. Confirmed: broadcast-driven
+		// freeze is the only correct choice here, not just the simplest one.
+		if (GetGameManager()?.IsGameOver == true) return;
+
 		if      (IsServer && IsLocalPlayer)  TickServerOwnPlayer(delta);
 		else if (IsServer && !IsLocalPlayer) TickServerRemotePlayer(delta);
 		else if (!IsServer && IsLocalPlayer) TickClientOwnPlayer(delta);

@@ -61,6 +61,16 @@
   </ItemGroup>
 
   <!--
+    Pure Systems source files (M5 score state + win condition, issues #24/#25).
+    Scoreboard.cs is plain C# with no Godot types at all — it doesn't even
+    need the GodotSharp package above, but the package stays referenced for
+    the Ball/Input source files compiled into this same test assembly.
+  -->
+  <ItemGroup>
+    <Compile Include="..\..\scripts\Systems\Scoreboard.cs" />
+  </ItemGroup>
+
+  <!--
     Pure Networking source files (M6 dedicated server, ADR-0007).
     DedicatedServerArgs.cs is pure command-line parsing — no Node, no engine
     singletons. NetworkManager.cs / DedicatedServerBootstrap.cs ARE excluded:
