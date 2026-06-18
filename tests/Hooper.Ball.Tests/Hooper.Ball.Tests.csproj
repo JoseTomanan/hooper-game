@@ -60,6 +60,16 @@
     <Compile Include="..\..\scripts\Input\RightStickGestureRecognizer.cs" />
   </ItemGroup>
 
+  <!--
+    Pure Systems source files (M5 score state + win condition, issues #24/#25).
+    Scoreboard.cs is plain C# with no Godot types at all — it doesn't even
+    need the GodotSharp package above, but the package stays referenced for
+    the Ball/Input source files compiled into this same test assembly.
+  -->
+  <ItemGroup>
+    <Compile Include="..\..\scripts\Systems\Scoreboard.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
