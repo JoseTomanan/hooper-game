@@ -1,4 +1,5 @@
 using Godot;
+using Hooper.Systems;
 
 namespace Hooper.Ball;
 
@@ -186,6 +187,43 @@ public partial class BallController : Node3D
 	/// <summary>True once ReceiveState has arrived since the last _PhysicsProcess.</summary>
 	private bool _hasNewState;
 
+	// ── Scoring (#24/#25) ───────────────────────────────────────────────────
+
+	/// <summary>
+	/// The peer id holding the ball at the moment Shoot() is called, captured
+	/// BEFORE StateMachine.Shoot() clears HolderPeerId to 0. Needed because by
+	/// the time TickInFlight's contact resolution detects a Make, HolderPeerId
+	/// is already 0 (see class doc's "Holder resolution") — there is no other
+	/// record of who released the shot. Half-court 1v1 means shooter == scorer
+	/// (both players shoot the same hoop), so no separate "which hoop" logic
+	/// is needed here.
+	/// </summary>
+	private int _lastShooterPeerId;
+
+	/// <summary>
+	/// Cached GameManager reference, looked up via the "game_manager" group
+	/// (see GameManager's class doc "Discovery"). Null-guarded loudly in
+	/// _Ready, with a lazy re-lookup fallback in case this node's _Ready runs
+	/// before GameManager's (Main.tscn authors GameManager first, so this
+	/// should not normally happen, but player/ball nodes can spawn at
+	/// runtime via MultiplayerSpawner while GameManager is static scene
+	/// content — defensive, not load-bearing).
+	/// </summary>
+	private GameManager _gameManager;
+
+	/// <summary>
+	/// Resolves _gameManager, re-querying the group if the cached reference
+	/// is still null (see field doc). Returns null (with a loud PrintErr,
+	/// already emitted once in _Ready) if GameManager truly isn't in the
+	/// scene — callers must null-check.
+	/// </summary>
+	private GameManager GetGameManager()
+	{
+		if (_gameManager == null)
+			_gameManager = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+		return _gameManager;
+	}
+
 	// ── Role helpers ──────────────────────────────────────────────────────
 
 	private bool IsServer => Multiplayer.IsServer();
@@ -227,12 +265,42 @@ public partial class BallController : Node3D
 		// the peer-ID-as-name identity contract only holds if both point at it.
 		if (Players == null)
 			GD.PrintErr("[BallController] Players is not assigned. Wire it in the Inspector to the same spawn root as NetworkManager.Players.");
+
+		_gameManager = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+		if (_gameManager == null)
+			GD.PrintErr("[BallController] No node in group 'game_manager' found. Scoring and game-over freeze will not work until GameManager is added to the scene (issue #27).");
 	}
 
 	// ── Tick loop ─────────────────────────────────────────────────────────
 
 	public override void _PhysicsProcess(double delta)
 	{
+		// (#25 doubt cycle 2, finding #1 — fixed from an earlier draft that
+		// early-returned the ENTIRE ball tick, including the broadcast, the
+		// instant GameManager.IsGameOver went true) An early "freeze the
+		// ball" guard here looked symmetric with PlayerController's freeze,
+		// but is actually wrong for the Ball specifically: RegisterBasket
+		// (called from TickInFlight below) sets IsGameOver=true SYNCHRONOUSLY
+		// on the SAME tick the winning Make happens, and GoLoose() only
+		// transitions the ball OUT of InFlight into Loose — it does not
+		// finish the fall. TickLoose needs several MORE ticks to integrate
+		// gravity down to the floor (see TickLoose). A guard here would have
+		// suppressed every one of those remaining ticks' Rpc(ReceiveState,...)
+		// broadcasts (IsGameOver is already true by the next tick), freezing
+		// every client's view of the ball mid-air, never settling, on every
+		// game-winning shot. There is no good place to insert "but let it
+		// finish falling first" without re-deriving exactly what TickLoose
+		// already computes, so instead: the ball is simply never frozen by
+		// game-over. This is safe, not just convenient — TickHeld/
+		// TickDribbling only re-centre the ball on whatever the holder's
+		// (now player-frozen, see PlayerController) position already is, and
+		// Loose settles to the floor and then reports zero velocity forever
+		// (see TickLoose) — none of these states do anything surprising once
+		// both players have stopped moving. Freezing the PLAYERS is what
+		// actually stops the match from progressing; the ball coasting to
+		// its natural rest (or idly re-centring on a stationary holder) is
+		// inert, not a bug.
+		//
 		// Reconcile against the freshest server snapshot BEFORE predicting
 		// this tick, same ordering rationale as PlayerController.TickClientOwnPlayer:
 		// the correction baseline should be the latest authoritative data we have.
@@ -321,8 +389,55 @@ public partial class BallController : Node3D
 				StateMachine.GoLoose();
 				break;
 			case ContactResult.Make:
-				// M2: just announce it; M5 (#24/#25) turns this into a score.
-				GD.Print("[Ball] Clean make.");
+				// (#24 doubt cycle 1, finding #1) M2 left the ball in
+				// InFlight after a Make, with no state transition. Since
+				// this method runs every physics tick while InFlight,
+				// RimBackboard.Resolve would keep reporting Make on EVERY
+				// subsequent tick the ball remains near the rim (the ball
+				// doesn't move away on its own) — at 60 Hz that's ~60
+				// "scores" per second for a single shot. GoLoose() fixes
+				// this the same way a Bounce already does: it transitions
+				// the state machine OUT of InFlight, so this case can
+				// never fire again for the same shot (Resolve is only
+				// called while State == InFlight). GoLoose runs on EVERY
+				// peer identically (it's pure ball-physics prediction,
+				// exactly like the Bounce branch above) — only the
+				// RegisterBasket call below is server-gated.
+				StateMachine.GoLoose();
+
+				// (#24 doubt cycle 1, finding #2 — THE crux) Only the
+				// SERVER may turn this prediction into a real point. Every
+				// peer (including the server) reaches this line on the same
+				// tick because Make detection is itself predicted
+				// identically everywhere (RimBackboard.Resolve is a pure
+				// function of _arc, which every peer integrates identically)
+				// — but RegisterBasket no-ops on a client
+				// (GameManager.RegisterBasket guards on !IsServer), so a
+				// client never mutates score, only ever displays the
+				// server's later broadcast. See GameManager's class doc for
+				// why score has no reconciliation channel the way position
+				// does.
+				//
+				// (#24 doubt cycle 1, finding #3) Doubt-checked the
+				// asymmetric case: can a CLIENT predict a Make the SERVER
+				// later rules a Bounce/miss (or vice versa)? The arc and rim
+				// geometry are deterministic pure functions (ADR-0004) fed
+				// the same RimCenter/RimRadius/BallRadius exports and the
+				// same _arc state — kept in sync every tick via
+				// ReceiveState/ReconcileFromServer — so the two sides agree
+				// tick-for-tick in the common case. If they ever diverged
+				// (e.g. a missed reconcile pass left a client's _arc stale),
+				// the client's local GoLoose() already ran and its
+				// RegisterBasket call already no-op'd — there is nothing to
+				// undo, because the client never had authority to register
+				// anything. The next ReceiveState broadcast force-corrects
+				// the client's StateMachine/position exactly like any other
+				// misprediction (discrete state is forced, per
+				// ReconcileFromServer below). A client that predicts a make
+				// the server rims out simply never scores, and its ball
+				// state gets force-corrected on the next broadcast — confirmed
+				// consistent, no permanent divergence possible.
+				GetGameManager()?.RegisterBasket(_lastShooterPeerId);
 				break;
 		}
 	}
@@ -405,10 +520,26 @@ public partial class BallController : Node3D
 	/// points can briefly differ; this is expected, not a new failure mode —
 	/// the standard ReconcileFromServer pass on the next broadcast absorbs it
 	/// exactly like any other position divergence.
+	///
+	/// (#24 doubt cycle 1, finding #4 — scorer attribution) HolderPeerId must
+	/// be captured into _lastShooterPeerId BEFORE StateMachine.Shoot() runs,
+	/// because Shoot() clears HolderPeerId to 0 (see class doc's "Holder
+	/// resolution" / TryShoot's M4 limitation note) — by the time TickInFlight
+	/// later detects a Make, HolderPeerId is already gone. Capturing it here
+	/// (the one place both shoot paths funnel through — the server's own
+	/// TryShoot→ApplyShootLocally call AND the server's RequestShoot→
+	/// ApplyShootLocally call for a remote holder) means _lastShooterPeerId is
+	/// correct in both cases: when the server itself is the holder, and when a
+	/// remote client is. A CLIENT also runs this method (for its own
+	/// prediction) and so also sets its own _lastShooterPeerId — harmless,
+	/// since RegisterBasket no-ops on a client regardless of which id it's
+	/// called with.
 	private bool ApplyShootLocally()
 	{
+		int holderAtShootTime = StateMachine.HolderPeerId;
 		if (!StateMachine.Shoot()) return false;
 
+		_lastShooterPeerId = holderAtShootTime;
 		_arc = new ShotArc(GlobalPosition, ShotTarget, ShotApexHeight, Gravity);
 		return true;
 	}
