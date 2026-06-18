@@ -209,19 +209,10 @@ public partial class BallController : Node3D
 			RimCenter, RimRadius, BallRadius, RimRestitution,
 			BoardCenter, BoardNormal, BoardHalfWidth, BoardHalfHeight, BoardRestitution);
 
-		// Start with NO holder (peer 0). The server self-assigns the tipoff to the
-		// first player node that exists (see TryAssignTipoffHolder), which is
-		// correct for BOTH topologies (ADR-0007): on a listen-server the first
-		// present node is the host (peer 1) — identical to the old hardcoded
-		// default — and on a headless dedicated server, where peer 1 has no player
-		// node, it is the first connecting client. Hardcoding peer 1 here parked
-		// the ball at the world origin forever on a dedicated host.
-		//
-		// StartDribble still runs so the ball begins Dribbling; with holder 0 it
-		// tracks the world origin until the server assigns a holder (a <=1-tick
-		// window once a player exists). This is the SAME pre-holder behaviour the
-		// listen-server already had between scene load and the Host button press.
-		StateMachine = new BallStateMachine(initialHolderPeerId: 0);
+		// M4: peer 1 (host) starts with the ball — simplest sensible tipoff
+		// default. This is not a rules system, just a starting condition;
+		// a real tipoff/possession system is future-issue territory.
+		StateMachine = new BallStateMachine(initialHolderPeerId: 1);
 		StateMachine.StartDribble();
 
 		_mesh = GetNodeOrNull<Node3D>("MeshInstance3D");
@@ -270,16 +261,6 @@ public partial class BallController : Node3D
 			case BallState.Loose:     TickLoose(dt);     break;
 		}
 
-		// Server-only: assign the tipoff holder once a player node exists but the
-		// ball has none yet (ADR-0007). The broadcast below propagates the holder
-		// to every client; clients never compute it themselves.
-		if (IsServer
-			&& StateMachine.HolderPeerId == 0
-			&& (State == BallState.Held || State == BallState.Dribbling))
-		{
-			TryAssignTipoffHolder();
-		}
-
 		// Only the server broadcasts authoritative truth. Every peer (server
 		// included) already predicted its own copy above; the server's
 		// broadcast is what every OTHER peer reconciles against.
@@ -298,37 +279,6 @@ public partial class BallController : Node3D
 	/// stale value from a previous flight.
 	/// </summary>
 	private Vector3 CurrentVelocity() => _arc?.Velocity ?? Vector3.Zero;
-
-	/// <summary>
-	/// Server-only tipoff assignment (ADR-0007): give the ball to the first
-	/// present player node. Called each tick while the ball is still awaiting
-	/// its first holder (Held/Dribbling with HolderPeerId == 0) — a state that
-	/// uniquely identifies the pre-tipoff window, since Catch() always sets a
-	/// holder and a post-shot holder-0 is InFlight/Loose (excluded by the
-	/// caller's guard), so this never steals possession mid-game.
-	///
-	/// ForceState is the right tool: assigning the tipoff is an authoritative
-	/// server decision, the same category as reconciliation — a direct snap of
-	/// holder identity, keeping the current ball state, not a gameplay edge to
-	/// validate. The player nodes are named by peer ID (the identity contract
-	/// NetworkManager.SpawnPlayer establishes), so the child's Name parses to
-	/// the holder peer ID. Peer 0 is impossible as a real peer, so the int != 0
-	/// guard is belt-and-suspenders against an unexpectedly-named node.
-	/// </summary>
-	private void TryAssignTipoffHolder()
-	{
-		if (Players == null) return;
-
-		foreach (Node child in Players.GetChildren())
-		{
-			if (int.TryParse(child.Name, out int peerId) && peerId != 0)
-			{
-				StateMachine.ForceState(State, peerId);
-				GD.Print("[BallController] Tipoff holder assigned to peer ", peerId);
-				return;
-			}
-		}
-	}
 
 	/// <summary>Resolves the current holder's world position, or the origin if none.</summary>
 	private Vector3 HolderPosition()
