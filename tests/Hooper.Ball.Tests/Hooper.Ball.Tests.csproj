@@ -60,6 +60,18 @@
     <Compile Include="..\..\scripts\Input\RightStickGestureRecognizer.cs" />
   </ItemGroup>
 
+  <!--
+    Pure Networking source files (M6 dedicated server, ADR-0007).
+    DedicatedServerArgs.cs is pure command-line parsing — no Node, no engine
+    singletons. NetworkManager.cs / DedicatedServerBootstrap.cs ARE excluded:
+    they extend Node / call OS + Multiplayer singletons.
+  -->
+  <ItemGroup>
+    <Compile Include="..\..\scripts\Networking\DedicatedServerArgs.cs" />
+    <Compile Include="..\..\scripts\Networking\ServerBeacon.cs" />
+    <Compile Include="..\..\scripts\Networking\ServerList.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
