@@ -88,7 +88,7 @@ public partial class GameManager : Node
 		// is meant to call RegisterBasket, but a stray future bug calling it
 		// on a client would corrupt a real Scoreboard instead of being a
 		// visible no-op). Restricting construction to the server makes that
-        // entire bug class impossible: a client has no Scoreboard object to
+		// entire bug class impossible: a client has no Scoreboard object to
 		// even accidentally mutate.
 		if (IsServer)
 			_scoreboard = new Scoreboard(TargetScore);
