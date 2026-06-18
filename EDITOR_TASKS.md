@@ -366,6 +366,73 @@ epic #19.
 
 ---
 
+## Milestone 5 editor tasks — scoring + win condition (issue #27)
+
+All M5 C# is committed (issues #24/#25/#26). What remains is human-only scene
+wiring. Score state, win condition, the broadcast, and the freeze are all in
+code; the editor just needs to put two nodes in the scene. **No NodePath
+exports to drag this time** — `BallController`, `PlayerController`, and the HUD
+all find `GameManager` automatically through the `game_manager` group it joins
+itself in `_Ready`, so the only requirement is that the node *exists* in
+`Main.tscn`.
+
+### Step 1 — Build first
+
+Build (hammer icon, top-right) so Godot sees the new `GameManager` and
+`ScoreHud` classes in the Attach Script list. (See the C# gotcha at the bottom
+of this file if they don't show up.)
+
+### Step 2 — Add the GameManager node
+
+1. In `Main.tscn`, add a plain **`Node`** (NOT `Node3D` — it has no transform)
+   as a child of the root. Name it `GameManager`.
+2. Attach `scripts/Systems/GameManager.cs` to it.
+3. (Optional) In the Inspector, set **Target Score** if you want something
+   other than the default of 11.
+
+### Step 3 — Add the score HUD
+
+1. Add a **`CanvasLayer`** under the root (so the HUD draws on top of the 3D
+   court and ignores the camera), then a **`Label`** under that CanvasLayer.
+   Position/anchor the Label wherever you like — a corner is fine, this is
+   functional-only.
+2. Attach `scripts/Systems/ScoreHud.cs` to the Label.
+3. Save the scene.
+
+### Step 4 — Verify (issue #27 acceptance criteria)
+
+Run two debug instances (the same Host / Join flow as M4). Then:
+
+1. **Score visible in both instances** — both windows show `You: 0  Opponent: 0`
+   on connect. ("You" is always the local player; the host's opponent is the
+   client and vice-versa.)
+2. **Score increments on a bucket** — shoot a clean make (an on-target shot;
+   see the M4 note about one shot per session). The scorer's `You:` increments
+   in their window and their `Opponent:` increments in the other window. The
+   Output log should NOT show any `No node in group 'game_manager' found`
+   errors from `BallController`/`PlayerController`/`ScoreHud` — if it does,
+   Step 2/3 was missed or the scene wasn't saved.
+3. **Win condition triggers** — lower **Target Score** to 1 in the Inspector
+   (so a single make ends the match) for this test. After the make, BOTH
+   players stop moving (game-over freeze) and each window shows
+   `You win!` / `You lose.` according to who scored. Reset Target Score to 11
+   (or your preference) afterward.
+
+When all three are true, **issue #27 is proven** — close it, then close the
+epic #23.
+
+### Troubleshooting M5
+
+| Symptom | Likely cause |
+|---|---|
+| `No node in group 'game_manager' found` in Output | GameManager node missing from `Main.tscn`, or scene not saved (Step 2) |
+| HUD reads `(no GameManager)` | Same as above — the Label loaded before any GameManager existed |
+| Score never changes after a make | Only a *clean* make scores; an off-target shot bounces (loose) and is not a basket — aim at the rim centre |
+| One window's score updates but not the other | Score broadcast (`ReceiveScoreState`) didn't reach the peer — confirm both windows are on this build |
+| Players never freeze on game-over | Target Score not reached, or GameManager missing on the *server* window |
+
+---
+
 ## What to deliberately NOT touch yet
 
 - Materials / shaders — gray placeholder surfaces are fine.
