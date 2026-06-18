@@ -68,3 +68,13 @@ corrections when they arrive.
   ours. This is accepted — we were always writing custom netcode.
 - Rollback is permanently off the table unless the project moves away from
   dedicated-server architecture.
+
+## Note — topology (added by ADR-0007)
+
+This ADR's examples were written against the **listen-server** topology used through
+Milestones 1b–5 (host = server + player 1). [ADR-0007](0007-dedicated-server-topology-discovery.md)
+adds a **headless dedicated server with no local player**, where every player node is a
+remote client driven through the same server-authoritative RPC path described here. The
+authority model is unchanged — the server still owns all truth — the server simply has no
+locally-controlled player. See ADR-0007 for the topology mechanics and the LAN discovery
+protocol.

@@ -6,8 +6,13 @@ namespace Hooper.Networking;
 /// Owns the ENet transport layer: hosting, joining, peer lifecycle, and
 /// server-side player spawning.
 ///
-/// Architecture (ADR-0002):
-///   - Listen-server topology: the host is simultaneously server + player 1.
+/// Architecture (ADR-0002, ADR-0007):
+///   - Two coexisting server-entry paths share one bringup core (StartServer):
+///       • HostGame — listen-server: the host is simultaneously server + player 1.
+///       • StartDedicatedServer — headless: authoritative host with NO local
+///         player; every player node is a connecting client (ADR-0007). This
+///         path is transitional scaffolding's eventual replacement, not an
+///         add-on to it — see ADR-0007's coexistence note.
 ///   - Godot's MultiplayerSpawner replicates the *existence* of player nodes.
 ///     Position is handled by our own tick loop (see PlayerController), not by
 ///     MultiplayerSynchronizer — because reconciliation requires our own code.
@@ -32,6 +37,13 @@ public partial class NetworkManager : Node
 	/// The hard limit before we open a second match is 2 players.
 	/// </summary>
 	private const int MaxClients = 2;
+
+	/// <summary>
+	/// Players in a full match — the 1v1 cap, reported in discovery beacons so a
+	/// browser can show "1/2" (ADR-0007). The real ceiling is enforced by the
+	/// MultiplayerSpawner's spawn_limit (=2) in Main.tscn, not by MaxClients.
+	/// </summary>
+	public const int MaxPlayersPerMatch = 2;
 
 	// ── Exports ─────────────────────────────────────────────────────────────
 
@@ -61,6 +73,14 @@ public partial class NetworkManager : Node
 	/// </summary>
 	[Signal] public delegate void ConnectionFailedEventHandler();
 
+	/// <summary>
+	/// Emitted on the SERVER (both listen-server and dedicated) once the ENet
+	/// server is up, carrying the game port. DiscoveryBroadcaster listens for this
+	/// to begin advertising the server on the LAN (ADR-0007). A pure client never
+	/// starts a server, so it never fires there.
+	/// </summary>
+	[Signal] public delegate void ServerStartedEventHandler(int port);
+
 	// ── State ───────────────────────────────────────────────────────────────
 
 	/// <summary>
@@ -71,6 +91,15 @@ public partial class NetworkManager : Node
 	/// </summary>
 	private bool _started;
 
+	/// <summary>
+	/// True once StartDedicatedServer ran — this process is a headless
+	/// authoritative host with no local player (ADR-0007). Currently
+	/// informational (logging / future branch points); the spawn path itself
+	/// needs no per-tick check because role dispatch already falls out of node
+	/// naming (no node named "1" on the server).
+	/// </summary>
+	private bool _isDedicated;
+
 	// ── Host / Join ──────────────────────────────────────────────────────────
 
 	/// <summary>
@@ -80,10 +109,59 @@ public partial class NetworkManager : Node
 	/// </summary>
 	public void HostGame(int port)
 	{
+		if (!StartServer(port)) return;
+
+		// Spawn our own (host) player node immediately — no PeerConnected fires
+		// for ourselves, so we do it here. The server is always peer 1.
+		// This is the listen-server topology: host = server + player 1 (ADR-0002).
+		SpawnPlayer(1);
+
+		// Host is ready as soon as the server is up; the client becomes ready
+		// in ConnectedToServer. Emitting here lets the host's Lobby hide itself.
+		// Trade-off (doubt cycle 1): the lobby hides before a client joins, which
+		// is intentional for M1b UX (host sees the court while waiting).
+		EmitSignal(SignalName.GameReady);
+	}
+
+	/// <summary>
+	/// Start a HEADLESS dedicated server on <paramref name="port"/> (ADR-0007).
+	/// Called by DedicatedServerBootstrap when the process is launched with the
+	/// --dedicated flag, NOT from the Lobby UI.
+	///
+	/// The difference from HostGame is precisely the two listen-server
+	/// assumptions a headless host has no business making:
+	///   • It does NOT SpawnPlayer(1) — peer 1 is the server, which has no local
+	///     player. Player nodes are created only for connecting clients, via
+	///     OnPeerConnected. PlayerController routes every such node to its
+	///     TickServerRemotePlayer role (the IsServer && IsLocalPlayer role is
+	///     simply never reached, since no node is named "1"). See ADR-0007.
+	///   • It does NOT emit GameReady — that signal exists only to tell the Lobby
+	///     overlay to hide itself, and a dedicated server has no Lobby. Gameplay
+	///     ticking depends on the multiplayer peer + spawned nodes, not on this
+	///     signal, so omitting it changes nothing about the simulation.
+	/// </summary>
+	public void StartDedicatedServer(int port)
+	{
+		if (!StartServer(port)) return;
+
+		_isDedicated = true;
+		GD.Print("[NetworkManager] Dedicated server running headless; awaiting clients.");
+		// No SpawnPlayer, no GameReady — see method doc.
+	}
+
+	/// <summary>
+	/// Shared server-bringup core for BOTH HostGame (listen-server) and
+	/// StartDedicatedServer (headless). Factoring this out is what keeps the two
+	/// entry paths from drifting as the netcode evolves (ADR-0007 names that the
+	/// primary coexistence risk). Returns true on success; on failure it emits
+	/// ConnectionFailed (so the Lobby can recover) and returns false.
+	/// </summary>
+	private bool StartServer(int port)
+	{
 		if (_started)
 		{
-			GD.PrintErr("[NetworkManager] HostGame called while already started; ignoring.");
-			return;
+			GD.PrintErr("[NetworkManager] StartServer called while already started; ignoring.");
+			return false;
 		}
 
 		// Source: https://docs.godotengine.org/en/stable/classes/class_enetmultiplayerpeer.html
@@ -94,8 +172,9 @@ public partial class NetworkManager : Node
 			GD.PrintErr($"[NetworkManager] CreateServer failed: {err}");
 			// Emit ConnectionFailed so Lobby re-enables its buttons.
 			// (Found in doubt-driven review, cycle 1: silent failure left lobby stuck.)
+			// Harmless on the dedicated path — nothing listens to it there.
 			EmitSignal(SignalName.ConnectionFailed);
-			return;
+			return false;
 		}
 
 		_started = true;
@@ -112,17 +191,13 @@ public partial class NetworkManager : Node
 		Multiplayer.PeerConnected    += OnPeerConnected;
 		Multiplayer.PeerDisconnected += OnPeerDisconnected;
 
-		GD.Print("[NetworkManager] Hosting on port ", port);
+		GD.Print("[NetworkManager] Server up on port ", port);
 
-		// Spawn our own (host) player node immediately — no PeerConnected fires
-		// for ourselves, so we do it here. The server is always peer 1.
-		SpawnPlayer(1);
-
-		// Host is ready as soon as the server is up; the client becomes ready
-		// in ConnectedToServer. Emitting here lets the host's Lobby hide itself.
-		// Trade-off (doubt cycle 1): the lobby hides before a client joins, which
-		// is intentional for M1b UX (host sees the court while waiting).
-		EmitSignal(SignalName.GameReady);
+		// Tell the discovery broadcaster (if any) to start advertising on the LAN.
+		// Fires for both topologies, so listen-server host games are discoverable
+		// too — a free win, same code path (ADR-0007).
+		EmitSignal(SignalName.ServerStarted, port);
+		return true;
 	}
 
 	/// <summary>
