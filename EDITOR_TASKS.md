@@ -366,11 +366,141 @@ epic #19.
 
 ---
 
+## Milestone 6 editor tasks — dedicated server + server browser
+
+**Do these only after the `feat/milestone-6` PR is merged, or checked out locally
+for verification before merge.** M6 acceptance is NOT the two-window flow from M1's
+step 5 — see "Step 5" below for the M6-specific procedure and what can't be proven
+on a single machine.
+
+### Step 1 — Build first
+
+Click the **hammer icon**. Godot must see the new classes
+(`DedicatedServerBootstrap`, plus the discovery/browser classes) before they
+appear in the Attach Script list and the Inspector. If the build fails, read the
+Output panel and tell Claude Code.
+
+### Step 2 — Add the DedicatedServerBootstrap node to Main.tscn
+
+This node is what makes the *same* Main.tscn run as a headless dedicated server
+when launched with `--dedicated` — and stay a normal client/host otherwise.
+
+1. Open `Main.tscn`. Right-click `Main` → Add Child Node → `Node`. Rename it
+   `DedicatedServerBootstrap`.
+2. **Attach Script** → `scripts/Networking/DedicatedServerBootstrap.cs`.
+3. In the **Inspector**, assign its two exports:
+   - **Network Manager** → drag in the `NetworkManager` node (sibling in Main).
+   - **Lobby** → drag in the `Lobby` instance (sibling in Main).
+
+Then add the **DiscoveryBroadcaster** (so the server advertises itself on the LAN):
+
+4. Right-click `Main` → Add Child Node → `Node`. Rename it `DiscoveryBroadcaster`.
+5. **Attach Script** → `scripts/Networking/DiscoveryBroadcaster.cs`.
+6. In the **Inspector**, assign:
+   - **Network Manager** → the `NetworkManager` node.
+   - **Players** → the `Players` spawn root (same node `NetworkManager.Players`
+     points at).
+   - **Server Name** → optional; defaults to "Hooper Server".
+7. Save the scene (**Ctrl+S**).
+
+On a normal launch (no `--dedicated`) the bootstrap does nothing and the Lobby
+behaves exactly as before; the broadcaster only starts advertising once a server
+actually comes up (Host or `--dedicated`). Confirm now: press **F5** — the lobby
+should still appear and Host/Join still work.
+
+### Step 2b — Build the server browser scene (Server Browser, ADR-0007)
+
+This is the discovery-driven join UI. It lists servers found on the LAN and joins
+the one you pick — no IP typing.
+
+1. **Scene → New Scene** → root node `CanvasLayer`. Save as `scenes/ServerBrowser.tscn`.
+2. Add a child **ItemList** (rename it `ServerListUi`). Size/position it so rows are
+   visible; leave it empty (rows are added at runtime).
+3. Add a child **Node** and **Attach Script** →
+   `scripts/Networking/DiscoveryListener.cs`. (This is the UDP listener the browser
+   reads from.)
+4. Select the root `CanvasLayer` → **Attach Script** →
+   `scripts/Networking/ServerBrowser.cs`.
+5. In the root's **Inspector**, assign:
+   - **Discovery** → the `DiscoveryListener` child you just added.
+   - **Network Manager** → the `NetworkManager` node in `Main.tscn` (drag from the
+     Main scene tree — you may need both scenes open, or instance the browser into
+     Main first, then assign).
+   - **Server List Ui** → the `ServerListUi` ItemList child.
+6. Back in `Main.tscn`: right-click `Main` → Instantiate Child Scene →
+   `scenes/ServerBrowser.tscn`. Position it where you want the list to appear
+   (e.g. beside or below the Lobby). Save.
+
+To **use** it: run a client, and discovered servers appear in the list. Double-click
+a row (or select + Enter) to join. On success the browser hides, same as the Lobby.
+
+### Step 3 — Create the dedicated-server export preset
+
+You need an exported binary to run the server headlessly.
+
+1. **Project → Export…** → **Add…** → choose your desktop platform
+   (**Windows Desktop**, or **Linux** if that's your server box).
+2. *(Recommended, optional)* In the preset, there is a **dedicated server** option
+   that strips textures/materials and sets the `dedicated_server` feature tag,
+   shrinking the build. Either the dedicated-server preset OR a normal desktop
+   export works — a normal export just needs the `--headless` flag at runtime.
+   Source: docs.godotengine.org/en/stable/tutorials/export/exporting_for_dedicated_servers.html
+3. Export the project to a path you'll remember (e.g. `build/server/`). You may
+   need to install export templates the first time (Godot will prompt).
+
+### Step 4 — Run the server headless and the clients
+
+From a terminal, launch the exported server with no display:
+
+```
+"HOOPER GAME.exe" --headless -- --dedicated --port 7777
+```
+
+- `--headless` is the **engine** flag (no window, no audio) — it must come BEFORE
+  the `--` separator.
+- `--dedicated` and `--port` are **our** args — they come AFTER `--`.
+- The bootstrap also accepts the looser `--headless --dedicated --port 7777`
+  (without the `--`), but the form above is the canonical one.
+
+Expected server log lines (no window opens):
+- `[DedicatedServerBootstrap] --dedicated detected; starting headless server on port 7777`
+- `[NetworkManager] Server up on port 7777`
+- `[NetworkManager] Dedicated server running headless; awaiting clients.`
+
+Now launch **two** clients (from the editor via *Debug → Run Multiple Instances → 2*,
+or two copies of a normal export). In each, type the server's IP in the Lobby and
+press **Join** (on one machine use `127.0.0.1`).
+
+### Step 5 — Verify (M6 acceptance — read which parts are single-machine-provable)
+
+**Provable on ONE machine:**
+1. The headless server starts, logs **0 players**, opens no window, and keeps
+   ticking.
+2. Two clients **Join by IP** → both capsules appear on both clients, the ball's
+   tipoff goes to a real client (it does NOT sit frozen at the court centre/origin),
+   and M4 movement/ball/committed-move sync still works.
+3. The server browser (wired in Step 2b) **may** list the local server,
+   depending on whether your OS loops the LAN broadcast back to the same machine.
+   If it appears, double-clicking the row should join it — proving the
+   discovery→JoinGame handoff end to end on one box.
+
+**NOT provable on one machine — needs a second LAN box (leave unproven until then):**
+- A server on machine A appearing in the browser on machine B (true LAN discovery).
+- Two clients each running their own discovery listener on the same machine — they
+  contend for the UDP discovery port (7777-adjacent 7778); use ONE browser client
+  per machine when testing locally.
+
+When the single-machine items pass, M6's *server + headless + join-by-IP* spine is
+proven; the *cross-machine discovery* bar stays open until you have a second
+machine on the LAN. Tell Claude Code which items you confirmed.
+
+---
+
 ## What to deliberately NOT touch yet
 
 - Materials / shaders — gray placeholder surfaces are fine.
 - Animation (the telegraphed wind-ups) — that's Milestone 3+.
-- Imported 3D models, sounds, UI polish, menus, dedicated-server export.
+- Imported 3D models, sounds, UI polish, menus.
 
 Keeping these out keeps your learning surface small while you and the AI prove
 the hard systems first.
