@@ -100,6 +100,8 @@ Do not add design reasoning here. If a decision belongs somewhere, it belongs in
 
 **Server reconciliation** — When the server's confirmed state arrives, the client compares it to its predicted state and corrects any divergence. Corrections should be rare and small if prediction is working correctly. see: [ADR-0002](docs/adr/0002-networking-server-authoritative.md)
 
+**Prediction buffer** — The client's queue of its own unacknowledged inputs, keyed by sequence number: records new inputs, evicts the oldest under sustained server silence, and prunes everything up to the server's last-applied seq before replay. The seq/ack bookkeeping behind client-side prediction, extracted into a pure `PredictionBuffer` class (issue #55) so it's unit-testable apart from the engine-bound replay step. see: [ADR-0002](docs/adr/0002-networking-server-authoritative.md)
+
 **Lag compensation** — Server-side technique for evaluating hit/interaction timing against the world state as the client saw it (accounting for network latency), not the server's current time. see: [ADR-0002](docs/adr/0002-networking-server-authoritative.md)
 
 **Tick loop** — The fixed-rate update loop driving server simulation and client prediction. Client inputs and server corrections are exchanged per-tick. see: [ADR-0002](docs/adr/0002-networking-server-authoritative.md)
