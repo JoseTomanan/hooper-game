@@ -33,23 +33,11 @@ Architecture decisions are documented in full in [`docs/adr/`](docs/adr/).
 
 ---
 
-## Current Status — Milestone 1
+## Current Status & Roadmap
 
-> **Networked movement proof.**  
-> Two player-controlled capsules on a flat plane. One peer hosts, the other connects (Godot ENet / MultiplayerApi). Each player sees the other move smoothly in real time, with local prediction so the controlling player feels zero input lag.
-
-**No ball, no basketball rules, no committed moves yet.** Milestone 1 exists to prove the single riskiest assumption first: that server-authoritative prediction works in Godot before anything else is built on top of it.
-
-### Milestone roadmap
-
-| # | Goal |
-|---|------|
-| **M1** | Networked movement proof (two capsules, prediction, no lag) |
-| **M2** | Local-only ball mini-physics (dribble attach + shot arc) |
-| **M3** | Hybrid input: analog movement + one discrete committed move with frames |
-| **M4** | Networking the ball + committed moves (prediction over the hard cases) |
-| **M5** | Win condition / scoring for a minimal 1v1 |
-| **M6** | Dedicated-server export + basic server browser |
+The current milestone and the full milestone status map live in
+[`CLAUDE.md` §2](CLAUDE.md) (the single source of truth), with GitHub Issues
+tracking the live state of each milestone and its sub-issues.
 
 ---
 

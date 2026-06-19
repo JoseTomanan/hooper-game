@@ -2,7 +2,7 @@
 
 Lookup table of project-specific terms. One entry per term: bold name, one-to-two sentence definition, `see:` pointer to the authoritative source. Not prose — not a design doc.
 
-**Sources:** [CLAUDE.md](CLAUDE.md), [ADR-0001](docs/adr/0001-engine-godot-csharp.md) – [ADR-0005](docs/adr/0005-community-model-dedicated-servers.md).
+**Sources:** [CLAUDE.md](CLAUDE.md), [ADR-0001](docs/adr/0001-engine-godot-csharp.md) – [ADR-0007](docs/adr/0007-dedicated-server-topology-discovery.md).
 
 Do not add design reasoning here. If a decision belongs somewhere, it belongs in an ADR.
 
@@ -83,6 +83,12 @@ Do not add design reasoning here. If a decision belongs somewhere, it belongs in
 **Rim / backboard interaction** — Explicit collision math between the ball and the rim or backboard. Hand-authored; no engine physics solver is involved at any point. see: [ADR-0004](docs/adr/0004-deterministic-ball-physics.md)
 
 **Authoritative ball state** — The server's canonical record of ball position and ball-state. Clients predict ball movement locally but reconcile to this. Godot Physics / Jolt must never influence authoritative ball state — even "visual-only" effects must be purely cosmetic and client-side. see: [ADR-0004](docs/adr/0004-deterministic-ball-physics.md)
+
+**Make-it-take-it** — The half-court possession rule where the scorer keeps possession for the next trip rather than handing it to the opponent. Part of the M6b possession loop. see: ADR-0008 (pending — issue #47), issue #49
+
+**Live rebound** — A missed shot leaves the ball *loose* and contested by proximity; whichever player recovers it (`BallStateMachine.Catch` from `Loose`) gains possession. The continuous-play alternative to a dead-ball reset. see: ADR-0008 (pending — issue #47), issue #48
+
+**Take-it-back / clear** — On every change of possession and after every made basket, the handler must carry the ball behind the clear line before a basket counts. Gates scoring so possession changes are meaningful. see: ADR-0008 (pending — issue #47), issue #50
 
 ---
 

@@ -17,6 +17,7 @@ locked unless explicitly revisited (see Decision Discipline in §4 below).
 | [ADR-0004](docs/adr/0004-deterministic-ball-physics.md) | Ball physics: custom deterministic mini-physics (not Godot Physics/Jolt) |
 | [ADR-0005](docs/adr/0005-community-model-dedicated-servers.md) | Community: self-hosted dedicated servers + server browser (CS 1.6 style) |
 | [ADR-0006](docs/adr/0006-renderer-mobile.md) | Renderer: Godot Mobile (D3D12), not Compatibility/Forward+ |
+| [ADR-0007](docs/adr/0007-dedicated-server-topology-discovery.md) | Dedicated-server topology (listen→headless) + LAN discovery wire format |
 
 ---
 
@@ -56,24 +57,42 @@ game-dev knowledge on the human's part.
 
 ## 2. Current milestone
 
-> **Milestone 1 — Networked movement proof.**
-> Two player-controlled capsules on a flat plane. One peer hosts, the other
-> connects (Godot ENet / MultiplayerApi). Each player sees the other move
-> smoothly in real time, with local prediction so the controlling player feels
-> zero input lag.
+> **M6b — Possession loop (active gameplay spine).** Turn the single shot into a
+> continuous half-court 1v1 playable to any `TargetScore > 1`: make-it-take-it,
+> live loose-ball rebounds, and the take-it-back ("clear") rule. Server-
+> authoritative with client prediction throughout (ADR-0002); the ball stays
+> deterministic mini-physics (ADR-0004). The possession ruleset is being recorded
+> in **ADR-0008** (issue #47) as part of this milestone. Epic: **#46**.
 >
-> NO ball, NO basketball rules, NO mini-physics, NO committed moves yet. This
-> proves the single riskiest assumption: that we can get networked, predicted,
-> server-authoritative movement working in Godot. Everything else hangs off this.
+> **M7a — Static readability pass (parallel presentation track).** Independent of
+> M6b and may proceed alongside it: swap the capsule for a humanoid mesh, add
+> cosmetic facing + burst lean, and directional shadows — all visual-only, with
+> collision and netcode unchanged. Foundation sub-issue #37 (extract `MovementMath`
+> + green-before-merge gate) blocks the rest. Epic: **#53**.
+>
+> **M7b is DEFERRED — do NOT pull it forward.** The rigged-animation pass (#54/#41)
+> starts only after M7a is proven in-editor.
 
-Next milestones, rough order:
-2. Local-only ball mini-physics (dribble attach + shot arc), single player, no net.
-3. Hybrid input: analog movement + one discrete committed move with frames.
-4. Networking the ball + committed moves (prediction over the hard cases).
-5. Win condition / scoring for a minimal 1v1.
-6. (Community layer) dedicated-server export + a basic server browser.
+### Milestone status
 
-Do not build ahead of the current milestone unless asked.
+| Milestone | Status | Epic |
+|-----------|--------|------|
+| M1a — Local movement | Done | #1 |
+| M1b — Networking on top | Done | #4 |
+| M2 — Local ball mini-physics | Done | #8 |
+| M3 — Hybrid input: committed moves | Done | #13 |
+| M4 — Networked ball + committed moves | Done | #19 |
+| M5 — Win condition + scoring | Done | #23 |
+| M6 — Dedicated server + server browser | Code done; editor verify (#32) trails M6b | #28 |
+| **M6b — Possession loop** | **Active (current)** | #46 |
+| **M7a — Static readability pass** | **Active (parallel presentation track)** | #53 |
+| M7b — Rigged humanoid animation | DEFERRED (after M7a proven) | #54 |
+
+GitHub Issues is the source of truth for the live state of each milestone and its
+sub-issues; this table is the at-a-glance map.
+
+Do not build ahead of the current milestone unless asked. M6b and M7a are both
+open for work; M7b is not.
 
 ---
 

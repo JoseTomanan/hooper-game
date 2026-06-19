@@ -563,11 +563,47 @@ machine on the LAN. Tell Claude Code which items you confirmed.
 
 ---
 
+## Milestone 6b editor tasks — possession loop (issue #52)
+
+> **Stub — steps to be authored when the M6b PR(s) land.** The verification
+> issue is **#52** (epic **#46**). M6b is server-authoritative gameplay only
+> (make-it-take-it, live rebound, take-it-back/clear) — it should add no new
+> scene wiring beyond what M5 already established, so the editor task is expected
+> to be a **dual-instance play-to-N-points verification**, not node assembly.
+> The implementing agent fills this section in against the real flow before
+> asking you to verify. Acceptance: a full 1v1 to a `TargetScore` > 1 (e.g. 5)
+> playable end-to-end — shots, makes, misses, live rebounds, take-it-back, and
+> game-over.
+
+---
+
+## Milestone 7a editor tasks — static readability pass (issue #53)
+
+> **Stub — steps to be authored as each M7a sub-issue PR lands.** Epic **#53**;
+> sub-issues #38 (humanoid mesh swap), #39 (cosmetic facing + burst lean), #40
+> (directional shadows), gated on #37 (the green-before-merge test baseline).
+> These are visual-only changes (collision and netcode unchanged), so the editor
+> tasks will be mesh/material/light wiring plus a **human readability check**:
+> the player reads as a humanoid that faces its movement and leans into the
+> crossover burst, grounded by directional shadows, verified across a
+> dual-instance test. The implementing agent fills in per-sub-issue steps against
+> the real node names. Do NOT pull M7b (#54/#41, rigged animation) forward.
+
+---
+
 ## What to deliberately NOT touch yet
 
-- Materials / shaders — gray placeholder surfaces are fine.
-- Animation (the telegraphed wind-ups) — that's Milestone 3+.
-- Imported 3D models, sounds, UI polish, menus.
+This list was written for the early gameplay milestones. **M7a (#53) now opens the
+static visual track** — a humanoid mesh, cosmetic facing/lean, and directional
+shadows are in scope under that milestone. Outside M7a's specific sub-issues, the
+restraint still holds:
+
+- Materials / shaders beyond what M7a's readability pass calls for — gray
+  placeholder surfaces are otherwise fine.
+- Rigged animation (committed-move wind-ups driven by a skeleton) — that's the
+  DEFERRED **M7b (#54)**, not yet open. M7a's facing/lean is cosmetic transform
+  only, not rigged animation.
+- Imported 3D models (beyond the M7a humanoid mesh), sounds, UI polish, menus.
 
 Keeping these out keeps your learning surface small while you and the AI prove
 the hard systems first.
