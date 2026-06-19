@@ -43,9 +43,11 @@ namespace Hooper.Player;
 /// SetMultiplayerAuthority — the server owns all transform truth.
 ///
 /// ── Shared motion code ───────────────────────────────────────────────────
-/// Move() and ComputeVelocity() are called identically on the server
-/// (authority), during client prediction, and during reconciliation replay.
-/// They must stay pure: no role branches, no network calls, no side effects.
+/// Move() is called identically on the server (authority), during client
+/// prediction, and during reconciliation replay. It must stay pure: no role
+/// branches, no network calls, no side effects. The Accel/Decel asymmetry it
+/// delegates to lives in MovementMath (issue #37) — pure and unit-tested,
+/// since any divergence there is a netcode bug, not just a feel tweak.
 ///
 /// ── Smooth correction ────────────────────────────────────────────────────
 /// When reconciliation detects divergence, _smoothOffset is SET to the
@@ -921,18 +923,11 @@ public partial class PlayerController : CharacterBody3D
 		// World-space, not camera-relative — so the server can replay it
 		// without knowing each client's camera orientation (ADR-0002).
 		Vector3 wishDir = new Vector3(inputDir.X, 0.0f, inputDir.Y);
-		Velocity = ComputeVelocity(Velocity, wishDir, delta);
+		// The Accel/Decel asymmetry ("change of pace", ADR-0003) lives in
+		// MovementMath now (issue #37) so it's unit-testable without a
+		// running Godot instance — this call is behavior-identical to the
+		// inline ComputeVelocity it replaced.
+		Velocity = MovementMath.ComputeVelocity(Velocity, wishDir, delta, MoveSpeed, Accel, Decel);
 		MoveAndSlide();
-	}
-
-	/// <summary>
-	/// Turns desired direction into the next velocity. Asymmetric rates
-	/// (Decel > Accel) are where "change of pace" lives (ADR-0003).
-	/// </summary>
-	private Vector3 ComputeVelocity(Vector3 current, Vector3 wishDir, double delta)
-	{
-		Vector3 target = wishDir * MoveSpeed;
-		float rate = wishDir == Vector3.Zero ? Decel : Accel;
-		return current.MoveToward(target, rate * (float)delta);
 	}
 }
