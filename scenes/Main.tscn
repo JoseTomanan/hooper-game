@@ -5,6 +5,8 @@
 [ext_resource type="PackedScene" uid="uid://deqwcrx0qbthi" path="res://scenes/Ball.tscn" id="3_0bbpv"]
 [ext_resource type="Script" uid="uid://bdeqenxam3rd5" path="res://scripts/Systems/GameManager.cs" id="4_rarhs"]
 [ext_resource type="Script" uid="uid://c18dt0w38pbsb" path="res://scripts/Systems/ScoreHud.cs" id="5_vcsgt"]
+[ext_resource type="Script" uid="uid://drobygl31y4mn" path="res://scripts/Networking/DedicatedServerBootstrap.cs" id="6_c01mt"]
+[ext_resource type="Script" uid="uid://dhdoqjw7im05f" path="res://scripts/Networking/DiscoveryBroadcaster.cs" id="7_nxtc6"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
 
@@ -104,3 +106,13 @@ offset_top = -10.312001
 offset_right = 19.847992
 offset_bottom = 12.687999
 script = ExtResource("5_vcsgt")
+
+[node name="DedicatedServerBootstrap" type="Node" parent="." unique_id=1722945202 node_paths=PackedStringArray("NetworkManager", "Lobby")]
+script = ExtResource("6_c01mt")
+NetworkManager = NodePath("../NetworkManager")
+Lobby = NodePath("../Lobby")
+
+[node name="DiscoveryBroadcaster" type="Node" parent="." unique_id=42622201 node_paths=PackedStringArray("NetworkManager", "Players")]
+script = ExtResource("7_nxtc6")
+NetworkManager = NodePath("../NetworkManager")
+Players = NodePath("../Players")
