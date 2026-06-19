@@ -82,6 +82,19 @@
     <Compile Include="..\..\scripts\Networking\ServerList.cs" />
   </ItemGroup>
 
+  <!--
+    Pure Player source files (M7a foundation, issues #37/#55).
+    MovementMath.cs and PredictionBuffer.cs are plain C# (PredictionBuffer
+    uses Godot.Vector2 from the GodotSharp NuGet already referenced above);
+    neither extends a Node. PlayerController.cs IS excluded — it extends
+    CharacterBody3D and touches the Input singleton, neither of which can
+    run headlessly.
+  -->
+  <ItemGroup>
+    <Compile Include="..\..\scripts\Player\MovementMath.cs" />
+    <Compile Include="..\..\scripts\Player\PredictionBuffer.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
