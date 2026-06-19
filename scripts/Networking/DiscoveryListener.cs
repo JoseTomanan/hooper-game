@@ -53,7 +53,7 @@ public partial class DiscoveryListener : Node
 		if (err != Error.Ok)
 		{
 			GD.PrintErr($"[DiscoveryListener] Bind({DiscoveryPort}) failed: {err}. " +
-			            "Another instance on this machine may already be listening.");
+						"Another instance on this machine may already be listening.");
 			_udp = null;
 			return;
 		}

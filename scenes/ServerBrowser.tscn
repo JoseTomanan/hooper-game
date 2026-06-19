@@ -1,0 +1,23 @@
+[gd_scene format=3 uid="uid://cb04swbq2ivnx"]
+
+[ext_resource type="Script" uid="uid://v24vhk2vmvjy" path="res://scripts/Networking/ServerBrowser.cs" id="1_k01qt"]
+[ext_resource type="Script" uid="uid://c2jcf4pj8gr5r" path="res://scripts/Networking/DiscoveryListener.cs" id="1_o75wg"]
+
+[node name="ServerBrowser" type="CanvasLayer" unique_id=1663277562 node_paths=PackedStringArray("Discovery", "ServerListUi")]
+script = ExtResource("1_k01qt")
+Discovery = NodePath("DiscoveryListener")
+ServerListUi = NodePath("ServerListUI")
+
+[node name="ServerListUI" type="ItemList" parent="." unique_id=321957583]
+anchors_preset = -1
+anchor_left = 0.017
+anchor_top = 0.164
+anchor_right = 0.017
+anchor_bottom = 0.164
+offset_left = -19.584002
+offset_top = -20.272003
+offset_right = 20.415998
+offset_bottom = 19.727997
+
+[node name="DiscoveryListener" type="Node" parent="." unique_id=322551629]
+script = ExtResource("1_o75wg")
