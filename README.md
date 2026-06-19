@@ -73,6 +73,19 @@ This project requires **Godot 4 (.NET edition)** — the standard Godot 4 build 
 
 Input actions (`move_left`, `move_right`, `move_forward`, `move_backward`) must be configured in **Project → Project Settings → Input Map** before movement works.
 
+### Running tests
+
+The pure, engine-free modules (ball physics, committed-move framework, score
+state, server discovery, player movement math + prediction bookkeeping) have a
+headless xUnit suite that runs without opening Godot:
+
+```
+dotnet test tests/Hooper.Ball.Tests
+```
+
+This suite is a **green-before-merge gate** for M7a (issue #37): any visual
+change to the player must not regress movement or reconciliation underneath it.
+
 ---
 
 ## Architecture Decisions

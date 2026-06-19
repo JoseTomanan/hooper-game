@@ -589,6 +589,22 @@ machine on the LAN. Tell Claude Code which items you confirmed.
 > dual-instance test. The implementing agent fills in per-sub-issue steps against
 > the real node names. Do NOT pull M7b (#54/#41, rigged animation) forward.
 
+### Green-before-merge gate (issue #37)
+
+`PlayerController`'s movement math (`MovementMath`, issue #37) and prediction
+bookkeeping (`PredictionBuffer`, issue #55) were extracted into pure, headless-
+testable classes specifically so M7a's visual changes have a regression net —
+a humanoid mesh swap or a cosmetic lean must not be able to silently break
+movement or reconciliation. Before any M7a PR merges, run:
+
+```
+dotnet test tests/Hooper.Ball.Tests
+```
+
+It must show **0 failed** (currently 250 tests). This is a code-only check —
+no editor steps required — but it's gating, not optional: if it's red, the PR
+doesn't merge regardless of how the visual change looks in the editor.
+
 ---
 
 ## What to deliberately NOT touch yet
