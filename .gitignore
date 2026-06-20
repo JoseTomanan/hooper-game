@@ -15,6 +15,12 @@ bin/
 obj/
 *.user
 
+# Godot exported builds
+build/
+
+# Godot resource UID sidecar files (auto-generated, not source)
+*.uid
+
 # Cross-session handoffs are scratch (in-flight state, not durable docs).
 # Keep the folder + its README in the repo so the convention is discoverable,
 # but never commit the handoff files themselves.
