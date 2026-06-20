@@ -122,17 +122,37 @@ public class ReboundContestTests
     }
 
     // ═════════════════════════════════════════════════════════════════════
-    // Distance uses full 3D position (a high airborne ball is out of reach)
+    // Height is ignored — floor-plane (XZ) distance only (regression #48)
     // ═════════════════════════════════════════════════════════════════════
 
     [Fact]
-    public void Resolve_BallAboveFloorPlayer_OutOfReachByHeight()
+    public void Resolve_PlayerDirectlyAboveBall_YIgnored_InReach()
     {
-        // Player directly under the ball horizontally, but the ball is 3 m up
-        // (e.g. just off the rim) — beyond a 1 m pickup radius in 3D.
-        var ball = new Vector3(0f, 3f, 0f);
-        var candidates = new[] { At(1, 0f, 0f) };
+        // Regression for the full-3D-distance bug: a player standing on a
+        // resting ball (capsule centre Y≈1.0, ball Y≈0.12) was rejected by
+        // the radius gate because the vertical gap alone was ~0.88 m — larger
+        // than the effective XZ reach of a 1.0 m PickupRadius. Fix: drop Y
+        // before measuring so PickupRadius means "metres of court reach."
+        //
+        // Player is directly above ball (XZ offset = 0). Old 3D metric:
+        // distSq = 1.0² = 1.0, radius 0.5 → rejected (0). New XZ metric:
+        // distSq = 0 → wins.
+        var ball = new Vector3(0f, 0f, 0f);
+        var candidates = new[] { new ReboundContest.Candidate(1, new Vector3(0f, 1.0f, 0f)) };
+        int winner = ReboundContest.Resolve(ball, candidates, 0.5f);
+        Assert.Equal(1, winner);
+    }
+
+    [Fact]
+    public void Resolve_RealWorldRestingBall_PlayerNearby_InReach()
+    {
+        // Concrete real-world scenario: ball resting at Y=0.12 (BallRadius),
+        // player capsule centre at Y=1.0, 0.5 m apart in X.
+        // Old 3D distSq = 0.5²+0.88² ≈ 1.024 > radiusSq=1.0 → nobody wins.
+        // New XZ distSq = 0.25 → peer 1 wins.
+        var ball = new Vector3(0f, 0.12f, 0f);
+        var candidates = new[] { new ReboundContest.Candidate(1, new Vector3(0.5f, 1.0f, 0f)) };
         int winner = ReboundContest.Resolve(ball, candidates, 1.0f);
-        Assert.Equal(0, winner);
+        Assert.Equal(1, winner);
     }
 }

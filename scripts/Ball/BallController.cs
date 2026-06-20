@@ -130,10 +130,12 @@ public partial class BallController : Node3D
 	// ── Possession tunables (M6b, ADR-0008) ───────────────────────────────
 
 	/// <summary>
-	/// How close (metres) a player must be to a loose ball to recover it
-	/// (issue #48). Editor-tunable balance surface, not an architectural
-	/// constant — see ADR-0008. When both players are in reach the nearer
-	/// wins (ReboundContest).
+	/// Floor-plane (XZ) distance (metres) within which a player can recover a
+	/// loose ball (issue #48). Editor-tunable balance surface, not an
+	/// architectural constant — see ADR-0008. The Y component of both ball and
+	/// player positions is ignored (the fixed height gap between a resting ball
+	/// and a capsule centre would otherwise shrink the real reach silently).
+	/// When both players are in reach the nearer wins (ReboundContest).
 	/// </summary>
 	[Export] public float PickupRadius { get; set; } = 1.0f;
 
