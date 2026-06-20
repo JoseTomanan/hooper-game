@@ -70,13 +70,13 @@ public partial class PossessionHud : Label
 		int localId = Multiplayer.GetUniqueId();
 
 		string who = holderPeerId == 0   ? "Loose ball"
-		           : holderPeerId == localId ? "You have the ball"
-		           : "Opponent has the ball";
+				   : holderPeerId == localId ? "You have the ball"
+				   : "Opponent has the ball";
 
 		// Clear state only matters while someone holds the ball.
 		string clear = holderPeerId == 0 ? ""
-		             : cleared ? "   •   Cleared"
-		             : "   •   Take it back";
+					 : cleared ? "   •   Cleared"
+					 : "   •   Take it back";
 
 		Text = who + clear;
 	}
