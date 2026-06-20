@@ -1,6 +1,17 @@
 [gd_scene format=3 uid="uid://deqwcrx0qbthi"]
 
 [ext_resource type="Script" uid="uid://daoimm0eih1jf" path="res://scripts/Ball/BallController.cs" id="1_d73vv"]
+[ext_resource type="Script" path="res://scripts/Systems/BlobShadow.cs" id="2_blobshadow"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ballshadow"]
+transparency = 1
+shading_mode = 2
+albedo_color = Color(0, 0, 0, 0.42)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_ballshadow"]
+top_radius = 0.14
+bottom_radius = 0.14
+height = 0.005
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_d73vv"]
 albedo_color = Color(0.8980392, 0.36078432, 0.05490196, 1)
@@ -15,3 +26,11 @@ script = ExtResource("1_d73vv")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=2001365288]
 mesh = SubResource("SphereMesh_ig1eg")
+
+[node name="Shadow" type="Node3D" parent="." unique_id=4000003]
+script = ExtResource("2_blobshadow")
+
+[node name="ShadowMesh" type="MeshInstance3D" parent="Shadow" unique_id=4000004]
+cast_shadow = 0
+mesh = SubResource("CylinderMesh_ballshadow")
+surface_material_override/0 = SubResource("StandardMaterial3D_ballshadow")

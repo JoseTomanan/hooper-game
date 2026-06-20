@@ -1,10 +1,21 @@
 [gd_scene format=3 uid="uid://damgpdajv4xlf"]
 
 [ext_resource type="Script" uid="uid://erpigohkoatw" path="res://scripts/Player/PlayerController.cs" id="1_p0vlq"]
+[ext_resource type="Script" path="res://scripts/Systems/BlobShadow.cs" id="2_blobshadow"]
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_p0vlq"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_p0vlq"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_playershadow"]
+transparency = 1
+shading_mode = 2
+albedo_color = Color(0, 0, 0, 0.42)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_playershadow"]
+top_radius = 0.38
+bottom_radius = 0.38
+height = 0.005
 
 [node name="CharacterBody3D" type="CharacterBody3D" unique_id=700308040]
 script = ExtResource("1_p0vlq")
@@ -14,3 +25,11 @@ mesh = SubResource("CapsuleMesh_p0vlq")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=523243475]
 shape = SubResource("CapsuleShape3D_p0vlq")
+
+[node name="Shadow" type="Node3D" parent="." unique_id=4000001]
+script = ExtResource("2_blobshadow")
+
+[node name="ShadowMesh" type="MeshInstance3D" parent="Shadow" unique_id=4000002]
+cast_shadow = 0
+mesh = SubResource("CylinderMesh_playershadow")
+surface_material_override/0 = SubResource("StandardMaterial3D_playershadow")
