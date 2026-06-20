@@ -137,6 +137,14 @@ public partial class BallController : Node3D
 	/// </summary>
 	[Export] public float PickupRadius { get; set; } = 1.0f;
 
+	/// <summary>
+	/// Floor-plane distance (metres) from the hoop the handler must reach to
+	/// clear a possession — the take-it-back line near the top of the key
+	/// (issue #50, ADR-0008). Editor-tunable balance surface. Defaults to ~the
+	/// NBA top-of-key radius (5.8 m).
+	/// </summary>
+	[Export] public float ClearLineDistance { get; set; } = 5.8f;
+
 	// ── Reconciliation tuning (mirrors PlayerController's tunables) ───────
 
 	/// <summary>
@@ -158,6 +166,25 @@ public partial class BallController : Node3D
 
 	/// <summary>Convenience accessor for the current state.</summary>
 	public BallState State => StateMachine.Current;
+
+	/// <summary>
+	/// Whether the current possession has been "cleared" — the handler has
+	/// carried the ball back behind the clear line, so a basket may now count
+	/// (take-it-back rule, ADR-0008, issue #50).
+	///
+	/// Server-authoritative and NEVER predicted, exactly the discrete-forced
+	/// treatment GameManager documents for score: only the server flips it
+	/// (false on every change of possession, true once the holder crosses the
+	/// clear line — see UpdateClearStatus / AwardPossession), and clients take
+	/// the value verbatim from the ReceiveState broadcast in
+	/// ReconcileFromServer. It lives here, with the holder it belongs to, rather
+	/// than in GameManager, because "cleared" is a property of THIS possession:
+	/// a possession change resets it, and the only check that sets it is pure
+	/// geometry on the holder position this node already computes. Held next to
+	/// HolderPeerId so the two travel together in one broadcast and the HUD
+	/// (#51) reads possession from a single source.
+	/// </summary>
+	public bool IsCleared { get; private set; }
 
 	private DribbleCycle _dribble;
 	private RimBackboard _basket;
@@ -194,6 +221,7 @@ public partial class BallController : Node3D
 	private Vector3 _serverPos;
 	private Vector3 _serverVel;
 	private int _serverHolderPeerId;
+	private bool _serverCleared;
 
 	/// <summary>True once ReceiveState has arrived since the last _PhysicsProcess.</summary>
 	private bool _hasNewState;
@@ -359,13 +387,21 @@ public partial class BallController : Node3D
 			TryAssignTipoffHolder();
 		}
 
+		// Server-only: clear the possession once the handler carries the ball
+		// back behind the clear line (#50). Server-authoritative; clients
+		// receive the flag in the broadcast below, never compute it.
+		if (IsServer)
+			UpdateClearStatus();
+
 		// Only the server broadcasts authoritative truth. Every peer (server
 		// included) already predicted its own copy above; the server's
-		// broadcast is what every OTHER peer reconciles against.
+		// broadcast is what every OTHER peer reconciles against. IsCleared rides
+		// the same per-tick snapshot as the holder it belongs to — continuously
+		// resent, so a dropped packet self-heals on the next tick.
 		if (IsServer)
 		{
 			Rpc(MethodName.ReceiveState,
-				(int)StateMachine.Current, GlobalPosition, CurrentVelocity(), StateMachine.HolderPeerId);
+				(int)StateMachine.Current, GlobalPosition, CurrentVelocity(), StateMachine.HolderPeerId, IsCleared);
 		}
 
 		ApplySmoothCorrection();
@@ -403,6 +439,13 @@ public partial class BallController : Node3D
 			if (int.TryParse(child.Name, out int peerId) && peerId != 0)
 			{
 				StateMachine.ForceState(State, peerId);
+
+				// The opening possession is pre-cleared (ADR-0008): the
+				// take-it-back rule applies "on every change of possession and
+				// after every made basket" — the tipoff is neither, so the
+				// first basket must be allowed to count without a take-back.
+				IsCleared = true;
+
 				GD.Print("[BallController] Tipoff holder assigned to peer ", peerId);
 				return;
 			}
@@ -414,6 +457,24 @@ public partial class BallController : Node3D
 	{
 		Node holder = Players?.GetNodeOrNull(StateMachine.HolderPeerId.ToString());
 		return (holder as Node3D)?.GlobalPosition ?? Vector3.Zero;
+	}
+
+	/// <summary>
+	/// Server-only: flip the current possession to cleared once the handler has
+	/// carried the ball back behind the clear line (#50, ADR-0008). Only checked
+	/// while a player actually holds the ball (Held/Dribbling) and only until it
+	/// flips — once cleared, the possession stays cleared until the next change
+	/// of possession resets it (AwardPossession). One-way within a possession, so
+	/// stepping back inside the line after clearing does not un-clear it.
+	/// </summary>
+	private void UpdateClearStatus()
+	{
+		if (IsCleared) return;
+		if (State != BallState.Held && State != BallState.Dribbling) return;
+		if (StateMachine.HolderPeerId == 0) return; // no holder to measure (pre-tipoff)
+
+		if (ClearLine.IsBehindClearLine(HolderPosition(), RimCenter, ClearLineDistance))
+			IsCleared = true;
 	}
 
 	// ── Per-state behaviour ───────────────────────────────────────────────
@@ -498,30 +559,53 @@ public partial class BallController : Node3D
 				// the server rims out simply never scores, and its ball
 				// state gets force-corrected on the next broadcast — confirmed
 				// consistent, no permanent divergence possible.
-				GetGameManager()?.RegisterBasket(_lastShooterPeerId);
-
-				// Make-it-take-it (#49, ADR-0008): the scorer keeps possession
-				// for the next trip, so a made basket continues the game instead
-				// of leaving the ball loose to settle dead on the floor.
-				//
-				// Server-only, and deliberately NOT predicted on clients (unlike
-				// the rebound in TickLoose): the reset is gated on
-				// RegisterBasket's game-over outcome, which is server truth — a
-				// client's GameManager.IsGameOver is only the broadcast mirror
-				// and lags by up to one RTT. Clients reconcile to the resulting
-				// Held/scorer (→Dribbling) broadcast like any other possession
-				// change. The 1-RTT window where a client still shows the ball
-				// Loose is inert: the ball is up near the rim, well outside any
-				// player's PickupRadius, so the rebound contest cannot fire a
-				// spurious client-side pickup before the reset broadcast lands.
-				//
-				// Skipped on a game-winning basket: the existing game-over freeze
-				// (PlayerController freezes the players; the ball coasts to rest —
-				// see _PhysicsProcess's no-freeze rationale) must stand.
-				if (IsServer && !(GetGameManager()?.IsGameOver ?? false))
-					AwardPossession(_lastShooterPeerId);
+				// The scoring DECISION is server-only — gated on IsCleared,
+				// which is server-authoritative (clients only ever display the
+				// broadcast value; see IsCleared's doc). A client reaching this
+				// branch already ran GoLoose() above as prediction and reconciles
+				// to whatever the server broadcasts next; it never scores or
+				// decides a turnover. (This is the same authority boundary the
+				// old code relied on via RegisterBasket's internal IsServer
+				// guard; making it an explicit server block here just lets the
+				// clear-gate and the take-it-back turnover live in one place.)
+				if (IsServer)
+					ResolveServerMake();
 				break;
 		}
+	}
+
+	/// <summary>
+	/// Server-only resolution of a made shot under the take-it-back rule (#50,
+	/// ADR-0008). A make counts only if the possession was cleared:
+	///   - Cleared: register the point, then — unless it won the game —
+	///     hand the ball back to the scorer (make-it-take-it, #49). The new
+	///     possession starts uncleared.
+	///   - Not cleared: the basket does NOT count; the ball turns over to the
+	///     defender (a take-it-back violation), who also starts uncleared. With
+	///     no opponent present (e.g. a solo editor test) the ball is left loose
+	///     for the rebound contest to resolve.
+	/// </summary>
+	private void ResolveServerMake()
+	{
+		if (IsCleared)
+		{
+			GetGameManager()?.RegisterBasket(_lastShooterPeerId);
+
+			// Make-it-take-it, unless the basket ended the game — then the
+			// game-over freeze stands (see _PhysicsProcess's no-freeze note).
+			if (!(GetGameManager()?.IsGameOver ?? false))
+				AwardPossession(_lastShooterPeerId);
+			return;
+		}
+
+		// Uncleared make: no points. Turn the ball over to the defender, who
+		// must take it back behind the clear line before THEY can score.
+		int defender = OtherPlayerPeerId(_lastShooterPeerId);
+		if (defender != 0)
+			AwardPossession(defender);
+		// else: no opponent present — leave the ball loose (GoLoose already
+		// ran) for the rebound contest to award. IsCleared is already false in
+		// this branch, so the possession correctly stays uncleared either way.
 	}
 
 	/// <summary>
@@ -587,6 +671,25 @@ public partial class BallController : Node3D
 	}
 
 	/// <summary>
+	/// Returns the peer id of the OTHER player under the Players spawn root —
+	/// the one whose node name is not <paramref name="peerId"/> — or 0 if there
+	/// is no other player present (e.g. a solo test). Used to award a take-it-back
+	/// turnover to the defender (#50). 1v1, so there is at most one other player.
+	/// </summary>
+	private int OtherPlayerPeerId(int peerId)
+	{
+		if (Players == null) return 0;
+
+		foreach (Node child in Players.GetChildren())
+		{
+			if (int.TryParse(child.Name, out int other) && other != 0 && other != peerId)
+				return other;
+		}
+
+		return 0;
+	}
+
+	/// <summary>
 	/// Awards possession of a loose / in-flight ball to a player and resumes a
 	/// live dribble — the shared handoff path used by a live rebound (#48) and,
 	/// later, the make-it-take-it reset (#49). Mirrors the tipoff sequence
@@ -599,6 +702,15 @@ public partial class BallController : Node3D
 	{
 		if (!StateMachine.Catch(peerId)) return;
 		StateMachine.StartDribble();
+
+		// Every change of possession starts uncleared (#50, ADR-0008): the new
+		// handler must carry the ball back behind the clear line before a basket
+		// counts. Server-only — IsCleared is server-authoritative and never
+		// predicted; on a client that predicted this rebound (TickLoose), the
+		// flag is left untouched here and corrected from the next broadcast in
+		// ReconcileFromServer, a <=1-RTT display-only lag with no scoring effect.
+		if (IsServer)
+			IsCleared = false;
 	}
 
 	// ── Shot trigger / input authority (M4) ─────────────────────────────────
@@ -754,12 +866,13 @@ public partial class BallController : Node3D
 	[Rpc(MultiplayerApi.RpcMode.Authority,
 		 CallLocal = false,
 		 TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
-	private void ReceiveState(int state, Vector3 pos, Vector3 vel, int holderPeerId)
+	private void ReceiveState(int state, Vector3 pos, Vector3 vel, int holderPeerId, bool cleared)
 	{
 		_serverState         = (BallState)state;
 		_serverPos           = pos;
 		_serverVel           = vel;
 		_serverHolderPeerId  = holderPeerId;
+		_serverCleared       = cleared;
 		_hasNewState         = true;
 	}
 
@@ -791,6 +904,11 @@ public partial class BallController : Node3D
 	{
 		if (StateMachine.Current != _serverState || StateMachine.HolderPeerId != _serverHolderPeerId)
 			StateMachine.ForceState(_serverState, _serverHolderPeerId);
+
+		// Cleared is server-authoritative and never predicted: a client takes
+		// the broadcast value verbatim (#50). This corrects the <=1-RTT window
+		// after a client-predicted rebound where the local flag was left stale.
+		IsCleared = _serverCleared;
 
 		Vector3 renderedPos = GlobalPosition;
 		GlobalPosition = _serverPos;
