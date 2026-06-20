@@ -18,6 +18,7 @@ locked unless explicitly revisited (see Decision Discipline in §4 below).
 | [ADR-0005](docs/adr/0005-community-model-dedicated-servers.md) | Community: self-hosted dedicated servers + server browser (CS 1.6 style) |
 | [ADR-0006](docs/adr/0006-renderer-mobile.md) | Renderer: Godot Mobile (D3D12), not Compatibility/Forward+ |
 | [ADR-0007](docs/adr/0007-dedicated-server-topology-discovery.md) | Dedicated-server topology (listen→headless) + LAN discovery wire format |
+| [ADR-0008](docs/adr/0008-possession-rules.md) | Half-court 1v1 possession rules: make-it-take-it, live rebound, take-it-back/clear |
 
 ---
 
