@@ -1,5 +1,4 @@
 using Godot;
-using System.Collections.Generic;
 using Hooper.Moves;
 using Hooper.Systems;
 
@@ -24,7 +23,7 @@ namespace Hooper.Player;
 ///     Apply Movement. Broadcast ReceiveState with the client's ackSeq.
 ///
 ///   CLIENT's own player (IsLocalPlayer + !IsServer) — prediction path:
-///     seq++; push input to _pending; apply Movement locally NOW (zero lag).
+///     _buffer.Record(input) (assigns seq); apply Movement locally NOW (zero lag).
 ///     Send SubmitInput(seq, input) to the server.
 ///     On receiving ReceiveState → reconcile (see ReconcileFromServer).
 ///
@@ -43,9 +42,11 @@ namespace Hooper.Player;
 /// SetMultiplayerAuthority — the server owns all transform truth.
 ///
 /// ── Shared motion code ───────────────────────────────────────────────────
-/// Move() and ComputeVelocity() are called identically on the server
-/// (authority), during client prediction, and during reconciliation replay.
-/// They must stay pure: no role branches, no network calls, no side effects.
+/// Move() is called identically on the server (authority), during client
+/// prediction, and during reconciliation replay. It must stay pure: no role
+/// branches, no network calls, no side effects. The Accel/Decel asymmetry it
+/// delegates to lives in MovementMath (issue #37) — pure and unit-tested,
+/// since any divergence there is a netcode bug, not just a feel tweak.
 ///
 /// ── Smooth correction ────────────────────────────────────────────────────
 /// When reconciliation detects divergence, _smoothOffset is SET to the
@@ -164,19 +165,10 @@ public partial class PlayerController : CharacterBody3D
 	// ── Network state ─────────────────────────────────────────────────────────
 
 	/// <summary>
-	/// Monotonic sequence counter. Incremented by the client each tick and
-	/// stamped on outgoing inputs. The server echoes the last-applied seq back
-	/// as ackSeq so the client can prune the pending buffer.
-	///
-	/// int wraps at 2^31 (~414 days at 60 Hz). Fine for M1b; revisit in M4
-	/// if we add session-persistence across restarts.
-	/// </summary>
-	private int _seq;
-
-	/// <summary>
 	/// The seq of the last input the server applied for this player node.
 	/// On the server: updated in SubmitInput, echoed via ReceiveState.
-	/// On the client (own player): updated in ReceiveState, used to prune _pending.
+	/// On the client (own player): updated in ReceiveState, fed to
+	/// _buffer.Acknowledge() to prune the prediction buffer.
 	/// </summary>
 	private int _serverAckedSeq;
 
@@ -193,15 +185,15 @@ public partial class PlayerController : CharacterBody3D
 	private Vector2 _pendingInput;
 
 	/// <summary>
-	/// Inputs the client has applied locally but not yet confirmed by the
-	/// server. Each entry is (seq, inputDir). Drained by ReconcileFromServer.
-	///
-	/// Cap: 120 entries (~2 s at 60 Hz). If the server goes silent for 2 s
-	/// the oldest inputs are evicted; a reconcile gap may follow, but this
-	/// requires effective server death — acceptable for M1b.
+	/// Records the client's own predicted inputs and drains them once the
+	/// server confirms them. Extracted from inline _seq/_pending fields
+	/// (issue #55, sibling of #37's MovementMath extraction) so the seq/ack
+	/// bookkeeping behind client-side prediction (ADR-0002) is unit-testable.
+	/// Capacity 120 (~2 s at 60 Hz, the original PendingCap default): if the
+	/// server goes silent for 2 s the oldest inputs are evicted; a reconcile
+	/// gap may follow, but this requires effective server death — acceptable.
 	/// </summary>
-	private readonly Queue<(int seq, Vector2 input)> _pending = new();
-	private const int PendingCap = 120;
+	private readonly PredictionBuffer _buffer = new();
 
 	/// <summary>Authoritative state received from the server, staged for reconcile.</summary>
 	private Vector3 _serverPos;
@@ -393,7 +385,6 @@ public partial class PlayerController : CharacterBody3D
 		}
 
 		// Prediction step.
-		_seq++;
 		SampleMoveInput(isServer: false); // reads gesture + feint, advances machine one tick, RPCs server
 
 		// During a committed move, send Vector2.Zero to the server as this
@@ -410,10 +401,10 @@ public partial class PlayerController : CharacterBody3D
 		// for but doesn't need to eliminate it.
 		Vector2 moveInput = _machine.IsActive ? Vector2.Zero : ReadInput();
 
-		if (_pending.Count >= PendingCap)
-			_pending.Dequeue(); // oldest evicted; 2-s silence required to hit this
-
-		_pending.Enqueue((_seq, moveInput));
+		// Record() assigns the seq and handles capacity eviction (see
+		// PredictionBuffer doc) — behavior-identical to the inline
+		// _seq++ / cap-check / enqueue this replaced.
+		int seq = _buffer.Record(moveInput);
 
 		if (_machine.IsActive)
 			TickCommittedMoveBehavior(delta);
@@ -423,7 +414,7 @@ public partial class PlayerController : CharacterBody3D
 		// Send input to server. UnreliableOrdered: dropped packets are gone,
 		// but arriving packets are always in seq order (no regress to stale input).
 		// Source: RpcId(peerId, MethodName.X) — peerId 1 = server.
-		RpcId(1, MethodName.SubmitInput, _seq, moveInput.X, moveInput.Y);
+		RpcId(1, MethodName.SubmitInput, seq, moveInput.X, moveInput.Y);
 	}
 
 	/// <summary>
@@ -715,8 +706,7 @@ public partial class PlayerController : CharacterBody3D
 			_machine.ForceState(MovePhase.Inactive, frameInPhase: 0, move: null);
 
 		// Step 1: prune confirmed inputs.
-		while (_pending.Count > 0 && _pending.Peek().seq <= ackSeq)
-			_pending.Dequeue();
+		_buffer.Acknowledge(ackSeq);
 
 		// Step 2: remember current rendered position for divergence calculation.
 		Vector3 renderedPos = GlobalPosition;
@@ -728,8 +718,10 @@ public partial class PlayerController : CharacterBody3D
 		// Step 3: replay unacknowledged inputs using the fixed physics timestep.
 		// The server simulated each of these at the same fixed rate, so using
 		// Engine.PhysicsTicksPerSecond here is the correct matching timestep.
+		// Move() (the engine-bound replay step, MoveAndSlide included) stays
+		// here — only the buffer bookkeeping moved to PredictionBuffer (#55).
 		double fixedDelta = 1.0 / Engine.PhysicsTicksPerSecond;
-		foreach ((_, Vector2 input) in _pending)
+		foreach (Vector2 input in _buffer.Replay())
 			Move(input, fixedDelta);
 
 		// Step 4: measure divergence and start a visual smooth correction if needed.
@@ -921,18 +913,11 @@ public partial class PlayerController : CharacterBody3D
 		// World-space, not camera-relative — so the server can replay it
 		// without knowing each client's camera orientation (ADR-0002).
 		Vector3 wishDir = new Vector3(inputDir.X, 0.0f, inputDir.Y);
-		Velocity = ComputeVelocity(Velocity, wishDir, delta);
+		// The Accel/Decel asymmetry ("change of pace", ADR-0003) lives in
+		// MovementMath now (issue #37) so it's unit-testable without a
+		// running Godot instance — this call is behavior-identical to the
+		// inline ComputeVelocity it replaced.
+		Velocity = MovementMath.ComputeVelocity(Velocity, wishDir, delta, MoveSpeed, Accel, Decel);
 		MoveAndSlide();
-	}
-
-	/// <summary>
-	/// Turns desired direction into the next velocity. Asymmetric rates
-	/// (Decel > Accel) are where "change of pace" lives (ADR-0003).
-	/// </summary>
-	private Vector3 ComputeVelocity(Vector3 current, Vector3 wishDir, double delta)
-	{
-		Vector3 target = wishDir * MoveSpeed;
-		float rate = wishDir == Vector3.Zero ? Decel : Accel;
-		return current.MoveToward(target, rate * (float)delta);
 	}
 }
