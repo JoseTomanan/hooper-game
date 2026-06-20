@@ -499,6 +499,27 @@ public partial class BallController : Node3D
 				// state gets force-corrected on the next broadcast — confirmed
 				// consistent, no permanent divergence possible.
 				GetGameManager()?.RegisterBasket(_lastShooterPeerId);
+
+				// Make-it-take-it (#49, ADR-0008): the scorer keeps possession
+				// for the next trip, so a made basket continues the game instead
+				// of leaving the ball loose to settle dead on the floor.
+				//
+				// Server-only, and deliberately NOT predicted on clients (unlike
+				// the rebound in TickLoose): the reset is gated on
+				// RegisterBasket's game-over outcome, which is server truth — a
+				// client's GameManager.IsGameOver is only the broadcast mirror
+				// and lags by up to one RTT. Clients reconcile to the resulting
+				// Held/scorer (→Dribbling) broadcast like any other possession
+				// change. The 1-RTT window where a client still shows the ball
+				// Loose is inert: the ball is up near the rim, well outside any
+				// player's PickupRadius, so the rebound contest cannot fire a
+				// spurious client-side pickup before the reset broadcast lands.
+				//
+				// Skipped on a game-winning basket: the existing game-over freeze
+				// (PlayerController freezes the players; the ball coasts to rest —
+				// see _PhysicsProcess's no-freeze rationale) must stand.
+				if (IsServer && !(GetGameManager()?.IsGameOver ?? false))
+					AwardPossession(_lastShooterPeerId);
 				break;
 		}
 	}
