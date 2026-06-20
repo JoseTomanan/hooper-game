@@ -629,6 +629,13 @@ public partial class BallController : Node3D
 
 			// Make-it-take-it, unless the basket ended the game — then the
 			// game-over freeze stands (see _PhysicsProcess's no-freeze note).
+			// The new possession starts uncleared (AwardPossession), but if the
+			// scorer made this shot from BEHIND the clear line they are already
+			// behind it, so UpdateClearStatus re-clears them on the same tick —
+			// by design: being at/behind the line satisfies "take it back" (no
+			// in-and-out crossing required). Only a make from INSIDE the line
+			// (the common layup case) leaves them uncleared and forced to carry
+			// the ball back out before the next basket counts.
 			if (!(GetGameManager()?.IsGameOver ?? false))
 				AwardPossession(_lastShooterPeerId);
 			return;
@@ -660,6 +667,14 @@ public partial class BallController : Node3D
 	/// effect is needed the way RegisterBasket is for scoring: the holder change
 	/// IS the broadcast state, forced to match on clients via
 	/// ReconcileFromServer like any other possession change.
+	///
+	/// Accepted cost: in the rare genuinely-contested case (both players within
+	/// PickupRadius AND their positions desynced enough to flip "who is nearer"),
+	/// a client may predict ITSELF recovering when the server awards the
+	/// opponent. Its predicted possession — and any shot it fired that frame —
+	/// is then reconciled away. That is the inherent price of predicting
+	/// possession (issue #48 requires the prediction), bounded to a one-RTT
+	/// window on a 50/50 scramble; nothing diverges permanently.
 	/// </summary>
 	private void TickLoose(float dt)
 	{
@@ -736,17 +751,28 @@ public partial class BallController : Node3D
 	/// </summary>
 	private void AwardPossession(int peerId)
 	{
-		if (!StateMachine.Catch(peerId)) return;
+		if (!StateMachine.Catch(peerId))
+		{
+			// Unreachable in the real call paths — both callers (the rebound in
+			// TickLoose and ResolveServerMake) only reach here while the ball is
+			// Loose, where Catch is legal. Surface loudly (CLAUDE.md loud-failure
+			// rule) if a future path ever calls in at an illegal state, rather
+			// than silently leaving possession in a half-changed condition.
+			GD.PrintErr($"[BallController] AwardPossession({peerId}) called in state {State}; Catch rejected, possession unchanged.");
+			return;
+		}
 		StateMachine.StartDribble();
 
 		// Every change of possession starts uncleared (#50, ADR-0008): the new
 		// handler must carry the ball back behind the clear line before a basket
-		// counts. Server-only — IsCleared is server-authoritative and never
-		// predicted; on a client that predicted this rebound (TickLoose), the
-		// flag is left untouched here and corrected from the next broadcast in
-		// ReconcileFromServer, a <=1-RTT display-only lag with no scoring effect.
-		if (IsServer)
-			IsCleared = false;
+		// counts. Set on EVERY peer, not just the server — "a new possession is
+		// uncleared" is a DETERMINISTIC rule, so a client predicting a rebound
+		// (TickLoose) predicts it too. That keeps the HUD showing "take it back"
+		// immediately instead of a stale "cleared" carried over from the prior
+		// possession. Only the TRUE flip (UpdateClearStatus, the line crossing)
+		// is server-authoritative; clients receive that via the ReceiveState
+		// broadcast in ReconcileFromServer and never compute it themselves.
+		IsCleared = false;
 	}
 
 	// ── Shot trigger / input authority (M4) ─────────────────────────────────
