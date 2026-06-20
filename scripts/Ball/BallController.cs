@@ -186,6 +186,15 @@ public partial class BallController : Node3D
 	/// </summary>
 	public bool IsCleared { get; private set; }
 
+	/// <summary>
+	/// Emitted on every peer whenever the holder or the cleared flag changes —
+	/// the push-driven cue the possession HUD (#51) refreshes on, mirroring how
+	/// GameManager.ScoreChanged drives ScoreHud. Fires from the same per-tick
+	/// change-check on every peer, so it is correct whether the change came from
+	/// local gameplay (server) or from a reconcile (client).
+	/// </summary>
+	[Signal] public delegate void PossessionChangedEventHandler(int holderPeerId, bool cleared);
+
 	private DribbleCycle _dribble;
 	private RimBackboard _basket;
 
@@ -281,6 +290,10 @@ public partial class BallController : Node3D
 
 	public override void _Ready()
 	{
+		// Discoverable by the possession HUD via group lookup (#51), the same
+		// pattern ScoreHud uses to find GameManager — there is exactly one ball.
+		AddToGroup("ball");
+
 		_dribble = new DribbleCycle(DribbleHandHeight, DribblePeriod);
 		_basket  = new RimBackboard(
 			RimCenter, RimRadius, BallRadius, RimRestitution,
@@ -405,6 +418,29 @@ public partial class BallController : Node3D
 		}
 
 		ApplySmoothCorrection();
+
+		// Push the possession HUD only when something actually changed (#51) —
+		// one refresh per possession/clear event, not 60 per second. Runs on
+		// every peer after reconcile, so a client emits when the broadcast moves
+		// the holder/cleared, and the server when gameplay does.
+		EmitPossessionIfChanged();
+	}
+
+	// ── Possession HUD push (#51) ──────────────────────────────────────────
+
+	/// <summary>Last (holder, cleared) pair emitted; -1 holder means "nothing emitted yet" (0 is a valid no-holder).</summary>
+	private int _lastEmittedHolder = -1;
+	private bool _lastEmittedCleared;
+
+	/// <summary>Emits PossessionChanged when the holder or cleared flag differs from the last emit.</summary>
+	private void EmitPossessionIfChanged()
+	{
+		if (StateMachine.HolderPeerId == _lastEmittedHolder && IsCleared == _lastEmittedCleared)
+			return;
+
+		_lastEmittedHolder = StateMachine.HolderPeerId;
+		_lastEmittedCleared = IsCleared;
+		EmitSignal(SignalName.PossessionChanged, _lastEmittedHolder, _lastEmittedCleared);
 	}
 
 	/// <summary>
