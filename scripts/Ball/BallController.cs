@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Godot;
 using Hooper.Systems;
 
@@ -125,6 +126,16 @@ public partial class BallController : Node3D
 	/// this action in Project Settings → Input Map (EDITOR_TASKS).
 	/// </summary>
 	[Export] public string ShootAction { get; set; } = "ball_shoot";
+
+	// ── Possession tunables (M6b, ADR-0008) ───────────────────────────────
+
+	/// <summary>
+	/// How close (metres) a player must be to a loose ball to recover it
+	/// (issue #48). Editor-tunable balance surface, not an architectural
+	/// constant — see ADR-0008. When both players are in reach the nearer
+	/// wins (ReboundContest).
+	/// </summary>
+	[Export] public float PickupRadius { get; set; } = 1.0f;
 
 	// ── Reconciliation tuning (mirrors PlayerController's tunables) ───────
 
@@ -493,9 +504,21 @@ public partial class BallController : Node3D
 	}
 
 	/// <summary>
-	/// Loose ball: keep falling under gravity until it settles on the floor.
-	/// This makes the "missed shot → loose → rests on the court" outcome
-	/// visible. A real loose-ball contest is an M4+ concern.
+	/// Loose ball: fall under gravity until it settles on the floor, AND each
+	/// tick run the live-rebound contest (#48, ADR-0008) so the ball can be
+	/// recovered and the possession loop continues — the keystone that turns
+	/// the old "one shot per match" ceiling into a real game.
+	///
+	/// The contest runs on EVERY peer as prediction, exactly like the Make
+	/// detection in TickInFlight: the recovery is a deterministic function of
+	/// the ball's and players' positions (ReboundContest), so each peer
+	/// computes the same winner from the data it has, the recoverer regains
+	/// control with zero input lag, and the server's next ReceiveState
+	/// broadcast reconciles away any divergence (e.g. a client predicting off a
+	/// slightly stale remote-player position). No separate server-gated side
+	/// effect is needed the way RegisterBasket is for scoring: the holder change
+	/// IS the broadcast state, forced to match on clients via
+	/// ReconcileFromServer like any other possession change.
 	/// </summary>
 	private void TickLoose(float dt)
 	{
@@ -511,6 +534,50 @@ public partial class BallController : Node3D
 		}
 
 		GlobalPosition = _arc.Position;
+
+		int recoverer = ResolveLooseBallRecovery();
+		if (recoverer != 0)
+			AwardPossession(recoverer);
+	}
+
+	/// <summary>
+	/// Gathers the loose-ball candidates from the Players spawn root (each
+	/// child is named by peer id — the identity contract NetworkManager.
+	/// SpawnPlayer establishes) and asks ReboundContest who recovers the ball.
+	/// Returns 0 (nobody in reach) when Players is unwired or no player is
+	/// within PickupRadius.
+	/// </summary>
+	private int ResolveLooseBallRecovery()
+	{
+		if (Players == null) return 0;
+
+		var candidates = new List<ReboundContest.Candidate>();
+		foreach (Node child in Players.GetChildren())
+		{
+			if (child is Node3D player
+				&& int.TryParse(child.Name, out int peerId)
+				&& peerId != 0)
+			{
+				candidates.Add(new ReboundContest.Candidate(peerId, player.GlobalPosition));
+			}
+		}
+
+		return ReboundContest.Resolve(GlobalPosition, candidates, PickupRadius);
+	}
+
+	/// <summary>
+	/// Awards possession of a loose / in-flight ball to a player and resumes a
+	/// live dribble — the shared handoff path used by a live rebound (#48) and,
+	/// later, the make-it-take-it reset (#49). Mirrors the tipoff sequence
+	/// (Catch → StartDribble): Catch is legal only from InFlight/Loose (it
+	/// returns false otherwise, leaving state untouched), and StartDribble then
+	/// puts the new holder into the same dribbling state the game opens in, so
+	/// they can immediately dribble and shoot.
+	/// </summary>
+	private void AwardPossession(int peerId)
+	{
+		if (!StateMachine.Catch(peerId)) return;
+		StateMachine.StartDribble();
 	}
 
 	// ── Shot trigger / input authority (M4) ─────────────────────────────────
@@ -533,14 +600,13 @@ public partial class BallController : Node3D
 	///   - Otherwise (this machine doesn't hold the ball): no local action.
 	///     A remote client's shot reaches us only via the server's broadcast.
 	///
-	/// (Doubt cycle 1, finding #1/#2) Known M4 limitation, inherited from M2:
 	/// Shoot() clears HolderPeerId to 0, and no peer's unique ID is ever 0, so
-	/// IsLocalHolder can never be true again after a shot until something calls
-	/// Catch() to hand the ball back — which nothing does yet (TickLoose only
-	/// settles the ball on the floor; pickup/possession-contest input is a
-	/// future issue, not #20's scope). One shot per match session is the
-	/// current ceiling; this is acceptable for #20/#22's verification scope
-	/// (one dribble/shot/crossover pass) but is NOT a full possession loop.
+	/// IsLocalHolder is false after a shot until possession is re-awarded. As of
+	/// M6b that re-award is wired (ADR-0008): TickLoose runs the live-rebound
+	/// contest (#48) and a made basket hands the ball back to the scorer (#49),
+	/// both via AwardPossession → Catch, which restores a holder and makes
+	/// IsLocalHolder true again for the recoverer. The old M4 "one shot per
+	/// match" ceiling — when nothing ever called Catch() — is no longer in force.
 	/// </summary>
 	private void TryShoot()
 	{
