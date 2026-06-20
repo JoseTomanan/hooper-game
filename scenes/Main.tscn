@@ -8,6 +8,7 @@
 [ext_resource type="Script" uid="uid://drobygl31y4mn" path="res://scripts/Networking/DedicatedServerBootstrap.cs" id="6_c01mt"]
 [ext_resource type="Script" uid="uid://dhdoqjw7im05f" path="res://scripts/Networking/DiscoveryBroadcaster.cs" id="7_nxtc6"]
 [ext_resource type="PackedScene" uid="uid://cb04swbq2ivnx" path="res://scenes/ServerBrowser.tscn" id="8_srbrw"]
+[ext_resource type="Script" uid="uid://de27yy5y4j6vq" path="res://scripts/Systems/PossessionHud.cs" id="9_q8u5g"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
 
@@ -56,6 +57,13 @@ surface_material_override/0 = SubResource("StandardMaterial3D_vcsgt")
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Floor" unique_id=391624559]
 shape = SubResource("BoxShape3D_floor")
 
+[node name="Camera3D" type="Camera3D" parent="." unique_id=1898710017]
+transform = Transform3D(1, 0, 0, 0, 0.7071068, 0.7071068, 0, -0.7071068, 0.7071068, 0, 8, 8)
+current = true
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=10074499]
+transform = Transform3D(1, 0, 0, 0, 0.70710677, 0.70710677, 0, -0.70710677, 0.70710677, 0, 10, 0)
+
 [node name="Rim" type="MeshInstance3D" parent="." unique_id=1248964402]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.05, 0)
 mesh = SubResource("TorusMesh_rvslj")
@@ -66,14 +74,10 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.5, 0.03)
 mesh = SubResource("BoxMesh_rvslj")
 surface_material_override/0 = SubResource("StandardMaterial3D_rarhs")
 
-[node name="Camera3D" type="Camera3D" parent="." unique_id=1898710017]
-transform = Transform3D(1, 0, 0, 0, 0.707, 0.707, 0, -0.707, 0.707, 0, 8, 8)
-current = true
-
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=10074499]
-transform = Transform3D(1, 0, 0, 0, 0.707, 0.707, 0, -0.707, 0.707, 0, 10, 0)
-
 [node name="Players" type="Node3D" parent="." unique_id=1470573220]
+
+[node name="Ball" parent="." unique_id=783251786 node_paths=PackedStringArray("Players") instance=ExtResource("3_0bbpv")]
+Players = NodePath("../Players")
 
 [node name="MultiplayerSpawner" type="MultiplayerSpawner" parent="." unique_id=603481057]
 _spawnable_scenes = PackedStringArray("uid://damgpdajv4xlf")
@@ -84,15 +88,22 @@ spawn_limit = 2
 script = ExtResource("1_elqb8")
 Players = NodePath("../Players")
 
-[node name="Lobby" parent="." unique_id=1910977576 node_paths=PackedStringArray("NetworkManager") instance=ExtResource("2_rvslj")]
-NetworkManager = NodePath("../NetworkManager")
-
-[node name="Ball" parent="." unique_id=783251786 node_paths=PackedStringArray("Players") instance=ExtResource("3_0bbpv")]
-Players = NodePath("../Players")
-
 [node name="GameManager" type="Node" parent="." unique_id=977964044]
 script = ExtResource("4_rarhs")
-TargetScore = 8
+TargetScore = 5
+
+[node name="DedicatedServerBootstrap" type="Node" parent="." unique_id=1722945202 node_paths=PackedStringArray("NetworkManager", "Lobby")]
+script = ExtResource("6_c01mt")
+NetworkManager = NodePath("../NetworkManager")
+Lobby = NodePath("../Lobby")
+
+[node name="DiscoveryBroadcaster" type="Node" parent="." unique_id=42622201 node_paths=PackedStringArray("NetworkManager", "Players")]
+script = ExtResource("7_nxtc6")
+NetworkManager = NodePath("../NetworkManager")
+Players = NodePath("../Players")
+
+[node name="Lobby" parent="." unique_id=1910977576 node_paths=PackedStringArray("NetworkManager") instance=ExtResource("2_rvslj")]
+NetworkManager = NodePath("../NetworkManager")
 
 [node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=1246989614]
 
@@ -108,15 +119,10 @@ offset_right = 19.847992
 offset_bottom = 12.687999
 script = ExtResource("5_vcsgt")
 
-[node name="DedicatedServerBootstrap" type="Node" parent="." unique_id=1722945202 node_paths=PackedStringArray("NetworkManager", "Lobby")]
-script = ExtResource("6_c01mt")
-NetworkManager = NodePath("../NetworkManager")
-Lobby = NodePath("../Lobby")
-
-[node name="DiscoveryBroadcaster" type="Node" parent="." unique_id=42622201 node_paths=PackedStringArray("NetworkManager", "Players")]
-script = ExtResource("7_nxtc6")
-NetworkManager = NodePath("../NetworkManager")
-Players = NodePath("../Players")
-
 [node name="ServerBrowser" parent="." unique_id=924367815 node_paths=PackedStringArray("NetworkManager") instance=ExtResource("8_srbrw")]
 NetworkManager = NodePath("../NetworkManager")
+
+[node name="PossessionHUD" type="Label" parent="." unique_id=1118293332]
+offset_right = 40.0
+offset_bottom = 23.0
+script = ExtResource("9_q8u5g")
