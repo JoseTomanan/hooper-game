@@ -72,6 +72,7 @@ current = true
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=10074499]
 transform = Transform3D(1, 0, 0, 0, 0.70710677, 0.70710677, 0, -0.70710677, 0.70710677, 0, 10, 0)
+shadow_enabled = true
 
 [node name="Rim" type="MeshInstance3D" parent="." unique_id=1248964402]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.05, 0)
