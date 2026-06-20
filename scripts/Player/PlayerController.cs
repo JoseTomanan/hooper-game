@@ -127,6 +127,14 @@ public partial class PlayerController : CharacterBody3D
 	/// </summary>
 	[Export] public float ReconcileSnapThreshold { get; set; } = 0.001f;
 
+	/// <summary>
+	/// The visual-root node that is offset during smooth correction and rotated
+	/// for cosmetic facing + lean. Set this in the editor to the node holding
+	/// the player mesh (humanoid root after M7a's mesh swap, or left unset to
+	/// fall back to the MeshInstance3D child lookup below).
+	/// </summary>
+	[Export] public NodePath VisualRoot { get; set; }
+
 	// ── Committed-move tuning (M3) ────────────────────────────────────────────
 
 	/// <summary>
@@ -161,6 +169,12 @@ public partial class PlayerController : CharacterBody3D
 	/// still works, it just snaps visibly.
 	/// </summary>
 	private Node3D _mesh;
+
+	/// <summary>
+	/// Last computed yaw for the visual mesh (radians). Persists between frames
+	/// so the mesh holds its facing when the player is stationary.
+	/// </summary>
+	private float _visualYaw;
 
 	// ── Network state ─────────────────────────────────────────────────────────
 
@@ -252,11 +266,22 @@ public partial class PlayerController : CharacterBody3D
 
 	public override void _Ready()
 	{
-		// Cache the mesh child for smooth-correction offset. Null if the scene
-		// is wired differently — physics still works, correction just snaps.
-		_mesh = GetNodeOrNull<Node3D>("MeshInstance3D");
-		if (_mesh == null)
-			GD.PrintErr("[PlayerController] MeshInstance3D child not found; smooth correction disabled.");
+		// Resolve the visual-root node for smooth-correction offset and cosmetic
+		// facing/lean. VisualRoot (set in the Inspector) is preferred — it
+		// survives the humanoid mesh swap (M7a) without a code change. Falls back
+		// to the hardcoded MeshInstance3D child lookup for scenes not yet updated.
+		if (VisualRoot != null && !VisualRoot.IsEmpty)
+		{
+			_mesh = GetNodeOrNull<Node3D>(VisualRoot);
+			if (_mesh == null)
+				GD.PrintErr($"[PlayerController] VisualRoot '{VisualRoot}' is set but could not be resolved — check for a renamed or deleted node. Smooth correction disabled.");
+		}
+		else
+		{
+			_mesh = GetNodeOrNull<Node3D>("MeshInstance3D");
+			if (_mesh == null)
+				GD.PrintErr("[PlayerController] Visual root not found; smooth correction disabled. Set VisualRoot in the Inspector or ensure a MeshInstance3D child exists.");
+		}
 
 		_gameManager = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
 		if (_gameManager == null)
@@ -309,6 +334,7 @@ public partial class PlayerController : CharacterBody3D
 		else                                 TickClientRemotePlayer();
 
 		ApplySmoothCorrection();
+		ApplyCosmetics();
 	}
 
 	// ── Tick roles ────────────────────────────────────────────────────────────
@@ -763,6 +789,37 @@ public partial class PlayerController : CharacterBody3D
 
 		_smoothOffset  = _smoothOffset.Lerp(Vector3.Zero, ReconcileLerpRate);
 		_mesh.Position = _smoothOffset;
+	}
+
+	/// <summary>
+	/// Applies cosmetic facing + burst lean to the visual mesh each frame.
+	/// Cosmetic-only: touches only _mesh.Rotation, never Velocity or any
+	/// authoritative/replicated state. Position (smooth-correction offset) and
+	/// Rotation (facing/lean) are independent transform channels on the same
+	/// node — setting one does not affect the other in Godot.
+	///
+	/// Exact tilt axis and sign are hitl visual sign-off (human verifies in-editor
+	/// that the mesh faces the run direction and leans into the crossover burst).
+	///
+	/// Known limitation (accepted trade-off, issue #39 "non-networked"): for the
+	/// CLIENT's copy of the REMOTE player, _machine is never advanced by
+	/// TickClientRemotePlayer, so _machine.Phase is always Inactive on that path
+	/// and the lean cosmetic is always 0 for the opponent as seen by the client.
+	/// Facing still works (Velocity is set from ReceiveState). Driving the remote
+	/// player's lean would require syncing _machine.Phase to the client's remote
+	/// copy — out of scope for a non-networked cosmetic pass.
+	/// </summary>
+	private void ApplyCosmetics()
+	{
+		if (_mesh == null) return;
+
+		_visualYaw = FacingResolver.ResolveYaw(Velocity, _visualYaw);
+		float burstDir = (_machine.CurrentMove as Crossover)?.BurstDirection ?? 0f;
+		float tilt = LeanResolver.ResolveTilt(_machine.Phase, burstDir);
+
+		// Y = yaw (face run direction), Z = lean (lateral tilt into burst).
+		// Exact sign/axis is hitl sign-off.
+		_mesh.Rotation = new Vector3(0f, _visualYaw, tilt);
 	}
 
 	// ── Input (unchanged from M1a) ────────────────────────────────────────────

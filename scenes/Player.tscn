@@ -19,6 +19,7 @@ height = 0.005
 
 [node name="CharacterBody3D" type="CharacterBody3D" unique_id=700308040]
 script = ExtResource("1_p0vlq")
+VisualRoot = NodePath("MeshInstance3D")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1371142566]
 mesh = SubResource("CapsuleMesh_p0vlq")
