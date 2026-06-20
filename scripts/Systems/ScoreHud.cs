@@ -46,22 +46,28 @@ public partial class ScoreHud : Label
 
 	public override void _Ready()
 	{
-		_gameManager = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
-		if (_gameManager == null)
+		// Deferred so GameManager._Ready() (a sibling) has run and joined the
+		// group before we look it up — avoids a false-positive error and a
+		// missed signal subscription if ScoreHud is listed first in the scene.
+		Callable.From(() =>
 		{
-			GD.PrintErr("[ScoreHud] No node in group 'game_manager' found. The score will not display until GameManager is added to the scene (issue #27).");
-			Text = "(no GameManager)";
-			return;
-		}
+			_gameManager = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+			if (_gameManager == null)
+			{
+				GD.PrintErr("[ScoreHud] No node in group 'game_manager' found. The score will not display until GameManager is added to the scene (issue #27).");
+				Text = "(no GameManager)";
+				return;
+			}
 
-		// Push-driven: refresh only when score state actually changes. Both
-		// signals fire on every peer when a basket broadcast lands (the server
-		// emits them locally too — see GameManager.BroadcastAndEmit).
-		_gameManager.ScoreChanged += RefreshScore;
-		_gameManager.GameOver     += ShowWinner;
+			// Push-driven: refresh only when score state actually changes. Both
+			// signals fire on every peer when a basket broadcast lands (the server
+			// emits them locally too — see GameManager.BroadcastAndEmit).
+			_gameManager.ScoreChanged += RefreshScore;
+			_gameManager.GameOver     += ShowWinner;
 
-		// Render the opening 0–0 before any basket has happened.
-		RefreshScore();
+			// Render the opening 0–0 before any basket has happened.
+			RefreshScore();
+		}).CallDeferred();
 	}
 
 	public override void _ExitTree()

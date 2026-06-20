@@ -327,9 +327,14 @@ public partial class BallController : Node3D
 		if (Players == null)
 			GD.PrintErr("[BallController] Players is not assigned. Wire it in the Inspector to the same spawn root as NetworkManager.Players.");
 
-		_gameManager = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
-		if (_gameManager == null)
-			GD.PrintErr("[BallController] No node in group 'game_manager' found. Scoring and game-over freeze will not work until GameManager is added to the scene (issue #27).");
+		// Deferred so GameManager._Ready() (a later sibling) has run and joined
+		// the group before we check — avoids a false-positive error on scene load.
+		Callable.From(() =>
+		{
+			_gameManager = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+			if (_gameManager == null)
+				GD.PrintErr("[BallController] No node in group 'game_manager' found. Scoring and game-over freeze will not work until GameManager is added to the scene (issue #27).");
+		}).CallDeferred();
 	}
 
 	// ── Tick loop ─────────────────────────────────────────────────────────
