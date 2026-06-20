@@ -43,12 +43,15 @@ public static class ReboundContest
 
     /// <summary>
     /// Resolves which player recovers the loose ball.
+    /// Distance is measured on the floor plane (XZ only) so that
+    /// <paramref name="pickupRadius"/> means "metres of court reach" regardless of
+    /// the fixed height gap between a resting ball and a player's capsule centre.
     /// </summary>
     /// <param name="ballPosition">Current world position of the loose ball.</param>
     /// <param name="candidates">All players eligible to recover (typically both peers).</param>
     /// <param name="pickupRadius">
-    /// Max distance (metres) a player may be from the ball and still recover it.
-    /// A candidate outside this radius cannot win.
+    /// Max floor-plane (XZ) distance (metres) a player may be from the ball and
+    /// still recover it. A candidate outside this radius cannot win.
     /// </param>
     /// <returns>
     /// The winning peer id, or 0 if no candidate is within the pickup radius.
@@ -68,7 +71,16 @@ public static class ReboundContest
 
         foreach (Candidate c in candidates)
         {
-            float distSq = (c.Position - ballPosition).LengthSquared();
+            // Floor-plane (XZ) distance only. A loose ball rests near the
+            // ground (Y ≈ 0.12) while a player's position is its capsule
+            // centre (Y ≈ 1.0). That fixed ~0.88 m vertical gap would consume
+            // most of the radius budget and make grounded pickups feel broken.
+            // Players never leave the floor (no jump), so height carries no
+            // contest information — PickupRadius means metres of court reach.
+            // Still a total order on a single scalar (ADR-0008 / ADR-0002).
+            Vector3 d = c.Position - ballPosition;
+            d.Y = 0f;
+            float distSq = d.LengthSquared();
             if (distSq > radiusSq) continue; // out of reach — cannot recover
 
             // Nearer wins. On an exact tie, lower peer id wins so the result
