@@ -84,7 +84,7 @@ game-dev knowledge on the human's part.
 | M3 — Hybrid input: committed moves | Done | #13 |
 | M4 — Networked ball + committed moves | Done | #19 |
 | M5 — Win condition + scoring | Done | #23 |
-| M6 — Dedicated server + server browser | Code done; editor verify (#32) trails M6b | #28 |
+| M6a — Dedicated server + server browser | Code done; editor verify (#32) trails M6b | #28 |
 | **M6b — Possession loop** | **Active (current)** | #46 |
 | **M7a — Static readability pass** | **Active (parallel presentation track)** | #53 |
 | M7b — Rigged humanoid animation | DEFERRED (after M7a proven) | #54 |

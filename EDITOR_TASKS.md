@@ -436,8 +436,8 @@ epic #23.
 ## Milestone 6 editor tasks — dedicated server + server browser
 
 **Do these only after the `feat/milestone-6` PR is merged, or checked out locally
-for verification before merge.** M6 acceptance is NOT the two-window flow from M1's
-step 5 — see "Step 5" below for the M6-specific procedure and what can't be proven
+for verification before merge.** M6a acceptance is NOT the two-window flow from M1's
+step 5 — see "Step 5" below for the M6a-specific procedure and what can't be proven
 on a single machine.
 
 ### Step 1 — Build first
@@ -538,7 +538,7 @@ Now launch **two** clients (from the editor via *Debug → Run Multiple Instance
 or two copies of a normal export). In each, type the server's IP in the Lobby and
 press **Join** (on one machine use `127.0.0.1`).
 
-### Step 5 — Verify (M6 acceptance — read which parts are single-machine-provable)
+### Step 5 — Verify (M6a acceptance — read which parts are single-machine-provable)
 
 **Provable on ONE machine:**
 1. The headless server starts, logs **0 players**, opens no window, and keeps
@@ -557,23 +557,72 @@ press **Join** (on one machine use `127.0.0.1`).
   contend for the UDP discovery port (7777-adjacent 7778); use ONE browser client
   per machine when testing locally.
 
-When the single-machine items pass, M6's *server + headless + join-by-IP* spine is
+When the single-machine items pass, M6a's *server + headless + join-by-IP* spine is
 proven; the *cross-machine discovery* bar stays open until you have a second
 machine on the LAN. Tell Claude Code which items you confirmed.
 
 ---
 
-## Milestone 6b editor tasks — possession loop (issue #52)
+## Milestone 6b editor tasks — possession loop (issues #51, #52)
 
-> **Stub — steps to be authored when the M6b PR(s) land.** The verification
-> issue is **#52** (epic **#46**). M6b is server-authoritative gameplay only
-> (make-it-take-it, live rebound, take-it-back/clear) — it should add no new
-> scene wiring beyond what M5 already established, so the editor task is expected
-> to be a **dual-instance play-to-N-points verification**, not node assembly.
-> The implementing agent fills this section in against the real flow before
-> asking you to verify. Acceptance: a full 1v1 to a `TargetScore` > 1 (e.g. 5)
-> playable end-to-end — shots, makes, misses, live rebounds, take-it-back, and
-> game-over.
+All M6b gameplay is server-authoritative C# and adds **no required scene wiring**
+beyond M5 — make-it-take-it, the live rebound, and the take-it-back/clear rule
+all run inside `BallController` and reconcile over the existing broadcast. The
+two human steps are: wire the possession HUD label (#51), and play a full game
+to verify the loop (#52).
+
+### Step 1 — Build first
+
+In the editor, **Build** (top-right) so the new `PossessionHud` class appears in
+the Attach Script list and the new `BallController` exports show in the
+Inspector. (See the C# gotcha at the bottom if the class list looks stale.)
+
+### Step 2 — Add the possession HUD (issue #51, hitl)
+
+1. In `Main.tscn`, under the same CanvasLayer/HUD node that holds the M5 score
+   `Label`, add a second **Label** node (name it e.g. `PossessionHud`).
+2. Position it where it won't overlap the score (e.g. top-centre, or just under
+   the score line).
+3. Attach `scripts/Systems/PossessionHud.cs` to it.
+4. No exports to wire — it finds the ball via the `"ball"` group at runtime,
+   the same way `ScoreHud` finds `GameManager`.
+
+### Step 3 — (Optional) tune the possession exports
+
+On the **Ball** node in `Main.tscn`, two new Inspector exports tune the feel —
+defaults are sensible, adjust only if play-testing wants it:
+
+- **Pickup Radius** (default `1.0` m) — how close a player must be to recover a
+  loose ball.
+- **Clear Line Distance** (default `5.8` m) — floor-plane distance from the hoop
+  the handler must reach to clear a possession before a basket counts.
+
+> Note: the clear line is measured from `Rim Center`. If your hoop is not at the
+> world origin, the clear ring follows the hoop automatically (it's radial), but
+> sanity-check that `5.8` m actually sits near your court's top-of-key given the
+> court scale you authored.
+
+### Step 4 — Verify (issue #52 acceptance criteria, hitl)
+
+Run two instances (host + client, the M4/M5 dual-instance flow). Set the
+`GameManager` **Target Score** to something > 1 (e.g. `5`) first. Then confirm,
+watching both windows:
+
+1. **Make-it-take-it** — after a made basket the scorer keeps the ball (it does
+   not die on the floor); the score increments on both windows.
+2. **Live rebound** — a missed shot leaves the ball loose; whichever player is
+   nearer recovers it and can dribble/shoot again. The `PossessionHud` flips to
+   the new holder on both windows.
+3. **Take-it-back / clear** — right after a make or a rebound the HUD shows
+   "Take it back"; a shot made *before* carrying the ball back past the clear
+   line does **not** score and the ball turns over; once the handler has cleared
+   (HUD shows "Cleared"), a make counts.
+4. **Game-over** — play to the target score; the game freezes and the win/lose
+   line shows, exactly as M5.
+
+When all four hold across both windows, **#52 is proven** — close it, then close
+**#51** (its HUD step is verified here too). Closing #52 lets you proceed to the
+M6a dedicated-server verification (#32), which reuses this same completed loop.
 
 ---
 

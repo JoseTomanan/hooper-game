@@ -42,6 +42,8 @@
     <Compile Include="..\..\scripts\Ball\ShotArc.cs" />
     <Compile Include="..\..\scripts\Ball\ContactResult.cs" />
     <Compile Include="..\..\scripts\Ball\RimBackboard.cs" />
+    <Compile Include="..\..\scripts\Ball\ReboundContest.cs" />
+    <Compile Include="..\..\scripts\Ball\ClearLine.cs" />
   </ItemGroup>
 
   <!--
