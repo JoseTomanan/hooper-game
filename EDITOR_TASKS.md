@@ -436,8 +436,8 @@ epic #23.
 ## Milestone 6 editor tasks — dedicated server + server browser
 
 **Do these only after the `feat/milestone-6` PR is merged, or checked out locally
-for verification before merge.** M6 acceptance is NOT the two-window flow from M1's
-step 5 — see "Step 5" below for the M6-specific procedure and what can't be proven
+for verification before merge.** M6a acceptance is NOT the two-window flow from M1's
+step 5 — see "Step 5" below for the M6a-specific procedure and what can't be proven
 on a single machine.
 
 ### Step 1 — Build first
@@ -538,7 +538,7 @@ Now launch **two** clients (from the editor via *Debug → Run Multiple Instance
 or two copies of a normal export). In each, type the server's IP in the Lobby and
 press **Join** (on one machine use `127.0.0.1`).
 
-### Step 5 — Verify (M6 acceptance — read which parts are single-machine-provable)
+### Step 5 — Verify (M6a acceptance — read which parts are single-machine-provable)
 
 **Provable on ONE machine:**
 1. The headless server starts, logs **0 players**, opens no window, and keeps
@@ -557,7 +557,7 @@ press **Join** (on one machine use `127.0.0.1`).
   contend for the UDP discovery port (7777-adjacent 7778); use ONE browser client
   per machine when testing locally.
 
-When the single-machine items pass, M6's *server + headless + join-by-IP* spine is
+When the single-machine items pass, M6a's *server + headless + join-by-IP* spine is
 proven; the *cross-machine discovery* bar stays open until you have a second
 machine on the LAN. Tell Claude Code which items you confirmed.
 
@@ -622,7 +622,7 @@ watching both windows:
 
 When all four hold across both windows, **#52 is proven** — close it, then close
 **#51** (its HUD step is verified here too). Closing #52 lets you proceed to the
-M6 dedicated-server verification (#32), which reuses this same completed loop.
+M6a dedicated-server verification (#32), which reuses this same completed loop.
 
 ---
 
