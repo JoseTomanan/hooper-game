@@ -20,9 +20,10 @@ namespace Hooper.Ball.Tests;
 /// and lands at the target under constant gravity.
 ///
 /// ── Stepper API ──────────────────────────────────────────────────────────
-/// ShotArc.Step(dt) advances one fixed tick using semi-implicit Euler:
-///   velocity += gravity * dt
-///   position += velocity * dt
+/// ShotArc.Step(dt) advances one fixed tick using trapezoidal (average-velocity)
+/// integration:
+///   newVelocity = velocity - gravity * dt
+///   position   += 0.5 * (velocity + newVelocity) * dt
 /// The dt parameter is explicit so tests can use a fixed value and get
 /// deterministic results without a running Godot engine.
 ///
@@ -109,7 +110,7 @@ public class ShotArcTests
     }
 
     // ═════════════════════════════════════════════════════════════════════
-    // Step — semi-implicit Euler integrator
+    // Step — trapezoidal (average-velocity) integrator
     // ═════════════════════════════════════════════════════════════════════
 
     [Fact]
@@ -125,7 +126,8 @@ public class ShotArcTests
     [Fact]
     public void Step_Once_VelocityYDecreasesByGravityTimesDt()
     {
-        // Semi-implicit Euler: vel.Y -= gravity * dt (applied BEFORE position update).
+        // Gravity is applied to velocity the same way regardless of which
+        // velocity feeds the position update: vel.Y -= gravity * dt.
         var arc = FlatShot();
         float initialVy = arc.Velocity.Y;
         arc.Step(FixedDt);
@@ -143,6 +145,39 @@ public class ShotArcTests
         arc.Step(FixedDt);
         Assert.Equal(initialVx, arc.Velocity.X, FineEpsilon);
         Assert.Equal(initialVz, arc.Velocity.Z, FineEpsilon);
+    }
+
+    /// <summary>
+    /// Pins the integrator to the analytic parabola at FineEpsilon (not just
+    /// "approximately," as the landing-accuracy tests below do at CoarseEpsilon).
+    ///
+    /// Under constant acceleration, position(t) = release + v0*t - 0.5*g*t^2 is
+    /// the exact closed-form solution. Trapezoidal (average-velocity) stepping
+    /// reproduces this exactly at every tick boundary, because each step's
+    /// increment v*dt - 0.5*g*dt^2 telescopes to the same closed form.
+    ///
+    /// This guards against regressing to semi-implicit Euler (position updated
+    /// with only the NEW velocity), which has a systematic undershoot of
+    /// 0.5*g*t*dt that grows with elapsed time — e.g. ~13 mm after 10 ticks here,
+    /// and the root cause of issue #46's "cleared shot clangs the rim" bug.
+    /// </summary>
+    [Fact]
+    public void Step_AfterKnownTime_PositionMatchesAnalyticParabola()
+    {
+        var arc = FlatShot();
+        Vector3 release         = arc.Position;
+        Vector3 initialVelocity = arc.Velocity;
+
+        const int steps = 10;
+        for (int i = 0; i < steps; i++)
+            arc.Step(FixedDt);
+
+        float t = steps * FixedDt;
+        float expectedX = release.X + initialVelocity.X * t;
+        float expectedY = release.Y + initialVelocity.Y * t - 0.5f * GravityMagnitude * t * t;
+
+        Assert.Equal(expectedX, arc.Position.X, FineEpsilon);
+        Assert.Equal(expectedY, arc.Position.Y, FineEpsilon);
     }
 
     // ═════════════════════════════════════════════════════════════════════
