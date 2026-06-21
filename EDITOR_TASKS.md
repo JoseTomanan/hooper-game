@@ -626,6 +626,68 @@ M6a dedicated-server verification (#32), which reuses this same completed loop.
 
 ---
 
+## Issue #46 additions — court bound walls + visual indicators (hitl)
+
+These steps implement the physical walls that keep players on the court.  The
+in-court visuals (clear-line arc, court-bound outline) are built in code by
+`CourtVisuals.cs` and need no editor authoring — they appear automatically once
+the scene runs.  Only the four wall `StaticBody3D` nodes require your hands.
+
+### Step 1 — Build first
+
+Build in the editor so `CourtVisuals` and the new `BallController` exports
+(`CourtMin`, `CourtMax`, `MadeFlashDuration`) appear.
+
+### Step 2 — Verify the procedural indicators appear (no wiring needed)
+
+Run a single instance (F5).  Confirm:
+
+- A flat ring on the court floor at roughly **5.8 m** from the hoop — this is
+  the clear-line arc.  It starts **red** (uncleared) once someone holds the ball
+  and turns **green** once they carry it behind the ring.
+- Four faint white box outlines tracing the court rectangle.
+
+If the ring radius looks wrong for your court scale, adjust **Clear Line
+Distance** on the Ball node in the Inspector.
+
+### Step 3 — Place the four half-court walls (hitl)
+
+The ball is clamped in code (`CourtBounds.Clamp` in `TickLoose`); the walls are
+for **players** (CharacterBody3D + MoveAndSlide handles them automatically).
+
+For each of the four sides, add a `StaticBody3D` + `CollisionShape3D`
+(`BoxShape3D`) directly under the `Main` root in `Main.tscn`.  Suggested layout
+matching the default `CourtMin (-4.88, -1.0)` / `CourtMax (4.88, 11.88)` exports:
+
+| Side | Position | Box Size |
+|------|----------|----------|
+| Near wall (−Z) | `(0, 1, −1.0)` | `(11, 2, 0.2)` |
+| Far wall (+Z)  | `(0, 1, 11.88)` | `(11, 2, 0.2)` |
+| Left wall (−X) | `(−4.88, 1, 5.44)` | `(0.2, 2, 14)` |
+| Right wall (+X) | `(4.88, 1, 5.44)` | `(0.2, 2, 14)` |
+
+> **Matching the code clamp:** the `CourtMin`/`CourtMax` exports on the Ball node
+> are the single source of truth for the ball's XZ bound.  Your wall positions
+> must match those numbers — if you resize the court or adjust the exports, move
+> the walls to match (and vice versa).
+
+### Step 4 — Verify (hitl)
+
+Run two instances.  Confirm:
+
+- Players **cannot walk off the floor** — all four walls stop them.
+- A **loose ball** cannot roll past the court edge — it stops at the bound line
+  and rests there (the clamp runs in code).
+- A **made basket** flashes the ball **green for ~1 second**, then returns to
+  orange.  Uncleared makes that turn over do **not** trigger the flash.
+- The **clear-line arc** flips red → green as the holder carries the ball back;
+  after a *make-it-take-it* hand-back the scorer starts already cleared (no
+  forced walk-back); after a **rebound** or **turnover** they start red.
+
+When all four hold, **close issue #46** (the epic).
+
+---
+
 ## Milestone 7a editor tasks — static readability pass (issue #53)
 
 **Do these only after the M7a PR has merged.** All changes are visual/cosmetic —

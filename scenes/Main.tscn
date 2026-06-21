@@ -9,6 +9,7 @@
 [ext_resource type="Script" uid="uid://dhdoqjw7im05f" path="res://scripts/Networking/DiscoveryBroadcaster.cs" id="7_nxtc6"]
 [ext_resource type="PackedScene" uid="uid://cb04swbq2ivnx" path="res://scenes/ServerBrowser.tscn" id="8_srbrw"]
 [ext_resource type="Script" uid="uid://de27yy5y4j6vq" path="res://scripts/Systems/PossessionHud.cs" id="9_q8u5g"]
+[ext_resource type="Script" path="res://scripts/Systems/CourtVisuals.cs" id="10_courtvisuals"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
 
@@ -149,6 +150,9 @@ script = ExtResource("5_vcsgt")
 
 [node name="ServerBrowser" parent="." unique_id=924367815 node_paths=PackedStringArray("NetworkManager") instance=ExtResource("8_srbrw")]
 NetworkManager = NodePath("../NetworkManager")
+
+[node name="CourtVisuals" type="Node3D" parent="." unique_id=4000010]
+script = ExtResource("10_courtvisuals")
 
 [node name="PossessionHUD" type="Label" parent="." unique_id=1118293332]
 anchors_preset = -1
