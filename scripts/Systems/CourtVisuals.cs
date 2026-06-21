@@ -9,54 +9,65 @@ namespace Hooper.Systems;
 /// wiring is needed beyond placing this node in the scene (see Main.tscn and
 /// EDITOR_TASKS.md — the same approach BlobShadow uses in Ball.tscn).
 ///
-/// ── Clear-line arc ───────────────────────────────────────────────────────
-/// A flat torus ring on the court floor at BallController.ClearLineDistance
-/// from the hoop (RimCenter XZ), coloured red when the current possession is
-/// not yet cleared and green once it is.  Hidden (neutral) while no one holds
-/// the ball — the clear state is only meaningful during a live possession.
-/// Legibility requirement from ADR-0008: the arc shows BOTH where the line is
-/// AND whether this possession has crossed it, so the player never has to guess
-/// why a shot didn't count.
+/// ── Clear-line arc (3-point line shape) ─────────────────────────────────
+/// A flat painted ribbon on the court floor shaped like a basketball 3-point
+/// line: a sweeping arc from right sideline to left sideline through the top
+/// of the key (the in-court portion of the ClearLineDistance circle), plus two
+/// straight "corner three" segments running from each arc endpoint down to the
+/// baseline (CourtMin.Y).  Built with SurfaceTool triangle strips so the result
+/// is a genuine flat mesh at floor level, not the raised 3D tube that TorusMesh
+/// produces.
+///
+/// Colour: white (court paint) by default; glows red when a possession is live
+/// and the holder has not yet cleared it — the "take it back" signal.  The line
+/// is always visible; only the colour changes.
+///
+/// Legibility trade-off (ADR-0008): the clear rule is a pure radius
+/// (ClearLine.IsBehindClearLine), so the corner segments technically represent
+/// a zone the rule does not grant — a player behind the corner paint can still
+/// be &lt;ClearLineDistance from the hoop and uncleared.  The author accepted
+/// this as a realism trade-off (see plan docs).  If the misleading colour ever
+/// becomes a problem, the corners can be kept permanently white while only the
+/// arc colour changes.
 ///
 /// ── Court-bound outline ───────────────────────────────────────────────────
 /// Four thin box segments tracing the CourtMin/CourtMax rectangle so the
 /// player can see the half-court limit the ball clamp (and the editor-placed
-/// StaticBody3D walls) enforce.  Static — built once and never changes colour.
+/// StaticBody3D walls) enforce.  Static — built once, never changes colour.
 ///
 /// ── Single source of truth ────────────────────────────────────────────────
 /// Both indicators read their geometry from BallController's exported fields
 /// (ClearLineDistance, RimCenter, CourtMin, CourtMax) via the "ball" group —
-/// exactly the approach PossessionHud uses.  If you retune any of those
-/// values in the Inspector, this node reflects them on the next scene load
-/// without any manual update here.
+/// exactly the approach PossessionHud uses.  Retune those values in the
+/// Inspector and the indicators update automatically on the next scene load.
 /// </summary>
 public partial class CourtVisuals : Node3D
 {
 	// ── Tunables ──────────────────────────────────────────────────────────
 
-	/// <summary>Floor-plane Y (height above court surface) for the arc and outline meshes.</summary>
+	/// <summary>Floor-plane Y (metres above court surface) for all floor indicators.</summary>
 	[Export] public float IndicatorHeight { get; set; } = 0.01f;
 
-	/// <summary>Ring thickness (torus inner→outer radius difference) for the clear-line arc.</summary>
-	[Export] public float ArcThickness { get; set; } = 0.05f;
+	/// <summary>Painted-line width for the clear-line arc and corner segments (metres).</summary>
+	[Export] public float LineWidth { get; set; } = 0.05f;
 
-	/// <summary>Height of the court-bound outline boxes (metres above the floor).</summary>
+	/// <summary>Height of the court-bound outline boxes (metres).</summary>
 	[Export] public float BoundLineHeight { get; set; } = 0.02f;
 
-	/// <summary>Half-width of the court-bound outline boxes (metres).</summary>
+	/// <summary>Thickness of the court-bound outline boxes (metres).</summary>
 	[Export] public float BoundLineThickness { get; set; } = 0.04f;
 
 	// ── Colours ───────────────────────────────────────────────────────────
 
-	private static readonly Color ColourCleared    = new(0.2f, 0.85f, 0.2f, 0.7f);  // green
-	private static readonly Color ColourTakeItBack = new(0.85f, 0.1f, 0.1f, 0.7f);  // red
-	private static readonly Color ColourBoundLine  = new(0.9f, 0.9f, 0.9f, 0.4f);   // faint white
+	private static readonly Color ColourBase       = new(1.00f, 1.00f, 1.00f, 0.85f); // white paint
+	private static readonly Color ColourTakeItBack = new(1.00f, 0.12f, 0.05f, 0.95f); // red glow
+	private static readonly Color ColourBoundLine  = new(0.90f, 0.90f, 0.90f, 0.40f); // faint white
 
 	// ── Runtime state ─────────────────────────────────────────────────────
 
-	private BallController _ball;
+	private BallController     _ball;
 	private StandardMaterial3D _arcMaterial;
-	private MeshInstance3D _arcMesh;
+	private MeshInstance3D     _arcMesh;
 
 	// ── Lifecycle ─────────────────────────────────────────────────────────
 
@@ -75,7 +86,7 @@ public partial class CourtVisuals : Node3D
 		// Push-driven refresh: only update on possession / clear changes.
 		_ball.PossessionChanged += OnPossessionChanged;
 
-		// Render the opening state before the first event fires.
+		// Seed the colour before the first event fires.
 		OnPossessionChanged(_ball.StateMachine.HolderPeerId, _ball.IsCleared);
 	}
 
@@ -88,43 +99,109 @@ public partial class CourtVisuals : Node3D
 	// ── Builder helpers ───────────────────────────────────────────────────
 
 	/// <summary>
-	/// Builds the flat torus ring at the clear-line radius, positioned on the
-	/// floor plane at the hoop's XZ centre.  The ring's height is controlled by
-	/// IndicatorHeight above the floor (y=0).
+	/// Builds a flat painted ribbon shaped like a basketball 3-point line.
+	///
+	/// Geometry overview:
+	///   θ is measured from the +X axis in the XZ floor plane; θ=π/2 → +Z (mid-court).
+	///   The arc sweeps from sideAngle (≈32.7°) through π/2 to π−sideAngle (≈147.3°),
+	///   where sideAngle = acos(halfCourtWidth / ClearLineDistance) is the angle at which
+	///   the circle meets the sidelines.  Each arc step is two flat triangles (a thin quad)
+	///   with CCW-from-above winding so GenerateNormals produces +Y.
+	///
+	///   The corner segments hang straight from each arc endpoint to CourtMin.Y (the
+	///   baseline / near-court edge).  Their start vertices are computed with the same
+	///   formula as the arc's last/first vertices, guaranteeing a seamless junction.
+	///
+	///   CullMode.Disabled makes the ribbon two-sided; GenerateNormals computes face
+	///   normals as a correctness baseline for any future lit-material switch.
 	/// </summary>
 	private void BuildClearLineArc()
 	{
-		float r = _ball.ClearLineDistance;
-		float hoopX = _ball.RimCenter.X;
-		float hoopZ = _ball.RimCenter.Z;
+		float r    = _ball.ClearLineDistance;  // 5.8 m (NBA ≈ top-of-key radius)
+		float rimX = _ball.RimCenter.X;        // 0
+		float rimZ = _ball.RimCenter.Z;        // 0.3
+		float y    = IndicatorHeight;
+		float half = LineWidth * 0.5f;
+
+		// sideAngle: where the clear circle meets the sideline (CourtMax.X from rim centre).
+		// The arc sweeps from this angle to its mirror through π/2 (mid-court direction).
+		float halfW     = Mathf.Min(_ball.CourtMax.X - rimX, rimX - _ball.CourtMin.X);
+		float sideAngle = Mathf.Acos(Mathf.Clamp(halfW / r, 0f, 1f));
+		float startA    = sideAngle;                // right end, ≈ 32.7°
+		// endA = π − sideAngle is the symmetric mirror of startA about π/2 (+Z).
+		// This is exact when rimX = 0 (rim on the court centre-line, as in Main.tscn).
+		// If rimX is ever non-zero, recompute the left sideAngle separately.
+		float endA      = Mathf.Pi - sideAngle;     // left  end, ≈ 147.3°
+
+		const int ArcSegs = 64;
+
+		var st = new SurfaceTool();
+		st.Begin(Mesh.PrimitiveType.Triangles);
+
+		// ── Arc ───────────────────────────────────────────────────────────────
+		// CCW-from-above winding: outer0, inner0, inner1 / outer0, inner1, outer1.
+		// (Verified: cross-product gives +Y normal for this quad orientation.)
+
+		for (int i = 0; i < ArcSegs; i++)
+		{
+			float a0 = Mathf.Lerp(startA, endA, (float)i       / ArcSegs);
+			float a1 = Mathf.Lerp(startA, endA, (float)(i + 1) / ArcSegs);
+
+			var inner0 = new Vector3(rimX + (r - half) * Mathf.Cos(a0), y, rimZ + (r - half) * Mathf.Sin(a0));
+			var outer0 = new Vector3(rimX + (r + half) * Mathf.Cos(a0), y, rimZ + (r + half) * Mathf.Sin(a0));
+			var inner1 = new Vector3(rimX + (r - half) * Mathf.Cos(a1), y, rimZ + (r - half) * Mathf.Sin(a1));
+			var outer1 = new Vector3(rimX + (r + half) * Mathf.Cos(a1), y, rimZ + (r + half) * Mathf.Sin(a1));
+
+			st.AddVertex(outer0); st.AddVertex(inner0); st.AddVertex(inner1);
+			st.AddVertex(outer0); st.AddVertex(inner1); st.AddVertex(outer1);
+		}
+
+		// ── Corner segments ───────────────────────────────────────────────────
+		// Arc endpoints at θ = startA (right) and θ = endA (left).
+		// Each corner is a quad from the arc endpoint down to CourtMin.Y (baseline).
+		// The start vertices are computed with the same formula as the arc's first/last
+		// step, so the junction is seamless (shared edge, no gap or overlap).
+		//
+		// CCW-from-above winding (sort by world-space X ascending, then use BL→TL→TR / BL→TR→BR):
+		//   Right corner: cos(startA) > 0  → inner (r−half) is at smaller X → innerBot, innerTop, outerTop
+		//   Left  corner: cos(endA)   < 0  → outer (r+half) is at smaller X → outerBot, outerTop, innerTop
+
+		// CourtMin is Vector2 where .Y stores world Z (the near-court Z edge).
+		// See BallController's CourtMin XML comment: "Y = near edge (smallest Z)".
+		float baseline = _ball.CourtMin.Y;   // -1.0 — world Z of the near-court edge
+
+		// Right corner — arc endpoint at θ = startA
+		var rcInnerTop = new Vector3(rimX + (r - half) * Mathf.Cos(startA), y, rimZ + (r - half) * Mathf.Sin(startA));
+		var rcOuterTop = new Vector3(rimX + (r + half) * Mathf.Cos(startA), y, rimZ + (r + half) * Mathf.Sin(startA));
+		var rcInnerBot = new Vector3(rcInnerTop.X, y, baseline);
+		var rcOuterBot = new Vector3(rcOuterTop.X, y, baseline);
+		st.AddVertex(rcInnerBot); st.AddVertex(rcInnerTop); st.AddVertex(rcOuterTop);
+		st.AddVertex(rcInnerBot); st.AddVertex(rcOuterTop); st.AddVertex(rcOuterBot);
+
+		// Left corner — arc endpoint at θ = endA
+		var lcInnerTop = new Vector3(rimX + (r - half) * Mathf.Cos(endA), y, rimZ + (r - half) * Mathf.Sin(endA));
+		var lcOuterTop = new Vector3(rimX + (r + half) * Mathf.Cos(endA), y, rimZ + (r + half) * Mathf.Sin(endA));
+		var lcInnerBot = new Vector3(lcInnerTop.X, y, baseline);
+		var lcOuterBot = new Vector3(lcOuterTop.X, y, baseline);
+		st.AddVertex(lcOuterBot); st.AddVertex(lcOuterTop); st.AddVertex(lcInnerTop);
+		st.AddVertex(lcOuterBot); st.AddVertex(lcInnerTop); st.AddVertex(lcInnerBot);
+
+		st.GenerateNormals();
 
 		_arcMaterial = new StandardMaterial3D
 		{
 			Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
-			ShadingMode   = BaseMaterial3D.ShadingModeEnum.Unshaded,
-			AlbedoColor   = ColourTakeItBack,
-			CullMode      = BaseMaterial3D.CullModeEnum.Disabled,
-		};
-
-		var mesh = new TorusMesh
-		{
-			InnerRadius = r - ArcThickness * 0.5f,
-			OuterRadius = r + ArcThickness * 0.5f,
-			Rings        = 64,
-			RingSegments = 8,
+			ShadingMode  = BaseMaterial3D.ShadingModeEnum.Unshaded,
+			AlbedoColor  = ColourBase,
+			CullMode     = BaseMaterial3D.CullModeEnum.Disabled,
 		};
 
 		_arcMesh = new MeshInstance3D
 		{
-			Mesh      = mesh,
+			Mesh       = st.Commit(),
 			CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
 		};
 		_arcMesh.SetSurfaceOverrideMaterial(0, _arcMaterial);
-		// Flat torus: rotate 90° around X so the ring lies on the floor plane.
-		_arcMesh.Transform = new Transform3D(
-			Basis.FromEuler(new Vector3(Mathf.Pi * 0.5f, 0f, 0f)),
-			new Vector3(hoopX, IndicatorHeight, hoopZ));
-
 		AddChild(_arcMesh);
 	}
 
@@ -136,8 +213,8 @@ public partial class CourtVisuals : Node3D
 		var min = _ball.CourtMin;
 		var max = _ball.CourtMax;
 
-		float w = max.X - min.X;  // court width  (X axis)
-		float d = max.Y - min.Y;  // court depth  (Z axis)
+		float w  = max.X - min.X;  // court width  (X axis)
+		float d  = max.Y - min.Y;  // court depth  (Z axis, stored in Vector2.Y)
 		float cx = (min.X + max.X) * 0.5f;
 		float cz = (min.Y + max.Y) * 0.5f;
 		float t  = BoundLineThickness;
@@ -156,9 +233,9 @@ public partial class CourtVisuals : Node3D
 		var mat = new StandardMaterial3D
 		{
 			Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
-			ShadingMode   = BaseMaterial3D.ShadingModeEnum.Unshaded,
-			AlbedoColor   = ColourBoundLine,
-			CullMode      = BaseMaterial3D.CullModeEnum.Disabled,
+			ShadingMode  = BaseMaterial3D.ShadingModeEnum.Unshaded,
+			AlbedoColor  = ColourBoundLine,
+			CullMode     = BaseMaterial3D.CullModeEnum.Disabled,
 		};
 
 		foreach (var (size, pos) in segments)
@@ -177,23 +254,18 @@ public partial class CourtVisuals : Node3D
 	// ── Signal handler ────────────────────────────────────────────────────
 
 	/// <summary>
-	/// Updates the clear-line arc colour on possession / clear state changes.
-	/// Mirrors PossessionHud.Refresh's logic: holderPeerId 0 means the ball is
-	/// loose (arc hidden); otherwise the arc is red (uncleared) or green (cleared).
+	/// Recolours the clear-line arc on possession / clear state changes.
+	/// The line is always visible (it is floor paint, not a HUD overlay);
+	/// only its colour changes:
+	///   live possession, not yet cleared → red  ("take it back")
+	///   loose or already cleared         → white (neutral court paint)
 	/// </summary>
 	private void OnPossessionChanged(int holderPeerId, bool cleared)
 	{
 		if (_arcMaterial == null) return;
 
-		if (holderPeerId == 0)
-		{
-			// Loose ball — hide the arc; cleared state is meaningless until
-			// the next possession is awarded.
-			_arcMesh.Visible = false;
-			return;
-		}
-
-		_arcMesh.Visible      = true;
-		_arcMaterial.AlbedoColor = cleared ? ColourCleared : ColourTakeItBack;
+		// Red only when someone is actively holding the ball and hasn't cleared.
+		bool needsClearing = holderPeerId != 0 && !cleared;
+		_arcMaterial.AlbedoColor = needsClearing ? ColourTakeItBack : ColourBase;
 	}
 }
