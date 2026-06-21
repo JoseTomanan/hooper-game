@@ -628,15 +628,117 @@ M6a dedicated-server verification (#32), which reuses this same completed loop.
 
 ## Milestone 7a editor tasks — static readability pass (issue #53)
 
-> **Stub — steps to be authored as each M7a sub-issue PR lands.** Epic **#53**;
-> sub-issues #38 (humanoid mesh swap), #39 (cosmetic facing + burst lean), #40
-> (directional shadows), gated on #37 (the green-before-merge test baseline).
-> These are visual-only changes (collision and netcode unchanged), so the editor
-> tasks will be mesh/material/light wiring plus a **human readability check**:
-> the player reads as a humanoid that faces its movement and leans into the
-> crossover burst, grounded by directional shadows, verified across a
-> dual-instance test. The implementing agent fills in per-sub-issue steps against
-> the real node names. Do NOT pull M7b (#54/#41, rigged animation) forward.
+**Do these only after the M7a PR has merged.** All changes are visual/cosmetic —
+collision, authoritative state, and netcode are unchanged (ADR-0002/ADR-0004).
+Epic **#53**; sub-issues #38 (mesh swap), #39 (facing + lean), #40 (shadows).
+
+### Step 1 — Build first
+
+Click the **hammer icon** (top-right). Godot must see the new `VisualRoot`
+export on `PlayerController` before it appears in the Inspector. If the build
+fails, read the Output panel and tell Claude Code.
+
+### Step 2 — Issue #38: import a humanoid mesh and wire VisualRoot
+
+**Asset sourcing:** Choose a CC0/public-domain humanoid model in glTF/.glb format.
+Recommended free sources (verify the license before use — record source + license
+in the PR):
+- **Quaternius** (quaternius.com) — CC0, many humanoid packs
+- **Kenney** (kenney.nl) — CC0, simple stylized characters
+
+A static mesh is fine — no rig, no animations. Keep it simple.
+
+**Import steps:**
+1. Drop the `.glb` file into `assets/` (create the folder if needed).
+2. In Godot's **FileSystem** panel, select the `.glb` and set its import mode
+   to **Scene** (the default). Click **Reimport** if prompted.
+3. In `scenes/Player.tscn`:
+   - Open the scene in the editor.
+   - Right-click the `CharacterBody3D` root → **Instantiate Child Scene** and
+     pick the imported `.glb`. This places the humanoid mesh as a child of the
+     player body.
+   - Select the `CharacterBody3D` root. In the **Inspector**, find **Visual Root**
+     (under the script's exported properties) and point it to the newly added
+     humanoid root node (the glTF scene root, not any particular bone).
+   - **Scale + position:** ensure the mesh's feet sit at or just above Y=0 in
+     the player's local space (capsule base). If the mesh arrives at a different
+     scale or with its origin at the hips, adjust its `Transform` → `Scale` and
+     `Position` until the feet align with the capsule base. Wrong origin causes
+     the shadow to read incorrectly and placement to look off.
+   - The original `MeshInstance3D` capsule visual can be hidden (`Visible = false`)
+     or deleted now that the humanoid replaces it. The `CapsuleShape3D` collision
+     must remain untouched.
+4. Save the scene (**Ctrl+S**).
+
+**Verify:** Run a single instance. The humanoid mesh should appear on the court
+with no physics change. Under the two-instance flow, verify **smooth correction
+still hides snaps** — wiggle under latency (move on the client, confirm no visible
+teleport on either window). If snapping re-appeared, the `VisualRoot` export is not
+pointing to the right node.
+
+### Step 3 — Issue #39: confirm facing + burst lean (dual-instance)
+
+Run two instances (host + client). On either player:
+1. **Facing:** move in any direction with WASD/left-stick. The humanoid mesh should
+   rotate to face the movement direction and hold the last facing when stationary.
+   - If the mesh faces the *opposite* direction: the `Atan2(velocity.X, velocity.Z)`
+     sign needs flipping. Tell Claude Code — this is hitl sign-off territory.
+   - If it snaps around jerkily: the `SpeedEpsilon` guard in `FacingResolver` may
+     need tuning. 0.1 m/s is the default.
+2. **Burst lean:** trigger a crossover (Q / right-stick flick). During the Active
+   phase burst, the mesh should lean laterally ~12° toward the burst direction.
+   - Lean must feel **grounded** — weighted, not floaty or exaggerated (ADR-0003
+     bounds). If 12° is too subtle or too much, ask Claude Code to adjust
+     `LeanRadians` in `LeanResolver.cs`.
+   - No lean during Startup (telegraph) or Recovery (punish) — those phases must
+     stay upright.
+3. Check the remote player's window: facing and lean should match (they derive from
+   the position/velocity stream already synced — no new netcode).
+
+### Step 4 — Issue #40: tune directional shadows
+
+`shadow_enabled = true` was pre-set on the `DirectionalLight3D` by the PR.
+Shadow bias/softness/angle require visual tuning in the editor.
+
+**Tuning target (Mobile renderer — ADR-0006, D3D12):**
+- `shadow_bias` and `shadow_normal_bias`: start at Godot's defaults (0.1 / 2.0)
+  and raise if you see **shadow acne** (dark speckles on surfaces). Lower if you
+  see **peter-panning** (shadows detaching from objects).
+- Light angle: shadows fall near-under objects at the current 45° angle. Adjust
+  if placement legibility needs it.
+- Verify: players, ball, rim, and backboard all have visible ground shadows.
+- **Ball in air:** the ball's shadow should stay on the floor (that's the
+  blob-shadow `BlobShadow.cs` node already on the ball). The new directional
+  shadow adds a second shadow during flight — check whether this reads well or
+  causes a confusing double-shadow. See the overlap note below.
+
+**⚠️ Overlap with blob shadows:** The blob-shadow system (`scripts/Systems/BlobShadow.cs`,
+added in commit a4c22ee) already projects a disc shadow for the player and ball onto
+the floor plane. Enabling directional shadows creates a second shadow for every object.
+You need to decide one of:
+- **Keep both** — blob shadow gives a consistent "grounding disc" + directional shadow
+  adds realistic depth. May look doubled.
+- **Disable blob shadows** — remove the `Shadow` node from `Player.tscn` and the
+  equivalent from `Ball.tscn`, letting directional shadows do the work alone.
+  May lose the altitude-gap read for the ball in the air.
+- **Disable directional shadows** — revert `shadow_enabled` to the default (false),
+  keeping blobs as the sole grounding system. Blob system has no altitude gap.
+Whichever you pick, tell Claude Code so it can update the scene accordingly.
+
+### Step 5 — Verify acceptance criteria (issue #53)
+
+Across a dual-instance run:
+- ✅ Player reads as a humanoid that faces its movement direction
+- ✅ Crossover burst produces a visible lean into the move during Active phase only
+- ✅ No lean during Startup (telegraph window) or Recovery (punish window)
+- ✅ Smooth correction still hides snaps (no teleport/flicker under latency)
+- ✅ Collision shape and netcode/prediction behavior unchanged from M5
+- ✅ Grounding (shadows or blob) reads clearly; ball altitude gap visible
+- ✅ `dotnet test tests/Hooper.Ball.Tests` shows 0 failed (green gate)
+
+When all pass, close **#38** and **#39** (after human confirms), and **#40** once
+the shadow choice is resolved. Then close the epic **#53**. Do NOT pull M7b (#54/#41,
+rigged animation) forward.
 
 ### Green-before-merge gate (issue #37)
 

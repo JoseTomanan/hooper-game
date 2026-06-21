@@ -8,7 +8,7 @@
 [ext_resource type="Script" uid="uid://drobygl31y4mn" path="res://scripts/Networking/DedicatedServerBootstrap.cs" id="6_c01mt"]
 [ext_resource type="Script" uid="uid://dhdoqjw7im05f" path="res://scripts/Networking/DiscoveryBroadcaster.cs" id="7_nxtc6"]
 [ext_resource type="PackedScene" uid="uid://cb04swbq2ivnx" path="res://scenes/ServerBrowser.tscn" id="8_srbrw"]
-[ext_resource type="Script" uid="uid://de27yy5y4j6vq" path="res://scripts/Systems/PossessionHud.cs" id="9_q8u5g"]
+[ext_resource type="Script" uid="uid://k4u66cfjffsl" path="res://scripts/Systems/PossessionHud.cs" id="9_q8u5g"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
 
@@ -21,13 +21,13 @@ sky = SubResource("Sky_1")
 ambient_light_source = 3
 
 [sub_resource type="BoxMesh" id="BoxMesh_floor"]
-size = Vector3(40, 1, 40)
+size = Vector3(10, 1, 14)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_vcsgt"]
-albedo_color = Color(0.89411765, 0.7647059, 0.7411765, 1)
+albedo_color = Color(0.3254902, 0.4392157, 0.101960786, 1)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
-size = Vector3(40, 1, 40)
+size = Vector3(10, 1, 14)
 
 [sub_resource type="TorusMesh" id="TorusMesh_rvslj"]
 inner_radius = 0.21
@@ -62,10 +62,12 @@ environment = SubResource("Environment_1")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="Floor" unique_id=1898698934]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
 mesh = SubResource("BoxMesh_floor")
 surface_material_override/0 = SubResource("StandardMaterial3D_vcsgt")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Floor" unique_id=391624559]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
 shape = SubResource("BoxShape3D_floor")
 
 [node name="Camera3D" type="Camera3D" parent="." unique_id=1898710017]
@@ -74,14 +76,15 @@ current = true
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=10074499]
 transform = Transform3D(1, 0, 0, 0, 0.70710677, 0.70710677, 0, -0.70710677, 0.70710677, 0, 10, 0)
+shadow_enabled = true
 
 [node name="Rim" type="MeshInstance3D" parent="." unique_id=1248964402]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.05, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.05, 0.3)
 mesh = SubResource("TorusMesh_rvslj")
 surface_material_override/0 = SubResource("StandardMaterial3D_0bbpv")
 
 [node name="Backboard" type="MeshInstance3D" parent="." unique_id=1730119088]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.5, 0.03)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.205, 0.03)
 mesh = SubResource("BoxMesh_rvslj")
 surface_material_override/0 = SubResource("StandardMaterial3D_rarhs")
 
@@ -90,7 +93,7 @@ transform = Transform3D(0.1, 0, 0, 0, 2.1, 0, 0, 0, 0.1, 0, -2.0984402, 0)
 mesh = SubResource("CylinderMesh_q8u5g")
 
 [node name="RingMarker" type="MeshInstance3D" parent="." unique_id=4000005]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.005, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.005, 0.3)
 cast_shadow = 0
 mesh = SubResource("TorusMesh_ringmarker")
 surface_material_override/0 = SubResource("StandardMaterial3D_ringmarker")
@@ -100,6 +103,9 @@ surface_material_override/0 = SubResource("StandardMaterial3D_ringmarker")
 [node name="Ball" parent="." unique_id=783251786 node_paths=PackedStringArray("Players") instance=ExtResource("3_0bbpv")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.10563743, 0.009416938, 3.4405046)
 Players = NodePath("../Players")
+RimCenter = Vector3(0, 3.05, 0.3)
+ShotTarget = Vector3(0, 3.05, 0.3)
+BoardCenter = Vector3(0, 3.205, 0.03)
 
 [node name="MultiplayerSpawner" type="MultiplayerSpawner" parent="." unique_id=603481057]
 _spawnable_scenes = PackedStringArray("uid://damgpdajv4xlf")
