@@ -1,27 +1,29 @@
 [gd_scene format=3 uid="uid://damgpdajv4xlf"]
 
 [ext_resource type="Script" uid="uid://erpigohkoatw" path="res://scripts/Player/PlayerController.cs" id="1_p0vlq"]
-[ext_resource type="Script" path="res://scripts/Systems/BlobShadow.cs" id="2_blobshadow"]
+[ext_resource type="Script" uid="uid://b2cug8lv7pgn8" path="res://scripts/Systems/BlobShadow.cs" id="2_blobshadow"]
+[ext_resource type="PackedScene" uid="uid://b58mjs28h2dpi" path="res://assets/characterMedium.fbx" id="3_3li8b"]
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_p0vlq"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_p0vlq"]
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_playershadow"]
-transparency = 1
-shading_mode = 2
-albedo_color = Color(0, 0, 0, 0.42)
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_playershadow"]
 top_radius = 0.38
 bottom_radius = 0.38
 height = 0.005
 
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_playershadow"]
+transparency = 1
+shading_mode = 2
+albedo_color = Color(0, 0, 0, 0.42)
+
 [node name="CharacterBody3D" type="CharacterBody3D" unique_id=700308040]
 script = ExtResource("1_p0vlq")
-VisualRoot = NodePath("MeshInstance3D")
+VisualRoot = NodePath("CharacterModel")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1371142566]
+visible = false
 mesh = SubResource("CapsuleMesh_p0vlq")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=523243475]
@@ -34,3 +36,6 @@ script = ExtResource("2_blobshadow")
 cast_shadow = 0
 mesh = SubResource("CylinderMesh_playershadow")
 surface_material_override/0 = SubResource("StandardMaterial3D_playershadow")
+
+[node name="CharacterModel" parent="." unique_id=216087023 instance=ExtResource("3_3li8b")]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, -0.9975891, 0)
