@@ -147,6 +147,25 @@ public partial class BallController : Node3D
 	/// </summary>
 	[Export] public float ClearLineDistance { get; set; } = 5.8f;
 
+	// ── Court bounds (issue #46, half-court containment) ────────────────────
+
+	/// <summary>
+	/// Floor-plane (XZ) lower bound of the playable court rectangle, in world
+	/// space: X = left edge, Y = near edge (smallest Z). Used to clamp a loose
+	/// ball in TickLoose (CourtBounds.Clamp) so it cannot roll off the floor
+	/// edge. Must match the StaticBody3D walls placed in the editor for players
+	/// (EDITOR_TASKS.md — court-bound step, issue #46). Inset from the raw
+	/// floor geometry by ~BallRadius to prevent the ball from resting half-
+	/// outside the floor mesh.
+	/// </summary>
+	[Export] public Vector2 CourtMin { get; set; } = new(-4.88f, -1.0f);
+
+	/// <summary>
+	/// Floor-plane (XZ) upper bound of the playable court rectangle: X = right
+	/// edge, Y = far edge (largest Z). See CourtMin for layout notes.
+	/// </summary>
+	[Export] public Vector2 CourtMax { get; set; } = new(4.88f, 11.88f);
+
 	// ── Reconciliation tuning (mirrors PlayerController's tunables) ───────
 
 	/// <summary>
@@ -328,6 +347,12 @@ public partial class BallController : Node3D
 		// the peer-ID-as-name identity contract only holds if both point at it.
 		if (Players == null)
 			GD.PrintErr("[BallController] Players is not assigned. Wire it in the Inspector to the same spawn root as NetworkManager.Players.");
+
+		// CourtMin/Max must be correctly ordered (Min.X < Max.X, Min.Y < Max.Y) for
+		// CourtBounds.Clamp to behave correctly.  Mathf.Clamp throws when min > max
+		// in debug builds, so catch the misconfiguration loud and early (issue #46).
+		if (CourtMin.X >= CourtMax.X || CourtMin.Y >= CourtMax.Y)
+			GD.PrintErr($"[BallController] CourtMin ({CourtMin}) must be strictly less than CourtMax ({CourtMax}) on each axis. Court bounds will not work until corrected in the Inspector.");
 
 		// Deferred so GameManager._Ready() (a later sibling) has run and joined
 		// the group before we check — avoids a false-positive error on scene load.
@@ -692,6 +717,28 @@ public partial class BallController : Node3D
 			_arc.Position = p;
 			_arc.Velocity = Vector3.Zero; // settled; no bounce model on the floor yet
 		}
+
+		// Half-court bound: clamp XZ so the loose ball cannot roll off the floor
+		// edge (issue #46).  Y is preserved — the floor-contact check above already
+		// owns vertical containment.  Exported CourtMin/Max are the single source of
+		// truth for the bounds; the StaticBody3D walls in the editor must match them.
+		// Deterministic: same exported values on every peer → no reconciliation drift.
+		//
+		// Ordering note: this must run AFTER the floor check above (which may have
+		// already written _arc.Position via the local `p` copy) so the final
+		// _arc.Position reflects both corrections before it is read into GlobalPosition.
+		//
+		// Velocity zeroing: when the clamp fires on an axis, zero the matching
+		// velocity component so the integrator does not keep pushing the ball
+		// through the wall every tick (analogous to the floor-contact Velocity=Zero
+		// at line 712).
+		Vector3 preclamp = _arc.Position;
+		_arc.Position = CourtBounds.Clamp(_arc.Position, CourtMin, CourtMax);
+
+		Vector3 arcVel = _arc.Velocity;
+		if (_arc.Position.X != preclamp.X) arcVel.X = 0f;
+		if (_arc.Position.Z != preclamp.Z) arcVel.Z = 0f;
+		_arc.Velocity = arcVel;
 
 		GlobalPosition = _arc.Position;
 
