@@ -30,19 +30,19 @@ albedo_color = Color(0.45, 0.45, 0.45, 1)
 [sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
 size = Vector3(10, 1, 14)
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_frontback"]
-size = Vector3(20.542, 5, 0.240625)
-
 [sub_resource type="BoxMesh" id="BoxMesh_backwall"]
 size = Vector3(20.542, 5, 0.240625)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wall"]
 albedo_color = Color(0.3, 0.3, 0.3, 1)
 
-[sub_resource type="BoxShape3D" id="BoxShape3D_lhr70"]
+[sub_resource type="BoxMesh" id="BoxMesh_wall"]
 size = Vector3(0.240625, 5, 14)
 
-[sub_resource type="BoxMesh" id="BoxMesh_wall"]
+[sub_resource type="BoxShape3D" id="BoxShape3D_frontback"]
+size = Vector3(20.542, 5, 0.240625)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_lhr70"]
 size = Vector3(0.240625, 5, 14)
 
 [sub_resource type="TorusMesh" id="TorusMesh_rvslj"]
@@ -83,48 +83,48 @@ mesh = SubResource("BoxMesh_floor")
 surface_material_override/0 = SubResource("StandardMaterial3D_vcsgt")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Floor" unique_id=391624559]
-transform = Transform3D(2, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 5)
 shape = SubResource("BoxShape3D_floor")
 
 [node name="Walls" type="StaticBody3D" parent="." unique_id=1794431801]
-
-[node name="WallCollisionFront" type="CollisionShape3D" parent="Walls" unique_id=2101000005]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.4630556, 12.120313)
-shape = SubResource("BoxShape3D_frontback")
-
-[node name="WallCollisionBack" type="CollisionShape3D" parent="Walls" unique_id=2101000003]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.4630556, -2.1203125)
-shape = SubResource("BoxShape3D_frontback")
 
 [node name="WallMeshBack" type="MeshInstance3D" parent="Walls" unique_id=2101000004]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.4630556, -2.1203125)
 mesh = SubResource("BoxMesh_backwall")
 surface_material_override/0 = SubResource("StandardMaterial3D_wall")
 
-[node name="WallCollisionLeft" type="CollisionShape3D" parent="Walls" unique_id=2028508273]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.142146, 2.493558, 5.111066)
-shape = SubResource("BoxShape3D_lhr70")
-
 [node name="WallMeshLeft" type="MeshInstance3D" parent="Walls" unique_id=2101000002]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.142146, 2.493558, 5.111066)
 mesh = SubResource("BoxMesh_wall")
 surface_material_override/0 = SubResource("StandardMaterial3D_wall")
-
-[node name="WallCollisionRight" type="CollisionShape3D" parent="Walls" unique_id=1599743776]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.150881, 2.4630556, 4.96599)
-shape = SubResource("BoxShape3D_lhr70")
 
 [node name="WallMeshRight" type="MeshInstance3D" parent="Walls" unique_id=2101000001]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.150881, 2.4630556, 4.96599)
 mesh = SubResource("BoxMesh_wall")
 surface_material_override/0 = SubResource("StandardMaterial3D_wall")
 
+[node name="WallCollisionBack" type="CollisionShape3D" parent="Walls" unique_id=2101000003]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.4630556, -2.1203125)
+shape = SubResource("BoxShape3D_frontback")
+
+[node name="WallCollisionFront" type="CollisionShape3D" parent="Walls" unique_id=2101000005]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.4630556, 12.120313)
+shape = SubResource("BoxShape3D_frontback")
+
+[node name="WallCollisionLeft" type="CollisionShape3D" parent="Walls" unique_id=2028508273]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.142146, 2.493558, 5.111066)
+shape = SubResource("BoxShape3D_lhr70")
+
+[node name="WallCollisionRight" type="CollisionShape3D" parent="Walls" unique_id=1599743776]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.150881, 2.4630556, 4.96599)
+shape = SubResource("BoxShape3D_lhr70")
+
 [node name="Camera3D" type="Camera3D" parent="." unique_id=1898710017]
 transform = Transform3D(1, 0, 0, 0, 0.7071068, 0.7071068, 0, -0.7071068, 0.7071068, 0, 8, 9.705208)
 current = true
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=10074499]
-transform = Transform3D(1, 0, 0, 0, -0.22892861, 0.97344327, 0, -0.97344327, -0.22892861, -0.30898857, 16.40461, -5.148597)
+transform = Transform3D(1, 0, 0, 0, -0.22892861, 0.97344327, 0, -0.97344327, -0.22892861, 13.806898, 16.40461, -5.148597)
 shadow_enabled = true
 
 [node name="Rim" type="MeshInstance3D" parent="." unique_id=1248964402]
@@ -200,6 +200,7 @@ script = ExtResource("5_vcsgt")
 NetworkManager = NodePath("../NetworkManager")
 
 [node name="CourtVisuals" type="Node3D" parent="." unique_id=4000010]
+transform = Transform3D(1.8, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 script = ExtResource("10_courtvisuals")
 
 [node name="PossessionHUD" type="Label" parent="." unique_id=1118293332]
