@@ -40,11 +40,20 @@ namespace Hooper.Ball;
 /// well-formed inputs are the caller's responsibility.
 ///
 /// ── Fixed-timestep integrator ─────────────────────────────────────────────
-/// Semi-implicit Euler (also called symplectic Euler) — the industry-standard
-/// choice for deterministic game physics:
+/// Trapezoidal (average-velocity) integration — exact for constant
+/// acceleration, unlike semi-implicit Euler:
 ///
-///   velocity.Y -= gravity * dt   // gravity applied to velocity first
-///   position   += velocity * dt  // then velocity drives position
+///   newVelocity.Y = velocity.Y - gravity * dt   // gravity updates velocity
+///   position     += 0.5 * (velocity + newVelocity) * dt  // average drives position
+///
+/// Semi-implicit Euler (position driven by the NEW velocity only) has a
+/// systematic undershoot of 0.5*gravity*t*dt that grows with elapsed flight
+/// time — at ~1s of flight (a routine mid-range shot) this is several
+/// centimetres, enough to make a dead-centre-aimed shot clang the front of the
+/// rim instead of swishing (issue #46). Averaging old and new velocity for the
+/// position update reproduces the exact closed-form parabola
+/// position(t) = release + v0*t - 0.5*gravity*t^2 at every tick boundary — this
+/// is the standard trapezoidal rule, which integrates a quadratic exactly.
 ///
 /// Applied at a fixed dt matching Engine.PhysicsTicksPerSecond (60 Hz).
 /// The dt is passed as a parameter so tests can drive it with a known fixed
@@ -140,14 +149,17 @@ public sealed class ShotArc
     // ── Integrator ────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Advances the ball by one fixed physics tick using semi-implicit Euler:
+    /// Advances the ball by one fixed physics tick using trapezoidal
+    /// (average-velocity) integration:
     ///
-    ///   Velocity.Y -= Gravity * dt   (gravity applied to velocity first)
-    ///   Position   += Velocity * dt  (then velocity drives position)
+    ///   newVelocity.Y = Velocity.Y - Gravity * dt   (gravity updates velocity)
+    ///   Position     += 0.5 * (Velocity + newVelocity) * dt  (average drives position)
     ///
-    /// This order (velocity before position) is what makes the integrator
-    /// "semi-implicit" (symplectic). It conserves energy better than explicit
-    /// Euler (position before velocity) and is standard for game physics loops.
+    /// Averaging the pre- and post-gravity velocity for the position update is
+    /// exact for constant acceleration (it reproduces the closed-form parabola
+    /// at every tick boundary — see the class docstring), unlike semi-implicit
+    /// Euler (position driven by the new velocity alone), which undershoots by
+    /// a growing amount the longer the ball is in flight.
     ///
     /// The caller (BallController._PhysicsProcess) should pass
     /// (float)(1.0 / Engine.PhysicsTicksPerSecond) as dt at runtime.
@@ -161,13 +173,14 @@ public sealed class ShotArc
     /// <param name="dt">Elapsed time this tick (seconds).</param>
     public void Step(float dt)
     {
-        // Semi-implicit Euler: velocity update first, then position.
         // Gravity acts only on Y (downward); X and Z are inertial.
-        Vector3 vel = Velocity;
-        vel.Y   -= Gravity * dt;
-        Velocity = vel;
+        Vector3 oldVel = Velocity;
+        Vector3 newVel = oldVel;
+        newVel.Y -= Gravity * dt;
+        Velocity  = newVel;
 
-        Position += Velocity * dt;
+        // Trapezoidal position update: average of old and new velocity.
+        Position += 0.5f * (oldVel + newVel) * dt;
     }
 
     // ── Launch velocity solver ────────────────────────────────────────────
