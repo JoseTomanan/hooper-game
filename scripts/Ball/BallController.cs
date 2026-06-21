@@ -244,6 +244,28 @@ public partial class BallController : Node3D
 	/// </summary>
 	private Vector3 _smoothOffset;
 
+	// ── Made-shot green flash (issue #46) ─────────────────────────────────
+
+	/// <summary>
+	/// Duration (seconds) the ball stays green after a counting basket.
+	/// Editor-tunable via the export below; 1 s is the default.
+	/// </summary>
+	[Export] public float MadeFlashDuration { get; set; } = 1.0f;
+
+	/// <summary>
+	/// Private per-instance material override for the ball mesh — duplicated
+	/// from the scene's shared sub-resource in _Ready so we can tint it without
+	/// affecting other instances (or the asset on disk). Null if the mesh node
+	/// was not found.
+	/// </summary>
+	private StandardMaterial3D _ballMaterial;
+
+	/// <summary>Original orange albedo, cached at startup for restoration after the flash.</summary>
+	private Color _originalAlbedo;
+
+	/// <summary>Countdown to the end of the current flash; &lt;= 0 means no active flash.</summary>
+	private float _flashTimer;
+
 	// ── Authoritative snapshot staging (client + server's own broadcast) ──
 
 	/// <summary>Latest broadcast received from the server, staged for reconcile.</summary>
@@ -339,6 +361,28 @@ public partial class BallController : Node3D
 		if (_mesh == null)
 			GD.PrintErr("[BallController] MeshInstance3D child not found; smooth correction disabled.");
 
+		// Set up the made-shot green flash (issue #46).  Duplicate the sphere's
+		// shared material into a per-instance override so tinting does not affect
+		// other instances or the sub-resource on disk.
+		if (_mesh is MeshInstance3D meshInst)
+		{
+			// The mesh's embedded material is on the SphereMesh, not the instance
+			// (Ball.tscn wires it via SphereMesh.material). GetActiveMaterial(0)
+			// resolves the mesh's own material when no override exists yet, giving
+			// us the orange color to duplicate and cache.
+			var baseMat = meshInst.GetActiveMaterial(0) as StandardMaterial3D;
+			if (baseMat != null)
+			{
+				_ballMaterial  = (StandardMaterial3D)baseMat.Duplicate();
+				_originalAlbedo = _ballMaterial.AlbedoColor;
+				meshInst.SetSurfaceOverrideMaterial(0, _ballMaterial);
+			}
+			else
+			{
+				GD.PrintErr("[BallController] Ball mesh has no StandardMaterial3D at surface 0; made-shot flash disabled.");
+			}
+		}
+
 		// (Doubt cycle 1, finding #6/#9) Players is unassigned → HolderPosition()
 		// would silently fall back to world origin every tick with no diagnostic,
 		// which is exactly the kind of failure CLAUDE.md asks us to surface loudly
@@ -360,8 +404,27 @@ public partial class BallController : Node3D
 		{
 			_gameManager = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
 			if (_gameManager == null)
+			{
 				GD.PrintErr("[BallController] No node in group 'game_manager' found. Scoring and game-over freeze will not work until GameManager is added to the scene (issue #27).");
+				return;
+			}
+
+			// Trigger the made-shot green flash on every counting basket (issue #46).
+			// ScoreChanged fires on EVERY peer (server via BroadcastAndEmit; clients
+			// via ReceiveScoreState RPC), so the flash is truthful everywhere: it only
+			// lights up when the server actually registered a point — never on an
+			// uncleared make that turned over.
+			if (_ballMaterial != null)
+				_gameManager.ScoreChanged += OnScoreChanged;
 		}).CallDeferred();
+	}
+
+	public override void _ExitTree()
+	{
+		// Drop the delegate so GameManager doesn't hold a dangling reference.
+		// Same lifecycle hygiene as PossessionHud._ExitTree.
+		if (_gameManager != null && _ballMaterial != null)
+			_gameManager.ScoreChanged -= OnScoreChanged;
 	}
 
 	// ── Tick loop ─────────────────────────────────────────────────────────
@@ -456,6 +519,9 @@ public partial class BallController : Node3D
 		// every peer after reconcile, so a client emits when the broadcast moves
 		// the holder/cleared, and the server when gameplay does.
 		EmitPossessionIfChanged();
+
+		// Tick the made-shot green flash countdown; restore orange when it expires.
+		TickMadeFlash((float)delta);
 	}
 
 	// ── Possession HUD push (#51) ──────────────────────────────────────────
@@ -473,6 +539,37 @@ public partial class BallController : Node3D
 		_lastEmittedHolder = StateMachine.HolderPeerId;
 		_lastEmittedCleared = IsCleared;
 		EmitSignal(SignalName.PossessionChanged, _lastEmittedHolder, _lastEmittedCleared);
+	}
+
+	// ── Made-shot green flash (issue #46) ─────────────────────────────────
+
+	/// <summary>
+	/// Called on every peer when the score changes (GameManager.ScoreChanged)
+	/// — i.e. when a counting basket is registered. Starts the green flash.
+	/// Fires only for genuine points (cleared makes), never for uncleared makes
+	/// that turn over — ScoreChanged is the authority boundary.
+	/// </summary>
+	private void OnScoreChanged()
+	{
+		if (_ballMaterial == null) return;
+		_flashTimer = MadeFlashDuration;
+		_ballMaterial.AlbedoColor = Colors.Green;
+	}
+
+	/// <summary>
+	/// Ticks the flash countdown and restores the original orange albedo when
+	/// the timer expires.  No-op when no flash is active (_flashTimer &lt;= 0).
+	/// </summary>
+	private void TickMadeFlash(float delta)
+	{
+		if (_flashTimer <= 0f || _ballMaterial == null) return;
+
+		_flashTimer -= delta;
+		if (_flashTimer <= 0f)
+		{
+			_flashTimer = 0f;
+			_ballMaterial.AlbedoColor = _originalAlbedo;
+		}
 	}
 
 	/// <summary>
