@@ -622,9 +622,12 @@ public partial class BallController : Node3D
 	/// ADR-0008). A make counts only if the possession was cleared:
 	///   - Cleared: register the point, then — unless it won the game —
 	///     hand the ball back to the scorer (make-it-take-it, #49). The new
-	///     possession starts uncleared.
+	///     possession starts CLEARED (ADR-0008 amended 2026-06-21): the scorer
+	///     already took the ball back to earn this make; forcing them to do it
+	///     again on the very next possession is double-punishment with no
+	///     defensive purpose. Rebounds and turnovers still start uncleared.
 	///   - Not cleared: the basket does NOT count; the ball turns over to the
-	///     defender (a take-it-back violation), who also starts uncleared. With
+	///     defender (a take-it-back violation), who starts uncleared. With
 	///     no opponent present (e.g. a solo editor test) the ball is left loose
 	///     for the rebound contest to resolve.
 	/// </summary>
@@ -636,15 +639,9 @@ public partial class BallController : Node3D
 
 			// Make-it-take-it, unless the basket ended the game — then the
 			// game-over freeze stands (see _PhysicsProcess's no-freeze note).
-			// The new possession starts uncleared (AwardPossession), but if the
-			// scorer made this shot from BEHIND the clear line they are already
-			// behind it, so UpdateClearStatus re-clears them on the same tick —
-			// by design: being at/behind the line satisfies "take it back" (no
-			// in-and-out crossing required). Only a make from INSIDE the line
-			// (the common layup case) leaves them uncleared and forced to carry
-			// the ball back out before the next basket counts.
+			// cleared: true — the scorer already earned their trip (see doc).
 			if (!(GetGameManager()?.IsGameOver ?? false))
-				AwardPossession(_lastShooterPeerId);
+				AwardPossession(_lastShooterPeerId, cleared: true);
 			return;
 		}
 
@@ -749,37 +746,59 @@ public partial class BallController : Node3D
 
 	/// <summary>
 	/// Awards possession of a loose / in-flight ball to a player and resumes a
-	/// live dribble — the shared handoff path used by a live rebound (#48) and,
-	/// later, the make-it-take-it reset (#49). Mirrors the tipoff sequence
+	/// live dribble — the shared handoff path used by a live rebound (#48) and
+	/// the make-it-take-it reset (#49). Mirrors the tipoff sequence
 	/// (Catch → StartDribble): Catch is legal only from InFlight/Loose (it
 	/// returns false otherwise, leaving state untouched), and StartDribble then
 	/// puts the new holder into the same dribbling state the game opens in, so
 	/// they can immediately dribble and shoot.
+	///
+	/// <paramref name="cleared"/> controls the clear state of the new possession
+	/// (ADR-0008 §Decision-3, amended 2026-06-21):
+	///   - false (default): a rebound or turnover — the new holder must carry
+	///     the ball back behind the clear line before a basket counts. Set on
+	///     EVERY peer (prediction runs on TickLoose), so the HUD shows "take it
+	///     back" immediately without waiting for the server broadcast.
+	///   - true: a make-it-take-it possession (#49) — the scorer already earned
+	///     their trip, so the new possession starts cleared. Server-only call
+	///     site (ResolveServerMake), broadcast via ReceiveState.
+	///
+	/// Only the TRUE clear flip (UpdateClearStatus, crossing the line) is server-
+	/// authoritative; clients receive that via the ReceiveState broadcast in
+	/// ReconcileFromServer and never compute it themselves.
 	/// </summary>
-	private void AwardPossession(int peerId)
+	private void AwardPossession(int peerId, bool cleared = false)
 	{
 		if (!StateMachine.Catch(peerId))
 		{
-			// Unreachable in the real call paths — both callers (the rebound in
-			// TickLoose and ResolveServerMake) only reach here while the ball is
-			// Loose, where Catch is legal. Surface loudly (CLAUDE.md loud-failure
-			// rule) if a future path ever calls in at an illegal state, rather
-			// than silently leaving possession in a half-changed condition.
+			// Both callers reach here while the ball is Loose, so Catch (Loose→Held)
+			// is legal and this branch is unreachable in normal play.  "Unreachable"
+			// holds even for the client prediction path: ReconcileFromServer runs at
+			// the TOP of _PhysicsProcess, before the state switch, so TickLoose (and
+			// thus this method) only ever dispatches when State == Loose.  Surface
+			// loudly per CLAUDE.md loud-failure rule so a future regression is not
+			// silent.
 			GD.PrintErr($"[BallController] AwardPossession({peerId}) called in state {State}; Catch rejected, possession unchanged.");
 			return;
 		}
-		StateMachine.StartDribble();
 
-		// Every change of possession starts uncleared (#50, ADR-0008): the new
-		// handler must carry the ball back behind the clear line before a basket
-		// counts. Set on EVERY peer, not just the server — "a new possession is
-		// uncleared" is a DETERMINISTIC rule, so a client predicting a rebound
-		// (TickLoose) predicts it too. That keeps the HUD showing "take it back"
-		// immediately instead of a stale "cleared" carried over from the prior
-		// possession. Only the TRUE flip (UpdateClearStatus, the line crossing)
-		// is server-authoritative; clients receive that via the ReceiveState
-		// broadcast in ReconcileFromServer and never compute it themselves.
-		IsCleared = false;
+		// StartDribble is legal from Held (the state Catch just transitioned to).
+		// Guard the return value so a future internal-state divergence (e.g. a
+		// ForceState landing between Catch and StartDribble) fails loudly rather
+		// than leaving the ball Held with no dribble cycle.
+		if (!StateMachine.StartDribble())
+		{
+			GD.PrintErr($"[BallController] AwardPossession({peerId}): StartDribble rejected after Catch in state {State}; possession partially awarded, ball may behave unexpectedly.");
+		}
+
+		// `cleared` is false for rebounds/turnovers (every peer sets this
+		// deterministically; clients predict it immediately for HUD responsiveness),
+		// and true for make-it-take-it resets (server-only call site in
+		// ResolveServerMake; clients start with false and are corrected by the next
+		// ReceiveState broadcast within 1 RTT).  The 1-RTT window where a client
+		// briefly shows "take it back" after a counting make is an accepted cosmetic
+		// artefact — sub-frame at LAN latency, inherent to client prediction.
+		IsCleared = cleared;
 	}
 
 	// ── Shot trigger / input authority (M4) ─────────────────────────────────

@@ -129,3 +129,31 @@ gives score.
 None. This ADR introduces no new engine-facing calls — `Catch`, `ReceiveState`,
 and the score-broadcast pattern all already exist and are proven. The exported
 pickup radius and clear-line threshold are ordinary Godot `[Export]` fields.
+
+---
+
+## Amendment — 2026-06-21 (issue #46 "minor tasks before closing epic")
+
+**Status remains Accepted.** The take-it-back rule is preserved; only its
+application to make-it-take-it possessions is narrowed.
+
+**Change to §Decision-3 (take-it-back / clear):** A possession that begins via
+make-it-take-it (#49) now starts **cleared**. The original text stated "every
+new possession starts uncleared" and §Consequences listed "no alternating
+possession / no inbound" as a deliberate tension. Play-testing revealed that
+forcing the scorer to also take it back on the possession they *just earned by
+clearing* is double-punishment with no defensive purpose: the defender cannot
+steal the ball mid-award, so there is no defensive moment the clear requirement
+creates in this window. The take-it-back rule retains its full meaning on
+**changes** of possession (rebound, steal, turnover), where the new holder is
+the defender or scramble winner and the clear requirement is the barrier between
+them and an instant put-back score.
+
+**What did NOT change:**
+- Rebounds (`TickLoose → AwardPossession`) still start uncleared.
+- Take-it-back turnovers (uncleared make → defender gets ball) still start uncleared.
+- The clear-line geometry, `IsCleared` broadcast path, and HUD are unchanged.
+
+**Code:** `BallController.AwardPossession` accepts an optional `cleared` flag
+(default `false`); `ResolveServerMake` passes `cleared: true` on the counting-make
+path only.
