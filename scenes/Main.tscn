@@ -83,7 +83,7 @@ mesh = SubResource("BoxMesh_floor")
 surface_material_override/0 = SubResource("StandardMaterial3D_vcsgt")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Floor" unique_id=391624559]
-transform = Transform3D(2, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 5)
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, -0.5020094, 5)
 shape = SubResource("BoxShape3D_floor")
 
 [node name="Walls" type="StaticBody3D" parent="." unique_id=1794431801]
