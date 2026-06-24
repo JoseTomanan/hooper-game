@@ -88,6 +88,7 @@ game-dev knowledge on the human's part.
 | **M6b — Possession loop** | **Active (current)** | #46 |
 | **M7a — Static readability pass** | **Active (parallel presentation track)** | #53 |
 | M7b — Rigged humanoid animation | DEFERRED (after M7a proven) | #54 |
+| M8 — Realism & polish pass | DEFERRED (umbrella, accrues sub-issues) | #61 |
 
 GitHub Issues is the source of truth for the live state of each milestone and its
 sub-issues; this table is the at-a-glance map.
