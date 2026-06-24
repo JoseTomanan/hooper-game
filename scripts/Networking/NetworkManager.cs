@@ -60,6 +60,25 @@ public partial class NetworkManager : Node
 	/// </summary>
 	[Export] public string PlayerScenePath { get; set; } = "res://scenes/Player.tscn";
 
+	/// <summary>
+	/// Spawn point for peer 1 — the listen-server host (HostGame always calls
+	/// SpawnPlayer(1); see that method's doc). Placed in front of the rim
+	/// (Rim sits at (0, 3.05, 0.3) in Main.tscn) and further out than
+	/// ClientSpawn: the host starts as the offense/ballhandler in the
+	/// half-court 1v1 stack (ADR-0008). Y = 0 matches the floor.
+	/// Tune in the Inspector — court bounds are X ∈ [-4.88, 4.88], Z ∈ [-1.0, 11.88]
+	/// (BallController.CourtMin/CourtMax).
+	/// </summary>
+	[Export] public Vector3 HostSpawn { get; set; } = new(0f, 0f, 6f);
+
+	/// <summary>
+	/// Spawn point for every joining client (peer id != 1). Nearer the rim
+	/// than HostSpawn, between the host and the basket: the joiner starts as
+	/// the defender in the half-court 1v1 stack (ADR-0008). See HostSpawn's
+	/// doc for the shared rim/bounds reference.
+	/// </summary>
+	[Export] public Vector3 ClientSpawn { get; set; } = new(0f, 0f, 3f);
+
 	// ── Signals ─────────────────────────────────────────────────────────────
 
 	/// <summary>
@@ -351,8 +370,28 @@ public partial class NetworkManager : Node
 		// (Peer IDs are 32-bit in practice; cast from long is safe for M1b.)
 		player.Name = name;
 
+		// Position before AddChild: local Position == world position here
+		// because Players sits at the scene origin, and setting it pre-AddChild
+		// means the player's first _PhysicsProcess tick already broadcasts the
+		// correct spawn position (PlayerController.TickServerOwnPlayer /
+		// TickServerRemotePlayer) rather than a one-tick-late correction.
+		if (player is Node3D player3D)
+			player3D.Position = SpawnPositionFor(peerId);
+		else
+			GD.PrintErr("[NetworkManager] Player.tscn root is not a Node3D; cannot set spawn position.");
+
 		Players.AddChild(player);
 		GD.Print("[NetworkManager] Spawned player for peer ", peerId);
+	}
+
+	/// <summary>
+	/// Maps a peer ID to its spawn point: the host (peer 1, see HostGame) gets
+	/// HostSpawn, every joining client gets ClientSpawn. See those exports'
+	/// docs for the offense/defense rationale (ADR-0008).
+	/// </summary>
+	private Vector3 SpawnPositionFor(int peerId)
+	{
+		return peerId == 1 ? HostSpawn : ClientSpawn;
 	}
 
 	/// <summary>
