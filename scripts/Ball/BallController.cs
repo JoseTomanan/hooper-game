@@ -73,6 +73,9 @@ public partial class BallController : Node3D
 	/// <summary>Hand height the dribble bounces up to (metres).</summary>
 	[Export] public float DribbleHandHeight { get; set; } = 1.0f;
 
+	/// <summary>How far (metres) in front of the holder the ball is positioned while Held or Dribbling.</summary>
+	[Export] public float DribbleForwardOffset { get; set; } = 0.5f;
+
 	/// <summary>Full down-and-up dribble cycle duration (seconds).</summary>
 	[Export] public float DribblePeriod { get; set; } = 0.6f;
 
@@ -218,6 +221,16 @@ public partial class BallController : Node3D
 
 	private DribbleCycle _dribble;
 	private RimBackboard _basket;
+
+	/// <summary>
+	/// Last known horizontal facing direction of the holder. Persisted so the
+	/// dribble offset stays stable while the player is stationary. Initialised
+	/// to -Z (facing up the court). Reset effectively on each possession change
+	/// because the new holder's velocity drives it immediately on the first
+	/// moving tick; the server's ReceiveState broadcast corrects any 1-tick
+	/// directional divergence in the meantime.
+	/// </summary>
+	private Vector3 _lastHolderForward = new Vector3(0f, 0f, -1f);
 
 	/// <summary>
 	/// The in-flight (or loose) trajectory. Non-null only while InFlight or
@@ -625,6 +638,25 @@ public partial class BallController : Node3D
 	}
 
 	/// <summary>
+	/// Returns the holder's current horizontal facing direction as a normalised XZ vector.
+	/// Falls back to <see cref="_lastHolderForward"/> when the holder is absent or stationary
+	/// (speed below 0.1 m/s — just above the deceleration floor so the direction locks in
+	/// before the player fully stops rather than flickering at the last frame of movement).
+	/// Writes <see cref="_lastHolderForward"/> as a side-effect; the server broadcasts
+	/// position every tick so any client/server divergence in this field is absorbed by
+	/// <see cref="ReconcileFromServer"/> within one tick.
+	/// </summary>
+	private Vector3 ComputeHolderForward(CharacterBody3D body)
+	{
+		if (body == null) return _lastHolderForward;
+		Vector3 vel = body.Velocity;
+		float horizontalSpeed = new Vector2(vel.X, vel.Z).Length();
+		if (horizontalSpeed < 0.1f) return _lastHolderForward;
+		_lastHolderForward = new Vector3(vel.X, 0f, vel.Z).Normalized();
+		return _lastHolderForward;
+	}
+
+	/// <summary>
 	/// Server-only: flip the current possession to cleared once the handler has
 	/// carried the ball back behind the clear line (#50, ADR-0008). Only checked
 	/// while a player actually holds the ball (Held/Dribbling) and only until it
@@ -644,18 +676,32 @@ public partial class BallController : Node3D
 
 	// ── Per-state behaviour ───────────────────────────────────────────────
 
-	/// <summary>Ball cradled at hand height above the holder. Shoot to release.</summary>
+	/// <summary>Ball cradled at hand height in front of the holder. Shoot to release.</summary>
 	private void TickHeld()
 	{
-		GlobalPosition = HolderPosition() + Vector3.Up * DribbleHandHeight;
+		var holderBody = Players?.GetNodeOrNull(StateMachine.HolderPeerId.ToString()) as CharacterBody3D;
+		Vector3 holderPos = holderBody?.GlobalPosition ?? Vector3.Zero;
+		Vector3 forward   = ComputeHolderForward(holderBody);
+		// World-space Y = DribbleHandHeight, consistent with DribbleCycle's world-Y convention.
+		GlobalPosition = new Vector3(
+			holderPos.X + forward.X * DribbleForwardOffset,
+			DribbleHandHeight,
+			holderPos.Z + forward.Z * DribbleForwardOffset
+		);
 		TryShoot();
 	}
 
-	/// <summary>Ball bouncing in the dribble cycle, tracking the holder. Shoot to release.</summary>
+	/// <summary>Ball bouncing in front of the holder. Shoot to release.</summary>
 	private void TickDribbling(float dt)
 	{
 		_dribble.Advance(dt);
-		GlobalPosition = _dribble.GetBallPosition(HolderPosition());
+		var holderBody = Players?.GetNodeOrNull(StateMachine.HolderPeerId.ToString()) as CharacterBody3D;
+		Vector3 holderPos = holderBody?.GlobalPosition ?? Vector3.Zero;
+		Vector3 forward   = ComputeHolderForward(holderBody);
+		// Pass XZ-offset position; GetBallPosition discards the Y and uses HeightAtPhase instead.
+		GlobalPosition = _dribble.GetBallPosition(
+			new Vector3(holderPos.X + forward.X * DribbleForwardOffset, holderPos.Y, holderPos.Z + forward.Z * DribbleForwardOffset)
+		);
 		TryShoot();
 	}
 
