@@ -73,6 +73,9 @@ public partial class BallController : Node3D
 	/// <summary>Hand height the dribble bounces up to (metres).</summary>
 	[Export] public float DribbleHandHeight { get; set; } = 1.0f;
 
+	/// <summary>How far (metres) in front of the holder the ball is positioned while Held or Dribbling.</summary>
+	[Export] public float DribbleForwardOffset { get; set; } = 0.5f;
+
 	/// <summary>Full down-and-up dribble cycle duration (seconds).</summary>
 	[Export] public float DribblePeriod { get; set; } = 0.6f;
 
@@ -147,6 +150,25 @@ public partial class BallController : Node3D
 	/// </summary>
 	[Export] public float ClearLineDistance { get; set; } = 5.8f;
 
+	// ── Court bounds (issue #46, half-court containment) ────────────────────
+
+	/// <summary>
+	/// Floor-plane (XZ) lower bound of the playable court rectangle, in world
+	/// space: X = left edge, Y = near edge (smallest Z). Used to clamp a loose
+	/// ball in TickLoose (CourtBounds.Clamp) so it cannot roll off the floor
+	/// edge. Must match the StaticBody3D walls placed in the editor for players
+	/// (EDITOR_TASKS.md — court-bound step, issue #46). Inset from the raw
+	/// floor geometry by ~BallRadius to prevent the ball from resting half-
+	/// outside the floor mesh.
+	/// </summary>
+	[Export] public Vector2 CourtMin { get; set; } = new(-4.88f, -1.0f);
+
+	/// <summary>
+	/// Floor-plane (XZ) upper bound of the playable court rectangle: X = right
+	/// edge, Y = far edge (largest Z). See CourtMin for layout notes.
+	/// </summary>
+	[Export] public Vector2 CourtMax { get; set; } = new(4.88f, 11.88f);
+
 	// ── Reconciliation tuning (mirrors PlayerController's tunables) ───────
 
 	/// <summary>
@@ -201,6 +223,16 @@ public partial class BallController : Node3D
 	private RimBackboard _basket;
 
 	/// <summary>
+	/// Last known horizontal facing direction of the holder. Persisted so the
+	/// dribble offset stays stable while the player is stationary. Initialised
+	/// to -Z (facing up the court). Reset effectively on each possession change
+	/// because the new holder's velocity drives it immediately on the first
+	/// moving tick; the server's ReceiveState broadcast corrects any 1-tick
+	/// directional divergence in the meantime.
+	/// </summary>
+	private Vector3 _lastHolderForward = new Vector3(0f, 0f, -1f);
+
+	/// <summary>
 	/// The in-flight (or loose) trajectory. Non-null only while InFlight or
 	/// Loose — it carries the position+velocity the integrator advances. Reused
 	/// for the loose fall so a bounced ball keeps moving under gravity.
@@ -224,6 +256,28 @@ public partial class BallController : Node3D
 	/// frame. SET, not accumulated — mirrors PlayerController._smoothOffset.
 	/// </summary>
 	private Vector3 _smoothOffset;
+
+	// ── Made-shot green flash (issue #46) ─────────────────────────────────
+
+	/// <summary>
+	/// Duration (seconds) the ball stays green after a counting basket.
+	/// Editor-tunable via the export below; 1 s is the default.
+	/// </summary>
+	[Export] public float MadeFlashDuration { get; set; } = 1.0f;
+
+	/// <summary>
+	/// Private per-instance material override for the ball mesh — duplicated
+	/// from the scene's shared sub-resource in _Ready so we can tint it without
+	/// affecting other instances (or the asset on disk). Null if the mesh node
+	/// was not found.
+	/// </summary>
+	private StandardMaterial3D _ballMaterial;
+
+	/// <summary>Original orange albedo, cached at startup for restoration after the flash.</summary>
+	private Color _originalAlbedo;
+
+	/// <summary>Countdown to the end of the current flash; &lt;= 0 means no active flash.</summary>
+	private float _flashTimer;
 
 	// ── Authoritative snapshot staging (client + server's own broadcast) ──
 
@@ -320,6 +374,28 @@ public partial class BallController : Node3D
 		if (_mesh == null)
 			GD.PrintErr("[BallController] MeshInstance3D child not found; smooth correction disabled.");
 
+		// Set up the made-shot green flash (issue #46).  Duplicate the sphere's
+		// shared material into a per-instance override so tinting does not affect
+		// other instances or the sub-resource on disk.
+		if (_mesh is MeshInstance3D meshInst)
+		{
+			// The mesh's embedded material is on the SphereMesh, not the instance
+			// (Ball.tscn wires it via SphereMesh.material). GetActiveMaterial(0)
+			// resolves the mesh's own material when no override exists yet, giving
+			// us the orange color to duplicate and cache.
+			var baseMat = meshInst.GetActiveMaterial(0) as StandardMaterial3D;
+			if (baseMat != null)
+			{
+				_ballMaterial  = (StandardMaterial3D)baseMat.Duplicate();
+				_originalAlbedo = _ballMaterial.AlbedoColor;
+				meshInst.SetSurfaceOverrideMaterial(0, _ballMaterial);
+			}
+			else
+			{
+				GD.PrintErr("[BallController] Ball mesh has no StandardMaterial3D at surface 0; made-shot flash disabled.");
+			}
+		}
+
 		// (Doubt cycle 1, finding #6/#9) Players is unassigned → HolderPosition()
 		// would silently fall back to world origin every tick with no diagnostic,
 		// which is exactly the kind of failure CLAUDE.md asks us to surface loudly
@@ -329,14 +405,39 @@ public partial class BallController : Node3D
 		if (Players == null)
 			GD.PrintErr("[BallController] Players is not assigned. Wire it in the Inspector to the same spawn root as NetworkManager.Players.");
 
+		// CourtMin/Max must be correctly ordered (Min.X < Max.X, Min.Y < Max.Y) for
+		// CourtBounds.Clamp to behave correctly.  Mathf.Clamp throws when min > max
+		// in debug builds, so catch the misconfiguration loud and early (issue #46).
+		if (CourtMin.X >= CourtMax.X || CourtMin.Y >= CourtMax.Y)
+			GD.PrintErr($"[BallController] CourtMin ({CourtMin}) must be strictly less than CourtMax ({CourtMax}) on each axis. Court bounds will not work until corrected in the Inspector.");
+
 		// Deferred so GameManager._Ready() (a later sibling) has run and joined
 		// the group before we check — avoids a false-positive error on scene load.
 		Callable.From(() =>
 		{
 			_gameManager = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
 			if (_gameManager == null)
+			{
 				GD.PrintErr("[BallController] No node in group 'game_manager' found. Scoring and game-over freeze will not work until GameManager is added to the scene (issue #27).");
+				return;
+			}
+
+			// Trigger the made-shot green flash on every counting basket (issue #46).
+			// ScoreChanged fires on EVERY peer (server via BroadcastAndEmit; clients
+			// via ReceiveScoreState RPC), so the flash is truthful everywhere: it only
+			// lights up when the server actually registered a point — never on an
+			// uncleared make that turned over.
+			if (_ballMaterial != null)
+				_gameManager.ScoreChanged += OnScoreChanged;
 		}).CallDeferred();
+	}
+
+	public override void _ExitTree()
+	{
+		// Drop the delegate so GameManager doesn't hold a dangling reference.
+		// Same lifecycle hygiene as PossessionHud._ExitTree.
+		if (_gameManager != null && _ballMaterial != null)
+			_gameManager.ScoreChanged -= OnScoreChanged;
 	}
 
 	// ── Tick loop ─────────────────────────────────────────────────────────
@@ -431,6 +532,9 @@ public partial class BallController : Node3D
 		// every peer after reconcile, so a client emits when the broadcast moves
 		// the holder/cleared, and the server when gameplay does.
 		EmitPossessionIfChanged();
+
+		// Tick the made-shot green flash countdown; restore orange when it expires.
+		TickMadeFlash((float)delta);
 	}
 
 	// ── Possession HUD push (#51) ──────────────────────────────────────────
@@ -448,6 +552,37 @@ public partial class BallController : Node3D
 		_lastEmittedHolder = StateMachine.HolderPeerId;
 		_lastEmittedCleared = IsCleared;
 		EmitSignal(SignalName.PossessionChanged, _lastEmittedHolder, _lastEmittedCleared);
+	}
+
+	// ── Made-shot green flash (issue #46) ─────────────────────────────────
+
+	/// <summary>
+	/// Called on every peer when the score changes (GameManager.ScoreChanged)
+	/// — i.e. when a counting basket is registered. Starts the green flash.
+	/// Fires only for genuine points (cleared makes), never for uncleared makes
+	/// that turn over — ScoreChanged is the authority boundary.
+	/// </summary>
+	private void OnScoreChanged()
+	{
+		if (_ballMaterial == null) return;
+		_flashTimer = MadeFlashDuration;
+		_ballMaterial.AlbedoColor = Colors.Green;
+	}
+
+	/// <summary>
+	/// Ticks the flash countdown and restores the original orange albedo when
+	/// the timer expires.  No-op when no flash is active (_flashTimer &lt;= 0).
+	/// </summary>
+	private void TickMadeFlash(float delta)
+	{
+		if (_flashTimer <= 0f || _ballMaterial == null) return;
+
+		_flashTimer -= delta;
+		if (_flashTimer <= 0f)
+		{
+			_flashTimer = 0f;
+			_ballMaterial.AlbedoColor = _originalAlbedo;
+		}
 	}
 
 	/// <summary>
@@ -503,6 +638,25 @@ public partial class BallController : Node3D
 	}
 
 	/// <summary>
+	/// Returns the holder's current horizontal facing direction as a normalised XZ vector.
+	/// Falls back to <see cref="_lastHolderForward"/> when the holder is absent or stationary
+	/// (speed below 0.1 m/s — just above the deceleration floor so the direction locks in
+	/// before the player fully stops rather than flickering at the last frame of movement).
+	/// Writes <see cref="_lastHolderForward"/> as a side-effect; the server broadcasts
+	/// position every tick so any client/server divergence in this field is absorbed by
+	/// <see cref="ReconcileFromServer"/> within one tick.
+	/// </summary>
+	private Vector3 ComputeHolderForward(CharacterBody3D body)
+	{
+		if (body == null) return _lastHolderForward;
+		Vector3 vel = body.Velocity;
+		float horizontalSpeed = new Vector2(vel.X, vel.Z).Length();
+		if (horizontalSpeed < 0.1f) return _lastHolderForward;
+		_lastHolderForward = new Vector3(vel.X, 0f, vel.Z).Normalized();
+		return _lastHolderForward;
+	}
+
+	/// <summary>
 	/// Server-only: flip the current possession to cleared once the handler has
 	/// carried the ball back behind the clear line (#50, ADR-0008). Only checked
 	/// while a player actually holds the ball (Held/Dribbling) and only until it
@@ -522,18 +676,32 @@ public partial class BallController : Node3D
 
 	// ── Per-state behaviour ───────────────────────────────────────────────
 
-	/// <summary>Ball cradled at hand height above the holder. Shoot to release.</summary>
+	/// <summary>Ball cradled at hand height in front of the holder. Shoot to release.</summary>
 	private void TickHeld()
 	{
-		GlobalPosition = HolderPosition() + Vector3.Up * DribbleHandHeight;
+		var holderBody = Players?.GetNodeOrNull(StateMachine.HolderPeerId.ToString()) as CharacterBody3D;
+		Vector3 holderPos = holderBody?.GlobalPosition ?? Vector3.Zero;
+		Vector3 forward   = ComputeHolderForward(holderBody);
+		// World-space Y = DribbleHandHeight, consistent with DribbleCycle's world-Y convention.
+		GlobalPosition = new Vector3(
+			holderPos.X + forward.X * DribbleForwardOffset,
+			DribbleHandHeight,
+			holderPos.Z + forward.Z * DribbleForwardOffset
+		);
 		TryShoot();
 	}
 
-	/// <summary>Ball bouncing in the dribble cycle, tracking the holder. Shoot to release.</summary>
+	/// <summary>Ball bouncing in front of the holder. Shoot to release.</summary>
 	private void TickDribbling(float dt)
 	{
 		_dribble.Advance(dt);
-		GlobalPosition = _dribble.GetBallPosition(HolderPosition());
+		var holderBody = Players?.GetNodeOrNull(StateMachine.HolderPeerId.ToString()) as CharacterBody3D;
+		Vector3 holderPos = holderBody?.GlobalPosition ?? Vector3.Zero;
+		Vector3 forward   = ComputeHolderForward(holderBody);
+		// Pass XZ-offset position; GetBallPosition discards the Y and uses HeightAtPhase instead.
+		GlobalPosition = _dribble.GetBallPosition(
+			new Vector3(holderPos.X + forward.X * DribbleForwardOffset, holderPos.Y, holderPos.Z + forward.Z * DribbleForwardOffset)
+		);
 		TryShoot();
 	}
 
@@ -622,9 +790,12 @@ public partial class BallController : Node3D
 	/// ADR-0008). A make counts only if the possession was cleared:
 	///   - Cleared: register the point, then — unless it won the game —
 	///     hand the ball back to the scorer (make-it-take-it, #49). The new
-	///     possession starts uncleared.
+	///     possession starts CLEARED (ADR-0008 amended 2026-06-21): the scorer
+	///     already took the ball back to earn this make; forcing them to do it
+	///     again on the very next possession is double-punishment with no
+	///     defensive purpose. Rebounds and turnovers still start uncleared.
 	///   - Not cleared: the basket does NOT count; the ball turns over to the
-	///     defender (a take-it-back violation), who also starts uncleared. With
+	///     defender (a take-it-back violation), who starts uncleared. With
 	///     no opponent present (e.g. a solo editor test) the ball is left loose
 	///     for the rebound contest to resolve.
 	/// </summary>
@@ -636,15 +807,9 @@ public partial class BallController : Node3D
 
 			// Make-it-take-it, unless the basket ended the game — then the
 			// game-over freeze stands (see _PhysicsProcess's no-freeze note).
-			// The new possession starts uncleared (AwardPossession), but if the
-			// scorer made this shot from BEHIND the clear line they are already
-			// behind it, so UpdateClearStatus re-clears them on the same tick —
-			// by design: being at/behind the line satisfies "take it back" (no
-			// in-and-out crossing required). Only a make from INSIDE the line
-			// (the common layup case) leaves them uncleared and forced to carry
-			// the ball back out before the next basket counts.
+			// cleared: true — the scorer already earned their trip (see doc).
 			if (!(GetGameManager()?.IsGameOver ?? false))
-				AwardPossession(_lastShooterPeerId);
+				AwardPossession(_lastShooterPeerId, cleared: true);
 			return;
 		}
 
@@ -695,6 +860,28 @@ public partial class BallController : Node3D
 			_arc.Position = p;
 			_arc.Velocity = Vector3.Zero; // settled; no bounce model on the floor yet
 		}
+
+		// Half-court bound: clamp XZ so the loose ball cannot roll off the floor
+		// edge (issue #46).  Y is preserved — the floor-contact check above already
+		// owns vertical containment.  Exported CourtMin/Max are the single source of
+		// truth for the bounds; the StaticBody3D walls in the editor must match them.
+		// Deterministic: same exported values on every peer → no reconciliation drift.
+		//
+		// Ordering note: this must run AFTER the floor check above (which may have
+		// already written _arc.Position via the local `p` copy) so the final
+		// _arc.Position reflects both corrections before it is read into GlobalPosition.
+		//
+		// Velocity zeroing: when the clamp fires on an axis, zero the matching
+		// velocity component so the integrator does not keep pushing the ball
+		// through the wall every tick (analogous to the floor-contact Velocity=Zero
+		// at line 712).
+		Vector3 preclamp = _arc.Position;
+		_arc.Position = CourtBounds.Clamp(_arc.Position, CourtMin, CourtMax);
+
+		Vector3 arcVel = _arc.Velocity;
+		if (_arc.Position.X != preclamp.X) arcVel.X = 0f;
+		if (_arc.Position.Z != preclamp.Z) arcVel.Z = 0f;
+		_arc.Velocity = arcVel;
 
 		GlobalPosition = _arc.Position;
 
@@ -749,37 +936,59 @@ public partial class BallController : Node3D
 
 	/// <summary>
 	/// Awards possession of a loose / in-flight ball to a player and resumes a
-	/// live dribble — the shared handoff path used by a live rebound (#48) and,
-	/// later, the make-it-take-it reset (#49). Mirrors the tipoff sequence
+	/// live dribble — the shared handoff path used by a live rebound (#48) and
+	/// the make-it-take-it reset (#49). Mirrors the tipoff sequence
 	/// (Catch → StartDribble): Catch is legal only from InFlight/Loose (it
 	/// returns false otherwise, leaving state untouched), and StartDribble then
 	/// puts the new holder into the same dribbling state the game opens in, so
 	/// they can immediately dribble and shoot.
+	///
+	/// <paramref name="cleared"/> controls the clear state of the new possession
+	/// (ADR-0008 §Decision-3, amended 2026-06-21):
+	///   - false (default): a rebound or turnover — the new holder must carry
+	///     the ball back behind the clear line before a basket counts. Set on
+	///     EVERY peer (prediction runs on TickLoose), so the HUD shows "take it
+	///     back" immediately without waiting for the server broadcast.
+	///   - true: a make-it-take-it possession (#49) — the scorer already earned
+	///     their trip, so the new possession starts cleared. Server-only call
+	///     site (ResolveServerMake), broadcast via ReceiveState.
+	///
+	/// Only the TRUE clear flip (UpdateClearStatus, crossing the line) is server-
+	/// authoritative; clients receive that via the ReceiveState broadcast in
+	/// ReconcileFromServer and never compute it themselves.
 	/// </summary>
-	private void AwardPossession(int peerId)
+	private void AwardPossession(int peerId, bool cleared = false)
 	{
 		if (!StateMachine.Catch(peerId))
 		{
-			// Unreachable in the real call paths — both callers (the rebound in
-			// TickLoose and ResolveServerMake) only reach here while the ball is
-			// Loose, where Catch is legal. Surface loudly (CLAUDE.md loud-failure
-			// rule) if a future path ever calls in at an illegal state, rather
-			// than silently leaving possession in a half-changed condition.
+			// Both callers reach here while the ball is Loose, so Catch (Loose→Held)
+			// is legal and this branch is unreachable in normal play.  "Unreachable"
+			// holds even for the client prediction path: ReconcileFromServer runs at
+			// the TOP of _PhysicsProcess, before the state switch, so TickLoose (and
+			// thus this method) only ever dispatches when State == Loose.  Surface
+			// loudly per CLAUDE.md loud-failure rule so a future regression is not
+			// silent.
 			GD.PrintErr($"[BallController] AwardPossession({peerId}) called in state {State}; Catch rejected, possession unchanged.");
 			return;
 		}
-		StateMachine.StartDribble();
 
-		// Every change of possession starts uncleared (#50, ADR-0008): the new
-		// handler must carry the ball back behind the clear line before a basket
-		// counts. Set on EVERY peer, not just the server — "a new possession is
-		// uncleared" is a DETERMINISTIC rule, so a client predicting a rebound
-		// (TickLoose) predicts it too. That keeps the HUD showing "take it back"
-		// immediately instead of a stale "cleared" carried over from the prior
-		// possession. Only the TRUE flip (UpdateClearStatus, the line crossing)
-		// is server-authoritative; clients receive that via the ReceiveState
-		// broadcast in ReconcileFromServer and never compute it themselves.
-		IsCleared = false;
+		// StartDribble is legal from Held (the state Catch just transitioned to).
+		// Guard the return value so a future internal-state divergence (e.g. a
+		// ForceState landing between Catch and StartDribble) fails loudly rather
+		// than leaving the ball Held with no dribble cycle.
+		if (!StateMachine.StartDribble())
+		{
+			GD.PrintErr($"[BallController] AwardPossession({peerId}): StartDribble rejected after Catch in state {State}; possession partially awarded, ball may behave unexpectedly.");
+		}
+
+		// `cleared` is false for rebounds/turnovers (every peer sets this
+		// deterministically; clients predict it immediately for HUD responsiveness),
+		// and true for make-it-take-it resets (server-only call site in
+		// ResolveServerMake; clients start with false and are corrected by the next
+		// ReceiveState broadcast within 1 RTT).  The 1-RTT window where a client
+		// briefly shows "take it back" after a counting make is an accepted cosmetic
+		// artefact — sub-frame at LAN latency, inherent to client prediction.
+		IsCleared = cleared;
 	}
 
 	// ── Shot trigger / input authority (M4) ─────────────────────────────────

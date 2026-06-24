@@ -171,6 +171,17 @@ public partial class PlayerController : CharacterBody3D
 	private Node3D _mesh;
 
 	/// <summary>
+	/// The visual node's authored local position, captured once in _Ready.
+	/// Player.tscn seats the humanoid mesh below the CharacterBody3D origin
+	/// (M7a mesh swap) via CharacterModel's local Position — smooth correction
+	/// below must apply ON TOP of that seat offset, not overwrite it. Before
+	/// this field existed, ApplySmoothCorrection() reset _mesh.Position to
+	/// Vector3.Zero whenever no correction was active, clobbering the seat
+	/// offset and leaving the model floating above the floor every frame.
+	/// </summary>
+	private Vector3 _meshRestPosition;
+
+	/// <summary>
 	/// Last computed yaw for the visual mesh (radians). Persists between frames
 	/// so the mesh holds its facing when the player is stationary.
 	/// </summary>
@@ -282,6 +293,12 @@ public partial class PlayerController : CharacterBody3D
 			if (_mesh == null)
 				GD.PrintErr("[PlayerController] Visual root not found; smooth correction disabled. Set VisualRoot in the Inspector or ensure a MeshInstance3D child exists.");
 		}
+
+		// Capture the authored seat offset (see _meshRestPosition's doc) so
+		// ApplySmoothCorrection() can apply correction relative to it instead
+		// of clobbering it with Vector3.Zero.
+		if (_mesh != null)
+			_meshRestPosition = _mesh.Position;
 
 		_gameManager = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
 		if (_gameManager == null)
@@ -771,6 +788,11 @@ public partial class PlayerController : CharacterBody3D
 	///
 	/// (Doubt cycle 1, findings #2 + #9 — fixed from GlobalPosition manipulation
 	/// which caused 2.33× overshoot, to mesh-child local offset instead.)
+	///
+	/// Offsets are applied RELATIVE to _meshRestPosition, not Vector3.Zero —
+	/// Player.tscn authors a seat offset on the visual node (M7a humanoid mesh
+	/// swap) and this channel must not clobber it (the "player floats above
+	/// the floor" bug: this used to reset _mesh.Position straight to zero).
 	/// </summary>
 	private void ApplySmoothCorrection()
 	{
@@ -783,12 +805,12 @@ public partial class PlayerController : CharacterBody3D
 		if (_smoothOffset.LengthSquared() < ReconcileSnapThreshold * ReconcileSnapThreshold)
 		{
 			_smoothOffset  = Vector3.Zero;
-			_mesh.Position = Vector3.Zero;
+			_mesh.Position = _meshRestPosition;
 			return;
 		}
 
 		_smoothOffset  = _smoothOffset.Lerp(Vector3.Zero, ReconcileLerpRate);
-		_mesh.Position = _smoothOffset;
+		_mesh.Position = _meshRestPosition + _smoothOffset;
 	}
 
 	/// <summary>

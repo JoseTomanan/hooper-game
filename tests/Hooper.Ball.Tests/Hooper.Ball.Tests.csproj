@@ -44,6 +44,7 @@
     <Compile Include="..\..\scripts\Ball\RimBackboard.cs" />
     <Compile Include="..\..\scripts\Ball\ReboundContest.cs" />
     <Compile Include="..\..\scripts\Ball\ClearLine.cs" />
+    <Compile Include="..\..\scripts\Ball\CourtBounds.cs" />
   </ItemGroup>
 
   <!--

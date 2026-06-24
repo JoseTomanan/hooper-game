@@ -9,6 +9,7 @@
 [ext_resource type="Script" uid="uid://dhdoqjw7im05f" path="res://scripts/Networking/DiscoveryBroadcaster.cs" id="7_nxtc6"]
 [ext_resource type="PackedScene" uid="uid://cb04swbq2ivnx" path="res://scenes/ServerBrowser.tscn" id="8_srbrw"]
 [ext_resource type="Script" uid="uid://de27yy5y4j6vq" path="res://scripts/Systems/PossessionHud.cs" id="9_q8u5g"]
+[ext_resource type="Script" uid="uid://ncidr0vku6ft" path="res://scripts/Systems/CourtVisuals.cs" id="10_courtvisuals"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
 
@@ -24,10 +25,25 @@ ambient_light_source = 3
 size = Vector3(10, 1, 14)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_vcsgt"]
-albedo_color = Color(0.3254902, 0.4392157, 0.101960786, 1)
+albedo_color = Color(0.45, 0.45, 0.45, 1)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
 size = Vector3(10, 1, 14)
+
+[sub_resource type="BoxMesh" id="BoxMesh_backwall"]
+size = Vector3(20.542, 5, 0.240625)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wall"]
+albedo_color = Color(0.3, 0.3, 0.3, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall"]
+size = Vector3(0.240625, 5, 14)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_frontback"]
+size = Vector3(20.542, 5, 0.240625)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_lhr70"]
+size = Vector3(0.240625, 5, 14)
 
 [sub_resource type="TorusMesh" id="TorusMesh_rvslj"]
 inner_radius = 0.21
@@ -40,9 +56,11 @@ albedo_color = Color(0.63529414, 0.1254902, 0.12156863, 1)
 size = Vector3(0.92, 0.61, 0.05)
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rarhs"]
-albedo_color = Color(0.5176471, 0.5176471, 0.5019608, 1)
+albedo_color = Color(0.56, 0.32816002, 0.1736, 1)
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_q8u5g"]
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_pole"]
 
 [sub_resource type="TorusMesh" id="TorusMesh_ringmarker"]
 inner_radius = 0.17
@@ -67,15 +85,48 @@ mesh = SubResource("BoxMesh_floor")
 surface_material_override/0 = SubResource("StandardMaterial3D_vcsgt")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="Floor" unique_id=391624559]
-transform = Transform3D(2, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 5)
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, -0.5020094, 5)
 shape = SubResource("BoxShape3D_floor")
+
+[node name="Walls" type="StaticBody3D" parent="." unique_id=1794431801]
+
+[node name="WallMeshBack" type="MeshInstance3D" parent="Walls" unique_id=2101000004]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.4630556, -2.1203125)
+mesh = SubResource("BoxMesh_backwall")
+surface_material_override/0 = SubResource("StandardMaterial3D_wall")
+
+[node name="WallMeshLeft" type="MeshInstance3D" parent="Walls" unique_id=2101000002]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.142146, 2.493558, 5.111066)
+mesh = SubResource("BoxMesh_wall")
+surface_material_override/0 = SubResource("StandardMaterial3D_wall")
+
+[node name="WallMeshRight" type="MeshInstance3D" parent="Walls" unique_id=2101000001]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.150881, 2.4630556, 4.96599)
+mesh = SubResource("BoxMesh_wall")
+surface_material_override/0 = SubResource("StandardMaterial3D_wall")
+
+[node name="WallCollisionBack" type="CollisionShape3D" parent="Walls" unique_id=2101000003]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.4630556, -2.1203125)
+shape = SubResource("BoxShape3D_frontback")
+
+[node name="WallCollisionFront" type="CollisionShape3D" parent="Walls" unique_id=2101000005]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.4630556, 12.120313)
+shape = SubResource("BoxShape3D_frontback")
+
+[node name="WallCollisionLeft" type="CollisionShape3D" parent="Walls" unique_id=2028508273]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.142146, 2.493558, 5.111066)
+shape = SubResource("BoxShape3D_lhr70")
+
+[node name="WallCollisionRight" type="CollisionShape3D" parent="Walls" unique_id=1599743776]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.150881, 2.4630556, 4.96599)
+shape = SubResource("BoxShape3D_lhr70")
 
 [node name="Camera3D" type="Camera3D" parent="." unique_id=1898710017]
 transform = Transform3D(1, 0, 0, 0, 0.7071068, 0.7071068, 0, -0.7071068, 0.7071068, 0, 8, 9.705208)
 current = true
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=10074499]
-transform = Transform3D(1, 0, 0, 0, -0.22892861, 0.97344327, 0, -0.97344327, -0.22892861, -0.30898857, 15.6352625, 0)
+transform = Transform3D(1, 0, 0, 0, -0.22892861, 0.97344327, 0, -0.97344327, -0.22892861, 13.806898, 16.40461, -5.148597)
 shadow_enabled = true
 
 [node name="Rim" type="MeshInstance3D" parent="." unique_id=1248964402]
@@ -88,9 +139,15 @@ transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1, 0, 3.361642, 0.03)
 mesh = SubResource("BoxMesh_rvslj")
 surface_material_override/0 = SubResource("StandardMaterial3D_rarhs")
 
-[node name="Pole" type="MeshInstance3D" parent="Backboard" unique_id=335177550]
-transform = Transform3D(0.10000001, 0, 0, 0, 1, 0, 0, 0, 0.1, 0, -1.2732873, 0)
+[node name="PoleBody" type="StaticBody3D" parent="." unique_id=4000020]
+
+[node name="Pole" type="MeshInstance3D" parent="PoleBody" unique_id=335177550]
+transform = Transform3D(0.15, 0, 0, 0, 1.5, 0, 0, 0, 0.1, 0, 1.4517109, 0.03)
 mesh = SubResource("CylinderMesh_q8u5g")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="PoleBody" unique_id=4000021]
+transform = Transform3D(0.15, 0, 0, 0, 1.5, 0, 0, 0, 0.1, 0, 1.451711, 0.03)
+shape = SubResource("CylinderShape3D_pole")
 
 [node name="RingMarker" type="MeshInstance3D" parent="." unique_id=4000005]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.005, 0.3)
@@ -149,6 +206,10 @@ script = ExtResource("5_vcsgt")
 
 [node name="ServerBrowser" parent="." unique_id=924367815 node_paths=PackedStringArray("NetworkManager") instance=ExtResource("8_srbrw")]
 NetworkManager = NodePath("../NetworkManager")
+
+[node name="CourtVisuals" type="Node3D" parent="." unique_id=4000010]
+transform = Transform3D(1.8, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+script = ExtResource("10_courtvisuals")
 
 [node name="PossessionHUD" type="Label" parent="." unique_id=1118293332]
 anchors_preset = -1
