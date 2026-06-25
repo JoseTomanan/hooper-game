@@ -911,6 +911,28 @@ exists in this game.
 
    You should end up with two playable animations named `idle` and `run` on this
    one AnimationPlayer.
+5. **Set the AnimationPlayer's `Root Node` so the clip tracks resolve.** With
+   `AnimationPlayer` selected, find **Root Node** near the top of the Inspector
+   (default `..`) and set it to **`../CharacterModel`**.
+   > **Why this is mandatory, not optional.** Animation tracks are stored as
+   > *node paths* (e.g. `Root/Skeleton3D:RightForeArm`), resolved relative to the
+   > AnimationPlayer's `Root Node`. The clips were extracted from
+   > `idle.fbx`/`run.fbx`, whose internal hierarchy is `Root → Skeleton3D →
+   > bones`; the same rig instanced into this scene is named `CharacterModel`, and
+   > its skeleton lives at `CharacterModel/Root/Skeleton3D`. The default `..`
+   > points at the `CharacterBody3D` root, so every track fails to resolve and the
+   > model stays in bind pose. `Root Node = ../CharacterModel` re-bases all tracks
+   > onto the model in one move. (The AnimationTree inherits this resolution via
+   > its `Anim Player` pointer, so this single setting fixes both the locomotion
+   > blend and the Step 4 committed-move states.)
+   > **Symptom if you skip it:** the Output panel floods with
+   > `AnimationMixer … couldn't resolve track: 'Root/Skeleton3D:<bone>'` and
+   > nothing animates. If you see that, this is the fix.
+   > **If `../CharacterModel` doesn't clear the warnings**, the model's internal
+   > node names differ — temporarily enable **Editable Children** on
+   > `CharacterModel` to read the real path under it (look for the node containing
+   > `Skeleton3D`), set `Root Node` to that node, then disable Editable Children
+   > again. Tell Claude Code the path you found so this step can be corrected.
 
 ### Step 3 — Issue #68: build the AnimationTree + locomotion blend
 
@@ -921,10 +943,17 @@ exists in this game.
 3. Set **Tree Root** to **New AnimationNodeStateMachine**. Double-click the
    state machine resource to open its graph editor (opens in the bottom
    **AnimationTree** panel).
-4. Right-click in the graph → **Add Node** → choose **BlendSpace1D** (not "Add
-   Animation" — this one needs to blend two clips, not play one). Rename this
-   node **`Locomotion`** — the name must be exactly this; `PlayerController`
-   reads `"parameters/Locomotion/blend_position"` literally.
+4. Right-click in the graph → **Add BlendSpace1D** (not "Add Animation" — this
+   one needs to blend two clips, not play one).
+   > **Godot 4.x menu note:** the right-click menu is **flat** — it lists the node
+   > types directly (`Add Animation`, `Add BlendSpace1D`, `Add BlendSpace2D`, `Add
+   > BlendTree`, `Add StateMachine`, `Load…`). There is no parent "Add Node" entry
+   > to expand; this list *is* the add-node menu. Only `Add Animation` has a
+   > submenu arrow (it asks which clip up front). Click `Add BlendSpace1D`
+   > directly.
+
+   Rename this node **`Locomotion`** — the name must be exactly this;
+   `PlayerController` reads `"parameters/Locomotion/blend_position"` literally.
 5. Double-click the `Locomotion` node to open its blend-space editor. Add two
    animation points:
    - Position **0** → `idle`
