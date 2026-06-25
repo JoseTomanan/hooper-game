@@ -61,6 +61,8 @@ albedo_color = Color(0.56, 0.32816002, 0.1736, 1)
 [sub_resource type="CylinderMesh" id="CylinderMesh_q8u5g"]
 
 [sub_resource type="CylinderShape3D" id="CylinderShape3D_pole"]
+radius = 0.0625
+height = 3.0
 
 [sub_resource type="TorusMesh" id="TorusMesh_ringmarker"]
 inner_radius = 0.17
@@ -146,7 +148,7 @@ transform = Transform3D(0.15, 0, 0, 0, 1.5, 0, 0, 0, 0.1, 0, 1.4517109, 0.03)
 mesh = SubResource("CylinderMesh_q8u5g")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="PoleBody" unique_id=4000021]
-transform = Transform3D(0.15, 0, 0, 0, 1.5, 0, 0, 0, 0.1, 0, 1.451711, 0.03)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.451711, 0.03)
 shape = SubResource("CylinderShape3D_pole")
 
 [node name="RingMarker" type="MeshInstance3D" parent="." unique_id=4000005]
