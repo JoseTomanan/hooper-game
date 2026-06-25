@@ -135,6 +135,22 @@ public partial class PlayerController : CharacterBody3D
 	/// </summary>
 	[Export] public NodePath VisualRoot { get; set; }
 
+	/// <summary>
+	/// The AnimationTree that drives the rigged humanoid (M7b, issues #68/#41/#69).
+	/// Set this in the editor to the AnimationTree node added under the humanoid
+	/// model. Left unset, all animation is silently skipped — movement, collision,
+	/// and netcode are completely unaffected (this is cosmetic-only, ADR-0002/0004),
+	/// so a scene without the AnimationTree wired still plays correctly, just
+	/// without locomotion/committed-move animation.
+	///
+	/// The tree's root must be an AnimationNodeStateMachine whose state names match
+	/// MoveAnimState exactly (Locomotion / Startup / Active / Recovery), with the
+	/// Locomotion state a BlendSpace1D blending idle→run by horizontal speed. See
+	/// EDITOR_TASKS.md "Milestone 7b" for the exact node/parameter contract this
+	/// code binds to.
+	/// </summary>
+	[Export] public NodePath AnimationTreePath { get; set; }
+
 	// ── Committed-move tuning (M3) ────────────────────────────────────────────
 
 	/// <summary>
@@ -186,6 +202,29 @@ public partial class PlayerController : CharacterBody3D
 	/// so the mesh holds its facing when the player is stationary.
 	/// </summary>
 	private float _visualYaw;
+
+	// ── Rigged-animation runtime (M7b, issues #68/#41/#69) ───────────────────
+
+	/// <summary>
+	/// The AnimationTree resolved from <see cref="AnimationTreePath"/> in _Ready,
+	/// or null if unset/unresolved. Null-guarded everywhere — animation is purely
+	/// cosmetic, so a null tree disables animation without affecting gameplay.
+	/// </summary>
+	private AnimationTree _animTree;
+
+	/// <summary>
+	/// The state-machine playback handle pulled from the AnimationTree's
+	/// "parameters/playback" once in _Ready. Travel() switches committed-move
+	/// states; cached so we don't re-fetch the Variant every tick.
+	/// </summary>
+	private AnimationNodeStateMachinePlayback _animPlayback;
+
+	/// <summary>
+	/// The committed-move animation state currently traveled to. Tracked so
+	/// ApplyAnimation only calls Travel() on an actual state change, not every
+	/// tick — repeated Travel() to the current state would restart the clip.
+	/// </summary>
+	private MoveAnimState _currentAnimState = MoveAnimState.Locomotion;
 
 	// ── Network state ─────────────────────────────────────────────────────────
 
@@ -300,6 +339,28 @@ public partial class PlayerController : CharacterBody3D
 		if (_mesh != null)
 			_meshRestPosition = _mesh.Position;
 
+		// Resolve the rigged-animation AnimationTree (M7b). Optional and fully
+		// null-guarded: a scene without it wired plays exactly as before, just
+		// without animation (cosmetic-only, ADR-0002/0004). Active is forced on
+		// so the tree drives the skeleton; the playback handle is cached once
+		// rather than re-fetched from the Variant dictionary every tick.
+		if (AnimationTreePath != null && !AnimationTreePath.IsEmpty)
+		{
+			_animTree = GetNodeOrNull<AnimationTree>(AnimationTreePath);
+			if (_animTree != null)
+			{
+				_animTree.Active = true;
+				_animPlayback = _animTree.Get("parameters/playback")
+					.As<AnimationNodeStateMachinePlayback>();
+				if (_animPlayback == null)
+					GD.PrintErr("[PlayerController] AnimationTree resolved but 'parameters/playback' is null — its root must be an AnimationNodeStateMachine. Committed-move animation disabled.");
+			}
+			else
+			{
+				GD.PrintErr($"[PlayerController] AnimationTreePath '{AnimationTreePath}' is set but could not be resolved — check for a renamed or deleted node. Animation disabled.");
+			}
+		}
+
 		_gameManager = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
 		if (_gameManager == null)
 			GD.PrintErr("[PlayerController] No node in group 'game_manager' found. Game-over freeze will not work until GameManager is added to the scene (issue #27).");
@@ -352,6 +413,7 @@ public partial class PlayerController : CharacterBody3D
 
 		ApplySmoothCorrection();
 		ApplyCosmetics();
+		ApplyAnimation();
 	}
 
 	// ── Tick roles ────────────────────────────────────────────────────────────
@@ -842,6 +904,26 @@ public partial class PlayerController : CharacterBody3D
 		// Y = yaw (face run direction), Z = lean (lateral tilt into burst).
 		// Exact sign/axis is hitl sign-off.
 		_mesh.Rotation = new Vector3(0f, _visualYaw, tilt);
+	}
+
+	/// <summary>
+	/// Drives the rigged AnimationTree's idle↔run locomotion blend from horizontal
+	/// speed each frame (M7b, #68). Cosmetic-only and null-guarded — if the tree
+	/// isn't wired this no-ops and gameplay is unaffected (ADR-0002/0004). Runs for
+	/// every role, so a remote player's locomotion reads on your screen from the
+	/// Velocity ReceiveState already syncs.
+	///
+	/// The blend position is |horizontal Velocity| in m/s; the editor authors the
+	/// BlendSpace1D so 0 = idle and MoveSpeed = full run (see EDITOR_TASKS.md M7b).
+	/// </summary>
+	private void ApplyAnimation()
+	{
+		if (_animTree == null) return;
+
+		// Locomotion blend (#68): feed horizontal speed; the Y component is
+		// vertical and irrelevant to a ground idle/run blend.
+		float horizontalSpeed = new Vector2(Velocity.X, Velocity.Z).Length();
+		_animTree.Set("parameters/Locomotion/blend_position", horizontalSpeed);
 	}
 
 	// ── Input (unchanged from M1a) ────────────────────────────────────────────
