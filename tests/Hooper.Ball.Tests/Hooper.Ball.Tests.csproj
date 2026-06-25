@@ -101,6 +101,8 @@
     <Compile Include="..\..\scripts\Player\MoveAnimState.cs" />
     <Compile Include="..\..\scripts\Player\MoveAnimResolver.cs" />
     <Compile Include="..\..\scripts\Player\DisplayPhaseResolver.cs" />
+    <Compile Include="..\..\scripts\Player\HandSide.cs" />
+    <Compile Include="..\..\scripts\Player\HandSideResolver.cs" />
   </ItemGroup>
 
   <ItemGroup>
