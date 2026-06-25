@@ -208,8 +208,8 @@ public partial class GameManager : Node
 
 	/// <summary>
 	/// Called BY THE SERVER on all peers, broadcasting the post-basket score
-	/// state. Mirrors BallController.RequestShoot's transfer-mode reasoning,
-	/// NOT ReceiveState's:
+	/// state. Mirrors PlayerController.RequestBeginMove's transfer-mode
+	/// reasoning, NOT ReceiveState's:
 	///
 	/// Transfer mode: Reliable, deliberately NOT UnreliableOrdered like
 	/// BallController.ReceiveState/PlayerController.ReceiveState. Those two
@@ -221,8 +221,8 @@ public partial class GameManager : Node
 	/// ever resend the same information. If this drops, the client's score
 	/// is permanently wrong (or the client never learns the game ended) —
 	/// that is a correctness bug, not a smoothing concern, exactly the same
-	/// reasoning BallController.RequestShoot already documents for its own
-	/// Reliable choice. Reliable's HOL-blocking risk is a non-issue here
+	/// reasoning PlayerController.RequestBeginMove already documents for its
+	/// own Reliable choice. Reliable's HOL-blocking risk is a non-issue here
 	/// because this fires at most a handful of times per match, never as a
 	/// continuous per-tick stream.
 	///

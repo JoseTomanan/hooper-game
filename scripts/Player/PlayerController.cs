@@ -1,4 +1,5 @@
 using Godot;
+using Hooper.Ball;
 using Hooper.Moves;
 using Hooper.Systems;
 
@@ -320,6 +321,54 @@ public partial class PlayerController : CharacterBody3D
 		return _gameManager;
 	}
 
+	/// <summary>
+	/// Cached BallController reference, discovered via the "ball" group
+	/// (BallController.AddToGroup("ball") in its own _Ready) — the same
+	/// lazy-group-lookup pattern as _gameManager/GetGameManager, needed for
+	/// the same reason: a player node's _Ready can race ahead of the ball's
+	/// in the scene tree. Used by IsBallHolder and the shoot-input read in
+	/// SampleMoveInput (M7b, issue #74).
+	/// </summary>
+	private BallController _ball;
+
+	/// <summary>Resolves _ball, re-querying the group if still null. See field doc.</summary>
+	private BallController GetBall()
+	{
+		if (_ball == null)
+			_ball = GetTree().GetFirstNodeInGroup("ball") as BallController;
+		return _ball;
+	}
+
+	/// <summary>
+	/// True when this player node is the ball's current holder — gates the
+	/// shoot input the same way the old BallController.TryShoot's IsLocalHolder
+	/// check did (M7b, issue #74). Keyed on Name == HolderPeerId, the same
+	/// peer-ID-as-node-name identity contract IsLocalPlayer already uses.
+	/// </summary>
+	private bool IsBallHolder
+	{
+		get
+		{
+			BallController ball = GetBall();
+			return ball != null && ball.StateMachine.HolderPeerId.ToString() == Name;
+		}
+	}
+
+	/// <summary>
+	/// True for exactly one tick — the tick this node's committed-move machine
+	/// enters Active on a JumpShot (M7b, issue #74). BallController.
+	/// CheckJumpShotRelease reads this on the holder's node to fire the
+	/// actual ball-state transition; this property never touches ball state
+	/// itself, only exposes the timing. JumpShotReleaseResolver is the pure,
+	/// unit-tested decision — this is the thin node-side glue reading it off
+	/// the live local _machine (correct for every role that calls this: the
+	/// server's authoritative copy of either holder role, and the client's
+	/// own prediction — see CheckJumpShotRelease's doc for why the client's
+	/// copy of a REMOTE holder is never consulted here).
+	/// </summary>
+	public bool JustReleasedJumpShot =>
+		JumpShotReleaseResolver.ShouldRelease(_machine.JustEnteredActive, _machine.CurrentMove);
+
 	// ── Role helpers ──────────────────────────────────────────────────────────
 
 	private bool IsServer      => Multiplayer.IsServer();
@@ -602,19 +651,23 @@ public partial class PlayerController : CharacterBody3D
 	/// authoritative start of a committed move.
 	///
 	/// Transfer mode: Reliable — a deliberate deviation from SubmitInput's
-	/// UnreliableOrdered, mirroring BallController.RequestShoot (#20). This is a
-	/// ONE-TIME discrete event with no redundancy: a dropped packet means the
+	/// UnreliableOrdered, the same one-time-discrete-event reasoning the old
+	/// BallController.RequestShoot (#20) used before M7b #74 replaced it with
+	/// phase-derived release. This is a ONE-TIME discrete event with no
+	/// redundancy: a dropped packet means the
 	/// player pressed crossover and nothing happened, a correctness bug, not a
 	/// smoothing concern. Reliable's head-of-line-blocking risk (the reason
 	/// ReceiveState/SubmitInput avoid it) doesn't apply because this fires
 	/// rarely — once per committed move attempt, not every physics tick — so
 	/// there is no continuous stream for a retransmit to stall.
 	///
-	/// moveId/param is the minimal payload to reconstruct a move. Only one
-	/// concrete move exists today ("crossover", carrying BurstDirection as
-	/// param) so a small if-chain is correct and proportionate — see
-	/// CommittedMove.Id's doc comment, which already anticipated this exact use.
-	/// Do not generalize into a move registry/factory until a second move exists.
+	/// moveId/param is the minimal payload to reconstruct a move. Two concrete
+	/// moves exist now ("crossover", carrying BurstDirection as param; and
+	/// "jumpshot", M7b issue #74, carrying no param) so a small if-chain is
+	/// still correct and proportionate — see CommittedMove.Id's doc comment,
+	/// which already anticipated this exact use. Revisit only if a third move
+	/// arrives with materially different reconstruction needs than a simple
+	/// id dispatch; do not build a registry/factory pre-emptively.
 	///
 	/// Security: same sender check as SubmitInput — PlayerController has a
 	/// per-peer node identity (Name == peer ID), unlike the Ball, which had to
@@ -632,9 +685,9 @@ public partial class PlayerController : CharacterBody3D
 	/// frame is not something Godot's MultiplayerApi guarantees — the accept/
 	/// reject boundary can land on either side of a single tick depending on
 	/// packet arrival timing. This is a ±1-tick (≈16ms) nondeterminism inherent
-	/// to ANY RPC-plus-fixed-tick-loop design (it equally affects SubmitInput
-	/// and BallController.RequestShoot); resolving it would require lockstep
-	/// simulation, well beyond M4's scope. Begin()'s own legality check is
+	/// to ANY RPC-plus-fixed-tick-loop design (it equally affects SubmitInput);
+	/// resolving it would require lockstep simulation, well beyond M4's scope.
+	/// Begin()'s own legality check is
 	/// still the sole authority regardless of which side of that boundary the
 	/// packet lands on.
 	///
@@ -658,8 +711,10 @@ public partial class PlayerController : CharacterBody3D
 
 		if (moveId == "crossover")
 			_machine.Begin(new Crossover(burstDirection: param));
-		// Unrecognized moveId: silently ignored. No other move type exists yet;
-		// a malformed/forged moveId from a tampered client simply does nothing.
+		else if (moveId == "jumpshot")
+			_machine.Begin(new JumpShot());
+		// Unrecognized moveId: silently ignored. A malformed/forged moveId
+		// from a tampered client simply does nothing.
 	}
 
 	/// <summary>
@@ -1046,6 +1101,20 @@ public partial class PlayerController : CharacterBody3D
 		if (!float.IsNaN(crossoverDir) && _machine.Begin(new Crossover(crossoverDir)) && !isServer)
 			RpcId(1, MethodName.RequestBeginMove, "crossover", crossoverDir);
 
+		// Shoot: begin a JumpShot (M7b, issue #74) — this REPLACES the old
+		// instant "ball leaves hand on press" trigger that used to live in
+		// BallController.TryShoot. Holder-gated the same way that old trigger
+		// was (IsBallHolder mirrors its IsLocalHolder check); Begin() itself
+		// enforces Inactive-only legality, so a shot attempt mid-crossover (or
+		// mid-shot) silently no-ops exactly like a second crossover attempt
+		// would. The actual ball release is NOT requested here — it fires
+		// several ticks later, on this machine's own JustEnteredActive, which
+		// BallController.CheckJumpShotRelease reads via JustReleasedJumpShot.
+		BallController ball = GetBall();
+		if (ball != null && Input.IsActionJustPressed(ball.ShootAction) && IsBallHolder
+			&& _machine.Begin(new JumpShot()) && !isServer)
+			RpcId(1, MethodName.RequestBeginMove, "jumpshot", 0f);
+
 		// Feint modifier: abort during the startup window.
 		// The machine enforces the feint-window guard; false return is silent.
 		if (Input.IsActionJustPressed("move_feint") && _machine.Feint() && !isServer)
@@ -1084,6 +1153,13 @@ public partial class PlayerController : CharacterBody3D
 				// Set the burst velocity on the first Active tick; on subsequent
 				// Active ticks the same velocity is maintained (no else-zero here).
 				// MoveAndSlide() applies it each tick, producing sustained separation.
+				// A JumpShot (M7b, #74) has no horizontal effect here — Velocity is
+				// already Vector3.Zero carried over from Startup (every Startup tick
+				// zeros it, above) and nothing sets it for a non-Crossover move, so
+				// the shooter stays planted through the release. BallController
+				// reads JustReleasedJumpShot to fire the actual ball transition on
+				// this same tick — that is a SEPARATE node's read of this machine's
+				// state, not a side effect this switch needs to produce.
 				if (_machine.JustEnteredActive && _machine.CurrentMove is Crossover crossover)
 					Velocity = new Vector3(crossover.BurstDirection * BurstSpeed, 0f, 0f);
 				MoveAndSlide();

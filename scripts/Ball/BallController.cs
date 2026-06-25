@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using Godot;
+using Hooper.Moves;
+using Hooper.Player;
 using Hooper.Systems;
 
 namespace Hooper.Ball;
@@ -34,7 +36,9 @@ namespace Hooper.Ball;
 ///   (dribble phase, arc integration, rim/backboard math) — not of per-peer
 ///   hardware — so there is nothing to "interpolate" the way a remote
 ///   player's capsule needs lerping. The one exception is the shoot trigger,
-///   which has real input-authority rules (see TryShoot below).
+///   which has real input-authority rules (see CheckJumpShotRelease below;
+///   M7b #74 moved the actual button-press read to PlayerController, but the
+///   ball-state transition itself is still gated here the same way).
 ///
 ///   The SERVER additionally broadcasts an authoritative snapshot
 ///   (state, position, velocity, holder) every tick by calling the
@@ -75,6 +79,16 @@ public partial class BallController : Node3D
 
 	/// <summary>How far (metres) in front of the holder the ball is positioned while Held or Dribbling.</summary>
 	[Export] public float DribbleForwardOffset { get; set; } = 0.5f;
+
+	/// <summary>
+	/// Lateral offset (metres) from the holder's centerline to the ball,
+	/// displaying which hand it's currently in (M7b, issue #73). Stacks with
+	/// DribbleForwardOffset — the ball sits forward-AND-to-the-side, not
+	/// directly on the centerline. Exact value is hitl visual sign-off, the
+	/// same as FacingResolver/LeanResolver's tilt — the human verifies
+	/// in-editor that the offset reads as a believable hand position.
+	/// </summary>
+	[Export] public float HandOffset { get; set; } = 0.18f;
 
 	/// <summary>Full down-and-up dribble cycle duration (seconds).</summary>
 	[Export] public float DribblePeriod { get; set; } = 0.6f;
@@ -232,6 +246,28 @@ public partial class BallController : Node3D
 	/// </summary>
 	private Vector3 _lastHolderForward = new Vector3(0f, 0f, -1f);
 
+	// ── Ball-on-hand display (M7b, issue #73) ─────────────────────────────
+
+	/// <summary>
+	/// Which hand the ball is currently displayed in. Defaults to Right —
+	/// an arbitrary but stable starting hand, reset on every possession
+	/// change (see _handSideHolderId) since a new holder has no carried-over
+	/// hand state to display. Cosmetic-only; never read by gameplay logic.
+	/// </summary>
+	private HandSide _handSide = HandSide.Right;
+
+	/// <summary>
+	/// The holder's DISPLAY phase (PlayerController.DisplayMove) as of the
+	/// last UpdateHandSide call, so HandSideResolver can detect the tick the
+	/// phase first becomes Active without re-deriving JustEnteredActive
+	/// itself (see HandSideResolver's class doc for why a phase comparison,
+	/// not the machine's local flag, is the role-correct signal here).
+	/// </summary>
+	private MovePhase _lastHandDisplayPhase = MovePhase.Inactive;
+
+	/// <summary>The holder peer id _handSide was last computed for — detects a possession change so the hand can reset.</summary>
+	private int _handSideHolderId;
+
 	/// <summary>
 	/// The in-flight (or loose) trajectory. Non-null only while InFlight or
 	/// Loose — it carries the position+velocity the integrator advances. Reused
@@ -334,8 +370,8 @@ public partial class BallController : Node3D
 
 	/// <summary>
 	/// True when the LOCAL peer is the ball's current holder. Drives shoot-
-	/// input authority (see TryShoot) — only the holder's machine may
-	/// legally trigger a shot, mirroring PlayerController's IsLocalPlayer
+	/// input authority (see CheckJumpShotRelease) — only the holder's machine
+	/// may legally trigger a shot, mirroring PlayerController's IsLocalPlayer
 	/// check but keyed on ball possession rather than node identity (the
 	/// Ball has no per-peer node to compare Name against).
 	/// </summary>
@@ -679,30 +715,74 @@ public partial class BallController : Node3D
 	/// <summary>Ball cradled at hand height in front of the holder. Shoot to release.</summary>
 	private void TickHeld()
 	{
-		var holderBody = Players?.GetNodeOrNull(StateMachine.HolderPeerId.ToString()) as CharacterBody3D;
+		var holderBody = Players?.GetNodeOrNull(StateMachine.HolderPeerId.ToString()) as PlayerController;
 		Vector3 holderPos = holderBody?.GlobalPosition ?? Vector3.Zero;
 		Vector3 forward   = ComputeHolderForward(holderBody);
+		Vector3 right     = HandRight(forward);
+		UpdateHandSide(holderBody);
+
 		// World-space Y = DribbleHandHeight, consistent with DribbleCycle's world-Y convention.
 		GlobalPosition = new Vector3(
-			holderPos.X + forward.X * DribbleForwardOffset,
+			holderPos.X + forward.X * DribbleForwardOffset + right.X * HandOffset * HandSign(),
 			DribbleHandHeight,
-			holderPos.Z + forward.Z * DribbleForwardOffset
+			holderPos.Z + forward.Z * DribbleForwardOffset + right.Z * HandOffset * HandSign()
 		);
-		TryShoot();
+		CheckJumpShotRelease(holderBody);
 	}
 
 	/// <summary>Ball bouncing in front of the holder. Shoot to release.</summary>
 	private void TickDribbling(float dt)
 	{
 		_dribble.Advance(dt);
-		var holderBody = Players?.GetNodeOrNull(StateMachine.HolderPeerId.ToString()) as CharacterBody3D;
+		var holderBody = Players?.GetNodeOrNull(StateMachine.HolderPeerId.ToString()) as PlayerController;
 		Vector3 holderPos = holderBody?.GlobalPosition ?? Vector3.Zero;
 		Vector3 forward   = ComputeHolderForward(holderBody);
+		Vector3 right     = HandRight(forward);
+		UpdateHandSide(holderBody);
+
 		// Pass XZ-offset position; GetBallPosition discards the Y and uses HeightAtPhase instead.
-		GlobalPosition = _dribble.GetBallPosition(
-			new Vector3(holderPos.X + forward.X * DribbleForwardOffset, holderPos.Y, holderPos.Z + forward.Z * DribbleForwardOffset)
-		);
-		TryShoot();
+		GlobalPosition = _dribble.GetBallPosition(new Vector3(
+			holderPos.X + forward.X * DribbleForwardOffset + right.X * HandOffset * HandSign(),
+			holderPos.Y,
+			holderPos.Z + forward.Z * DribbleForwardOffset + right.Z * HandOffset * HandSign()
+		));
+		CheckJumpShotRelease(holderBody);
+	}
+
+	/// <summary>
+	/// The holder's world-space "right" direction given their forward vector
+	/// (issue #73) — Cross(forward, Up), matching the Godot convention
+	/// ComputeHolderForward's callers already assume (-Z is forward, +X is
+	/// right). Used to place the ball to the side of the holder's centerline
+	/// rather than only in front of it.
+	/// </summary>
+	private static Vector3 HandRight(Vector3 forward) => new(-forward.Z, 0f, forward.X);
+
+	/// <summary>+1 when the ball is displayed in the right hand, -1 when in the left.</summary>
+	private float HandSign() => _handSide == HandSide.Right ? 1f : -1f;
+
+	/// <summary>
+	/// Updates which hand the ball displays in, riding the same DISPLAY path
+	/// #69 established (PlayerController.DisplayMove) so the opponent's hand
+	/// switch is visible too, not just the local player's — otherwise this
+	/// would silently repeat the #39/#69 gap (issue #73). Resets to the
+	/// default hand on every possession change: a new holder has no
+	/// carried-over hand state to display.
+	/// </summary>
+	private void UpdateHandSide(PlayerController holder)
+	{
+		if (StateMachine.HolderPeerId != _handSideHolderId)
+		{
+			_handSideHolderId      = StateMachine.HolderPeerId;
+			_handSide               = HandSide.Right;
+			_lastHandDisplayPhase   = MovePhase.Inactive;
+		}
+
+		if (holder == null) return;
+
+		(MovePhase phase, float burstDir) = holder.DisplayMove();
+		_handSide             = HandSideResolver.Resolve(_handSide, _lastHandDisplayPhase, phase, burstDir);
+		_lastHandDisplayPhase = phase;
 	}
 
 	/// <summary>
@@ -991,51 +1071,55 @@ public partial class BallController : Node3D
 		IsCleared = cleared;
 	}
 
-	// ── Shot trigger / input authority (M4) ─────────────────────────────────
+	// ── Shot trigger / input authority (M4 → M7b #74) ───────────────────────
 
 	/// <summary>
-	/// Releases a shot toward the rim if the local shoot input fires this tick
-	/// AND the local peer holds shoot authority.
+	/// Fires the actual ball-state transition for a jump shot, on the tick the
+	/// holder's committed-move machine enters Active (M7b, issue #74) — this
+	/// REPLACES the old instant "press shoot, ball leaves hand" trigger that
+	/// used to live here as TryShoot(). The shoot BUTTON is no longer read by
+	/// this class at all: pressing it now begins a JumpShot on the holder's
+	/// PlayerController (PlayerController.SampleMoveInput), and the release
+	/// several ticks later is this method's job, derived purely from that
+	/// machine's state — there is no separate "release" RPC.
 	///
-	/// Authority rules (mirrors PlayerController's server-vs-client split,
-	/// but keyed on ball possession rather than node identity):
-	///   - If this machine is the SERVER and also the current holder: apply
-	///     the shot directly. The server IS the input source for its own
-	///     player, exactly like TickServerOwnPlayer reads hardware directly —
-	///     no RPC needed because there is no authority to defer to.
-	///   - If this machine is a CLIENT and the LOCAL peer is the current
-	///     holder: predict the shot immediately against the local _arc/
-	///     StateMachine copy (zero perceived lag), AND send RequestShoot to
-	///     the server so it can apply the authoritative transition. The
-	///     server's later broadcast reconciles away any divergence.
-	///   - Otherwise (this machine doesn't hold the ball): no local action.
-	///     A remote client's shot reaches us only via the server's broadcast.
+	/// Authority rules (mirrors the old TryShoot/RequestShoot split, but
+	/// derived from machine state instead of an input press):
+	///   - SERVER: always checks, regardless of whether the holder is its own
+	///     player or a remote client's — the server already runs an
+	///     authoritative CommittedMoveMachine for EVERY player node (see
+	///     PlayerController's class doc, M4 #21), so JustReleasedJumpShot is
+	///     truthful here for either holder role with no RPC needed.
+	///   - CLIENT, own holder: predicts the same release locally against its
+	///     own _machine copy for zero perceived lag, exactly like the old
+	///     TryShoot's client-prediction branch.
+	///   - CLIENT, remote holder: never fires here — the client's copy of a
+	///     REMOTE player never advances its local _machine (the #69 gap), so
+	///     JustReleasedJumpShot is permanently false for it regardless. That
+	///     client instead sees the shot via the ball's own ReceiveState
+	///     broadcast/ReconcileFromServer, completely unchanged by this issue.
 	///
 	/// Shoot() clears HolderPeerId to 0, and no peer's unique ID is ever 0, so
 	/// IsLocalHolder is false after a shot until possession is re-awarded. As of
 	/// M6b that re-award is wired (ADR-0008): TickLoose runs the live-rebound
 	/// contest (#48) and a made basket hands the ball back to the scorer (#49),
 	/// both via AwardPossession → Catch, which restores a holder and makes
-	/// IsLocalHolder true again for the recoverer. The old M4 "one shot per
-	/// match" ceiling — when nothing ever called Catch() — is no longer in force.
+	/// IsLocalHolder true again for the recoverer.
 	/// </summary>
-	private void TryShoot()
+	private void CheckJumpShotRelease(PlayerController holder)
 	{
-		if (!Input.IsActionJustPressed(ShootAction)) return;
-		if (!IsLocalHolder) return;
-
-		if (!ApplyShootLocally()) return;
-
-		// Clients additionally ask the server to make it official. The server
-		// (when it IS the holder) needed no RPC — it just applied the shot above.
-		if (!IsServer)
-			RpcId(1, MethodName.RequestShoot);
+		if (!IsServer && !IsLocalHolder) return;
+		if (holder == null) return;
+		if (holder.JustReleasedJumpShot)
+			ApplyShootLocally();
 	}
 
 	/// <summary>
 	/// Shared shot-application step: transitions the state machine and builds
-	/// the ShotArc. Used both by the predicting holder (TryShoot) and by the
-	/// server when fulfilling a RequestShoot from a remote holder.
+	/// the ShotArc. Used both by the predicting holder (CheckJumpShotRelease's
+	/// client branch) and by the server (CheckJumpShotRelease's server branch,
+	/// for either holder role) — see CheckJumpShotRelease's doc for the full
+	/// authority split (M7b, #74; this method itself is unchanged from M4).
 	/// </summary>
 	/// <returns>True if the shot was legal (Held/Dribbling) and applied.</returns>
 	///
@@ -1043,24 +1127,23 @@ public partial class BallController : Node3D
 	/// GlobalPosition this machine currently has for the ball — the client's
 	/// own predicted position when the client is the holder, or the server's
 	/// (possibly up-to-1-RTT-different) view of that same holder's position
-	/// when the server applies a remote RequestShoot. These two release
-	/// points can briefly differ; this is expected, not a new failure mode —
-	/// the standard ReconcileFromServer pass on the next broadcast absorbs it
-	/// exactly like any other position divergence.
+	/// when the server applies the release for a remote holder. These two
+	/// release points can briefly differ; this is expected, not a new failure
+	/// mode — the standard ReconcileFromServer pass on the next broadcast
+	/// absorbs it exactly like any other position divergence.
 	///
 	/// (#24 doubt cycle 1, finding #4 — scorer attribution) HolderPeerId must
 	/// be captured into _lastShooterPeerId BEFORE StateMachine.Shoot() runs,
 	/// because Shoot() clears HolderPeerId to 0 (see class doc's "Holder
-	/// resolution" / TryShoot's M4 limitation note) — by the time TickInFlight
-	/// later detects a Make, HolderPeerId is already gone. Capturing it here
-	/// (the one place both shoot paths funnel through — the server's own
-	/// TryShoot→ApplyShootLocally call AND the server's RequestShoot→
-	/// ApplyShootLocally call for a remote holder) means _lastShooterPeerId is
-	/// correct in both cases: when the server itself is the holder, and when a
-	/// remote client is. A CLIENT also runs this method (for its own
-	/// prediction) and so also sets its own _lastShooterPeerId — harmless,
-	/// since RegisterBasket no-ops on a client regardless of which id it's
-	/// called with.
+	/// resolution") — by the time TickInFlight later detects a Make,
+	/// HolderPeerId is already gone. Capturing it here (the one place both
+	/// shoot paths funnel through — CheckJumpShotRelease's server branch for
+	/// either holder role, and its client-prediction branch) means
+	/// _lastShooterPeerId is correct in both cases: when the server itself is
+	/// the holder, and when a remote client is. A CLIENT also runs this
+	/// method (for its own prediction) and so also sets its own
+	/// _lastShooterPeerId — harmless, since RegisterBasket no-ops on a client
+	/// regardless of which id it's called with.
 	private bool ApplyShootLocally()
 	{
 		int holderAtShootTime = StateMachine.HolderPeerId;
@@ -1069,47 +1152,6 @@ public partial class BallController : Node3D
 		_lastShooterPeerId = holderAtShootTime;
 		_arc = new ShotArc(GlobalPosition, ShotTarget, ShotApexHeight, Gravity);
 		return true;
-	}
-
-	// ── Server RPC: receive shoot request from the holder ───────────────────
-
-	/// <summary>
-	/// Called BY A CLIENT (the current ball holder) on the SERVER, requesting
-	/// the authoritative shot transition.
-	///
-	/// Transfer mode: Reliable — a deliberate deviation from SubmitInput's
-	/// UnreliableOrdered. SubmitInput is continuous per-tick state: a dropped
-	/// packet is harmless because the next tick's packet supersedes it. A
-	/// shoot request is the opposite — a ONE-TIME discrete event with no
-	/// redundancy. If it's dropped, the player pressed the shoot button and
-	/// nothing happened, which is a correctness bug, not a smoothing concern.
-	/// Reliable's head-of-line-blocking risk (the reason ReceiveState and
-	/// SubmitInput avoid it) doesn't apply here because this RPC fires
-	/// rarely — once per shot, not 60 times a second — so there is no
-	/// continuous stream for a retransmit to stall.
-	///
-	/// Security: validate the sender against StateMachine.HolderPeerId, not
-	/// against Name — the Ball node has no peer-ID name (it is one shared
-	/// node, not one-per-peer like PlayerController), so HolderPeerId is the
-	/// only available authority record.
-	/// </summary>
-	[Rpc(MultiplayerApi.RpcMode.AnyPeer,
-		 CallLocal = false,
-		 TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void RequestShoot()
-	{
-		int senderId = Multiplayer.GetRemoteSenderId();
-		if (senderId != StateMachine.HolderPeerId)
-		{
-			GD.PrintErr($"[BallController] Unauthorized RequestShoot from peer {senderId} (holder is {StateMachine.HolderPeerId})");
-			return;
-		}
-
-		// The server may already be ahead of this request if its own tick
-		// got here first (e.g. extremely low latency) — ApplyShootLocally
-		// returns false harmlessly via StateMachine.Shoot()'s legality guard
-		// if the ball is no longer Held/Dribbling.
-		ApplyShootLocally();
 	}
 
 	// ── Client RPC: receive server state ────────────────────────────────────
@@ -1162,10 +1204,10 @@ public partial class BallController : Node3D
 	/// Discrete state: forced to match exactly — there is no meaningful
 	/// "partial correction" of an enum, unlike continuous position. A
 	/// mismatch here means the local prediction took a different transition
-	/// than the server (e.g. it predicted a shot the server hasn't applied
-	/// yet, or missed a transition due to a dropped RequestShoot) — ForceState
-	/// repairs it unconditionally rather than silently keeping the stale
-	/// local value.
+	/// than the server (e.g. it predicted a JumpShot release the server's
+	/// authoritative _machine copy hasn't reached Active for yet) —
+	/// ForceState repairs it unconditionally rather than silently keeping the
+	/// stale local value.
 	///
 	/// Continuous position: same mesh-offset smooth-correction trick
 	/// PlayerController uses. This node (treated as the "physics body" the
@@ -1195,8 +1237,8 @@ public partial class BallController : Node3D
 		{
 			// _arc may be null on a client that hasn't predicted its own
 			// Shoot() yet (e.g. it just received the server's transition to
-			// InFlight before its own TryShoot ever ran) — construct a
-			// matching arc rather than dereferencing null.
+			// InFlight before its own CheckJumpShotRelease ever fired) —
+			// construct a matching arc rather than dereferencing null.
 			if (_arc == null)
 				_arc = new ShotArc(_serverPos, ShotTarget, ShotApexHeight, Gravity);
 			_arc.Position = _serverPos;
