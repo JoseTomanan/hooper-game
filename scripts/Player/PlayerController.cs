@@ -265,14 +265,27 @@ public partial class PlayerController : CharacterBody3D
 
 	/// <summary>
 	/// Authoritative committed-move phase received from the server, staged for
-	/// reconcile (M4, #21). ReceiveState's payload also carries frameInPhase/
-	/// moveId/moveParam (the wire format includes them, satisfying "frames
-	/// remaining... in the server tick broadcast" literally) but only Phase is
-	/// stored — see ReconcileFromServer's Step 0 comment for why FrameInPhase
-	/// is deliberately not compared, which leaves nothing else to act on here
-	/// for the one move type that exists today.
+	/// reconcile (M4, #21) AND for display of a remote player's commitment (M7b,
+	/// #69). ReconcileFromServer's Step 0 consults it only for the own-player
+	/// force-Inactive correction (FrameInPhase deliberately not compared — see
+	/// that comment); ApplyCosmetics/ApplyAnimation read it as the DISPLAY phase
+	/// for the client's copy of the opponent (DisplayPhaseResolver decides which
+	/// roles use it). The two consumers never conflict: reconciliation runs only
+	/// on the own player, display-from-broadcast only on the remote copy.
 	/// </summary>
 	private MovePhase _serverMovePhase;
+
+	/// <summary>
+	/// Authoritative moveId / move payload from the latest broadcast (M7b, #69).
+	/// Before #69 these wire fields were received but discarded (only the phase
+	/// fed reconciliation). Now they drive the DISPLAY of a remote player's burst
+	/// lean direction: the client's copy of the opponent has no live local
+	/// CurrentMove to read BurstDirection from, so it reconstructs the lean's
+	/// sign from the broadcast payload instead. Display-only — never feeds
+	/// reconciliation, prediction, or any authoritative state.
+	/// </summary>
+	private string _serverMoveId = "";
+	private float _serverMoveParam;
 
 	/// <summary>True once ReceiveState has arrived since the last _PhysicsProcess.</summary>
 	private bool _hasNewState;
@@ -703,12 +716,15 @@ public partial class PlayerController : CharacterBody3D
 	/// moveParam is the move's reconstruction payload (today: Crossover's
 	/// BurstDirection), 0 when not applicable.
 	///
-	/// (#21 doubt cycle 1, finding #2) frameInPhase/moveId/moveParam are received
-	/// but deliberately NOT stored — only movePhase feeds reconciliation (see
-	/// ReconcileFromServer's Step 0). They still travel on the wire because the
-	/// issue text literally asks for "frames remaining" in the broadcast and a
-	/// future second move type may need them for richer reconciliation; storing
-	/// fields nothing reads today would just be dead state.
+	/// (#21 doubt cycle 1, finding #2) frameInPhase remains received-but-unstored —
+	/// only movePhase feeds reconciliation (see ReconcileFromServer's Step 0, which
+	/// explains why FrameInPhase must not be compared against this stale snapshot).
+	///
+	/// (M7b, #69) moveId/moveParam, formerly discarded for the same "nothing reads
+	/// them" reason, are now stored: they drive the DISPLAY of a remote player's
+	/// burst-lean direction (ApplyCosmetics), since the client's copy of the
+	/// opponent has no live local CurrentMove to read BurstDirection from. This is
+	/// a display-only read; reconciliation is unchanged.
 	/// </summary>
 	[Rpc(MultiplayerApi.RpcMode.Authority,
 		 CallLocal = false,
@@ -720,6 +736,8 @@ public partial class PlayerController : CharacterBody3D
 		_serverVel       = vel;
 		_serverAckedSeq  = ackSeq;
 		_serverMovePhase = (MovePhase)movePhase;
+		_serverMoveId    = moveId;
+		_serverMoveParam = moveParam;
 		_hasNewState     = true;
 	}
 
@@ -885,21 +903,21 @@ public partial class PlayerController : CharacterBody3D
 	/// Exact tilt axis and sign are hitl visual sign-off (human verifies in-editor
 	/// that the mesh faces the run direction and leans into the crossover burst).
 	///
-	/// Known limitation (accepted trade-off, issue #39 "non-networked"): for the
-	/// CLIENT's copy of the REMOTE player, _machine is never advanced by
-	/// TickClientRemotePlayer, so _machine.Phase is always Inactive on that path
-	/// and the lean cosmetic is always 0 for the opponent as seen by the client.
-	/// Facing still works (Velocity is set from ReceiveState). Driving the remote
-	/// player's lean would require syncing _machine.Phase to the client's remote
-	/// copy — out of scope for a non-networked cosmetic pass.
+	/// M7b (#69): the lean now reads the DISPLAY phase/burst from DisplayMove(),
+	/// not the raw local _machine. This revives the burst lean for the CLIENT's
+	/// copy of the REMOTE player — previously always 0 because that role never
+	/// advances its local _machine (the accepted #39 "non-networked" limitation).
+	/// The opponent's commitment now leans on your screen, driven by the same
+	/// broadcast phase already on the wire. Facing is unchanged — it derives from
+	/// Velocity, which ReceiveState already sets for the remote copy.
 	/// </summary>
 	private void ApplyCosmetics()
 	{
 		if (_mesh == null) return;
 
 		_visualYaw = FacingResolver.ResolveYaw(Velocity, _visualYaw);
-		float burstDir = (_machine.CurrentMove as Crossover)?.BurstDirection ?? 0f;
-		float tilt = LeanResolver.ResolveTilt(_machine.Phase, burstDir);
+		(MovePhase displayPhase, float burstDir) = DisplayMove();
+		float tilt = LeanResolver.ResolveTilt(displayPhase, burstDir);
 
 		// Y = yaw (face run direction), Z = lean (lateral tilt into burst).
 		// Exact sign/axis is hitl sign-off.
@@ -924,6 +942,29 @@ public partial class PlayerController : CharacterBody3D
 		// vertical and irrelevant to a ground idle/run blend.
 		float horizontalSpeed = new Vector2(Velocity.X, Velocity.Z).Length();
 		_animTree.Set("parameters/Locomotion/blend_position", horizontalSpeed);
+	}
+
+	/// <summary>
+	/// The committed-move phase and burst direction this node should DISPLAY this
+	/// frame, resolved by role (M7b, #69). For every role this peer simulates
+	/// (host own, server's remote copy, client own) it reads the live local
+	/// _machine; for the client's copy of the opponent — the one role that never
+	/// advances its local _machine — it reads the broadcast phase/payload instead.
+	/// DisplayPhaseResolver owns that decision (pure + unit-tested); this method is
+	/// the thin node-side glue that reads the right fields per branch.
+	///
+	/// Burst direction: the own/simulated path reads it live off CurrentMove; the
+	/// broadcast path reconstructs it from _serverMoveId/_serverMoveParam (today,
+	/// "crossover" carrying BurstDirection — the same minimal payload RequestBeginMove
+	/// and MoveParamOf already speak).
+	/// </summary>
+	private (MovePhase phase, float burstDir) DisplayMove()
+	{
+		if (DisplayPhaseResolver.LocalMachineDrivesDisplay(IsServer, IsLocalPlayer))
+			return (_machine.Phase, (_machine.CurrentMove as Crossover)?.BurstDirection ?? 0f);
+
+		float burstDir = _serverMoveId == "crossover" ? _serverMoveParam : 0f;
+		return (_serverMovePhase, burstDir);
 	}
 
 	// ── Input (unchanged from M1a) ────────────────────────────────────────────
