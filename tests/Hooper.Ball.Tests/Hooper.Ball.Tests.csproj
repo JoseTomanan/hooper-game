@@ -98,6 +98,8 @@
     <Compile Include="..\..\scripts\Player\PredictionBuffer.cs" />
     <Compile Include="..\..\scripts\Player\FacingResolver.cs" />
     <Compile Include="..\..\scripts\Player\LeanResolver.cs" />
+    <Compile Include="..\..\scripts\Player\MoveAnimState.cs" />
+    <Compile Include="..\..\scripts\Player\MoveAnimResolver.cs" />
   </ItemGroup>
 
   <ItemGroup>
