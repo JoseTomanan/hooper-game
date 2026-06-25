@@ -65,14 +65,16 @@ game-dev knowledge on the human's part.
 > deterministic mini-physics (ADR-0004). The possession ruleset is being recorded
 > in **ADR-0008** (issue #47) as part of this milestone. Epic: **#46**.
 >
-> **M7a — Static readability pass (parallel presentation track).** Independent of
-> M6b and may proceed alongside it: swap the capsule for a humanoid mesh, add
-> cosmetic facing + burst lean, and directional shadows — all visual-only, with
-> collision and netcode unchanged. Foundation sub-issue #37 (extract `MovementMath`
-> + green-before-merge gate) blocks the rest. Epic: **#53**.
->
-> **M7b is DEFERRED — do NOT pull it forward.** The rigged-animation pass (#54/#41)
-> starts only after M7a is proven in-editor.
+> **M7b — Rigged humanoid animation pass (parallel presentation track).** Un-deferred:
+> M7a (#53) is proven in-editor, so this now proceeds. Makes the committed move
+> honestly commit — feet plant, weight transfers, a visible startup → active →
+> recovery arc — so commitment is visible to BOTH players (ADR-0003). Sub-issues
+> in dependency order: #68 (rig + idle/run locomotion blend) → #41 (committed-move
+> phase → animation, placeholder pose) → #69 (remote-phase display sync, the fix
+> that makes the opponent's commitment actually render on the other client — this
+> was a silent gap even in M7a's burst lean). The bespoke crossover animation clip
+> itself is explicitly OUT of this epic's scope — it's #70 under M8 (#61), so the
+> engineering isn't blocked on art. Epic: **#54**.
 
 ### Milestone status
 
@@ -86,15 +88,15 @@ game-dev knowledge on the human's part.
 | M5 — Win condition + scoring | Done | #23 |
 | M6a — Dedicated server + server browser | Code done; editor verify (#32) trails M6b | #28 |
 | **M6b — Possession loop** | **Active (current)** | #46 |
-| **M7a — Static readability pass** | **Active (parallel presentation track)** | #53 |
-| M7b — Rigged humanoid animation | DEFERRED (after M7a proven) | #54 |
-| M8 — Realism & polish pass | DEFERRED (umbrella, accrues sub-issues) | #61 |
+| M7a — Static readability pass | Done | #53 |
+| **M7b — Rigged humanoid animation** | **Active (parallel presentation track)** | #54 |
+| M8 — Realism & polish pass | DEFERRED (umbrella, accrues sub-issues); #70 (crossover clip) parked here | #61 |
 
 GitHub Issues is the source of truth for the live state of each milestone and its
 sub-issues; this table is the at-a-glance map.
 
-Do not build ahead of the current milestone unless asked. M6b and M7a are both
-open for work; M7b is not.
+Do not build ahead of the current milestone unless asked. M6b and M7b are both
+open for work; M8 is not.
 
 ---
 
