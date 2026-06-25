@@ -61,6 +61,8 @@
     <Compile Include="..\..\scripts\Input\Crossover.cs" />
     <Compile Include="..\..\scripts\Input\GestureResult.cs" />
     <Compile Include="..\..\scripts\Input\RightStickGestureRecognizer.cs" />
+    <Compile Include="..\..\scripts\Input\JumpShot.cs" />
+    <Compile Include="..\..\scripts\Input\JumpShotReleaseResolver.cs" />
   </ItemGroup>
 
   <!--
