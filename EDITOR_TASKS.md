@@ -799,8 +799,7 @@ Across a dual-instance run:
 - ✅ `dotnet test tests/Hooper.Ball.Tests` shows 0 failed (green gate)
 
 When all pass, close **#38** and **#39** (after human confirms), and **#40** once
-the shadow choice is resolved. Then close the epic **#53**. Do NOT pull M7b (#54/#41,
-rigged animation) forward.
+the shadow choice is resolved. Then close the epic **#53**.
 
 ### Green-before-merge gate (issue #37)
 
@@ -820,6 +819,178 @@ doesn't merge regardless of how the visual change looks in the editor.
 
 ---
 
+## Milestone 7b editor tasks — rigged humanoid animation pass (issues #68, #41, #69)
+
+**Do these only after the M7b PR (`feat/54-anim-integration`) has merged.** All the
+C# is already written and unit-test-covered (`MoveAnimResolver`, `DisplayPhaseResolver`)
+— what's missing is the AnimationTree itself, which only the editor can author.
+Epic **#54**. Sub-issues in dependency order: #68 (rig + locomotion blend, this
+section's bulk) → #41 (placeholder committed-move states — same AnimationTree,
+mostly just adding 3 more nodes) → #69 (remote-phase display — already code-complete;
+its "editor task" is just the dual-instance verification at the end).
+
+### Step 1 — Build first
+
+Click the **hammer icon**. Godot must see the new `AnimationTreePath` export on
+`PlayerController`, plus `MoveAnimResolver`/`DisplayPhaseResolver`, before the
+Inspector shows the new field. If the build fails, read the Output panel and
+tell Claude Code.
+
+### Step 2 — Issue #68: get idle/run animations onto the rig
+
+**Source:** `Documents/kenney_animated-characters-protagonists/Animations/idle.fbx`
+and `run.fbx` (sibling folder to this repo, CC0 license) — same skeleton as the
+`characterMedium.fbx` already imported for M7a, so this should be a clean
+retarget with no rebinding. Ignore `jump.fbx` in that folder — no jump mechanic
+exists in this game.
+
+1. Copy `idle.fbx` and `run.fbx` into `assets/`.
+2. Select each in the **FileSystem** dock. In the **Import** tab, confirm
+   **Import As: Scene** (the default for an FBX with mesh/skeleton data) and
+   that animation import is enabled. Click **Reimport** if prompted.
+   - ⚠️ **Known Godot quirk:** some asset packs ship animation-only FBX files
+     with no skeleton node, which blocks the "save as Animation Library" option.
+     If idle.fbx/run.fbx import with NO skeleton (just an AnimationPlayer), that's
+     this quirk — the animations are still usable, just via a different route:
+     instance the imported scene as a temporary child anywhere in a scratch
+     scene, copy the AnimationPlayer's animation resource out (drag from its
+     Animation panel into the FileSystem dock to save it as a standalone `.res`),
+     then delete the scratch instance. If this happens and the steps below don't
+     match what you see, stop and tell Claude Code what the Import tab actually
+     shows — this is exactly the "Godot API churn" risk CLAUDE.md flags.
+3. In `scenes/Player.tscn`, select the humanoid model node (the M7a
+   `CharacterModel` child holding `characterMedium.fbx`). Add a child
+   **AnimationPlayer**, name it `AnimationPlayer`.
+4. Get the idle/run clips into that AnimationPlayer's animation list — open the
+   **Animation** panel (bottom dock) with `AnimationPlayer` selected, use
+   **Animation → Manage Animations** (or the equivalent load/import button) to
+   pull in the clips from the imported idle.fbx/run.fbx. You should end up with
+   two playable animations, e.g. named `idle` and `run`, on this one
+   AnimationPlayer.
+
+### Step 3 — Issue #68: build the AnimationTree + locomotion blend
+
+1. Still under the humanoid model node, add a child **AnimationTree**, name it
+   `AnimationTree`.
+2. In the Inspector, set its **Anim Player** property to the `AnimationPlayer`
+   you just built (NodePath to the sibling node).
+3. Set **Tree Root** to **New AnimationNodeStateMachine**. Double-click the
+   state machine resource to open its graph editor (opens in the bottom
+   **AnimationTree** panel).
+4. Right-click in the graph → **Add Node** → choose **BlendSpace1D** (not "Add
+   Animation" — this one needs to blend two clips, not play one). Rename this
+   node **`Locomotion`** — the name must be exactly this; `PlayerController`
+   reads `"parameters/Locomotion/blend_position"` literally.
+5. Double-click the `Locomotion` node to open its blend-space editor. Add two
+   animation points:
+   - Position **0** → `idle`
+   - Position **6** → `run` (this must equal the Player's **Move Speed** export,
+     6.0 by default — see the gotcha below if you ever change MoveSpeed).
+6. Back in the state machine graph, drag from the **Start** marker to
+   `Locomotion` so it's the entry state.
+7. Select the `AnimationTree` node → in the Inspector, check **Active**. (The
+   code also force-enables this in `_Ready`, but starting it true avoids a blank
+   first frame before `_Ready` runs.)
+8. On the **Player** node (`CharacterBody3D` root of `Player.tscn`), find the
+   **Animation Tree Path** export (under PlayerController's exported
+   properties) and point it at the `AnimationTree` node you just built.
+9. Save the scene.
+
+> **Gotcha — keep MoveSpeed and the blend-space Max in sync.** The blend
+> position is fed from raw horizontal speed (m/s), and the `Locomotion`
+> BlendSpace1D's run point is a fixed number you typed in Step 5. If you ever
+> tune `MoveSpeed` on the Player node, also move that BlendSpace1D point to
+> match — otherwise the run blend will cap out early (or never reach full run)
+> and the animation will look wrong relative to actual speed. This is the same
+> kind of manual-sync gotcha as the court-bound walls vs. `CourtMin`/`CourtMax`
+> earlier in this file.
+
+**Verify (single instance):** Run `Main.tscn`. Standing still, the humanoid
+should hold an idle pose. Moving with WASD should blend smoothly into a run —
+no popping or T-pose. If it doesn't move at all, double-check **Active** is on
+and **Animation Tree Path** is actually assigned (Step 7/8).
+
+### Step 4 — Issue #41: add the committed-move placeholder states
+
+Same `AnimationTree` graph from Step 3 — this just adds three more nodes to it.
+There is **no bespoke crossover clip yet** (that's #70, filed under M8) — these
+are explicitly placeholder poses using clips you already have from Step 2.
+
+1. Reopen the state machine graph (double-click `Tree Root` in the Inspector,
+   or it may still be open in the bottom panel).
+2. Right-click → **Add Animation** three times, creating three new state nodes.
+   Rename them exactly **`Startup`**, **`Active`**, **`Recovery`** — these
+   names are a hard contract with the code: `PlayerController.ApplyAnimation`
+   calls `Travel(target.ToString())` where `target` is a `MoveAnimState` value,
+   so a typo here means the Travel() call silently fails to find a path.
+3. Assign a placeholder clip to each (recommended, since no crossover clip
+   exists yet — swap these later for #70's real clip with no code change):
+   - **Startup** → `idle` (reads as a frozen wind-up — fits the "movement
+     locked, telegraph window" design intent even as a placeholder).
+   - **Active** → `run` (reads as motion during the burst).
+   - **Recovery** → `idle` (reads as settling/decelerating).
+   You're free to pick differently — these are just the lowest-effort choices
+   that need zero new assets and aren't thematically wrong.
+4. **Connect every state to every other state, both directions** (6 arrows
+   total among the 4 states: Locomotion↔Startup, Locomotion↔Active,
+   Locomotion↔Recovery, Startup↔Active, Startup↔Recovery, Active↔Recovery).
+   This is deliberately over-connected: `Travel()` only follows existing
+   transition arrows, and the display-phase code (#69) can jump between any
+   two of these states depending on what the broadcast says, so a missing arc
+   would make `Travel()` silently fail to switch for that one transition.
+5. Select each new transition arrow → in the Inspector, set **Switch Mode** to
+   **Immediate** (not "At End" or "Sync"). The phase transitions are driven by
+   exact physics ticks in code (`MoveFrameData`'s 6/3/12-frame Crossover
+   timing) — Immediate is what makes the animation cut land on the same tick
+   the phase actually changes, which is what makes Startup's telegraph and
+   Recovery's punish window legible (ADR-0003) rather than a half-second behind.
+6. Save the scene.
+
+**Verify (single instance):** Trigger a crossover (Q / right-stick flick).
+Confirm you see a **distinct** Startup pose during the freeze, a different pose
+during the burst, and a third during recovery — even though they're placeholder
+clips, the three phases should be visually distinguishable from each other and
+from idle/run. If nothing changes during a crossover, check the transition
+arrows from Step 4 — `Travel()` found no path and silently no-oped.
+
+### Step 5 — Issue #69: verify the opponent's commitment renders (dual-instance)
+
+This is the load-bearing fix and the actual done-bar for M7b — all its code
+(`DisplayPhaseResolver`, the `ApplyCosmetics`/`ApplyAnimation` role-aware read)
+is already merged; this step is purely verification, no further wiring.
+
+Run **Debug → Run Multiple Instances → 2** (Host + Join, same flow as M4/M5/M6b).
+
+1. On **either** window, trigger a crossover.
+2. Watch the **OTHER** window's view of that same player. Confirm:
+   - The Startup → Active → Recovery animation states from Step 4 play there
+     too, in sync with the triggering window (not stuck on Locomotion).
+   - The burst **lean** (M7a, revived by #69) tilts on the opponent too — this
+     was silently dead before #69 (the opponent's local `_machine` never
+     advanced, so it was always reading Inactive).
+3. Confirm idle/run locomotion still reads correctly for both players in both
+   windows (Step 3's blend, now also proven over netcode).
+
+When all three hold, **#69 is proven** — close it, then close **#41** (after
+confirming Step 4's single-instance check too), then close **#68**, then close
+the epic **#54**. Leave the M8 bespoke-crossover follow-up issue (filed under
+#61) open — it replaces the Step 4 placeholder clips later with no code change.
+
+### Troubleshooting M7b
+
+| Symptom | Likely cause |
+|---|---|
+| Humanoid doesn't animate at all, stays in bind pose | `AnimationTreePath` not assigned (Step 8) or **Active** unchecked (Step 7) |
+| Output shows `AnimationTree resolved but 'parameters/playback' is null` | `Tree Root` isn't an `AnimationNodeStateMachine` — redo Step 3.3 |
+| Output shows `AnimationTreePath '...' is set but could not be resolved` | NodePath points to a renamed/deleted node — re-assign in Step 8 |
+| Idle/run blend works but crossover never changes pose | A transition arrow is missing (Step 4.4) — `Travel()` found no path, silently no-oped |
+| Crossover changes pose late / a beat after the freeze | A transition's Switch Mode is "At End"/"Sync" instead of **Immediate** (Step 4.5) |
+| State name typo (e.g. "startup" lowercase) | `MoveAnimState.ToString()` is case-sensitive and must exactly match the state node's name (Step 4.2) |
+| Run blend never reaches full speed / blends "too early" | BlendSpace1D's run point doesn't match the current `MoveSpeed` export — see the Step 3 gotcha |
+| Opponent's animation/lean still doesn't play on the other window | Confirm both windows are on the merged `feat/54-anim-integration` build — pre-#69 clients never read the broadcast phase for display |
+
+---
+
 ## What to deliberately NOT touch yet
 
 This list was written for the early gameplay milestones. **M7a (#53) now opens the
@@ -829,10 +1000,11 @@ restraint still holds:
 
 - Materials / shaders beyond what M7a's readability pass calls for — gray
   placeholder surfaces are otherwise fine.
-- Rigged animation (committed-move wind-ups driven by a skeleton) — that's the
-  DEFERRED **M7b (#54)**, not yet open. M7a's facing/lean is cosmetic transform
-  only, not rigged animation.
-- Imported 3D models (beyond the M7a humanoid mesh), sounds, UI polish, menus.
+- The bespoke crossover animation clip — M7b (#54, see its editor-tasks section
+  above) wires the rig and a placeholder pose; the real clip is M8 (#61, sub-issue
+  filed under that umbrella), sourced later via external AI tool / hand-authoring.
+- Imported 3D models (beyond the M7a humanoid mesh and M7b's idle/run rig),
+  sounds, UI polish, menus.
 
 Keeping these out keeps your learning surface small while you and the AI prove
 the hard systems first.
