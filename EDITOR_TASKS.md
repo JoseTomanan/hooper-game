@@ -850,28 +850,38 @@ retarget with no rebinding. Ignore `jump.fbx` in that folder — no jump mechani
 exists in this game.
 
 1. Copy `idle.fbx` and `run.fbx` into `assets/`.
-2. Select each in the **FileSystem** dock. In the **Import** tab, confirm
-   **Import As: Scene** (the default for an FBX with mesh/skeleton data) and
-   that animation import is enabled. Click **Reimport** if prompted.
-   - ⚠️ **Known Godot quirk:** some asset packs ship animation-only FBX files
-     with no skeleton node, which blocks the "save as Animation Library" option.
-     If idle.fbx/run.fbx import with NO skeleton (just an AnimationPlayer), that's
-     this quirk — the animations are still usable, just via a different route:
-     instance the imported scene as a temporary child anywhere in a scratch
-     scene, copy the AnimationPlayer's animation resource out (drag from its
-     Animation panel into the FileSystem dock to save it as a standalone `.res`),
-     then delete the scratch instance. If this happens and the steps below don't
-     match what you see, stop and tell Claude Code what the Import tab actually
-     shows — this is exactly the "Godot API churn" risk CLAUDE.md flags.
+2. **Extract each clip to a standalone animation resource.** In Godot 4.x you
+   **cannot** load an `.fbx` directly into an AnimationPlayer — the FBX is a
+   *scene*, and the clip lives inside it. (If you try, Godot throws *"The file
+   you selected is an imported scene from a 3D model… save the animations using
+   Actions… → Set Animation Save Paths."* — that dialog is telling you to do
+   exactly this step first.) For **each** of `idle.fbx` and `run.fbx`:
+   - Select it in the **FileSystem** dock → **Import** tab → click
+     **Advanced Import Settings…** (button at the bottom of the Import dock).
+   - In the dialog, top toolbar → **Actions…** → **Set Animation Save Paths**.
+     Pick a save location/name — `res://assets/idle.res` and `res://assets/run.res`.
+     Confirm, then **Reimport**. You now have two standalone `.res` clips.
+   - ⚠️ **Benign warning, not an error:** while in that dialog you may see
+     `window.cpp:1090 - Attempting to make child window exclusive, but the parent
+     window already has another exclusive child … SceneImportSettingsDialog`.
+     This is a cosmetic Godot editor warning (the file-picker stacking on a
+     confirmation dialog) — the save still completes. Ignore it and finish the
+     save. It does **not** affect your build or the imported files.
+   - **Alternative route (avoids the dialog entirely):** instead of the above,
+     select the FBX → **Import** tab → change **Import As** from `Scene` to
+     **`Animation Library`** → **Reimport**. The whole FBX then loads as an
+     AnimationLibrary you can load in step 4. Downside: clips end up
+     namespaced (`libname/clip`), so the bare `idle`/`run` names the later
+     steps assume won't match — you'd reference the namespaced name in Step 3
+     instead. Prefer the `Set Animation Save Paths` route above for clean names.
 3. In `scenes/Player.tscn`, select the humanoid model node (the M7a
    `CharacterModel` child holding `characterMedium.fbx`). Add a child
    **AnimationPlayer**, name it `AnimationPlayer`.
-4. Get the idle/run clips into that AnimationPlayer's animation list — open the
-   **Animation** panel (bottom dock) with `AnimationPlayer` selected, use
-   **Animation → Manage Animations** (or the equivalent load/import button) to
-   pull in the clips from the imported idle.fbx/run.fbx. You should end up with
-   two playable animations, e.g. named `idle` and `run`, on this one
-   AnimationPlayer.
+4. Load the two `.res` clips into that AnimationPlayer — with `AnimationPlayer`
+   selected, open the **Animation** panel (bottom dock) → **Animation** menu →
+   **Manage Animations…** → **Load** (folder icon) → pick `assets/idle.res`,
+   then `assets/run.res`. You should end up with two playable animations named
+   `idle` and `run` on this one AnimationPlayer.
 
 ### Step 3 — Issue #68: build the AnimationTree + locomotion blend
 
@@ -1046,6 +1056,8 @@ deferred to M9, not part of this epic's done-bar.
 
 | Symptom | Likely cause |
 |---|---|
+| *"The file you selected is an imported scene from a 3D model…"* when loading a clip | You pointed the AnimationPlayer at an `.fbx` directly — extract it first via **Set Animation Save Paths** (Step 2.2), then load the `.res` |
+| `window.cpp:1090 … make child window exclusive … SceneImportSettingsDialog` | Benign editor warning from stacked modal dialogs (Step 2.2) — the save still completes; ignore it |
 | Humanoid doesn't animate at all, stays in bind pose | `AnimationTreePath` not assigned (Step 8) or **Active** unchecked (Step 7 of Step 3) |
 | Output shows `AnimationTree resolved but 'parameters/playback' is null` | `Tree Root` isn't an `AnimationNodeStateMachine` — redo Step 3.3 |
 | Output shows `AnimationTreePath '...' is set but could not be resolved` | NodePath points to a renamed/deleted node — re-assign in Step 8 of Step 3 |
