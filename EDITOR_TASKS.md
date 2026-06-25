@@ -849,6 +849,14 @@ and `run.fbx` (sibling folder to this repo, CC0 license) — same skeleton as th
 retarget with no rebinding. Ignore `jump.fbx` in that folder — no jump mechanic
 exists in this game.
 
+> ✅ **Items 1–2 are already done in the repo.** `assets/idle.res` and
+> `assets/run.res` were extracted headlessly (Godot 4.6, `ResourceSaver`) from
+> the source FBX, verified to reload, and confirmed to retarget cleanly onto the
+> M7a `characterMedium` rig (skeleton at `Root/Skeleton3D`, all 40 bone-tracks
+> match, 0 missing). **Skip to item 3** and just load the two `.res` files in
+> item 4. Items 1–2 below are kept only as the record of how they were made (and
+> for re-extracting if the source ever changes).
+
 1. Copy `idle.fbx` and `run.fbx` into `assets/`.
 2. **Extract each clip to a standalone animation resource.** In Godot 4.x you
    **cannot** load an `.fbx` directly into an AnimationPlayer — the FBX is a
