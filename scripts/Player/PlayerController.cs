@@ -925,14 +925,20 @@ public partial class PlayerController : CharacterBody3D
 	}
 
 	/// <summary>
-	/// Drives the rigged AnimationTree's idle↔run locomotion blend from horizontal
-	/// speed each frame (M7b, #68). Cosmetic-only and null-guarded — if the tree
-	/// isn't wired this no-ops and gameplay is unaffected (ADR-0002/0004). Runs for
-	/// every role, so a remote player's locomotion reads on your screen from the
-	/// Velocity ReceiveState already syncs.
+	/// Drives the rigged AnimationTree each frame (M7b): the idle↔run locomotion
+	/// blend from horizontal speed (#68), and the committed-move state machine
+	/// (Locomotion/Startup/Active/Recovery) from the DISPLAY phase (#41 + #69).
 	///
-	/// The blend position is |horizontal Velocity| in m/s; the editor authors the
-	/// BlendSpace1D so 0 = idle and MoveSpeed = full run (see EDITOR_TASKS.md M7b).
+	/// Cosmetic-only and fully null-guarded — if the AnimationTree isn't wired,
+	/// this no-ops and gameplay is unaffected (ADR-0002/0004). Like ApplyCosmetics
+	/// it runs for EVERY role, so the opponent's committed-move animation plays on
+	/// your screen via the broadcast phase (DisplayMove), closing the ADR-0003 gap
+	/// that the lean alone left open.
+	///
+	/// The blend position is set from |horizontal Velocity| in m/s; the editor
+	/// authors the BlendSpace1D so 0 = idle and MoveSpeed = full run (see
+	/// EDITOR_TASKS.md M7b). Travel() fires only on a state CHANGE — re-traveling
+	/// to the current state would restart the placeholder clip every tick.
 	/// </summary>
 	private void ApplyAnimation()
 	{
@@ -942,6 +948,19 @@ public partial class PlayerController : CharacterBody3D
 		// vertical and irrelevant to a ground idle/run blend.
 		float horizontalSpeed = new Vector2(Velocity.X, Velocity.Z).Length();
 		_animTree.Set("parameters/Locomotion/blend_position", horizontalSpeed);
+
+		// Committed-move state (#41/#69): map the DISPLAY phase to an anim state
+		// and Travel() only when it changes. Enum names match the AnimationTree's
+		// state names by contract (EDITOR_TASKS.md M7b), so ToString() is the
+		// state id — Locomotion/Startup/Active/Recovery.
+		if (_animPlayback == null) return;
+		(MovePhase displayPhase, _) = DisplayMove();
+		MoveAnimState target = MoveAnimResolver.Resolve(displayPhase);
+		if (target != _currentAnimState)
+		{
+			_animPlayback.Travel(target.ToString());
+			_currentAnimState = target;
+		}
 	}
 
 	/// <summary>
