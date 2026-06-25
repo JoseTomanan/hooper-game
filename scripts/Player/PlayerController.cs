@@ -975,9 +975,16 @@ public partial class PlayerController : CharacterBody3D
 	/// Burst direction: the own/simulated path reads it live off CurrentMove; the
 	/// broadcast path reconstructs it from _serverMoveId/_serverMoveParam (today,
 	/// "crossover" carrying BurstDirection — the same minimal payload RequestBeginMove
-	/// and MoveParamOf already speak).
+	/// and MoveParamOf already speak). A JumpShot has no burst payload, so both
+	/// paths naturally return 0 for it — correct, since the jump shot has no
+	/// lateral lean of its own (ApplyCosmetics/LeanResolver only react to a
+	/// nonzero burst).
+	///
+	/// Public (M7b, issue #73): BallController.UpdateHandSide reads this on the
+	/// holder's node so the ball-on-hand display rides the same per-role DISPLAY
+	/// path #69 established, rather than re-deriving its own role logic.
 	/// </summary>
-	private (MovePhase phase, float burstDir) DisplayMove()
+	public (MovePhase phase, float burstDir) DisplayMove()
 	{
 		if (DisplayPhaseResolver.LocalMachineDrivesDisplay(IsServer, IsLocalPlayer))
 			return (_machine.Phase, (_machine.CurrentMove as Crossover)?.BurstDirection ?? 0f);
