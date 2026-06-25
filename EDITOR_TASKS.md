@@ -849,13 +849,24 @@ and `run.fbx` (sibling folder to this repo, CC0 license) — same skeleton as th
 retarget with no rebinding. Ignore `jump.fbx` in that folder — no jump mechanic
 exists in this game.
 
-> ✅ **Items 1–2 are already done in the repo.** `assets/idle.res` and
-> `assets/run.res` were extracted headlessly (Godot 4.6, `ResourceSaver`) from
-> the source FBX, verified to reload, and confirmed to retarget cleanly onto the
-> M7a `characterMedium` rig (skeleton at `Root/Skeleton3D`, all 40 bone-tracks
-> match, 0 missing). **Skip to item 3** and just load the two `.res` files in
-> item 4. Items 1–2 below are kept only as the record of how they were made (and
-> for re-extracting if the source ever changes).
+> ✅ **Items 1–2 are already done in the repo.** The clips were extracted
+> headlessly (Godot 4.6, `ResourceSaver`) from the source FBX, verified to
+> reload, and confirmed to retarget cleanly onto the M7a `characterMedium` rig
+> (skeleton at `Root/Skeleton3D`, all 40 bone-tracks match, 0 missing). Three
+> files are committed:
+> - **`assets/locomotion.res`** — an `AnimationLibrary` holding both clips,
+>   keyed `idle` and `run`. **This is the file you load in item 4.**
+> - `assets/idle.res`, `assets/run.res` — the individual `Animation` clips the
+>   library references (`res://` relative). Keep them; the library points at
+>   them. You do **not** load these directly.
+>
+> **Why a library and not the bare clips:** the AnimationPlayer's
+> **Manage Animations… → Load Library** button accepts an `AnimationLibrary`,
+> **not** a single `Animation` resource — loading `idle.res` there fails with
+> *"The file you selected is not a valid AnimationLibrary."* The library wrapper
+> is what that button expects. **Skip to item 3.** Items 1–2 below are kept only
+> as the record of how the clips were made (and for re-extracting if the source
+> ever changes).
 
 1. Copy `idle.fbx` and `run.fbx` into `assets/`.
 2. **Extract each clip to a standalone animation resource.** In Godot 4.x you
@@ -885,11 +896,21 @@ exists in this game.
 3. In `scenes/Player.tscn`, select the humanoid model node (the M7a
    `CharacterModel` child holding `characterMedium.fbx`). Add a child
    **AnimationPlayer**, name it `AnimationPlayer`.
-4. Load the two `.res` clips into that AnimationPlayer — with `AnimationPlayer`
-   selected, open the **Animation** panel (bottom dock) → **Animation** menu →
-   **Manage Animations…** → **Load** (folder icon) → pick `assets/idle.res`,
-   then `assets/run.res`. You should end up with two playable animations named
-   `idle` and `run` on this one AnimationPlayer.
+4. Load the animation **library** into that AnimationPlayer — with
+   `AnimationPlayer` selected, open the **Animation** panel (bottom dock) →
+   **Animation** menu → **Manage Animations…** → **Load Library** (folder icon,
+   top-right) → pick `assets/locomotion.res`.
+   - When prompted for a library **name, leave it blank / empty** (the default
+     `[Global]` library). That makes the clips addressable as bare `idle` and
+     `run` — which is what Step 3's BlendSpace1D and Step 4's states reference.
+     If you name the library (e.g. `loco`), the clips become `loco/idle` and you
+     would have to use those namespaced names everywhere downstream.
+   - **Do not** use the plain **Load** button on a single `idle.res`/`run.res` —
+     that path expects a library and errors with *"not a valid
+     AnimationLibrary."* The one `locomotion.res` brings in both clips at once.
+
+   You should end up with two playable animations named `idle` and `run` on this
+   one AnimationPlayer.
 
 ### Step 3 — Issue #68: build the AnimationTree + locomotion blend
 
@@ -1065,6 +1086,7 @@ deferred to M9, not part of this epic's done-bar.
 | Symptom | Likely cause |
 |---|---|
 | *"The file you selected is an imported scene from a 3D model…"* when loading a clip | You pointed the AnimationPlayer at an `.fbx` directly — extract it first via **Set Animation Save Paths** (Step 2.2), then load the `.res` |
+| *"The file you selected is not a valid AnimationLibrary."* when loading a clip | You loaded a bare `Animation` (`idle.res`/`run.res`) into **Load Library**, which wants an `AnimationLibrary` — load **`assets/locomotion.res`** instead (Step 2.4); the individual clips are its references, not direct loads |
 | `window.cpp:1090 … make child window exclusive … SceneImportSettingsDialog` | Benign editor warning from stacked modal dialogs (Step 2.2) — the save still completes; ignore it |
 | Humanoid doesn't animate at all, stays in bind pose | `AnimationTreePath` not assigned (Step 8) or **Active** unchecked (Step 7 of Step 3) |
 | Output shows `AnimationTree resolved but 'parameters/playback' is null` | `Tree Root` isn't an `AnimationNodeStateMachine` — redo Step 3.3 |
