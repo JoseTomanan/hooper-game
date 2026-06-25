@@ -819,15 +819,20 @@ doesn't merge regardless of how the visual change looks in the editor.
 
 ---
 
-## Milestone 7b editor tasks — rigged humanoid animation pass (issues #68, #41, #69)
+## Milestone 7b editor tasks — rigged humanoid animation pass (issues #68, #41, #69, #73, #74)
 
 **Do these only after the M7b PR (`feat/54-anim-integration`) has merged.** All the
-C# is already written and unit-test-covered (`MoveAnimResolver`, `DisplayPhaseResolver`)
-— what's missing is the AnimationTree itself, which only the editor can author.
-Epic **#54**. Sub-issues in dependency order: #68 (rig + locomotion blend, this
-section's bulk) → #41 (placeholder committed-move states — same AnimationTree,
-mostly just adding 3 more nodes) → #69 (remote-phase display — already code-complete;
-its "editor task" is just the dual-instance verification at the end).
+C# is already written and unit-test-covered (`MoveAnimResolver`, `DisplayPhaseResolver`,
+`HandSideResolver`, `JumpShotReleaseResolver`) — what's missing is the AnimationTree
+itself, which only the editor can author. Epic **#54**. Sub-issues in dependency
+order: #68 (rig + locomotion blend, this section's bulk) → #41 (placeholder
+committed-move states — same AnimationTree, mostly just adding 3 more nodes) →
+#69 (remote-phase display — already code-complete; its "editor task" is just the
+dual-instance verification at Step 5) → #73 (ball-on-hand — Step 6, pure
+verification, no new nodes; the lateral offset is an export with a working
+default) → #74 (jump shot as a committed move — Step 7, also pure verification:
+it reuses the SAME Startup/Active/Recovery states Step 4 already builds and the
+SAME `ball_shoot` input action from Milestone 2, so there is nothing new to wire).
 
 ### Step 1 — Build first
 
@@ -972,22 +977,86 @@ Run **Debug → Run Multiple Instances → 2** (Host + Join, same flow as M4/M5/
    windows (Step 3's blend, now also proven over netcode).
 
 When all three hold, **#69 is proven** — close it, then close **#41** (after
-confirming Step 4's single-instance check too), then close **#68**, then close
-the epic **#54**. Leave the M8 bespoke-crossover follow-up issue (filed under
-#61) open — it replaces the Step 4 placeholder clips later with no code change.
+confirming Step 4's single-instance check too), then close **#68**. Continue to
+Step 6 (#73) and Step 7 (#74) below before closing the epic.
+
+### Step 6 — Issue #73: verify the ball switches hands (single + dual-instance)
+
+All the code is already merged — `HandSideResolver` (pure, unit-tested) and
+`BallController`'s lateral offset in `TickHeld`/`TickDribbling`. Nothing new to
+build; this is sign-off, same as Step 5 was for #69.
+
+1. Run `Main.tscn` solo. Dribble in place, then trigger a crossover (Q /
+   right-stick flick). Confirm the ball visibly sits on one side of the
+   player before the move and switches to the other side exactly on the
+   burst (same tick as the lean/burst, not before or after).
+2. The exact offset distance (`HandOffset`, default 0.18m) and which literal
+   side reads as "right" are hitl visual sign-off — if the ball overlaps the
+   body or sits unrealistically far out, tune `HandOffset` on the **Ball**
+   node's Inspector (no code change needed) and re-test.
+3. **Dual-instance** (`Debug → Run Multiple Instances → 2`): trigger a
+   crossover on one window, confirm the ball's hand-switch is visible on the
+   **other** window's view of that player too — this rides the same
+   `DisplayMove()` path #69 proved in Step 5, so if Step 5 passed and this
+   doesn't, the bug is novel to #73's wiring, not a repeat of the #69 gap.
+4. Confirm a NEW possession (rebound, turnover, make-it-take-it) resets the
+   ball to its default hand rather than carrying over the previous holder's
+   last hand side.
+
+When all four hold, **#73 is proven** — close it.
+
+### Step 7 — Issue #74: verify the jump shot as a committed move
+
+All the code is already merged — `JumpShot`, `JumpShotReleaseResolver` (pure,
+unit-tested), and the shoot-input rewire in `PlayerController`/`BallController`.
+This REPLACES the old instant shot: pressing shoot no longer releases the ball
+immediately.
+
+1. Run `Main.tscn` solo. Get the ball, then press the shoot button (`ball_shoot`
+   action from Milestone 2's Input Map — unchanged, nothing new to add).
+   Confirm:
+   - Movement locks immediately (same "planted" feel as a crossover's Startup).
+   - The ball stays in hand through a visible wind-up (~0.3s at default
+     tuning) — it must NOT leave the hand on the button press itself.
+   - The ball releases (transitions to its shot arc) at the END of the
+     wind-up, then movement stays locked through a brief recovery
+     (~0.33s) before you can move or shoot again.
+   - The Startup/Active/Recovery poses from Step 4 play during the shot —
+     same states the crossover uses (no bespoke jump-shot pose exists yet;
+     that's art, M8). This is fine and expected, not a bug.
+2. Confirm you **cannot** begin a shot while a crossover (or another shot) is
+   already running, and vice versa — `Begin()` enforces this for free; if it
+   ever doesn't, that's a real bug, not a tuning issue.
+3. **Dual-instance**: trigger a shot on one window, confirm the wind-up is
+   visible on the **other** window's view of that player (the defender's read
+   window, ADR-0003) before the ball actually leaves the hand there too.
+4. The exact frame counts (`JumpShot.DefaultFrameData`: 18 startup / 4 active /
+   20 recovery) are editor-tunable balance surface, not load-bearing — if the
+   windup feels too long/short, ask Claude Code to adjust the constructor's
+   defaults rather than hand-editing frame counts in the Inspector (there is
+   no export for them today; they're construction-time only).
+
+When all four hold, **#74 is proven** — close it, then close the epic **#54**.
+Leave the M8 bespoke-crossover-clip follow-up issue (filed under #61) open —
+it replaces the Step 4 placeholder clips later with no code change. Also leave
+#76/#77 (ball-hand-as-steal-surface, pump-fake) alone — both are explicitly
+deferred to M9, not part of this epic's done-bar.
 
 ### Troubleshooting M7b
 
 | Symptom | Likely cause |
 |---|---|
-| Humanoid doesn't animate at all, stays in bind pose | `AnimationTreePath` not assigned (Step 8) or **Active** unchecked (Step 7) |
+| Humanoid doesn't animate at all, stays in bind pose | `AnimationTreePath` not assigned (Step 8) or **Active** unchecked (Step 7 of Step 3) |
 | Output shows `AnimationTree resolved but 'parameters/playback' is null` | `Tree Root` isn't an `AnimationNodeStateMachine` — redo Step 3.3 |
-| Output shows `AnimationTreePath '...' is set but could not be resolved` | NodePath points to a renamed/deleted node — re-assign in Step 8 |
+| Output shows `AnimationTreePath '...' is set but could not be resolved` | NodePath points to a renamed/deleted node — re-assign in Step 8 of Step 3 |
 | Idle/run blend works but crossover never changes pose | A transition arrow is missing (Step 4.4) — `Travel()` found no path, silently no-oped |
 | Crossover changes pose late / a beat after the freeze | A transition's Switch Mode is "At End"/"Sync" instead of **Immediate** (Step 4.5) |
 | State name typo (e.g. "startup" lowercase) | `MoveAnimState.ToString()` is case-sensitive and must exactly match the state node's name (Step 4.2) |
 | Run blend never reaches full speed / blends "too early" | BlendSpace1D's run point doesn't match the current `MoveSpeed` export — see the Step 3 gotcha |
 | Opponent's animation/lean still doesn't play on the other window | Confirm both windows are on the merged `feat/54-anim-integration` build — pre-#69 clients never read the broadcast phase for display |
+| Ball doesn't visibly switch hands | Check `HandOffset` isn't 0 on the **Ball** node's Inspector; confirm Step 6.1's timing (must be on the burst tick, not before) |
+| Pressing shoot still releases the ball instantly | Build is stale (old `BallController.TryShoot` cached) — rebuild (Step 1) and confirm the merged `feat/54-anim-integration` commit includes #74 |
+| Shot windup never ends / ball never releases | Check `Output` for `JustReleasedJumpShot` never firing — confirm `RequestBeginMove`'s `"jumpshot"` branch exists (a stale build symptom, same fix as above) |
 
 ---
 
