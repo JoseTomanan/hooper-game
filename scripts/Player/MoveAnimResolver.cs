@@ -52,24 +52,14 @@ public static class MoveAnimResolver
             case MovePhase.Recovery:
                 return MoveAnimState.Recovery;
 
-            // TODO(you): decide the fallback for an unrecognized phase value.
-            //
-            // MovePhase is a closed enum today, so this case is only reachable if
-            // someone adds a 5th phase later (or a corrupt/cast value arrives).
-            // This function runs in the per-tick render path. Two options:
-            //
-            //   (a) graceful: `return MoveAnimState.Locomotion;`
-            //       — degrades to neutral stance, never crashes the render path.
-            //       Matches this codebase's "never throw in a tick loop" stance
-            //       (see CommittedMoveMachine.ForceState's doubt-cycle comment and
-            //       Begin() returning false instead of throwing).
-            //
-            //   (b) strict: `throw new ArgumentOutOfRangeException(nameof(phase), ...);`
-            //       — fails loud so a future unmapped phase is caught in tests
-            //       immediately rather than silently rendering as Locomotion.
-            //
-            // Replace the line below with your choice. The test
-            // MoveAnimResolverTests.Resolve_UnknownPhase_* pins whichever you pick.
+            // Unrecognized phase → graceful fallback to neutral stance. MovePhase
+            // is a closed enum today, so this is only reachable via a corrupt cast
+            // or a future 5th phase. This runs in the per-tick render path, so it
+            // degrades rather than throws — matching the codebase's "never throw in
+            // a tick loop" stance (CommittedMoveMachine.Begin() returns false and
+            // ForceState normalizes rather than throwing). A silently-unmapped
+            // future phase animating as Locomotion is caught by the test
+            // Resolve_UnknownPhase_DegradesToLocomotion, not by a runtime crash.
             default:
                 return MoveAnimState.Locomotion;
         }

@@ -61,10 +61,9 @@ public class MoveAnimResolverTests
         // a future 5th phase. The resolver runs in the per-tick render path, so
         // the default degrades to neutral stance rather than throwing — matching
         // this codebase's "never throw in a tick loop" stance (CommittedMoveMachine
-        // returns false / normalizes instead of throwing).
-        //
-        // NOTE: if you change MoveAnimResolver's default case to throw (option b
-        // in that file's TODO), flip this to Assert.Throws<ArgumentOutOfRangeException>.
+        // returns false / normalizes instead of throwing). This test is the net
+        // that catches a future phase that was added but never mapped: it would
+        // surface here as "unexpectedly Locomotion" rather than as a live crash.
         MovePhase corrupt = (MovePhase)999;
 
         Assert.Equal(MoveAnimState.Locomotion, MoveAnimResolver.Resolve(corrupt));
