@@ -839,9 +839,21 @@ the hard systems first.
 
 ---
 
-## Two Godot C# gotchas worth knowing on day one
+## Godot gotchas worth knowing on day one
 
 - Node scripts MUST be `partial` classes, or they won't build. Claude Code knows
   this; if a build fails mysteriously, check that first.
 - After adding/renaming C# files, you sometimes need to **build** (the hammer
   icon, top-right) before Godot sees the new class in the Attach Script list.
+- **Don't squash/stretch a round collider.** When you scale a `CollisionShape3D`
+  whose shape is a **cylinder, capsule, or sphere**, the X and Z scale must be
+  **equal** — those shapes have one radius, so they can't be made oval. The
+  project uses **Jolt Physics**, which (unlike old Godot Physics) prints a warning
+  and silently rounds a mismatched scale to a single value:
+  `Failed to correctly scale shape … not supported by Jolt Physics`. If you see
+  that in the Output panel, find the offending node and instead set the size on
+  the **shape itself** (its `Radius` / `Height` in the Inspector) with the node's
+  Scale left at `(1, 1, 1)`. Boxes are fine to scale unevenly. The *mesh* next to
+  it can be scaled however you like — only the collision shape complains.
+  (This is exactly what bit the basketball `PoleBody` once; the round pole's
+  collider had been scaled `0.15 × 0.1` on X/Z.)

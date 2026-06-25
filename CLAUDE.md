@@ -111,6 +111,16 @@ open for work; M8 is not.
   (see EDITOR_TASKS.md). Claude Code writes the C# a scene's nodes reference, but
   the human wires nodes in the editor.
 - **`assets/`** — models, textures, sounds. Placeholder/gray is fine for now.
+- **Physics colliders (the project runs Jolt — `3d/physics_engine="Jolt Physics"`):**
+  never apply a **non-uniform scale** to a `CylinderShape3D`, `CapsuleShape3D`, or
+  `SphereShape3D`. Their cross-section is a single *radius*, so a mismatched X/Z
+  scale is impossible to honour — Jolt silently clamps it (you'll see
+  `Failed to correctly scale shape … not supported by Jolt Physics` at load) and
+  the collider stops matching its mesh. Author the size on the **shape resource**
+  (`radius` / `height`) and keep the node's scale at `1`. `BoxShape3D` is exempt —
+  a box has independent X/Y/Z extents. The visual `MeshInstance3D` may still be
+  scaled freely; only the collision shape is constrained. If you find a scaled
+  round collider in a `.tscn`, flag it.
 - One script = one node responsibility. `partial` class extending the node type.
 - Comment the "why," not the "what," especially around netcode and the
   deterministic ball, because the human is learning the engine.
