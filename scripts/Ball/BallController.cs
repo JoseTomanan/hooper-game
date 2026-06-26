@@ -222,34 +222,41 @@ public partial class BallController : Node3D
 
 	/// <summary>
 	/// Master switch for distance-based shot scatter (issue #62, ADR-0009).
-	/// Defaults to <c>false</c> so behaviour is unchanged until scatter has
-	/// been play-tested and tuned in the editor.  Flip to <c>true</c> in the
-	/// Inspector once <see cref="ShotScatterPerMeter"/> and
-	/// <see cref="MaxShotScatter"/> have been dialled in.
+	/// Enabled by default: the magnitudes below were tuned against a Monte-Carlo
+	/// make-percentage sweep through the real ShotArc + RimBackboard physics (see
+	/// ShotMakeCurveTests) so the resulting curve matches real basketball — open
+	/// layups automatic, an open three ~41 % (NBA wide-open ≈ 38–40 %), long
+	/// heaves falling off steeply.  Flip to <c>false</c> only to restore the old
+	/// "every uncontested shot makes" behaviour for an isolated test.
 	///
 	/// Server-only: the scatter draw runs only when IsServer (client prediction
 	/// keeps aiming dead-centre; ReconcileFromServer snaps the arc to the
 	/// server's possibly-missed trajectory within ~1 RTT — no new netcode
 	/// needed, see ADR-0009 and the ApplyShootLocally comment below).
 	/// </summary>
-	[Export] public bool ShotScatterEnabled { get; set; } = false;
+	[Export] public bool ShotScatterEnabled { get; set; } = true;
 
 	/// <summary>
 	/// Base scatter radius per metre of shot distance, in metres per metre.
 	/// The raw offset radius before capping is
 	/// <c>ShotScatterPerMeter × horizontalDistance</c>.
-	/// Default 0.03 m/m means a 5 m shot has a ~0.15 m radius; tune upward
-	/// once the game feels too easy to make every shot.
+	/// 0.026 m/m is tuned so the make curve tracks real FG% in the playable
+	/// range: shots under ~4 m make ~100 % open, ~5 m ≈ 67 %, an open three
+	/// (~6.75 m) ≈ 41 %.  Since a make requires the offset to land inside the
+	/// inner-rim radius (0.11 m), make% ≈ (0.11 / (perMeter·distance))² — raise
+	/// this to make shooting harder, lower it to make it more forgiving.
 	/// </summary>
-	[Export] public float ShotScatterPerMeter { get; set; } = 0.03f;
+	[Export] public float ShotScatterPerMeter { get; set; } = 0.026f;
 
 	/// <summary>
-	/// Hard cap on scatter offset radius (metres), regardless of distance.
-	/// Prevents very long shots from producing absurd multi-metre misses.
-	/// Default 0.4 m is roughly the rim radius × 1.7 — a clear miss that
-	/// still looks like an honest attempt at the basket.
+	/// Hard cap on the BASE scatter offset radius (metres), before accuracy
+	/// penalties.  Prevents very long shots from producing absurd multi-metre
+	/// misses.  0.45 m is roughly the rim radius × 2 — a clear miss that still
+	/// looks like an honest attempt; it floors long open heaves at ~6–12 % and
+	/// binds only on long, heavily-penalised shots (the penalty multiplier is
+	/// applied after this cap — see ShotScatter.Scatter).
 	/// </summary>
-	[Export] public float MaxShotScatter { get; set; } = 0.4f;
+	[Export] public float MaxShotScatter { get; set; } = 0.45f;
 
 	/// <summary>
 	/// Seed for the server-side shot-scatter RNG (<c>_shotRng</c>).
@@ -272,12 +279,16 @@ public partial class BallController : Node3D
 	/// Only active inside the <c>IsServer &amp;&amp; ShotScatterEnabled</c>
 	/// block — client prediction keeps aiming dead-centre, unchanged.
 	///
+	/// 0.8 ⇒ a full-sprint shot scatters 1.8× as much as a stationary one; in the
+	/// make sweep this turns an open 5 m shot (~67 %) into ~35 % when fired on the
+	/// move, leaving close shots forgiving unless ALSO contested.
+	///
 	/// <b>Open design question (#64):</b> continuous speed-ratio (current)
 	/// vs. a discrete planted/not-planted threshold.  A threshold may fit
 	/// ADR-0003's hybrid committed-move model better.  Default continuous
 	/// pending human review.
 	/// </summary>
-	[Export] public float MovementScatterK { get; set; } = 1.0f;
+	[Export] public float MovementScatterK { get; set; } = 0.8f;
 
 	/// <summary>
 	/// Strength of the defender-contest penalty applied to shot scatter (issue
@@ -306,10 +317,11 @@ public partial class BallController : Node3D
 	/// XZ-plane distance (metres) within which the other player contests a
 	/// shot (issue #65, ADR-0009).  Beyond this range the contest penalty
 	/// factor is 1 (no effect).  Pairs with <see cref="ContestScatterK"/>.
-	/// Default 2.0 m is roughly an arm's-length closeout; tune in the
-	/// Inspector once <see cref="ShotScatterEnabled"/> is active.
+	/// 2.2 m is roughly an arm's-length closeout: a defender ~1 m away yields a
+	/// ~1.5× scatter factor, dropping an open 5 m shot from ~67 % to ~43 %; a
+	/// defender right on top approaches the full <see cref="ContestScatterK"/>.
 	/// </summary>
-	[Export] public float ContestRange { get; set; } = 2.0f;
+	[Export] public float ContestRange { get; set; } = 2.2f;
 
 	// ── Reconciliation tuning (mirrors PlayerController's tunables) ───────
 

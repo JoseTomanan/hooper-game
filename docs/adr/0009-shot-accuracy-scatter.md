@@ -101,10 +101,10 @@ every in-flight tick) snaps them to the server's arc within ~1 RTT.
 
 **Harder / accepted tradeoffs:**
 
-- **The defaults are not tuned.**  `ShotScatterEnabled = false` and the default
-  magnitudes are conservative starting points; the actual "feels fair" values
-  require play-testing.  They are exported precisely because they are balance
-  surface, not architectural constants.
+- **The defaults are tuned, not just guessed** (see *Tuning* below).  They were
+  fitted to a real make-percentage curve via simulation and are now enabled by
+  default (`ShotScatterEnabled = true`).  They remain exported balance surface —
+  play-testing may still adjust feel — but they are no longer placeholders.
 - **`ShotScatterSeed` makes reproducibility explicit but also visible.**  A
   sufficiently motivated player who can inspect exported values could predict miss
   patterns for a given seed.  For a 1v1 competitive game, this is acceptable: both
@@ -186,10 +186,54 @@ contestFactor = 1 + ContestScatterK × proximity
 If no other player node exists (solo test), `contestFactor = 1`.
 
 New exports on `BallController`: `ContestScatterK` (default `1.0f`),
-`ContestRange` (default `2.0f` m).
+`ContestRange` (default `2.2f` m).
 
 **Open design question (deferred to human):** Proximity-alone (current) vs.
 requiring the defender to be facing or actively closing out.  ADR-0003 earmarks
 the full contest/timing mechanic for the timing-window layer; this is the
 deliberately-minimal first slice.  The proximity gate must NOT grow into
 block/steal logic — that belongs to a later milestone.
+
+---
+
+## Tuning — how the default magnitudes were chosen
+
+**Date:** 2026-06-26
+
+The scatter and floor-bounce defaults are not guesses; they were fitted to real
+basketball numbers and verified by simulating the **actual** deterministic
+physics (`ShotScatter` → `ShotArc` → `RimBackboard`) over a deterministic
+stratified sweep of the scatter sample space.  The sweep is preserved as a
+regression test (`tests/Hooper.Ball.Tests/ShotMakeCurveTests.cs`), so retuning a
+constant without updating the expected bands fails the build.
+
+**Key insight.** A shot makes iff the scattered aim point lands inside the
+inner-rim radius `RimRadius − BallRadius = 0.11 m` (a rim graze sends the ball
+`Loose`, which is not re-checked for a make).  For uniform-disc sampling this
+gives a closed form, `make% ≈ (0.11 / min(perMeter·distance, maxScatter))²`,
+which the simulation confirmed — and refined: flat-arc shots near the boundary
+rim out slightly more than the closed form predicts, which the test captures.
+
+**Resulting open (uncontested, stationary) make curve** with
+`ShotScatterPerMeter = 0.026`, `MaxShotScatter = 0.45`:
+
+| Distance | Make% | Real-world anchor |
+|----------|-------|-------------------|
+| ≤ 3 m    | ~100% | open layup — automatic |
+| 5 m      | ~67%  | open mid-range |
+| 5.8 m    | ~53%  | at the clear line |
+| 6.75 m   | ~41%  | NBA wide-open three ≈ 38–40% |
+| 10 m     | ~21%  | steep falloff rewards spacing |
+
+Penalties (`MovementScatterK = 0.8`, `ContestScatterK = 1.0`,
+`ContestRange = 2.2 m`) compose onto that curve: an open 5 m shot (~67%) drops to
+~43% contested, ~35% on the move, ~22% both.  Close shots stay forgiving unless
+*both* moving and contested — a sprinting, tightly-contested 2 m shot is the only
+way to miss point-blank, which reads as a genuinely bad decision rather than
+random punishment.
+
+**Floor bounce** (`FloorRestitution = 0.82`, `FloorHorizontalDecay = 0.9`,
+`FloorSettleSpeed = 0.6`): an NBA ball on hardwood rebounds to ~1.22 m from a
+1.8 m drop ⇒ COR ≈ √(1.22/1.8) ≈ 0.82.  Simulated, 0.82 gives a realistic
+first rebound (~125 cm) decaying over ~15 ever-smaller bounces, versus the dead
+single thud a low value produced.
