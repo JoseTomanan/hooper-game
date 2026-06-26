@@ -1067,10 +1067,23 @@ All the code is already merged — `HandSideResolver` (pure, unit-tested) and
 `BallController`'s lateral offset in `TickHeld`/`TickDribbling`. Nothing new to
 build; this is sign-off, same as Step 5 was for #69.
 
-1. Run `Main.tscn` solo. Dribble in place, then trigger a crossover (Q /
-   right-stick flick). Confirm the ball visibly sits on one side of the
-   player before the move and switches to the other side exactly on the
-   burst (same tick as the lean/burst, not before or after).
+1. Run `Main.tscn` solo. Dribble in place — on the **keyboard** the ball
+   starts in the player's **left** hand (this is deliberate; see note below).
+   Trigger a crossover with **Q**. Confirm the ball visibly jumps from the
+   left side to the **right** side of the player. You do NOT need to catch
+   the exact burst tick by eye (it happens in one ~16 ms frame and is too
+   fast to time) — the before/after positions are what matters: left while
+   dribbling, right after the crossover.
+   > **Why it starts left (issue #73 diagnose):** the hand cue is
+   > direction-based — the ball moves to the side you burst toward — and the
+   > keyboard **Q** is hardcoded to always burst **right**. If the ball also
+   > started on the right, the first crossover would move it from right to
+   > right, i.e. nothing visible. Defaulting the displayed hand to the left
+   > (opposite Q's fixed direction) guarantees the first crossover of each
+   > possession is a visible left→right switch. A *second* same-direction Q
+   > in the same possession correctly stays on the right (you kept attacking
+   > the same way — not a bug). With a **gamepad** you can flick left or right
+   > and the ball follows the flick direction directly.
 2. The exact offset distance (`HandOffset`, default 0.18m) and which literal
    side reads as "right" are hitl visual sign-off — if the ball overlaps the
    body or sits unrealistically far out, tune `HandOffset` on the **Ball**
