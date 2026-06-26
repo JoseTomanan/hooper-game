@@ -249,12 +249,19 @@ public partial class BallController : Node3D
 	// ── Ball-on-hand display (M7b, issue #73) ─────────────────────────────
 
 	/// <summary>
-	/// Which hand the ball is currently displayed in. Defaults to Right —
-	/// an arbitrary but stable starting hand, reset on every possession
-	/// change (see _handSideHolderId) since a new holder has no carried-over
-	/// hand state to display. Cosmetic-only; never read by gameplay logic.
+	/// Which hand the ball is currently displayed in. Defaults to LEFT —
+	/// deliberately the OPPOSITE of the keyboard crossover's fixed burst
+	/// direction (PlayerController's Q is hardcoded to +1 = right). Because
+	/// HandSideResolver is direction-based (ball goes to the side you burst
+	/// toward), a Right default would make the first keyboard crossover a
+	/// silent no-op — burst-right onto an already-right ball moves nothing
+	/// (issue #73 diagnose). Starting on the left guarantees the first
+	/// crossover of every possession visibly switches the ball Left→Right.
+	/// Reset on every possession change (see _handSideHolderId) since a new
+	/// holder has no carried-over hand state to display. Cosmetic-only;
+	/// never read by gameplay logic.
 	/// </summary>
-	private HandSide _handSide = HandSide.Right;
+	private HandSide _handSide = HandSide.Left;
 
 	/// <summary>
 	/// The holder's DISPLAY phase (PlayerController.DisplayMove) as of the
@@ -774,7 +781,7 @@ public partial class BallController : Node3D
 		if (StateMachine.HolderPeerId != _handSideHolderId)
 		{
 			_handSideHolderId      = StateMachine.HolderPeerId;
-			_handSide               = HandSide.Right;
+			_handSide               = HandSide.Left; // see _handSide's doc: opposite the keyboard burst so the next crossover is visible
 			_lastHandDisplayPhase   = MovePhase.Inactive;
 		}
 
