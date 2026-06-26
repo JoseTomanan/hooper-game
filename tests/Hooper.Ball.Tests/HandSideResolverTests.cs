@@ -81,4 +81,19 @@ public class HandSideResolverTests
 
         Assert.Equal(HandSide.Right, result);
     }
+
+    [Fact]
+    public void Resolve_BurstTowardCurrentHand_IsNoOp()
+    {
+        // The resolver is DIRECTION-based, not a flip: bursting toward the side
+        // the ball is already on returns that same side, moving nothing. This
+        // is exactly why BallController defaults the displayed hand to Left —
+        // the keyboard crossover (Q) always bursts right (+1), so a Right
+        // default would make the first crossover of a possession a silent
+        // no-op (the cue looked "broken" on keyboard; issue #73 diagnose).
+        HandSide result = HandSideResolver.Resolve(
+            current: HandSide.Right, previousPhase: MovePhase.Startup, currentPhase: MovePhase.Active, burstDirection: 1f);
+
+        Assert.Equal(HandSide.Right, result);
+    }
 }
