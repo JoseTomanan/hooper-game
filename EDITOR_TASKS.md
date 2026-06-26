@@ -1004,20 +1004,33 @@ are explicitly placeholder poses using clips you already have from Step 2.
    - **Recovery** → `idle` (reads as settling/decelerating).
    You're free to pick differently — these are just the lowest-effort choices
    that need zero new assets and aren't thematically wrong.
-4. **Connect every state to every other state, both directions** (6 arrows
-   total among the 4 states: Locomotion↔Startup, Locomotion↔Active,
-   Locomotion↔Recovery, Startup↔Active, Startup↔Recovery, Active↔Recovery).
-   This is deliberately over-connected: `Travel()` only follows existing
-   transition arrows, and the display-phase code (#69) can jump between any
-   two of these states depending on what the broadcast says, so a missing arc
-   would make `Travel()` silently fail to switch for that one transition.
-5. Select each new transition arrow → in the Inspector, set **Switch Mode** to
+4. **Connect every state to every other state, both directions** (12 arrows
+   total — the 6 pairs Locomotion↔Startup, Locomotion↔Active,
+   Locomotion↔Recovery, Startup↔Active, Startup↔Recovery, Active↔Recovery,
+   each drawn as TWO one-way arrows). This is deliberately over-connected:
+   `Travel()` only follows existing transition arrows, and the display-phase
+   code (#69) can jump between any two of these states depending on what the
+   broadcast says, so a missing arc would make `Travel()` silently fail to
+   switch for that one transition. In particular, every state needs an arc
+   **back to Locomotion** — without it, the mesh never returns to the idle/run
+   blend after a move ends.
+5. **Leave Auto Advance OFF on all 12 arrows** (its default). This graph is
+   100% `Travel()`-driven from `PlayerController.ApplyAnimation`, so every arc
+   must stay **Enabled** (travel-only), never **Auto**. An Auto arc out of
+   `Locomotion` has no advance condition, so the state machine auto-advances
+   out of `Locomotion` the instant it enters — the idle/run blend never renders
+   and "running" animation silently disappears. (This regressed once exactly
+   this way.) Auto Advance is the toggle right next to Switch Mode in the same
+   Inspector panel — easy to flip by mistake. The lone exception is the
+   pre-existing `Start → Locomotion` arc, which is correctly Auto (it just drops
+   the dummy Start node into Locomotion on load).
+6. Select each new transition arrow → in the Inspector, set **Switch Mode** to
    **Immediate** (not "At End" or "Sync"). The phase transitions are driven by
    exact physics ticks in code (`MoveFrameData`'s 6/3/12-frame Crossover
    timing) — Immediate is what makes the animation cut land on the same tick
    the phase actually changes, which is what makes Startup's telegraph and
    Recovery's punish window legible (ADR-0003) rather than a half-second behind.
-6. Save the scene.
+7. Save the scene.
 
 **Verify (single instance):** Trigger a crossover (Q / right-stick flick).
 Confirm you see a **distinct** Startup pose during the freeze, a different pose
