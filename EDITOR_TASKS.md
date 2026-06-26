@@ -799,8 +799,7 @@ Across a dual-instance run:
 - ✅ `dotnet test tests/Hooper.Ball.Tests` shows 0 failed (green gate)
 
 When all pass, close **#38** and **#39** (after human confirms), and **#40** once
-the shadow choice is resolved. Then close the epic **#53**. Do NOT pull M7b (#54/#41,
-rigged animation) forward.
+the shadow choice is resolved. Then close the epic **#53**.
 
 ### Green-before-merge gate (issue #37)
 
@@ -820,6 +819,344 @@ doesn't merge regardless of how the visual change looks in the editor.
 
 ---
 
+## Milestone 7b editor tasks — rigged humanoid animation pass (issues #68, #41, #69, #73, #74)
+
+**Do these only after the M7b PR (`feat/54-anim-integration`) has merged.** All the
+C# is already written and unit-test-covered (`MoveAnimResolver`, `DisplayPhaseResolver`,
+`HandSideResolver`, `JumpShotReleaseResolver`) — what's missing is the AnimationTree
+itself, which only the editor can author. Epic **#54**. Sub-issues in dependency
+order: #68 (rig + locomotion blend, this section's bulk) → #41 (placeholder
+committed-move states — same AnimationTree, mostly just adding 3 more nodes) →
+#69 (remote-phase display — already code-complete; its "editor task" is just the
+dual-instance verification at Step 5) → #73 (ball-on-hand — Step 6, pure
+verification, no new nodes; the lateral offset is an export with a working
+default) → #74 (jump shot as a committed move — Step 7, also pure verification:
+it reuses the SAME Startup/Active/Recovery states Step 4 already builds and the
+SAME `ball_shoot` input action from Milestone 2, so there is nothing new to wire).
+
+### Step 1 — Build first
+
+Click the **hammer icon**. Godot must see the new `AnimationTreePath` export on
+`PlayerController`, plus `MoveAnimResolver`/`DisplayPhaseResolver`, before the
+Inspector shows the new field. If the build fails, read the Output panel and
+tell Claude Code.
+
+### Step 2 — Issue #68: get idle/run animations onto the rig
+
+**Source:** `Documents/kenney_animated-characters-protagonists/Animations/idle.fbx`
+and `run.fbx` (sibling folder to this repo, CC0 license) — same skeleton as the
+`characterMedium.fbx` already imported for M7a, so this should be a clean
+retarget with no rebinding. Ignore `jump.fbx` in that folder — no jump mechanic
+exists in this game.
+
+> ✅ **Items 1–2 are already done in the repo.** The clips were extracted
+> headlessly (Godot 4.6, `ResourceSaver`) from the source FBX, verified to
+> reload, and confirmed to retarget cleanly onto the M7a `characterMedium` rig
+> (skeleton at `Root/Skeleton3D`, all 40 bone-tracks match, 0 missing). Three
+> files are committed:
+> - **`assets/locomotion.res`** — an `AnimationLibrary` holding both clips,
+>   keyed `idle` and `run`. **This is the file you load in item 4.**
+> - `assets/idle.res`, `assets/run.res` — the individual `Animation` clips the
+>   library references (`res://` relative). Keep them; the library points at
+>   them. You do **not** load these directly.
+>
+> **Why a library and not the bare clips:** the AnimationPlayer's
+> **Manage Animations… → Load Library** button accepts an `AnimationLibrary`,
+> **not** a single `Animation` resource — loading `idle.res` there fails with
+> *"The file you selected is not a valid AnimationLibrary."* The library wrapper
+> is what that button expects. **Skip to item 3.** Items 1–2 below are kept only
+> as the record of how the clips were made (and for re-extracting if the source
+> ever changes).
+
+1. Copy `idle.fbx` and `run.fbx` into `assets/`.
+2. **Extract each clip to a standalone animation resource.** In Godot 4.x you
+   **cannot** load an `.fbx` directly into an AnimationPlayer — the FBX is a
+   *scene*, and the clip lives inside it. (If you try, Godot throws *"The file
+   you selected is an imported scene from a 3D model… save the animations using
+   Actions… → Set Animation Save Paths."* — that dialog is telling you to do
+   exactly this step first.) For **each** of `idle.fbx` and `run.fbx`:
+   - Select it in the **FileSystem** dock → **Import** tab → click
+     **Advanced Import Settings…** (button at the bottom of the Import dock).
+   - In the dialog, top toolbar → **Actions…** → **Set Animation Save Paths**.
+     Pick a save location/name — `res://assets/idle.res` and `res://assets/run.res`.
+     Confirm, then **Reimport**. You now have two standalone `.res` clips.
+   - ⚠️ **Benign warning, not an error:** while in that dialog you may see
+     `window.cpp:1090 - Attempting to make child window exclusive, but the parent
+     window already has another exclusive child … SceneImportSettingsDialog`.
+     This is a cosmetic Godot editor warning (the file-picker stacking on a
+     confirmation dialog) — the save still completes. Ignore it and finish the
+     save. It does **not** affect your build or the imported files.
+   - **Alternative route (avoids the dialog entirely):** instead of the above,
+     select the FBX → **Import** tab → change **Import As** from `Scene` to
+     **`Animation Library`** → **Reimport**. The whole FBX then loads as an
+     AnimationLibrary you can load in step 4. Downside: clips end up
+     namespaced (`libname/clip`), so the bare `idle`/`run` names the later
+     steps assume won't match — you'd reference the namespaced name in Step 3
+     instead. Prefer the `Set Animation Save Paths` route above for clean names.
+3. In `scenes/Player.tscn`, select the humanoid model node (the M7a
+   `CharacterModel` child holding `characterMedium.fbx`). Add a child
+   **AnimationPlayer**, name it `AnimationPlayer`.
+4. Load the animation **library** into that AnimationPlayer — with
+   `AnimationPlayer` selected, open the **Animation** panel (bottom dock) →
+   **Animation** menu → **Manage Animations…** → **Load Library** (folder icon,
+   top-right) → pick `assets/locomotion.res`.
+   - When prompted for a library **name, leave it blank / empty** (the default
+     `[Global]` library). That makes the clips addressable as bare `idle` and
+     `run` — which is what Step 3's BlendSpace1D and Step 4's states reference.
+     If you name the library (e.g. `loco`), the clips become `loco/idle` and you
+     would have to use those namespaced names everywhere downstream.
+   - **Do not** use the plain **Load** button on a single `idle.res`/`run.res` —
+     that path expects a library and errors with *"not a valid
+     AnimationLibrary."* The one `locomotion.res` brings in both clips at once.
+
+   You should end up with two playable animations named `idle` and `run` on this
+   one AnimationPlayer.
+5. **Set the AnimationPlayer's `Root Node` so the clip tracks resolve.** With
+   `AnimationPlayer` selected, find **Root Node** near the top of the Inspector
+   (default `..`) and set it to **`../CharacterModel`**.
+   > **Why this is mandatory, not optional.** Animation tracks are stored as
+   > *node paths* (e.g. `Root/Skeleton3D:RightForeArm`), resolved relative to the
+   > AnimationPlayer's `Root Node`. The clips were extracted from
+   > `idle.fbx`/`run.fbx`, whose internal hierarchy is `Root → Skeleton3D →
+   > bones`; the same rig instanced into this scene is named `CharacterModel`, and
+   > its skeleton lives at `CharacterModel/Root/Skeleton3D`. The default `..`
+   > points at the `CharacterBody3D` root, so every track fails to resolve and the
+   > model stays in bind pose. `Root Node = ../CharacterModel` re-bases all tracks
+   > onto the model in one move. (The AnimationTree inherits this resolution via
+   > its `Anim Player` pointer, so this single setting fixes both the locomotion
+   > blend and the Step 4 committed-move states.)
+   > **Symptom if you skip it:** the Output panel floods with
+   > `AnimationMixer … couldn't resolve track: 'Root/Skeleton3D:<bone>'` and
+   > nothing animates. If you see that, this is the fix.
+   > **If `../CharacterModel` doesn't clear the warnings**, the model's internal
+   > node names differ — temporarily enable **Editable Children** on
+   > `CharacterModel` to read the real path under it (look for the node containing
+   > `Skeleton3D`), set `Root Node` to that node, then disable Editable Children
+   > again. Tell Claude Code the path you found so this step can be corrected.
+
+### Step 3 — Issue #68: build the AnimationTree + locomotion blend
+
+1. Still under the humanoid model node, add a child **AnimationTree**, name it
+   `AnimationTree`.
+2. In the Inspector, set its **Anim Player** property to the `AnimationPlayer`
+   you just built (NodePath to the sibling node).
+3. Set **Tree Root** to **New AnimationNodeStateMachine**. Double-click the
+   state machine resource to open its graph editor (opens in the bottom
+   **AnimationTree** panel).
+4. Right-click in the graph → **Add BlendSpace1D** (not "Add Animation" — this
+   one needs to blend two clips, not play one).
+   > **Godot 4.x menu note:** the right-click menu is **flat** — it lists the node
+   > types directly (`Add Animation`, `Add BlendSpace1D`, `Add BlendSpace2D`, `Add
+   > BlendTree`, `Add StateMachine`, `Load…`). There is no parent "Add Node" entry
+   > to expand; this list *is* the add-node menu. Only `Add Animation` has a
+   > submenu arrow (it asks which clip up front). Click `Add BlendSpace1D`
+   > directly.
+
+   Rename this node **`Locomotion`** — the name must be exactly this;
+   `PlayerController` reads `"parameters/Locomotion/blend_position"` literally.
+5. Double-click the `Locomotion` node to open its blend-space editor. Add two
+   animation points:
+   - Position **0** → `idle`
+   - Position **6** → `run` (this must equal the Player's **Move Speed** export,
+     6.0 by default — see the gotcha below if you ever change MoveSpeed).
+6. Back in the state machine graph, drag from the **Start** marker to
+   `Locomotion` so it's the entry state.
+7. Select the `AnimationTree` node → in the Inspector, check **Active**. (The
+   code also force-enables this in `_Ready`, but starting it true avoids a blank
+   first frame before `_Ready` runs.)
+8. On the **Player** node (`CharacterBody3D` root of `Player.tscn`), find the
+   **Animation Tree Path** export (under PlayerController's exported
+   properties) and point it at the `AnimationTree` node you just built.
+9. Save the scene.
+
+> **Gotcha — keep MoveSpeed and the blend-space Max in sync.** The blend
+> position is fed from raw horizontal speed (m/s), and the `Locomotion`
+> BlendSpace1D's run point is a fixed number you typed in Step 5. If you ever
+> tune `MoveSpeed` on the Player node, also move that BlendSpace1D point to
+> match — otherwise the run blend will cap out early (or never reach full run)
+> and the animation will look wrong relative to actual speed. This is the same
+> kind of manual-sync gotcha as the court-bound walls vs. `CourtMin`/`CourtMax`
+> earlier in this file.
+
+**Verify (single instance):** Run `Main.tscn`. Standing still, the humanoid
+should hold an idle pose. Moving with WASD should blend smoothly into a run —
+no popping or T-pose. If it doesn't move at all, double-check **Active** is on
+and **Animation Tree Path** is actually assigned (Step 7/8).
+
+### Step 4 — Issue #41: add the committed-move placeholder states
+
+Same `AnimationTree` graph from Step 3 — this just adds three more nodes to it.
+There is **no bespoke crossover clip yet** (that's #70, filed under M8) — these
+are explicitly placeholder poses using clips you already have from Step 2.
+
+1. Reopen the state machine graph (double-click `Tree Root` in the Inspector,
+   or it may still be open in the bottom panel).
+2. Right-click → **Add Animation** three times, creating three new state nodes.
+   Rename them exactly **`Startup`**, **`Active`**, **`Recovery`** — these
+   names are a hard contract with the code: `PlayerController.ApplyAnimation`
+   calls `Travel(target.ToString())` where `target` is a `MoveAnimState` value,
+   so a typo here means the Travel() call silently fails to find a path.
+3. Assign a placeholder clip to each (recommended, since no crossover clip
+   exists yet — swap these later for #70's real clip with no code change):
+   - **Startup** → `idle` (reads as a frozen wind-up — fits the "movement
+     locked, telegraph window" design intent even as a placeholder).
+   - **Active** → `run` (reads as motion during the burst).
+   - **Recovery** → `idle` (reads as settling/decelerating).
+   You're free to pick differently — these are just the lowest-effort choices
+   that need zero new assets and aren't thematically wrong.
+4. **Connect every state to every other state, both directions** (12 arrows
+   total — the 6 pairs Locomotion↔Startup, Locomotion↔Active,
+   Locomotion↔Recovery, Startup↔Active, Startup↔Recovery, Active↔Recovery,
+   each drawn as TWO one-way arrows). This is deliberately over-connected:
+   `Travel()` only follows existing transition arrows, and the display-phase
+   code (#69) can jump between any two of these states depending on what the
+   broadcast says, so a missing arc would make `Travel()` silently fail to
+   switch for that one transition. In particular, every state needs an arc
+   **back to Locomotion** — without it, the mesh never returns to the idle/run
+   blend after a move ends.
+5. **Leave Auto Advance OFF on all 12 arrows** (its default). This graph is
+   100% `Travel()`-driven from `PlayerController.ApplyAnimation`, so every arc
+   must stay **Enabled** (travel-only), never **Auto**. An Auto arc out of
+   `Locomotion` has no advance condition, so the state machine auto-advances
+   out of `Locomotion` the instant it enters — the idle/run blend never renders
+   and "running" animation silently disappears. (This regressed once exactly
+   this way.) Auto Advance is the toggle right next to Switch Mode in the same
+   Inspector panel — easy to flip by mistake. The lone exception is the
+   pre-existing `Start → Locomotion` arc, which is correctly Auto (it just drops
+   the dummy Start node into Locomotion on load).
+6. Select each new transition arrow → in the Inspector, set **Switch Mode** to
+   **Immediate** (not "At End" or "Sync"). The phase transitions are driven by
+   exact physics ticks in code (`MoveFrameData`'s 6/3/12-frame Crossover
+   timing) — Immediate is what makes the animation cut land on the same tick
+   the phase actually changes, which is what makes Startup's telegraph and
+   Recovery's punish window legible (ADR-0003) rather than a half-second behind.
+7. Save the scene.
+
+**Verify (single instance):** Trigger a crossover (Q / right-stick flick).
+Confirm you see a **distinct** Startup pose during the freeze, a different pose
+during the burst, and a third during recovery — even though they're placeholder
+clips, the three phases should be visually distinguishable from each other and
+from idle/run. If nothing changes during a crossover, check the transition
+arrows from Step 4 — `Travel()` found no path and silently no-oped.
+
+### Step 5 — Issue #69: verify the opponent's commitment renders (dual-instance)
+
+This is the load-bearing fix and the actual done-bar for M7b — all its code
+(`DisplayPhaseResolver`, the `ApplyCosmetics`/`ApplyAnimation` role-aware read)
+is already merged; this step is purely verification, no further wiring.
+
+Run **Debug → Run Multiple Instances → 2** (Host + Join, same flow as M4/M5/M6b).
+
+1. On **either** window, trigger a crossover.
+2. Watch the **OTHER** window's view of that same player. Confirm:
+   - The Startup → Active → Recovery animation states from Step 4 play there
+     too, in sync with the triggering window (not stuck on Locomotion).
+   - The burst **lean** (M7a, revived by #69) tilts on the opponent too — this
+     was silently dead before #69 (the opponent's local `_machine` never
+     advanced, so it was always reading Inactive).
+3. Confirm idle/run locomotion still reads correctly for both players in both
+   windows (Step 3's blend, now also proven over netcode).
+
+When all three hold, **#69 is proven** — close it, then close **#41** (after
+confirming Step 4's single-instance check too), then close **#68**. Continue to
+Step 6 (#73) and Step 7 (#74) below before closing the epic.
+
+### Step 6 — Issue #73: verify the ball switches hands (single + dual-instance)
+
+All the code is already merged — `HandSideResolver` (pure, unit-tested) and
+`BallController`'s lateral offset in `TickHeld`/`TickDribbling`. Nothing new to
+build; this is sign-off, same as Step 5 was for #69.
+
+1. Run `Main.tscn` solo. Dribble in place — on the **keyboard** the ball
+   starts in the player's **left** hand (this is deliberate; see note below).
+   Trigger a crossover with **Q**. Confirm the ball visibly jumps from the
+   left side to the **right** side of the player. You do NOT need to catch
+   the exact burst tick by eye (it happens in one ~16 ms frame and is too
+   fast to time) — the before/after positions are what matters: left while
+   dribbling, right after the crossover.
+   > **Why it starts left (issue #73 diagnose):** the hand cue is
+   > direction-based — the ball moves to the side you burst toward — and the
+   > keyboard **Q** is hardcoded to always burst **right**. If the ball also
+   > started on the right, the first crossover would move it from right to
+   > right, i.e. nothing visible. Defaulting the displayed hand to the left
+   > (opposite Q's fixed direction) guarantees the first crossover of each
+   > possession is a visible left→right switch. A *second* same-direction Q
+   > in the same possession correctly stays on the right (you kept attacking
+   > the same way — not a bug). With a **gamepad** you can flick left or right
+   > and the ball follows the flick direction directly.
+2. The exact offset distance (`HandOffset`, default 0.18m) and which literal
+   side reads as "right" are hitl visual sign-off — if the ball overlaps the
+   body or sits unrealistically far out, tune `HandOffset` on the **Ball**
+   node's Inspector (no code change needed) and re-test.
+3. **Dual-instance** (`Debug → Run Multiple Instances → 2`): trigger a
+   crossover on one window, confirm the ball's hand-switch is visible on the
+   **other** window's view of that player too — this rides the same
+   `DisplayMove()` path #69 proved in Step 5, so if Step 5 passed and this
+   doesn't, the bug is novel to #73's wiring, not a repeat of the #69 gap.
+4. Confirm a NEW possession (rebound, turnover, make-it-take-it) resets the
+   ball to its default hand rather than carrying over the previous holder's
+   last hand side.
+
+When all four hold, **#73 is proven** — close it.
+
+### Step 7 — Issue #74: verify the jump shot as a committed move
+
+All the code is already merged — `JumpShot`, `JumpShotReleaseResolver` (pure,
+unit-tested), and the shoot-input rewire in `PlayerController`/`BallController`.
+This REPLACES the old instant shot: pressing shoot no longer releases the ball
+immediately.
+
+1. Run `Main.tscn` solo. Get the ball, then press the shoot button (`ball_shoot`
+   action from Milestone 2's Input Map — unchanged, nothing new to add).
+   Confirm:
+   - Movement locks immediately (same "planted" feel as a crossover's Startup).
+   - The ball stays in hand through a visible wind-up (~0.3s at default
+     tuning) — it must NOT leave the hand on the button press itself.
+   - The ball releases (transitions to its shot arc) at the END of the
+     wind-up, then movement stays locked through a brief recovery
+     (~0.33s) before you can move or shoot again.
+   - The Startup/Active/Recovery poses from Step 4 play during the shot —
+     same states the crossover uses (no bespoke jump-shot pose exists yet;
+     that's art, M8). This is fine and expected, not a bug.
+2. Confirm you **cannot** begin a shot while a crossover (or another shot) is
+   already running, and vice versa — `Begin()` enforces this for free; if it
+   ever doesn't, that's a real bug, not a tuning issue.
+3. **Dual-instance**: trigger a shot on one window, confirm the wind-up is
+   visible on the **other** window's view of that player (the defender's read
+   window, ADR-0003) before the ball actually leaves the hand there too.
+4. The exact frame counts (`JumpShot.DefaultFrameData`: 18 startup / 4 active /
+   20 recovery) are editor-tunable balance surface, not load-bearing — if the
+   windup feels too long/short, ask Claude Code to adjust the constructor's
+   defaults rather than hand-editing frame counts in the Inspector (there is
+   no export for them today; they're construction-time only).
+
+When all four hold, **#74 is proven** — close it, then close the epic **#54**.
+Leave the M8 bespoke-crossover-clip follow-up issue (filed under #61) open —
+it replaces the Step 4 placeholder clips later with no code change. Also leave
+#76/#77 (ball-hand-as-steal-surface, pump-fake) alone — both are explicitly
+deferred to M9, not part of this epic's done-bar.
+
+### Troubleshooting M7b
+
+| Symptom | Likely cause |
+|---|---|
+| *"The file you selected is an imported scene from a 3D model…"* when loading a clip | You pointed the AnimationPlayer at an `.fbx` directly — extract it first via **Set Animation Save Paths** (Step 2.2), then load the `.res` |
+| *"The file you selected is not a valid AnimationLibrary."* when loading a clip | You loaded a bare `Animation` (`idle.res`/`run.res`) into **Load Library**, which wants an `AnimationLibrary` — load **`assets/locomotion.res`** instead (Step 2.4); the individual clips are its references, not direct loads |
+| `window.cpp:1090 … make child window exclusive … SceneImportSettingsDialog` | Benign editor warning from stacked modal dialogs (Step 2.2) — the save still completes; ignore it |
+| Humanoid doesn't animate at all, stays in bind pose | `AnimationTreePath` not assigned (Step 8) or **Active** unchecked (Step 7 of Step 3) |
+| Output shows `AnimationTree resolved but 'parameters/playback' is null` | `Tree Root` isn't an `AnimationNodeStateMachine` — redo Step 3.3 |
+| Output shows `AnimationTreePath '...' is set but could not be resolved` | NodePath points to a renamed/deleted node — re-assign in Step 8 of Step 3 |
+| Idle/run blend works but crossover never changes pose | A transition arrow is missing (Step 4.4) — `Travel()` found no path, silently no-oped |
+| Crossover changes pose late / a beat after the freeze | A transition's Switch Mode is "At End"/"Sync" instead of **Immediate** (Step 4.5) |
+| State name typo (e.g. "startup" lowercase) | `MoveAnimState.ToString()` is case-sensitive and must exactly match the state node's name (Step 4.2) |
+| Run blend never reaches full speed / blends "too early" | BlendSpace1D's run point doesn't match the current `MoveSpeed` export — see the Step 3 gotcha |
+| Opponent's animation/lean still doesn't play on the other window | Confirm both windows are on the merged `feat/54-anim-integration` build — pre-#69 clients never read the broadcast phase for display |
+| Ball doesn't visibly switch hands | Check `HandOffset` isn't 0 on the **Ball** node's Inspector; confirm Step 6.1's timing (must be on the burst tick, not before) |
+| Pressing shoot still releases the ball instantly | Build is stale (old `BallController.TryShoot` cached) — rebuild (Step 1) and confirm the merged `feat/54-anim-integration` commit includes #74 |
+| Shot windup never ends / ball never releases | Check `Output` for `JustReleasedJumpShot` never firing — confirm `RequestBeginMove`'s `"jumpshot"` branch exists (a stale build symptom, same fix as above) |
+
+---
+
 ## What to deliberately NOT touch yet
 
 This list was written for the early gameplay milestones. **M7a (#53) now opens the
@@ -829,10 +1166,11 @@ restraint still holds:
 
 - Materials / shaders beyond what M7a's readability pass calls for — gray
   placeholder surfaces are otherwise fine.
-- Rigged animation (committed-move wind-ups driven by a skeleton) — that's the
-  DEFERRED **M7b (#54)**, not yet open. M7a's facing/lean is cosmetic transform
-  only, not rigged animation.
-- Imported 3D models (beyond the M7a humanoid mesh), sounds, UI polish, menus.
+- The bespoke crossover animation clip — M7b (#54, see its editor-tasks section
+  above) wires the rig and a placeholder pose; the real clip is M8 (#61, sub-issue
+  filed under that umbrella), sourced later via external AI tool / hand-authoring.
+- Imported 3D models (beyond the M7a humanoid mesh and M7b's idle/run rig),
+  sounds, UI polish, menus.
 
 Keeping these out keeps your learning surface small while you and the AI prove
 the hard systems first.

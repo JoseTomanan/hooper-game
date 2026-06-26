@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://erpigohkoatw" path="res://scripts/Player/PlayerController.cs" id="1_p0vlq"]
 [ext_resource type="Script" uid="uid://b2cug8lv7pgn8" path="res://scripts/Systems/BlobShadow.cs" id="2_blobshadow"]
 [ext_resource type="PackedScene" uid="uid://b58mjs28h2dpi" path="res://assets/characterMedium.fbx" id="3_3li8b"]
+[ext_resource type="AnimationLibrary" path="res://assets/locomotion.res" id="4_mdl7e"]
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_p0vlq"]
 
@@ -18,9 +19,74 @@ transparency = 1
 shading_mode = 2
 albedo_color = Color(0, 0, 0, 0.42)
 
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_mdl7e"]
+animation = &"locomotion/run"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_qu4a1"]
+animation = &"locomotion/idle"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_70d11"]
+animation = &"locomotion/run"
+
+[sub_resource type="AnimationNodeBlendSpace1D" id="AnimationNodeBlendSpace1D_cw2d6"]
+blend_point_0/node = SubResource("AnimationNodeAnimation_qu4a1")
+blend_point_0/pos = 0.0
+blend_point_1/node = SubResource("AnimationNodeAnimation_70d11")
+blend_point_1/pos = 6.0
+min_space = -0.2
+max_space = 6.2
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_cw2d6"]
+animation = &"locomotion/idle"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_khinc"]
+animation = &"locomotion/idle"
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_khinc"]
+advance_mode = 2
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_bruh7"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_6eyey"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_d3wef"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_o4126"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_lkdrv"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_p7iby"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_su2lo"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_ac2lo"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_re2lo"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_ac2su"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_re2su"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_re2ac"]
+
+[sub_resource type="AnimationNodeStateMachine" id="AnimationNodeStateMachine_bruh7"]
+states/Active/node = SubResource("AnimationNodeAnimation_mdl7e")
+states/Active/position = Vector2(377, 248)
+states/End/position = Vector2(629, 100)
+states/Locomotion/node = SubResource("AnimationNodeBlendSpace1D_cw2d6")
+states/Locomotion/position = Vector2(377, 100)
+states/Recovery/node = SubResource("AnimationNodeAnimation_cw2d6")
+states/Recovery/position = Vector2(496.0843, 179)
+states/Start/position = Vector2(179, 100)
+states/Startup/node = SubResource("AnimationNodeAnimation_khinc")
+states/Startup/position = Vector2(277.0843, 179)
+transitions = ["Start", "Locomotion", SubResource("AnimationNodeStateMachineTransition_khinc"), "Locomotion", "Startup", SubResource("AnimationNodeStateMachineTransition_bruh7"), "Locomotion", "Active", SubResource("AnimationNodeStateMachineTransition_6eyey"), "Locomotion", "Recovery", SubResource("AnimationNodeStateMachineTransition_d3wef"), "Startup", "Active", SubResource("AnimationNodeStateMachineTransition_o4126"), "Active", "Recovery", SubResource("AnimationNodeStateMachineTransition_lkdrv"), "Startup", "Recovery", SubResource("AnimationNodeStateMachineTransition_p7iby"), "Startup", "Locomotion", SubResource("AnimationNodeStateMachineTransition_su2lo"), "Active", "Locomotion", SubResource("AnimationNodeStateMachineTransition_ac2lo"), "Recovery", "Locomotion", SubResource("AnimationNodeStateMachineTransition_re2lo"), "Active", "Startup", SubResource("AnimationNodeStateMachineTransition_ac2su"), "Recovery", "Startup", SubResource("AnimationNodeStateMachineTransition_re2su"), "Recovery", "Active", SubResource("AnimationNodeStateMachineTransition_re2ac")]
+graph_offset = Vector2(56.084297, 0)
+
 [node name="CharacterBody3D" type="CharacterBody3D" unique_id=700308040]
 script = ExtResource("1_p0vlq")
 VisualRoot = NodePath("CharacterModel")
+AnimationTreePath = NodePath("AnimationTree")
 
 [node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1371142566]
 visible = false
@@ -39,3 +105,13 @@ surface_material_override/0 = SubResource("StandardMaterial3D_playershadow")
 
 [node name="CharacterModel" parent="." unique_id=216087023 instance=ExtResource("3_3li8b")]
 transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, -0.9975891, 0)
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=1871239818]
+root_node = NodePath("../CharacterModel")
+libraries/locomotion = ExtResource("4_mdl7e")
+
+[node name="AnimationTree" type="AnimationTree" parent="." unique_id=686892176]
+root_node = NodePath("../CharacterModel")
+tree_root = SubResource("AnimationNodeStateMachine_bruh7")
+anim_player = NodePath("../AnimationPlayer")
+parameters/Locomotion/blend_position = 0.0

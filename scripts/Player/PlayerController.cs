@@ -1,4 +1,5 @@
 using Godot;
+using Hooper.Ball;
 using Hooper.Moves;
 using Hooper.Systems;
 
@@ -135,6 +136,22 @@ public partial class PlayerController : CharacterBody3D
 	/// </summary>
 	[Export] public NodePath VisualRoot { get; set; }
 
+	/// <summary>
+	/// The AnimationTree that drives the rigged humanoid (M7b, issues #68/#41/#69).
+	/// Set this in the editor to the AnimationTree node added under the humanoid
+	/// model. Left unset, all animation is silently skipped — movement, collision,
+	/// and netcode are completely unaffected (this is cosmetic-only, ADR-0002/0004),
+	/// so a scene without the AnimationTree wired still plays correctly, just
+	/// without locomotion/committed-move animation.
+	///
+	/// The tree's root must be an AnimationNodeStateMachine whose state names match
+	/// MoveAnimState exactly (Locomotion / Startup / Active / Recovery), with the
+	/// Locomotion state a BlendSpace1D blending idle→run by horizontal speed. See
+	/// EDITOR_TASKS.md "Milestone 7b" for the exact node/parameter contract this
+	/// code binds to.
+	/// </summary>
+	[Export] public NodePath AnimationTreePath { get; set; }
+
 	// ── Committed-move tuning (M3) ────────────────────────────────────────────
 
 	/// <summary>
@@ -187,6 +204,29 @@ public partial class PlayerController : CharacterBody3D
 	/// </summary>
 	private float _visualYaw;
 
+	// ── Rigged-animation runtime (M7b, issues #68/#41/#69) ───────────────────
+
+	/// <summary>
+	/// The AnimationTree resolved from <see cref="AnimationTreePath"/> in _Ready,
+	/// or null if unset/unresolved. Null-guarded everywhere — animation is purely
+	/// cosmetic, so a null tree disables animation without affecting gameplay.
+	/// </summary>
+	private AnimationTree _animTree;
+
+	/// <summary>
+	/// The state-machine playback handle pulled from the AnimationTree's
+	/// "parameters/playback" once in _Ready. Travel() switches committed-move
+	/// states; cached so we don't re-fetch the Variant every tick.
+	/// </summary>
+	private AnimationNodeStateMachinePlayback _animPlayback;
+
+	/// <summary>
+	/// The committed-move animation state currently traveled to. Tracked so
+	/// ApplyAnimation only calls Travel() on an actual state change, not every
+	/// tick — repeated Travel() to the current state would restart the clip.
+	/// </summary>
+	private MoveAnimState _currentAnimState = MoveAnimState.Locomotion;
+
 	// ── Network state ─────────────────────────────────────────────────────────
 
 	/// <summary>
@@ -226,14 +266,27 @@ public partial class PlayerController : CharacterBody3D
 
 	/// <summary>
 	/// Authoritative committed-move phase received from the server, staged for
-	/// reconcile (M4, #21). ReceiveState's payload also carries frameInPhase/
-	/// moveId/moveParam (the wire format includes them, satisfying "frames
-	/// remaining... in the server tick broadcast" literally) but only Phase is
-	/// stored — see ReconcileFromServer's Step 0 comment for why FrameInPhase
-	/// is deliberately not compared, which leaves nothing else to act on here
-	/// for the one move type that exists today.
+	/// reconcile (M4, #21) AND for display of a remote player's commitment (M7b,
+	/// #69). ReconcileFromServer's Step 0 consults it only for the own-player
+	/// force-Inactive correction (FrameInPhase deliberately not compared — see
+	/// that comment); ApplyCosmetics/ApplyAnimation read it as the DISPLAY phase
+	/// for the client's copy of the opponent (DisplayPhaseResolver decides which
+	/// roles use it). The two consumers never conflict: reconciliation runs only
+	/// on the own player, display-from-broadcast only on the remote copy.
 	/// </summary>
 	private MovePhase _serverMovePhase;
+
+	/// <summary>
+	/// Authoritative moveId / move payload from the latest broadcast (M7b, #69).
+	/// Before #69 these wire fields were received but discarded (only the phase
+	/// fed reconciliation). Now they drive the DISPLAY of a remote player's burst
+	/// lean direction: the client's copy of the opponent has no live local
+	/// CurrentMove to read BurstDirection from, so it reconstructs the lean's
+	/// sign from the broadcast payload instead. Display-only — never feeds
+	/// reconciliation, prediction, or any authoritative state.
+	/// </summary>
+	private string _serverMoveId = "";
+	private float _serverMoveParam;
 
 	/// <summary>True once ReceiveState has arrived since the last _PhysicsProcess.</summary>
 	private bool _hasNewState;
@@ -268,6 +321,54 @@ public partial class PlayerController : CharacterBody3D
 		return _gameManager;
 	}
 
+	/// <summary>
+	/// Cached BallController reference, discovered via the "ball" group
+	/// (BallController.AddToGroup("ball") in its own _Ready) — the same
+	/// lazy-group-lookup pattern as _gameManager/GetGameManager, needed for
+	/// the same reason: a player node's _Ready can race ahead of the ball's
+	/// in the scene tree. Used by IsBallHolder and the shoot-input read in
+	/// SampleMoveInput (M7b, issue #74).
+	/// </summary>
+	private BallController _ball;
+
+	/// <summary>Resolves _ball, re-querying the group if still null. See field doc.</summary>
+	private BallController GetBall()
+	{
+		if (_ball == null)
+			_ball = GetTree().GetFirstNodeInGroup("ball") as BallController;
+		return _ball;
+	}
+
+	/// <summary>
+	/// True when this player node is the ball's current holder — gates the
+	/// shoot input the same way the old BallController.TryShoot's IsLocalHolder
+	/// check did (M7b, issue #74). Keyed on Name == HolderPeerId, the same
+	/// peer-ID-as-node-name identity contract IsLocalPlayer already uses.
+	/// </summary>
+	private bool IsBallHolder
+	{
+		get
+		{
+			BallController ball = GetBall();
+			return ball != null && ball.StateMachine.HolderPeerId.ToString() == Name;
+		}
+	}
+
+	/// <summary>
+	/// True for exactly one tick — the tick this node's committed-move machine
+	/// enters Active on a JumpShot (M7b, issue #74). BallController.
+	/// CheckJumpShotRelease reads this on the holder's node to fire the
+	/// actual ball-state transition; this property never touches ball state
+	/// itself, only exposes the timing. JumpShotReleaseResolver is the pure,
+	/// unit-tested decision — this is the thin node-side glue reading it off
+	/// the live local _machine (correct for every role that calls this: the
+	/// server's authoritative copy of either holder role, and the client's
+	/// own prediction — see CheckJumpShotRelease's doc for why the client's
+	/// copy of a REMOTE holder is never consulted here).
+	/// </summary>
+	public bool JustReleasedJumpShot =>
+		JumpShotReleaseResolver.ShouldRelease(_machine.JustEnteredActive, _machine.CurrentMove);
+
 	// ── Role helpers ──────────────────────────────────────────────────────────
 
 	private bool IsServer      => Multiplayer.IsServer();
@@ -299,6 +400,28 @@ public partial class PlayerController : CharacterBody3D
 		// of clobbering it with Vector3.Zero.
 		if (_mesh != null)
 			_meshRestPosition = _mesh.Position;
+
+		// Resolve the rigged-animation AnimationTree (M7b). Optional and fully
+		// null-guarded: a scene without it wired plays exactly as before, just
+		// without animation (cosmetic-only, ADR-0002/0004). Active is forced on
+		// so the tree drives the skeleton; the playback handle is cached once
+		// rather than re-fetched from the Variant dictionary every tick.
+		if (AnimationTreePath != null && !AnimationTreePath.IsEmpty)
+		{
+			_animTree = GetNodeOrNull<AnimationTree>(AnimationTreePath);
+			if (_animTree != null)
+			{
+				_animTree.Active = true;
+				_animPlayback = _animTree.Get("parameters/playback")
+					.As<AnimationNodeStateMachinePlayback>();
+				if (_animPlayback == null)
+					GD.PrintErr("[PlayerController] AnimationTree resolved but 'parameters/playback' is null — its root must be an AnimationNodeStateMachine. Committed-move animation disabled.");
+			}
+			else
+			{
+				GD.PrintErr($"[PlayerController] AnimationTreePath '{AnimationTreePath}' is set but could not be resolved — check for a renamed or deleted node. Animation disabled.");
+			}
+		}
 
 		_gameManager = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
 		if (_gameManager == null)
@@ -352,6 +475,7 @@ public partial class PlayerController : CharacterBody3D
 
 		ApplySmoothCorrection();
 		ApplyCosmetics();
+		ApplyAnimation();
 	}
 
 	// ── Tick roles ────────────────────────────────────────────────────────────
@@ -527,19 +651,23 @@ public partial class PlayerController : CharacterBody3D
 	/// authoritative start of a committed move.
 	///
 	/// Transfer mode: Reliable — a deliberate deviation from SubmitInput's
-	/// UnreliableOrdered, mirroring BallController.RequestShoot (#20). This is a
-	/// ONE-TIME discrete event with no redundancy: a dropped packet means the
+	/// UnreliableOrdered, the same one-time-discrete-event reasoning the old
+	/// BallController.RequestShoot (#20) used before M7b #74 replaced it with
+	/// phase-derived release. This is a ONE-TIME discrete event with no
+	/// redundancy: a dropped packet means the
 	/// player pressed crossover and nothing happened, a correctness bug, not a
 	/// smoothing concern. Reliable's head-of-line-blocking risk (the reason
 	/// ReceiveState/SubmitInput avoid it) doesn't apply because this fires
 	/// rarely — once per committed move attempt, not every physics tick — so
 	/// there is no continuous stream for a retransmit to stall.
 	///
-	/// moveId/param is the minimal payload to reconstruct a move. Only one
-	/// concrete move exists today ("crossover", carrying BurstDirection as
-	/// param) so a small if-chain is correct and proportionate — see
-	/// CommittedMove.Id's doc comment, which already anticipated this exact use.
-	/// Do not generalize into a move registry/factory until a second move exists.
+	/// moveId/param is the minimal payload to reconstruct a move. Two concrete
+	/// moves exist now ("crossover", carrying BurstDirection as param; and
+	/// "jumpshot", M7b issue #74, carrying no param) so a small if-chain is
+	/// still correct and proportionate — see CommittedMove.Id's doc comment,
+	/// which already anticipated this exact use. Revisit only if a third move
+	/// arrives with materially different reconstruction needs than a simple
+	/// id dispatch; do not build a registry/factory pre-emptively.
 	///
 	/// Security: same sender check as SubmitInput — PlayerController has a
 	/// per-peer node identity (Name == peer ID), unlike the Ball, which had to
@@ -557,9 +685,9 @@ public partial class PlayerController : CharacterBody3D
 	/// frame is not something Godot's MultiplayerApi guarantees — the accept/
 	/// reject boundary can land on either side of a single tick depending on
 	/// packet arrival timing. This is a ±1-tick (≈16ms) nondeterminism inherent
-	/// to ANY RPC-plus-fixed-tick-loop design (it equally affects SubmitInput
-	/// and BallController.RequestShoot); resolving it would require lockstep
-	/// simulation, well beyond M4's scope. Begin()'s own legality check is
+	/// to ANY RPC-plus-fixed-tick-loop design (it equally affects SubmitInput);
+	/// resolving it would require lockstep simulation, well beyond M4's scope.
+	/// Begin()'s own legality check is
 	/// still the sole authority regardless of which side of that boundary the
 	/// packet lands on.
 	///
@@ -583,8 +711,10 @@ public partial class PlayerController : CharacterBody3D
 
 		if (moveId == "crossover")
 			_machine.Begin(new Crossover(burstDirection: param));
-		// Unrecognized moveId: silently ignored. No other move type exists yet;
-		// a malformed/forged moveId from a tampered client simply does nothing.
+		else if (moveId == "jumpshot")
+			_machine.Begin(new JumpShot());
+		// Unrecognized moveId: silently ignored. A malformed/forged moveId
+		// from a tampered client simply does nothing.
 	}
 
 	/// <summary>
@@ -641,12 +771,15 @@ public partial class PlayerController : CharacterBody3D
 	/// moveParam is the move's reconstruction payload (today: Crossover's
 	/// BurstDirection), 0 when not applicable.
 	///
-	/// (#21 doubt cycle 1, finding #2) frameInPhase/moveId/moveParam are received
-	/// but deliberately NOT stored — only movePhase feeds reconciliation (see
-	/// ReconcileFromServer's Step 0). They still travel on the wire because the
-	/// issue text literally asks for "frames remaining" in the broadcast and a
-	/// future second move type may need them for richer reconciliation; storing
-	/// fields nothing reads today would just be dead state.
+	/// (#21 doubt cycle 1, finding #2) frameInPhase remains received-but-unstored —
+	/// only movePhase feeds reconciliation (see ReconcileFromServer's Step 0, which
+	/// explains why FrameInPhase must not be compared against this stale snapshot).
+	///
+	/// (M7b, #69) moveId/moveParam, formerly discarded for the same "nothing reads
+	/// them" reason, are now stored: they drive the DISPLAY of a remote player's
+	/// burst-lean direction (ApplyCosmetics), since the client's copy of the
+	/// opponent has no live local CurrentMove to read BurstDirection from. This is
+	/// a display-only read; reconciliation is unchanged.
 	/// </summary>
 	[Rpc(MultiplayerApi.RpcMode.Authority,
 		 CallLocal = false,
@@ -658,6 +791,8 @@ public partial class PlayerController : CharacterBody3D
 		_serverVel       = vel;
 		_serverAckedSeq  = ackSeq;
 		_serverMovePhase = (MovePhase)movePhase;
+		_serverMoveId    = moveId;
+		_serverMoveParam = moveParam;
 		_hasNewState     = true;
 	}
 
@@ -823,25 +958,94 @@ public partial class PlayerController : CharacterBody3D
 	/// Exact tilt axis and sign are hitl visual sign-off (human verifies in-editor
 	/// that the mesh faces the run direction and leans into the crossover burst).
 	///
-	/// Known limitation (accepted trade-off, issue #39 "non-networked"): for the
-	/// CLIENT's copy of the REMOTE player, _machine is never advanced by
-	/// TickClientRemotePlayer, so _machine.Phase is always Inactive on that path
-	/// and the lean cosmetic is always 0 for the opponent as seen by the client.
-	/// Facing still works (Velocity is set from ReceiveState). Driving the remote
-	/// player's lean would require syncing _machine.Phase to the client's remote
-	/// copy — out of scope for a non-networked cosmetic pass.
+	/// M7b (#69): the lean now reads the DISPLAY phase/burst from DisplayMove(),
+	/// not the raw local _machine. This revives the burst lean for the CLIENT's
+	/// copy of the REMOTE player — previously always 0 because that role never
+	/// advances its local _machine (the accepted #39 "non-networked" limitation).
+	/// The opponent's commitment now leans on your screen, driven by the same
+	/// broadcast phase already on the wire. Facing is unchanged — it derives from
+	/// Velocity, which ReceiveState already sets for the remote copy.
 	/// </summary>
 	private void ApplyCosmetics()
 	{
 		if (_mesh == null) return;
 
 		_visualYaw = FacingResolver.ResolveYaw(Velocity, _visualYaw);
-		float burstDir = (_machine.CurrentMove as Crossover)?.BurstDirection ?? 0f;
-		float tilt = LeanResolver.ResolveTilt(_machine.Phase, burstDir);
+		(MovePhase displayPhase, float burstDir) = DisplayMove();
+		float tilt = LeanResolver.ResolveTilt(displayPhase, burstDir);
 
 		// Y = yaw (face run direction), Z = lean (lateral tilt into burst).
 		// Exact sign/axis is hitl sign-off.
 		_mesh.Rotation = new Vector3(0f, _visualYaw, tilt);
+	}
+
+	/// <summary>
+	/// Drives the rigged AnimationTree each frame (M7b): the idle↔run locomotion
+	/// blend from horizontal speed (#68), and the committed-move state machine
+	/// (Locomotion/Startup/Active/Recovery) from the DISPLAY phase (#41 + #69).
+	///
+	/// Cosmetic-only and fully null-guarded — if the AnimationTree isn't wired,
+	/// this no-ops and gameplay is unaffected (ADR-0002/0004). Like ApplyCosmetics
+	/// it runs for EVERY role, so the opponent's committed-move animation plays on
+	/// your screen via the broadcast phase (DisplayMove), closing the ADR-0003 gap
+	/// that the lean alone left open.
+	///
+	/// The blend position is set from |horizontal Velocity| in m/s; the editor
+	/// authors the BlendSpace1D so 0 = idle and MoveSpeed = full run (see
+	/// EDITOR_TASKS.md M7b). Travel() fires only on a state CHANGE — re-traveling
+	/// to the current state would restart the placeholder clip every tick.
+	/// </summary>
+	private void ApplyAnimation()
+	{
+		if (_animTree == null) return;
+
+		// Locomotion blend (#68): feed horizontal speed; the Y component is
+		// vertical and irrelevant to a ground idle/run blend.
+		float horizontalSpeed = new Vector2(Velocity.X, Velocity.Z).Length();
+		_animTree.Set("parameters/Locomotion/blend_position", horizontalSpeed);
+
+		// Committed-move state (#41/#69): map the DISPLAY phase to an anim state
+		// and Travel() only when it changes. Enum names match the AnimationTree's
+		// state names by contract (EDITOR_TASKS.md M7b), so ToString() is the
+		// state id — Locomotion/Startup/Active/Recovery.
+		if (_animPlayback == null) return;
+		(MovePhase displayPhase, _) = DisplayMove();
+		MoveAnimState target = MoveAnimResolver.Resolve(displayPhase);
+		if (target != _currentAnimState)
+		{
+			_animPlayback.Travel(target.ToString());
+			_currentAnimState = target;
+		}
+	}
+
+	/// <summary>
+	/// The committed-move phase and burst direction this node should DISPLAY this
+	/// frame, resolved by role (M7b, #69). For every role this peer simulates
+	/// (host own, server's remote copy, client own) it reads the live local
+	/// _machine; for the client's copy of the opponent — the one role that never
+	/// advances its local _machine — it reads the broadcast phase/payload instead.
+	/// DisplayPhaseResolver owns that decision (pure + unit-tested); this method is
+	/// the thin node-side glue that reads the right fields per branch.
+	///
+	/// Burst direction: the own/simulated path reads it live off CurrentMove; the
+	/// broadcast path reconstructs it from _serverMoveId/_serverMoveParam (today,
+	/// "crossover" carrying BurstDirection — the same minimal payload RequestBeginMove
+	/// and MoveParamOf already speak). A JumpShot has no burst payload, so both
+	/// paths naturally return 0 for it — correct, since the jump shot has no
+	/// lateral lean of its own (ApplyCosmetics/LeanResolver only react to a
+	/// nonzero burst).
+	///
+	/// Public (M7b, issue #73): BallController.UpdateHandSide reads this on the
+	/// holder's node so the ball-on-hand display rides the same per-role DISPLAY
+	/// path #69 established, rather than re-deriving its own role logic.
+	/// </summary>
+	public (MovePhase phase, float burstDir) DisplayMove()
+	{
+		if (DisplayPhaseResolver.LocalMachineDrivesDisplay(IsServer, IsLocalPlayer))
+			return (_machine.Phase, (_machine.CurrentMove as Crossover)?.BurstDirection ?? 0f);
+
+		float burstDir = _serverMoveId == "crossover" ? _serverMoveParam : 0f;
+		return (_serverMovePhase, burstDir);
 	}
 
 	// ── Input (unchanged from M1a) ────────────────────────────────────────────
@@ -897,6 +1101,20 @@ public partial class PlayerController : CharacterBody3D
 		if (!float.IsNaN(crossoverDir) && _machine.Begin(new Crossover(crossoverDir)) && !isServer)
 			RpcId(1, MethodName.RequestBeginMove, "crossover", crossoverDir);
 
+		// Shoot: begin a JumpShot (M7b, issue #74) — this REPLACES the old
+		// instant "ball leaves hand on press" trigger that used to live in
+		// BallController.TryShoot. Holder-gated the same way that old trigger
+		// was (IsBallHolder mirrors its IsLocalHolder check); Begin() itself
+		// enforces Inactive-only legality, so a shot attempt mid-crossover (or
+		// mid-shot) silently no-ops exactly like a second crossover attempt
+		// would. The actual ball release is NOT requested here — it fires
+		// several ticks later, on this machine's own JustEnteredActive, which
+		// BallController.CheckJumpShotRelease reads via JustReleasedJumpShot.
+		BallController ball = GetBall();
+		if (ball != null && Input.IsActionJustPressed(ball.ShootAction) && IsBallHolder
+			&& _machine.Begin(new JumpShot()) && !isServer)
+			RpcId(1, MethodName.RequestBeginMove, "jumpshot", 0f);
+
 		// Feint modifier: abort during the startup window.
 		// The machine enforces the feint-window guard; false return is silent.
 		if (Input.IsActionJustPressed("move_feint") && _machine.Feint() && !isServer)
@@ -935,6 +1153,13 @@ public partial class PlayerController : CharacterBody3D
 				// Set the burst velocity on the first Active tick; on subsequent
 				// Active ticks the same velocity is maintained (no else-zero here).
 				// MoveAndSlide() applies it each tick, producing sustained separation.
+				// A JumpShot (M7b, #74) has no horizontal effect here — Velocity is
+				// already Vector3.Zero carried over from Startup (every Startup tick
+				// zeros it, above) and nothing sets it for a non-Crossover move, so
+				// the shooter stays planted through the release. BallController
+				// reads JustReleasedJumpShot to fire the actual ball transition on
+				// this same tick — that is a SEPARATE node's read of this machine's
+				// state, not a side effect this switch needs to produce.
 				if (_machine.JustEnteredActive && _machine.CurrentMove is Crossover crossover)
 					Velocity = new Vector3(crossover.BurstDirection * BurstSpeed, 0f, 0f);
 				MoveAndSlide();

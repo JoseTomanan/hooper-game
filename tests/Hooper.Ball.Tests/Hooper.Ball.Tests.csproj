@@ -61,6 +61,8 @@
     <Compile Include="..\..\scripts\Input\Crossover.cs" />
     <Compile Include="..\..\scripts\Input\GestureResult.cs" />
     <Compile Include="..\..\scripts\Input\RightStickGestureRecognizer.cs" />
+    <Compile Include="..\..\scripts\Input\JumpShot.cs" />
+    <Compile Include="..\..\scripts\Input\JumpShotReleaseResolver.cs" />
   </ItemGroup>
 
   <!--
@@ -98,6 +100,11 @@
     <Compile Include="..\..\scripts\Player\PredictionBuffer.cs" />
     <Compile Include="..\..\scripts\Player\FacingResolver.cs" />
     <Compile Include="..\..\scripts\Player\LeanResolver.cs" />
+    <Compile Include="..\..\scripts\Player\MoveAnimState.cs" />
+    <Compile Include="..\..\scripts\Player\MoveAnimResolver.cs" />
+    <Compile Include="..\..\scripts\Player\DisplayPhaseResolver.cs" />
+    <Compile Include="..\..\scripts\Player\HandSide.cs" />
+    <Compile Include="..\..\scripts\Player\HandSideResolver.cs" />
   </ItemGroup>
 
   <ItemGroup>
