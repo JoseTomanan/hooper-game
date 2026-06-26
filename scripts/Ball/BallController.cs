@@ -138,6 +138,38 @@ public partial class BallController : Node3D
 	/// <summary>Restitution for backboard contact [0..1].</summary>
 	[Export] public float BoardRestitution { get; set; } = 0.65f;
 
+	// ── Floor-bounce tunables (issue #66, M8 realism pass) ────────────────
+
+	/// <summary>
+	/// Coefficient of restitution for floor contact [0..1].
+	/// A regulation basketball on hardwood typically bounces back to ~55 % of
+	/// its drop height, giving e ≈ √0.55 ≈ 0.74 for a pure vertical drop;
+	/// 0.55 is a conservative tuned default that accounts for the horizontal
+	/// energy already absorbed before the loose-ball reaches the floor.
+	/// Slightly lower than RimRestitution (0.65) because the floor absorbs more
+	/// energy per contact than the rigid steel rim.
+	/// </summary>
+	[Export] public float FloorRestitution { get; set; } = 0.55f;
+
+	/// <summary>
+	/// Fraction of horizontal (XZ) speed retained after each floor contact [0..1].
+	/// Models rolling friction and spin-down per bounce. 1.0 = frictionless floor.
+	/// Default 0.8 means 20 % of lateral speed is lost each time the ball hits
+	/// the hardwood, so the ball rolls to a stop after a few bounces rather than
+	/// sliding indefinitely.
+	/// </summary>
+	[Export] public float FloorHorizontalDecay { get; set; } = 0.8f;
+
+	/// <summary>
+	/// Post-bounce vertical speed threshold (m/s). When a bounce would produce
+	/// a vertical rebound speed below this value, the ball settles immediately
+	/// (velocity zeroed) instead of executing an imperceptible micro-bounce.
+	/// Prevents infinite-bounce jitter and keeps the ball visibly at rest.
+	/// 0.5 m/s is below the threshold of visual perception at typical camera
+	/// distances; tune lower only if you want more "active" micro-bouncing.
+	/// </summary>
+	[Export] public float FloorSettleSpeed { get; set; } = 0.5f;
+
 	/// <summary>
 	/// Input action that fires a shot while Held / Dribbling. The human adds
 	/// this action in Project Settings → Input Map (EDITOR_TASKS).
@@ -940,12 +972,24 @@ public partial class BallController : Node3D
 		_arc.Step(dt);
 		Vector3 p = _arc.Position;
 
-		// Floor is the ground plane; the ball centre rests one radius above it.
+		// Floor contact: bounce the ball with restitution instead of dead-stopping.
+		// FloorBounce.Resolve is a pure helper (ADR-0004 headless-seam, issue #66):
+		//   - Depenetrates: sets position.Y = BallRadius.
+		//   - Reflects vY with FloorRestitution; decays vX/vZ by FloorHorizontalDecay.
+		//   - Settles (velocity = 0) when the post-bounce vertical speed would fall
+		//     below FloorSettleSpeed — preventing infinite micro-bounce jitter.
+		// This replaces the old `Velocity = Vector3.Zero` dead-stop, so the ball now
+		// bounces a few times before coming to rest, matching hardwood behaviour.
+		// The call site already guards p.Y <= BallRadius so Resolve's internal guard
+		// is a safety net, not the primary check — performance-neutral.
 		if (p.Y <= BallRadius)
 		{
-			p.Y = BallRadius;
-			_arc.Position = p;
-			_arc.Velocity = Vector3.Zero; // settled; no bounce model on the floor yet
+			(Vector3 bouncedPos, Vector3 bouncedVel) = FloorBounce.Resolve(
+				p, _arc.Velocity,
+				BallRadius, FloorRestitution,
+				FloorHorizontalDecay, FloorSettleSpeed);
+			_arc.Position = bouncedPos;
+			_arc.Velocity = bouncedVel;
 		}
 
 		// Half-court bound: clamp XZ so the loose ball cannot roll off the floor
