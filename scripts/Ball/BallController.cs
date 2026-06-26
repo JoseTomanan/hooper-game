@@ -143,33 +143,35 @@ public partial class BallController : Node3D
 
 	/// <summary>
 	/// Coefficient of restitution for floor contact [0..1].
-	/// A regulation basketball on hardwood typically bounces back to ~55 % of
-	/// its drop height, giving e ≈ √0.55 ≈ 0.74 for a pure vertical drop;
-	/// 0.55 is a conservative tuned default that accounts for the horizontal
-	/// energy already absorbed before the loose-ball reaches the floor.
-	/// Slightly lower than RimRestitution (0.65) because the floor absorbs more
-	/// energy per contact than the rigid steel rim.
+	/// Grounded in measured data: a regulation NBA ball inflated to spec rebounds
+	/// to ~1.22 m when dropped from 1.8 m on hardwood, i.e. COR = √(1.22/1.8) ≈
+	/// 0.82.  The simulation harness (docs/handoffs note / scratchpad) confirms
+	/// 0.82 produces a realistic decay — first rebound ~125 cm from a 1.8 m drop,
+	/// settling over ~15 ever-smaller bounces — rather than the dead single-thud
+	/// a lower value gives.  Higher than RimRestitution (0.65) because a properly
+	/// inflated ball returns more energy off the floor than off the rigid rim edge.
 	/// </summary>
-	[Export] public float FloorRestitution { get; set; } = 0.55f;
+	[Export] public float FloorRestitution { get; set; } = 0.82f;
 
 	/// <summary>
 	/// Fraction of horizontal (XZ) speed retained after each floor contact [0..1].
 	/// Models rolling friction and spin-down per bounce. 1.0 = frictionless floor.
-	/// Default 0.8 means 20 % of lateral speed is lost each time the ball hits
-	/// the hardwood, so the ball rolls to a stop after a few bounces rather than
-	/// sliding indefinitely.
+	/// Default 0.9 means 10 % of lateral speed is lost each contact — hardwood
+	/// contact is brief, so lateral loss per bounce is small; the ball keeps
+	/// rolling/drifting realistically rather than stopping dead.
 	/// </summary>
-	[Export] public float FloorHorizontalDecay { get; set; } = 0.8f;
+	[Export] public float FloorHorizontalDecay { get; set; } = 0.9f;
 
 	/// <summary>
 	/// Post-bounce vertical speed threshold (m/s). When a bounce would produce
 	/// a vertical rebound speed below this value, the ball settles immediately
 	/// (velocity zeroed) instead of executing an imperceptible micro-bounce.
 	/// Prevents infinite-bounce jitter and keeps the ball visibly at rest.
-	/// 0.5 m/s is below the threshold of visual perception at typical camera
-	/// distances; tune lower only if you want more "active" micro-bouncing.
+	/// 0.6 m/s ⇒ a ~1.8 cm rebound, below the threshold of visual perception at
+	/// typical camera distances; it trims the long tail of tiny bounces without
+	/// cutting any visible bounce short.  Tune lower for more "active" micro-bouncing.
 	/// </summary>
-	[Export] public float FloorSettleSpeed { get; set; } = 0.5f;
+	[Export] public float FloorSettleSpeed { get; set; } = 0.6f;
 
 	/// <summary>
 	/// Input action that fires a shot while Held / Dribbling. The human adds
