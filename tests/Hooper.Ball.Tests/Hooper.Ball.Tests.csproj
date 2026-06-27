@@ -99,6 +99,7 @@
   -->
   <ItemGroup>
     <Compile Include="..\..\scripts\Player\MovementMath.cs" />
+    <Compile Include="..\..\scripts\Player\HeadingMath.cs" />
     <Compile Include="..\..\scripts\Player\PredictionBuffer.cs" />
     <Compile Include="..\..\scripts\Player\FacingResolver.cs" />
     <Compile Include="..\..\scripts\Player\LeanResolver.cs" />
