@@ -1,6 +1,6 @@
 # ADR-0009 — Shot accuracy — distance-based scatter, server-authoritative
 
-- **Status:** Accepted (amended 2026-06-26 — movement penalty #64, contest penalty #65)
+- **Status:** Accepted (amended 2026-06-26 — movement penalty #64, contest penalty #65; design questions resolved 2026-06-27)
 - **Date:** 2026-06-26
 - **Superseded-by:** —
 
@@ -169,11 +169,17 @@ movementFactor = 1 + MovementScatterK × speedRatio
 
 New exports on `BallController`: `MovementScatterK` (default `1.0f`).
 
-**Open design question (deferred to human):** The continuous speed-ratio above vs.
-a discrete planted/not-planted threshold.  A threshold may fit ADR-0003's
-hybrid committed-move model better, where "committed" is a binary state.
-Implemented as continuous pending review; the K constant is the balance surface
-regardless of which variant wins.
+**Resolved (2026-06-27): continuous speed-ratio penalty.**  The discrete
+planted/not-planted threshold alternative was rejected.  Rationale: shot stillness
+is a property of the *analog-movement* half of ADR-0003's hybrid input model, not
+its committed-move half.  Movement speed is already a continuous, server-authoritative
+quantity (`holder.Velocity.Length()`), so a continuous penalty reads the system as it
+actually is — every increment of speed costs a little accuracy.  A discrete "planted"
+state would only be honest if it were tied to genuine committed-move state in the
+`CommittedMoveMachine`, which would (a) conflate the spacing/footwork spine with the
+commitment layer and (b) expand scope into ADR-0003 — explicitly out of bounds for
+this minimal accuracy slice.  The `MovementScatterK` constant remains the sole balance
+surface.
 
 ### #65 — defender-contest penalty
 
@@ -188,11 +194,17 @@ If no other player node exists (solo test), `contestFactor = 1`.
 New exports on `BallController`: `ContestScatterK` (default `1.0f`),
 `ContestRange` (default `2.2f` m).
 
-**Open design question (deferred to human):** Proximity-alone (current) vs.
-requiring the defender to be facing or actively closing out.  ADR-0003 earmarks
-the full contest/timing mechanic for the timing-window layer; this is the
-deliberately-minimal first slice.  The proximity gate must NOT grow into
-block/steal logic — that belongs to a later milestone.
+**Resolved (2026-06-27): proximity-alone.**  Requiring the defender to be facing or
+actively closing out was rejected for this slice.  Rationale: a facing-based contest
+would need the defender's *orientation*, and the only orientation the project has today
+is `scripts/Player/FacingResolver.cs`, which ADR-0004 makes explicitly cosmetic,
+client-side, and never authoritative.  Reading it to decide a make/miss would make an
+authoritative outcome depend on cosmetic state — a direct ADR-0004 violation.  Honest
+facing-based contest would require deriving a *server-authoritative* orientation (e.g.
+from the defender's authoritative movement/aim vector), which is new scope and belongs
+with the full contest/timing mechanic ADR-0003 earmarks for the timing-window layer.
+Proximity is the deliberately-minimal first slice and must NOT grow into block/steal
+logic — that belongs to a later milestone.
 
 ---
 
