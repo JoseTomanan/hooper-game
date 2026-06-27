@@ -55,7 +55,7 @@ public static class ShotFacing
     /// </summary>
     /// <param name="headingYaw">
     /// Shooter's current heading in radians (Y-rotation, Godot convention:
-    /// Atan2(x, z) on the XZ plane, −Z forward at yaw = 0).  Must be the
+    /// Atan2(x, z) on the XZ plane, +Z forward at yaw = 0).  Must be the
     /// server-authoritative <c>PlayerController.Heading</c>, NOT any cosmetic
     /// FacingResolver output.
     /// </param>
