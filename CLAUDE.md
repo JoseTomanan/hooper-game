@@ -140,6 +140,27 @@ GitHub Issues is the sole task tracker. TASKS.md no longer exists.
   - **Single-commit fix → straight to `main`:** that commit's body carries `Closes #X` (the M1a pattern).
   - **Multi-commit work → branch + PR:** the *PR body* carries `Closes #X`; the commits do not (see Branching below).
 
+### Starting AFK work (do this first, every time)
+
+Before writing any code for an `afk` issue, decide which discipline fits and
+**invoke it** — do not start coding unguided. This is a standing instruction for
+every agent on this repo; the human should not have to ask for it each time.
+
+- Investigate the task, then pick one:
+  - **`/tdd`** — when the task has a clear, testable spec and the risk is *getting
+    the behaviour right* (new logic, bug fixes, the deterministic ball, scoring/
+    possession rules). Red-green-refactor pins the behaviour.
+  - **`/doubt-driven-development`** — when the task is in unfamiliar code, the
+    stakes are high (netcode, irreversible/authoritative state), or a wrong-but-
+    confident answer would be costly to debug later. It subjects each non-trivial
+    decision to a fresh-context adversarial review.
+- The two are not mutually exclusive — if a task is both well-specced *and* high-
+  stakes, run `/tdd` for the behaviour and lean on doubt-driven review for the
+  risky decisions within it. When genuinely unsure, default to
+  `/doubt-driven-development`.
+- State which one you chose and why in your first response on the issue, then
+  invoke it.
+
 ### Branching & multi-commit issues
 
 Default to small: if an issue is one focused commit, commit straight to `main`.
