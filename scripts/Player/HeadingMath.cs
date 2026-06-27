@@ -64,9 +64,10 @@ public static class HeadingMath
     /// <param name="maxTurnRateDeg">
     /// Nominal maximum turn speed in degrees/second, applied at small
     /// angular differences. Scaled down by the non-linear factor for large
-    /// differences. Default ~540 °/s: a 180° back-turn at backTurnSlowFactor
-    /// 0.35 takes roughly (180 / (540 × 0.35)) ≈ 0.95 s — about one second,
-    /// clearly readable as a physical commitment.
+    /// differences. Default 400 °/s. A 180° back-turn at backTurnSlowFactor
+    /// 0.35 takes ≈ 0.75 s — this is the integrated time of the non-linear
+    /// schedule, not the constant-rate 180/(rate×f) figure (which overestimates
+    /// because the rate accelerates as the diff closes).
     /// </param>
     /// <param name="backTurnSlowFactor">
     /// [0, 1] fraction of maxTurnRateDeg applied at exactly 180°. The

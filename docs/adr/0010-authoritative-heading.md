@@ -91,7 +91,7 @@ backTurnSlowFactor, |diff|/π)`. Default values:
 
 | Export | Default | Reasoning |
 |--------|---------|-----------|
-| `MaxTurnRateDeg` | 540 °/s | At `BackTurnSlowFactor` 0.35, a 180° back-turn takes ≈ 0.95 s — one breath; clearly readable and punishable. A 20° correction takes ≈ 0.07 s — effectively instant to a human player. |
+| `MaxTurnRateDeg` | 400 °/s | At `BackTurnSlowFactor` 0.35, a 180° back-turn takes ≈ 0.75 s (integrated time of the non-linear schedule — the constant-rate 180/(rate×f) estimate overestimates because the rate accelerates as the diff closes). A 20° correction takes ≈ 0.07 s — effectively instant to a human player. |
 | `BackTurnSlowFactor` | 0.35 | The back-turn is ~3× slower than a micro-correction. Chosen so the pivot is legibly slow without being so slow it feels broken. Designer-tuneable via Inspector export. |
 
 ## Consequences
@@ -121,3 +121,11 @@ backTurnSlowFactor, |diff|/π)`. Default values:
   during a committed move, so the heading should not drift mid-burst. If a
   future move requires heading updates during Active/Recovery, `RotateToward`
   can be called explicitly in `TickCommittedMoveBehavior` for that phase.
+- Determinism caveat (ADR-0004): `HeadingMath.RotateToward` uses `MathF.Atan2`,
+  a transcendental not guaranteed by IEEE-754 to be bit-identical across
+  heterogeneous architectures (unlike `MovementMath`, which uses only basic
+  arithmetic). In practice this is bounded and safe: the shot-accuracy outcome
+  (#81) reads the SERVER's authoritative `Heading` only, and clients snap
+  `Heading` to the broadcast value before the reconciliation replay — so any
+  cross-arch drift in client prediction is corrected within the
+  unacknowledged-input window and never affects an authoritative outcome.

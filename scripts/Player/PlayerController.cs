@@ -112,12 +112,13 @@ public partial class PlayerController : CharacterBody3D
 	/// differences (micro-corrections). Scaled down toward BackTurnSlowFactor
 	/// as the angle widens to 180° (see HeadingMath.RotateToward).
 	///
-	/// 540 °/s: at BackTurnSlowFactor 0.35 a full 180° back-turn costs
-	/// ~(180 / (540 × 0.35)) ≈ 0.95 s — roughly one second, which is
-	/// visibly slow and punishable, while a 20° correction (~0.07 s) remains
+	/// Default 400 °/s: a full 180° back-turn takes ≈ 0.75 s — this is the
+	/// integrated time of the non-linear rate schedule (rate accelerates as the
+	/// diff closes), NOT the constant-rate 180/(rate×f) estimate, which
+	/// overestimates the time. A 20° micro-correction takes ≈ 0.07 s —
 	/// effectively instant to the player.
 	/// </summary>
-	[Export] public float MaxTurnRateDeg { get; set; } = 540f;
+	[Export] public float MaxTurnRateDeg { get; set; } = 400f;
 
 	/// <summary>
 	/// Fraction of MaxTurnRateDeg applied at exactly 180° (back-turn).
