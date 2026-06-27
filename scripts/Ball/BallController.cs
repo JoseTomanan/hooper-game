@@ -323,6 +323,33 @@ public partial class BallController : Node3D
 	/// </summary>
 	[Export] public float ContestRange { get; set; } = 2.2f;
 
+	/// <summary>
+	/// Strength of the facing-direction penalty applied to shot scatter (issue
+	/// #81, ADR-0009 amendment 2026-06-27).  When
+	/// <see cref="ShotScatterEnabled"/> is true, the scatter radius is scaled
+	/// by <c>1 + FacingScatterK × (angle / π)</c>, where <c>angle</c> is the
+	/// shortest angular distance in [0, π] between the shooter's
+	/// server-authoritative <c>Heading</c> (ADR-0010) and the direction to the
+	/// rim.  A squared-up shot has factor 1 (no penalty); a full back-to-basket
+	/// shot has factor <c>1 + FacingScatterK</c>.
+	///
+	/// Only active inside the <c>IsServer &amp;&amp; ShotScatterEnabled</c>
+	/// block — client prediction keeps aiming dead-centre, unchanged.
+	///
+	/// 0.8 ⇒ a back-to-basket shot (180°) scatters 1.8× as much as a
+	/// squared-up shot, placing the facing penalty slightly below the maximum
+	/// ContestScatterK = 1.0 on-ball closeout (2.0×).  A 90° side-on shot
+	/// scatters 1.4× — meaningful but still makeable on a clean look.  This
+	/// keeps the facing factor clearly subordinate to a full defender closeout
+	/// so the two penalties stack without producing absurd misses on moderate
+	/// contest + slight mis-facing scenarios.
+	///
+	/// Uses <c>holder.Heading</c> (ADR-0010), NOT <c>FacingResolver</c> —
+	/// FacingResolver is cosmetic-only and cannot feed an authoritative outcome
+	/// (see ADR-0004 and ADR-0009 §Resolved 2026-06-27).
+	/// </summary>
+	[Export] public float FacingScatterK { get; set; } = 0.8f;
+
 	// ── Reconciliation tuning (mirrors PlayerController's tunables) ───────
 
 	/// <summary>
@@ -1395,7 +1422,18 @@ public partial class BallController : Node3D
 				}
 			}
 
-			float accuracyMultiplier = movementFactor * contestFactor;
+			// #81 — facing penalty: back-to-basket shots scatter more.
+			// Reads holder.Heading (server-authoritative, ADR-0010), NOT
+			// FacingResolver — using FacingResolver here would make an
+			// authoritative make/miss depend on cosmetic state, the
+			// "ADR-0004 trap" documented in ADR-0009 §Resolved 2026-06-27.
+			float facingFactor = ShotFacing.Multiplier(
+				holder.Heading,
+				holder.GlobalPosition,
+				ShotTarget,
+				FacingScatterK);
+
+			float accuracyMultiplier = movementFactor * contestFactor * facingFactor;
 
 			aimTarget = ShotScatter.Scatter(
 				ShotTarget, distance, angle01, radius01,
