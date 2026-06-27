@@ -123,4 +123,40 @@ public class ShotMakeCurveTests
         Assert.True(pressured < 90.0 && pressured > 40.0,
             $"sprinting+contested 2 m was {pressured:0.0}%, expected a real but not hopeless dip.");
     }
+
+    [Fact]
+    public void FacingPenaltyDragsMakePercentDownMonotonically()
+    {
+        // Pins the #81 off-facing penalty end-to-end: ShotFacing.Multiplier
+        // (at the BallController default FacingScatterK = 0.8) composed onto the
+        // real make curve. Squared-up must be unpenalised; side-on and
+        // back-to-basket must drop make% monotonically. Bands are wide enough to
+        // absorb small FacingScatterK tuning, tight enough to catch a regression.
+        // If FacingScatterK is retuned, update these bands and explain why.
+        const float K = 0.8f;
+        Vector3 rim     = new(0, 3.05f, 0);
+        Vector3 shooter = new(0, 0, 5f);          // 5 m in front of the rim (+Z)
+        float toRimYaw  = Mathf.Atan2(rim.X - shooter.X, rim.Z - shooter.Z);
+
+        float squaredMult = ShotFacing.Multiplier(toRimYaw,                          shooter, rim, K); // 1.0
+        float sideMult    = ShotFacing.Multiplier(Norm(toRimYaw + Mathf.Pi / 2f),    shooter, rim, K); // 1.4
+        float backMult    = ShotFacing.Multiplier(Norm(toRimYaw + Mathf.Pi),         shooter, rim, K); // 1.8
+
+        double squared = MakePct(5f, squaredMult);
+        double side    = MakePct(5f, sideMult);
+        double back    = MakePct(5f, backMult);
+
+        Assert.True(side < squared, $"side-on {side:0.0}% should be < squared-up {squared:0.0}%");
+        Assert.True(back < side,    $"back-to-basket {back:0.0}% should be < side-on {side:0.0}%");
+        Assert.True(side >= 40.0 && side <= 53.0, $"side-on (90°) make% was {side:0.0}%, expected [40, 53].");
+        Assert.True(back >= 28.0 && back <= 43.0, $"back-to-basket (180°) make% was {back:0.0}%, expected [28, 43].");
+    }
+
+    // Wrap an angle into [-π, π] for the facing test above.
+    private static float Norm(float a)
+    {
+        while (a >  Mathf.Pi) a -= 2f * Mathf.Pi;
+        while (a < -Mathf.Pi) a += 2f * Mathf.Pi;
+        return a;
+    }
 }

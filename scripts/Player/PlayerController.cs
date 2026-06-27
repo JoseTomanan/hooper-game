@@ -105,6 +105,33 @@ public partial class PlayerController : CharacterBody3D
 	/// <summary>Top ground speed in metres/second.</summary>
 	[Export] public float MoveSpeed { get; set; } = 6.0f;
 
+	// ── Heading tuning (issue #80) ────────────────────────────────────────────
+
+	/// <summary>
+	/// Nominal maximum turn speed in degrees/second, applied at small angular
+	/// differences (micro-corrections). Scaled down toward BackTurnSlowFactor
+	/// as the angle widens to 180° (see HeadingMath.RotateToward).
+	///
+	/// Default 400 °/s: a full 180° back-turn takes ≈ 0.75 s — this is the
+	/// integrated time of the non-linear rate schedule (rate accelerates as the
+	/// diff closes), NOT the constant-rate 180/(rate×f) estimate, which
+	/// overestimates the time. A 20° micro-correction takes ≈ 0.07 s —
+	/// effectively instant to the player.
+	/// </summary>
+	[Export] public float MaxTurnRateDeg { get; set; } = 400f;
+
+	/// <summary>
+	/// Fraction of MaxTurnRateDeg applied at exactly 180° (back-turn).
+	/// The effective rate lerps continuously from MaxTurnRateDeg at diff=0°
+	/// to MaxTurnRateDeg × BackTurnSlowFactor at diff=180° — no sharp gear-change.
+	///
+	/// 0.35: a back-turn is about 3× slower than a small correction, making
+	/// a reverse-pivot a real readable commitment (ADR-0003) while micro-aim
+	/// still feels near-instant. Values closer to 1.0 approach linear (no
+	/// slowdown); values closer to 0 approach a frozen back-turn.
+	/// </summary>
+	[Export] public float BackTurnSlowFactor { get; set; } = 0.35f;
+
 	/// <summary>Ground acceleration in m/s².</summary>
 	[Export] public float Accel { get; set; } = 30.0f;
 
@@ -160,6 +187,23 @@ public partial class PlayerController : CharacterBody3D
 	/// MoveSpeed to create visible separation — that is the point of the move.
 	/// </summary>
 	[Export] public float BurstSpeed { get; set; } = 12.0f;
+
+	// ── Authoritative heading (issue #80) ────────────────────────────────────
+
+	/// <summary>
+	/// Server-authoritative heading in radians (Y-rotation, Godot convention).
+	/// Updated every tick inside Move() via HeadingMath.RotateToward —
+	/// the same shared step used for prediction, server authority, and
+	/// reconciliation replay (ADR-0002). Broadcast in ReceiveState alongside
+	/// pos/vel; the client replays it during reconciliation exactly as pos/vel.
+	///
+	/// This replaces the cosmetic-only FacingResolver.ResolveYaw(Velocity, …)
+	/// as the source of the display yaw (ApplyCosmetics). Elevating it to
+	/// server-authoritative state also unblocks issue #81 (facing-based shot
+	/// accuracy), which needs to read the server's opinion of where the player
+	/// is actually pointing when the shot releases.
+	/// </summary>
+	public float Heading { get; private set; }
 
 	// ── Committed-move state (M3, local-only) ─────────────────────────────────
 
@@ -263,6 +307,15 @@ public partial class PlayerController : CharacterBody3D
 	/// <summary>Authoritative state received from the server, staged for reconcile.</summary>
 	private Vector3 _serverPos;
 	private Vector3 _serverVel;
+
+	/// <summary>
+	/// Authoritative heading received from the server, staged for reconcile
+	/// (own player) and for display (client's remote copy). Snapped to
+	/// Heading before the replay loop in ReconcileFromServer so the heading
+	/// is replayed forward from the correct authoritative base — identical
+	/// treatment to _serverPos/_serverVel (ADR-0002).
+	/// </summary>
+	private float _serverHeading;
 
 	/// <summary>
 	/// Authoritative committed-move phase received from the server, staged for
@@ -503,9 +556,12 @@ public partial class PlayerController : CharacterBody3D
 
 		// Broadcast authoritative state to all clients.
 		// ackSeq = 0 because the host has no client-input queue to acknowledge.
+		// Heading is piggybacked on this existing broadcast — same staleness
+		// and redundancy properties as pos/vel; no separate channel needed.
 		// Source: Rpc(MethodName.X) broadcasts to all peers.
 		Rpc(MethodName.ReceiveState, 0, GlobalPosition, Velocity,
-			(int)_machine.Phase, _machine.FrameInPhase, MoveIdOf(_machine.CurrentMove), MoveParamOf(_machine.CurrentMove));
+			(int)_machine.Phase, _machine.FrameInPhase, MoveIdOf(_machine.CurrentMove), MoveParamOf(_machine.CurrentMove),
+			Heading);
 	}
 
 	/// <summary>
@@ -530,10 +586,11 @@ public partial class PlayerController : CharacterBody3D
 			Move(_pendingInput, delta);
 
 		// Echo _serverAckedSeq so the client prunes its pending buffer, plus
-		// the committed-move state piggybacked on the same broadcast (see
-		// ReceiveState below for the payload rationale).
+		// the committed-move state and heading piggybacked on the same broadcast
+		// (see ReceiveState below for the payload rationale).
 		Rpc(MethodName.ReceiveState, _serverAckedSeq, GlobalPosition, Velocity,
-			(int)_machine.Phase, _machine.FrameInPhase, MoveIdOf(_machine.CurrentMove), MoveParamOf(_machine.CurrentMove));
+			(int)_machine.Phase, _machine.FrameInPhase, MoveIdOf(_machine.CurrentMove), MoveParamOf(_machine.CurrentMove),
+			Heading);
 	}
 
 	/// <summary>
@@ -547,7 +604,7 @@ public partial class PlayerController : CharacterBody3D
 		// baseline is the freshest authoritative state we have.
 		if (_hasNewState)
 		{
-			ReconcileFromServer(_serverPos, _serverVel, _serverAckedSeq, delta);
+			ReconcileFromServer(_serverPos, _serverVel, _serverAckedSeq, _serverHeading, delta);
 			_hasNewState = false;
 		}
 
@@ -602,6 +659,11 @@ public partial class PlayerController : CharacterBody3D
 		// Keep Velocity in sync with server so any future collision queries
 		// against this node return plausible values (not stale local data).
 		Velocity = _serverVel;
+		// Adopt the server's heading directly — the remote copy never runs
+		// Move(), so it has no local HeadingMath step to advance Heading.
+		// Setting it here ensures ApplyCosmetics displays the correct
+		// authoritative facing on the opponent's model.
+		Heading = _serverHeading;
 	}
 
 	// ── Server RPC: receive client input ─────────────────────────────────────
@@ -785,7 +847,7 @@ public partial class PlayerController : CharacterBody3D
 		 CallLocal = false,
 		 TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
 	private void ReceiveState(int ackSeq, Vector3 pos, Vector3 vel,
-		int movePhase, int frameInPhase, string moveId, float moveParam)
+		int movePhase, int frameInPhase, string moveId, float moveParam, float heading)
 	{
 		_serverPos       = pos;
 		_serverVel       = vel;
@@ -793,6 +855,11 @@ public partial class PlayerController : CharacterBody3D
 		_serverMovePhase = (MovePhase)movePhase;
 		_serverMoveId    = moveId;
 		_serverMoveParam = moveParam;
+		// Authoritative heading for reconcile (own player) and display
+		// (client's remote copy). Same UnreliableOrdered staleness properties
+		// as pos/vel — fine, since the replay loop catches the own player up
+		// and the remote player displays the latest received value.
+		_serverHeading   = heading;
 		_hasNewState     = true;
 	}
 
@@ -823,7 +890,7 @@ public partial class PlayerController : CharacterBody3D
 	/// under any nonzero latency, since the client's local FrameInPhase is
 	/// *always* further along than the last snapshot once a move is running).
 	/// </summary>
-	private void ReconcileFromServer(Vector3 authPos, Vector3 authVel, int ackSeq, double delta)
+	private void ReconcileFromServer(Vector3 authPos, Vector3 authVel, int ackSeq, float authHeading, double delta)
 	{
 		// Step 0: only correct the ONE divergence that actually matters for
 		// the contract — the server confirms the move the client predicted
@@ -892,6 +959,15 @@ public partial class PlayerController : CharacterBody3D
 		// Snap physics to authoritative state.
 		GlobalPosition = authPos;
 		Velocity       = authVel;
+
+		// Snap heading to the authoritative value BEFORE the replay loop so
+		// each replayed Move() step advances it forward from the correct base —
+		// identical treatment to GlobalPosition/Velocity. Without this snap,
+		// the replay would diverge from the server's path whenever the server's
+		// heading differed from the local prediction's heading at the ack point
+		// (e.g. after a large turn where the non-linear rate produces
+		// per-tick differences that accumulate over unacknowledged ticks).
+		Heading = authHeading;
 
 		// Step 3: replay unacknowledged inputs using the fixed physics timestep.
 		// The server simulated each of these at the same fixed rate, so using
@@ -970,7 +1046,15 @@ public partial class PlayerController : CharacterBody3D
 	{
 		if (_mesh == null) return;
 
-		_visualYaw = FacingResolver.ResolveYaw(Velocity, _visualYaw);
+		// Display yaw now derives from the authoritative Heading (issue #80,
+		// ADR-0010) instead of FacingResolver.ResolveYaw(Velocity, …).
+		// Heading is server-authoritative and replayed on reconcile, so it
+		// expresses the true bounded turn cost that both players observe —
+		// not a purely cosmetic velocity-derived estimate. FacingResolver is
+		// left in the codebase for historical reference; it is no longer
+		// called on this code path. _visualYaw is preserved as the field name
+		// for the lean computation below, but its value now comes from Heading.
+		_visualYaw = Heading;
 		(MovePhase displayPhase, float burstDir) = DisplayMove();
 		float tilt = LeanResolver.ResolveTilt(displayPhase, burstDir);
 
@@ -1222,6 +1306,16 @@ public partial class PlayerController : CharacterBody3D
 		// running Godot instance — this call is behavior-identical to the
 		// inline ComputeVelocity it replaced.
 		Velocity = MovementMath.ComputeVelocity(Velocity, wishDir, delta, MoveSpeed, Accel, Decel);
+
+		// Advance the authoritative heading toward wishDir at a bounded
+		// non-linear rate (issue #80, ADR-0010). Placed here — inside the
+		// shared motion step — so it is replayed identically on the server,
+		// the client prediction, and the reconciliation replay loop without
+		// any extra code paths. HeadingMath.RotateToward is pure, so this
+		// introduces no role-checks or network calls in violation of the
+		// "keep Move() pure" contract.
+		Heading = HeadingMath.RotateToward(Heading, inputDir, delta, MaxTurnRateDeg, BackTurnSlowFactor);
+
 		MoveAndSlide();
 	}
 }
