@@ -1,6 +1,6 @@
 # ADR-0009 — Shot accuracy — distance-based scatter, server-authoritative
 
-- **Status:** Accepted (amended 2026-06-26 — movement penalty #64, contest penalty #65; design questions resolved 2026-06-27)
+- **Status:** Accepted (amended 2026-06-26 — movement penalty #64, contest penalty #65; design questions resolved 2026-06-27; amended 2026-06-27 — facing penalty #81)
 - **Date:** 2026-06-26
 - **Superseded-by:** —
 
@@ -249,3 +249,73 @@ random punishment.
 1.8 m drop ⇒ COR ≈ √(1.22/1.8) ≈ 0.82.  Simulated, 0.82 gives a realistic
 first rebound (~125 cm) decaying over ~15 ever-smaller bounces, versus the dead
 single thud a low value produced.
+
+---
+
+## Amendment — facing penalty (#81)
+
+**Date:** 2026-06-27
+
+### What changed
+
+A third accuracy factor — `facingFactor` — is added to the multiplicative
+model.  The composition becomes:
+
+```
+accuracyMultiplier = movementFactor × contestFactor × facingFactor
+
+facingFactor = 1 + FacingScatterK × (angle / π)
+
+where angle = shortest angular distance in [0, π] between
+              holder.Heading and the direction to ShotTarget
+```
+
+Implementation lives in `scripts/Ball/ShotFacing.cs` — a new pure static
+class following the same headless-seam discipline (ADR-0004) as `ShotScatter`.
+The factor is computed at the call site in `BallController.ApplyShootLocally`
+and passed into `ShotScatter.Scatter`; `ShotScatter` itself is unchanged.
+
+### Why holder.Heading, not FacingResolver (the ADR-0004 unblocking)
+
+Issue #65 noted that a facing-based contest penalty would require the
+*defender's* orientation, and the only orientation available at the time was
+`FacingResolver` — explicitly cosmetic-only and client-local (ADR-0004).
+Reading it to decide a make/miss would make an authoritative outcome depend on
+cosmetic, non-replicated state.
+
+Issue #80 (ADR-0010) elevated the *shooter's* heading to server-authoritative
+state: `PlayerController.Heading` is updated inside `Move()`, replayed during
+reconciliation, and broadcast alongside pos/vel.  This gives the server an
+honest, authoritative orientation that can feed an outcome.  Issue #81 uses it.
+
+The rule from ADR-0004 holds: `FacingResolver` is never read on the authority
+path.  The penalty reads `holder.Heading` (ADR-0010) exclusively.
+
+### Balance surface
+
+New export on `BallController`: `FacingScatterK` (default `0.8f`).
+
+At `FacingScatterK = 0.8`:
+
+| Facing angle | facingFactor |
+|---|---|
+| 0° (squared up) | 1.00 |
+| 45° | 1.20 |
+| 90° (side-on) | 1.40 |
+| 135° | 1.60 |
+| 180° (back-to-basket) | 1.80 |
+
+The back-to-basket penalty (1.80×) is deliberately below the full on-ball
+closeout penalty (`ContestScatterK = 1.0` → 2.0×).  A turnaround fadeaway
+with no defender is harder than an open squared-up shot but not as punishing
+as a fully-contested shot — matching basketball intuition.  The two penalties
+compose: a moving, contested, back-to-basket shot stacks all three factors.
+
+### Cross-references
+
+- ADR-0010: elevates `Heading` to server-authoritative state — the prerequisite
+  for this penalty.
+- Issue #80: implements ADR-0010 (the `Heading` property on `PlayerController`).
+- Issue #81: this amendment.
+- `ShotScatter` is unchanged; the factor is computed and composed at the call
+  site, keeping `ShotScatter` agnostic to the source of the multiplier.
