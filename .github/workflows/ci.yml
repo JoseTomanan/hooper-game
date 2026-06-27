@@ -1,0 +1,41 @@
+name: CI
+
+# Why this exists
+# ----------------
+# The C# layer of a Godot 4 .NET project is an ordinary .NET assembly that
+# references the engine API through the `Godot.NET.Sdk` NuGet package, so it
+# compiles on a plain runner with no Godot editor installed.
+#
+# Crucially, the GAME project (HOOPER GAME.csproj) and the TEST project
+# (tests/Hooper.Ball.Tests) are two SEPARATE compile surfaces — the game csproj
+# excludes tests/**/*.cs, and the test csproj enables ImplicitUsings while the
+# game csproj does not. That asymmetry means `dotnet test` alone can stay green
+# while the game project fails to compile (e.g. a file using System.MathF with
+# only `using Godot;` resolves in tests via the implicit global `using System;`
+# but not in the game build). So we build the game project EXPLICITLY here —
+# that is the guard `dotnet test` cannot provide.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # Build the GAME project on its own compile surface. This is the step that
+      # catches game-only compile errors the test project would mask.
+      - name: Build game project
+        run: dotnet build "HOOPER GAME.csproj" --configuration Debug
+
+      # Build + run the deterministic ball / physics test suite.
+      - name: Run tests
+        run: dotnet test tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj --configuration Debug

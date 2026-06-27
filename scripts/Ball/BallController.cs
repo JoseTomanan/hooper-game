@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Godot;
 using Hooper.Moves;
@@ -138,6 +139,40 @@ public partial class BallController : Node3D
 	/// <summary>Restitution for backboard contact [0..1].</summary>
 	[Export] public float BoardRestitution { get; set; } = 0.65f;
 
+	// ── Floor-bounce tunables (issue #66, M8 realism pass) ────────────────
+
+	/// <summary>
+	/// Coefficient of restitution for floor contact [0..1].
+	/// Grounded in measured data: a regulation NBA ball inflated to spec rebounds
+	/// to ~1.22 m when dropped from 1.8 m on hardwood, i.e. COR = √(1.22/1.8) ≈
+	/// 0.82.  The simulation harness (docs/handoffs note / scratchpad) confirms
+	/// 0.82 produces a realistic decay — first rebound ~125 cm from a 1.8 m drop,
+	/// settling over ~15 ever-smaller bounces — rather than the dead single-thud
+	/// a lower value gives.  Higher than RimRestitution (0.65) because a properly
+	/// inflated ball returns more energy off the floor than off the rigid rim edge.
+	/// </summary>
+	[Export] public float FloorRestitution { get; set; } = 0.82f;
+
+	/// <summary>
+	/// Fraction of horizontal (XZ) speed retained after each floor contact [0..1].
+	/// Models rolling friction and spin-down per bounce. 1.0 = frictionless floor.
+	/// Default 0.9 means 10 % of lateral speed is lost each contact — hardwood
+	/// contact is brief, so lateral loss per bounce is small; the ball keeps
+	/// rolling/drifting realistically rather than stopping dead.
+	/// </summary>
+	[Export] public float FloorHorizontalDecay { get; set; } = 0.9f;
+
+	/// <summary>
+	/// Post-bounce vertical speed threshold (m/s). When a bounce would produce
+	/// a vertical rebound speed below this value, the ball settles immediately
+	/// (velocity zeroed) instead of executing an imperceptible micro-bounce.
+	/// Prevents infinite-bounce jitter and keeps the ball visibly at rest.
+	/// 0.6 m/s ⇒ a ~1.8 cm rebound, below the threshold of visual perception at
+	/// typical camera distances; it trims the long tail of tiny bounces without
+	/// cutting any visible bounce short.  Tune lower for more "active" micro-bouncing.
+	/// </summary>
+	[Export] public float FloorSettleSpeed { get; set; } = 0.6f;
+
 	/// <summary>
 	/// Input action that fires a shot while Held / Dribbling. The human adds
 	/// this action in Project Settings → Input Map (EDITOR_TASKS).
@@ -182,6 +217,111 @@ public partial class BallController : Node3D
 	/// edge, Y = far edge (largest Z). See CourtMin for layout notes.
 	/// </summary>
 	[Export] public Vector2 CourtMax { get; set; } = new(4.88f, 11.88f);
+
+	// ── Shot scatter tunables (issue #62, ADR-0009) ──────────────────────
+
+	/// <summary>
+	/// Master switch for distance-based shot scatter (issue #62, ADR-0009).
+	/// Enabled by default: the magnitudes below were tuned against a Monte-Carlo
+	/// make-percentage sweep through the real ShotArc + RimBackboard physics (see
+	/// ShotMakeCurveTests) so the resulting curve matches real basketball — open
+	/// layups automatic, an open three ~41 % (NBA wide-open ≈ 38–40 %), long
+	/// heaves falling off steeply.  Flip to <c>false</c> only to restore the old
+	/// "every uncontested shot makes" behaviour for an isolated test.
+	///
+	/// Server-only: the scatter draw runs only when IsServer (client prediction
+	/// keeps aiming dead-centre; ReconcileFromServer snaps the arc to the
+	/// server's possibly-missed trajectory within ~1 RTT — no new netcode
+	/// needed, see ADR-0009 and the ApplyShootLocally comment below).
+	/// </summary>
+	[Export] public bool ShotScatterEnabled { get; set; } = true;
+
+	/// <summary>
+	/// Base scatter radius per metre of shot distance, in metres per metre.
+	/// The raw offset radius before capping is
+	/// <c>ShotScatterPerMeter × horizontalDistance</c>.
+	/// 0.026 m/m is tuned so the make curve tracks real FG% in the playable
+	/// range: shots under ~4 m make ~100 % open, ~5 m ≈ 67 %, an open three
+	/// (~6.75 m) ≈ 41 %.  Since a make requires the offset to land inside the
+	/// inner-rim radius (0.11 m), make% ≈ (0.11 / (perMeter·distance))² — raise
+	/// this to make shooting harder, lower it to make it more forgiving.
+	/// </summary>
+	[Export] public float ShotScatterPerMeter { get; set; } = 0.026f;
+
+	/// <summary>
+	/// Hard cap on the BASE scatter offset radius (metres), before accuracy
+	/// penalties.  Prevents very long shots from producing absurd multi-metre
+	/// misses.  0.45 m is roughly the rim radius × 2 — a clear miss that still
+	/// looks like an honest attempt; it floors long open heaves at ~6–12 % and
+	/// binds only on long, heavily-penalised shots (the penalty multiplier is
+	/// applied after this cap — see ShotScatter.Scatter).
+	/// </summary>
+	[Export] public float MaxShotScatter { get; set; } = 0.45f;
+
+	/// <summary>
+	/// Seed for the server-side shot-scatter RNG (<c>_shotRng</c>).
+	/// Changing this seed changes the miss pattern for a given sequence of
+	/// shots but does not affect whether scatter is active (that is
+	/// <see cref="ShotScatterEnabled"/>).  Exported so it can be varied in
+	/// the editor to test different miss distributions without recompiling.
+	/// </summary>
+	[Export] public int ShotScatterSeed { get; set; } = 12345;
+
+	/// <summary>
+	/// Strength of the movement penalty applied to shot scatter (issue #64,
+	/// ADR-0009).  When <see cref="ShotScatterEnabled"/> is true and the
+	/// shooter is moving, the scatter radius is scaled by
+	/// <c>1 + MovementScatterK × speedRatio</c>, where
+	/// <c>speedRatio = clamp(velocity / MoveSpeed, 0, 1)</c>.  A full-sprint
+	/// shot receives the maximum penalty; a stationary shot has factor 1 (no
+	/// penalty beyond the base distance scatter).
+	///
+	/// Only active inside the <c>IsServer &amp;&amp; ShotScatterEnabled</c>
+	/// block — client prediction keeps aiming dead-centre, unchanged.
+	///
+	/// 0.8 ⇒ a full-sprint shot scatters 1.8× as much as a stationary one; in the
+	/// make sweep this turns an open 5 m shot (~67 %) into ~35 % when fired on the
+	/// move, leaving close shots forgiving unless ALSO contested.
+	///
+	/// <b>Open design question (#64):</b> continuous speed-ratio (current)
+	/// vs. a discrete planted/not-planted threshold.  A threshold may fit
+	/// ADR-0003's hybrid committed-move model better.  Default continuous
+	/// pending human review.
+	/// </summary>
+	[Export] public float MovementScatterK { get; set; } = 0.8f;
+
+	/// <summary>
+	/// Strength of the defender-contest penalty applied to shot scatter (issue
+	/// #65, ADR-0009).  When <see cref="ShotScatterEnabled"/> is true and the
+	/// other player is within <see cref="ContestRange"/> metres (XZ), the
+	/// scatter radius is scaled by <c>1 + ContestScatterK × proximity</c>,
+	/// where <c>proximity = clamp(1 - dist / ContestRange, 0, 1)</c>.  A
+	/// defender exactly at the shooter's position gives factor
+	/// <c>1 + ContestScatterK</c>; beyond <see cref="ContestRange"/> gives
+	/// factor 1 (no penalty).  If no other player node is present (solo test),
+	/// factor is 1.
+	///
+	/// Only active inside the <c>IsServer &amp;&amp; ShotScatterEnabled</c>
+	/// block — client prediction keeps aiming dead-centre, unchanged.
+	///
+	/// <b>Open design question (#65):</b> proximity-alone (current) vs.
+	/// requiring the defender to be facing/closing-out.  ADR-0003 earmarks the
+	/// full contest/timing mechanic for the timing-window layer; this is the
+	/// deliberately-minimal first slice.  Do not grow into block/steal logic
+	/// here — that belongs in a later milestone.  Default proximity-only
+	/// pending human review.
+	/// </summary>
+	[Export] public float ContestScatterK { get; set; } = 1.0f;
+
+	/// <summary>
+	/// XZ-plane distance (metres) within which the other player contests a
+	/// shot (issue #65, ADR-0009).  Beyond this range the contest penalty
+	/// factor is 1 (no effect).  Pairs with <see cref="ContestScatterK"/>.
+	/// 2.2 m is roughly an arm's-length closeout: a defender ~1 m away yields a
+	/// ~1.5× scatter factor, dropping an open 5 m shot from ~67 % to ~43 %; a
+	/// defender right on top approaches the full <see cref="ContestScatterK"/>.
+	/// </summary>
+	[Export] public float ContestRange { get; set; } = 2.2f;
 
 	// ── Reconciliation tuning (mirrors PlayerController's tunables) ───────
 
@@ -347,6 +487,19 @@ public partial class BallController : Node3D
 	/// </summary>
 	private int _lastShooterPeerId;
 
+	// ── Shot scatter RNG (issue #62, ADR-0009) ─────────────────────────────
+
+	/// <summary>
+	/// Server-side seeded RNG for shot scatter (ADR-0009).  Seeded from
+	/// <see cref="ShotScatterSeed"/> in _Ready (see initialisation note there).
+	/// Only USED when <c>IsServer &amp;&amp; ShotScatterEnabled</c>; constructed
+	/// on every peer anyway because _Ready runs everywhere, but a client never
+	/// draws from it — the server's draw is the authoritative one, and the
+	/// existing ReconcileFromServer broadcast snaps the client's predicted arc
+	/// onto the server's (possibly scattered) trajectory within ~1 RTT.
+	/// </summary>
+	private Random _shotRng;
+
 	/// <summary>
 	/// Cached GameManager reference, looked up via the "game_manager" group
 	/// (see GameManager's class doc "Discovery"). Null-guarded loudly in
@@ -412,6 +565,15 @@ public partial class BallController : Node3D
 		// listen-server already had between scene load and the Host button press.
 		StateMachine = new BallStateMachine(initialHolderPeerId: 0);
 		StateMachine.StartDribble();
+
+		// Seed the shot-scatter RNG from the editor-tunable ShotScatterSeed.
+		// Constructed on every peer (client + server) because _Ready runs
+		// everywhere, but only ever DRAWN from on the server (see _shotRng field
+		// doc and ApplyShootLocally).  Constructing it unconditionally is
+		// harmless — a System.Random allocation costs nothing — and keeps the
+		// field non-null so there is no null-check at draw time if the
+		// IsServer branch ever widens.
+		_shotRng = new Random(ShotScatterSeed);
 
 		_mesh = GetNodeOrNull<Node3D>("MeshInstance3D");
 		if (_mesh == null)
@@ -940,12 +1102,24 @@ public partial class BallController : Node3D
 		_arc.Step(dt);
 		Vector3 p = _arc.Position;
 
-		// Floor is the ground plane; the ball centre rests one radius above it.
+		// Floor contact: bounce the ball with restitution instead of dead-stopping.
+		// FloorBounce.Resolve is a pure helper (ADR-0004 headless-seam, issue #66):
+		//   - Depenetrates: sets position.Y = BallRadius.
+		//   - Reflects vY with FloorRestitution; decays vX/vZ by FloorHorizontalDecay.
+		//   - Settles (velocity = 0) when the post-bounce vertical speed would fall
+		//     below FloorSettleSpeed — preventing infinite micro-bounce jitter.
+		// This replaces the old `Velocity = Vector3.Zero` dead-stop, so the ball now
+		// bounces a few times before coming to rest, matching hardwood behaviour.
+		// The call site already guards p.Y <= BallRadius so Resolve's internal guard
+		// is a safety net, not the primary check — performance-neutral.
 		if (p.Y <= BallRadius)
 		{
-			p.Y = BallRadius;
-			_arc.Position = p;
-			_arc.Velocity = Vector3.Zero; // settled; no bounce model on the floor yet
+			(Vector3 bouncedPos, Vector3 bouncedVel) = FloorBounce.Resolve(
+				p, _arc.Velocity,
+				BallRadius, FloorRestitution,
+				FloorHorizontalDecay, FloorSettleSpeed);
+			_arc.Position = bouncedPos;
+			_arc.Velocity = bouncedVel;
 		}
 
 		// Half-court bound: clamp XZ so the loose ball cannot roll off the floor
@@ -1118,7 +1292,7 @@ public partial class BallController : Node3D
 		if (!IsServer && !IsLocalHolder) return;
 		if (holder == null) return;
 		if (holder.JustReleasedJumpShot)
-			ApplyShootLocally();
+			ApplyShootLocally(holder);
 	}
 
 	/// <summary>
@@ -1126,8 +1300,16 @@ public partial class BallController : Node3D
 	/// the ShotArc. Used both by the predicting holder (CheckJumpShotRelease's
 	/// client branch) and by the server (CheckJumpShotRelease's server branch,
 	/// for either holder role) — see CheckJumpShotRelease's doc for the full
-	/// authority split (M7b, #74; this method itself is unchanged from M4).
+	/// authority split (M7b, #74; extended in #64/#65 to accept the holder for
+	/// accuracy-penalty computation).
 	/// </summary>
+	/// <param name="holder">
+	/// The PlayerController currently holding the ball.  Used server-side only
+	/// (inside the <c>IsServer &amp;&amp; ShotScatterEnabled</c> block) to read
+	/// <c>Velocity</c> and <c>MoveSpeed</c> for the movement penalty (#64) and
+	/// <c>GlobalPosition</c> + peer id for the contest-proximity lookup (#65).
+	/// Never null at either call site (CheckJumpShotRelease guards this).
+	/// </param>
 	/// <returns>True if the shot was legal (Held/Dribbling) and applied.</returns>
 	///
 	/// (Doubt cycle 1, finding #3) The release point used here is whichever
@@ -1151,13 +1333,76 @@ public partial class BallController : Node3D
 	/// method (for its own prediction) and so also sets its own
 	/// _lastShooterPeerId — harmless, since RegisterBasket no-ops on a client
 	/// regardless of which id it's called with.
-	private bool ApplyShootLocally()
+	private bool ApplyShootLocally(PlayerController holder)
 	{
 		int holderAtShootTime = StateMachine.HolderPeerId;
 		if (!StateMachine.Shoot()) return false;
 
 		_lastShooterPeerId = holderAtShootTime;
-		_arc = new ShotArc(GlobalPosition, ShotTarget, ShotApexHeight, Gravity);
+
+		// ── Shot scatter (issue #62, ADR-0009) ───────────────────────────────
+		// Clients predict dead-centre: aimTarget == ShotTarget.  The server
+		// draws from _shotRng to possibly offset the target into a miss; the
+		// existing ReconcileFromServer broadcast (which runs every in-flight
+		// tick) snaps the client's predicted arc onto the server's (possibly
+		// scattered) trajectory within ~1 RTT — no new netcode needed.
+		//
+		// Distance is XZ-plane only: ignoring the Y difference (shooter height
+		// vs. rim height) means a tall and a short player shooting from the
+		// same floor position get identical scatter magnitude, which is the
+		// intended mechanic (scatter grows with court distance, not arc length).
+		Vector3 aimTarget = ShotTarget;
+		if (IsServer && ShotScatterEnabled)
+		{
+			float dx       = ShotTarget.X - GlobalPosition.X;
+			float dz       = ShotTarget.Z - GlobalPosition.Z;
+			float distance = MathF.Sqrt(dx * dx + dz * dz);
+
+			float angle01  = (float)_shotRng.NextDouble();
+			float radius01 = (float)_shotRng.NextDouble();
+
+			// ── Accuracy multiplier: movement (#64) × contest (#65) ──────────
+			// Both penalties are pure server-side reads of already-authoritative
+			// state (holder Velocity/MoveSpeed; player node GlobalPosition).
+			// No new netcode: clients keep aiming dead-centre and are corrected
+			// by the next ReconcileFromServer broadcast, exactly as with the
+			// base #62 distance scatter.  The multiplier is ≥ 1; a stationary
+			// uncontested shot has multiplier 1.0 and behaves identically to
+			// the pre-#64/#65 path.
+
+			// #64 — movement penalty: full-sprint shot scatters most.
+			// speedRatio is in [0,1]: 0 = standing still, 1 = full MoveSpeed.
+			float speedRatio      = holder.MoveSpeed > 0f
+				? Math.Clamp(holder.Velocity.Length() / holder.MoveSpeed, 0f, 1f)
+				: 0f;
+			float movementFactor  = 1f + MovementScatterK * speedRatio;
+
+			// #65 — contest penalty: defender within ContestRange → larger factor.
+			// proximity is in [0,1]: 0 = at ContestRange edge, 1 = on top of shooter.
+			float contestFactor   = 1f;
+			int   shooterPeerId   = holderAtShootTime; // captured before Shoot() cleared it
+			int   defenderPeerId  = OtherPlayerPeerId(shooterPeerId);
+			if (defenderPeerId != 0 && Players != null)
+			{
+				var defenderNode = Players.GetNodeOrNull<Node3D>(defenderPeerId.ToString());
+				if (defenderNode != null && ContestRange > 0f)
+				{
+					float ddx       = defenderNode.GlobalPosition.X - holder.GlobalPosition.X;
+					float ddz       = defenderNode.GlobalPosition.Z - holder.GlobalPosition.Z;
+					float defDist   = MathF.Sqrt(ddx * ddx + ddz * ddz);
+					float proximity = Math.Clamp(1f - defDist / ContestRange, 0f, 1f);
+					contestFactor   = 1f + ContestScatterK * proximity;
+				}
+			}
+
+			float accuracyMultiplier = movementFactor * contestFactor;
+
+			aimTarget = ShotScatter.Scatter(
+				ShotTarget, distance, angle01, radius01,
+				ShotScatterPerMeter, MaxShotScatter, accuracyMultiplier);
+		}
+
+		_arc = new ShotArc(GlobalPosition, aimTarget, ShotApexHeight, Gravity);
 		return true;
 	}
 
