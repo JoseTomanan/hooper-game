@@ -21,6 +21,7 @@ locked unless explicitly revisited (see Decision Discipline in §4 below).
 | [ADR-0008](docs/adr/0008-possession-rules.md) | Half-court 1v1 possession rules: make-it-take-it, live rebound, take-it-back/clear |
 | [ADR-0010](docs/adr/0010-authoritative-heading.md) | Player heading: server-authoritative, bounded non-linear turn rate, integrated into Move() |
 | [ADR-0011](docs/adr/0011-claude-authors-scenes.md) | Claude authors `.tscn`/`.res`/`project.godot` by text-edit; human owns feel + verification only |
+| [ADR-0013](docs/adr/0013-afk-hitl-separate-issues.md) | AFK build work and HITL editor verification live in separate issues (no dual-labelled issue) |
 
 ---
 
@@ -160,6 +161,7 @@ GitHub Issues is the sole task tracker. TASKS.md no longer exists.
 
 - Issues labeled `afk` are Claude Code's to implement.
 - Issues labeled `hitl` require a human editor step (see EDITOR_TASKS.md) before they can close.
+- **AFK build and HITL verify are separate issues** ([ADR-0013](docs/adr/0013-afk-hitl-separate-issues.md)). An issue is single-purpose: either an `afk` build issue (closes on merge) or a `hitl` verify issue (closes only when proven in-engine) — **do not file or leave an issue carrying both labels.** If work has a build half and a verification half, split it; the `afk` issue merges and a separate `hitl` issue holds the dual-instance verify. When a legacy dual-labelled `afk` issue's code merges, close it and move the verify into a `hitl` issue (name the destination in the closing comment, name the sources in the verify issue — the #83–#86 → #114 pattern). One `hitl` issue may consolidate several AFK features proven in the same editor session.
 - **Done means proven, not written.** A `hitl` issue is only closed after the human confirms it in the editor (the relevant EDITOR_TASKS steps). Do not close it on code alone.
 - When finishing a unit of work, tell the human which issue(s) to close and which EDITOR_TASKS steps (if any) they must complete first.
 - **Closing keyword placement.** Exactly one artifact closes an issue, and it carries `Closes #X` in its *description/body* (never the subject line), so GitHub auto-closes the issue and the close is traceable:
