@@ -54,11 +54,15 @@ public class MoveFrameDataTests
     }
 
     [Fact]
-    public void Constructor_FeintWindowEqualToStartup_IsValid()
+    public void Constructor_FeintWindowEqualToStartup_Throws()
     {
-        // Window exactly filling the startup phase means feint is available the whole startup.
-        var fd = new MoveFrameData(startupFrames: 6, activeFrames: 4, recoveryFrames: 10, feintWindowFrames: 6);
-        Assert.Equal(6, fd.FeintWindowFrames);
+        // Tightened for #77: window must be strictly < startup so at least one
+        // committed-tail Startup frame always exists (ADR-0003). A window == startup
+        // would eliminate the point of no return. See Constructor_FeintWindowEqualsStartup_NowThrows
+        // in the FeintRecoveryFrames section below for the same assertion presented
+        // as a new-rule test; this existing test is updated to match the new rule.
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => new MoveFrameData(startupFrames: 6, activeFrames: 4, recoveryFrames: 10, feintWindowFrames: 6));
     }
 
     // ── Invalid construction ──────────────────────────────────────────────────
@@ -105,5 +109,52 @@ public class MoveFrameDataTests
     {
         Assert.Throws<ArgumentOutOfRangeException>(
             () => new MoveFrameData(startupFrames: 6, activeFrames: 4, recoveryFrames: 10, feintWindowFrames: -1));
+    }
+
+    // ── FeintRecoveryFrames ───────────────────────────────────────────────────
+
+    [Fact]
+    public void Constructor_OmittingFeintRecoveryFrames_DefaultsToZero()
+    {
+        // All existing call sites omit the parameter — the default must be 0 so
+        // nothing changes for Crossover, Hesitation, JumpShot (pre-#77), etc.
+        var fd = new MoveFrameData(startupFrames: 6, activeFrames: 4, recoveryFrames: 10, feintWindowFrames: 3);
+        Assert.Equal(0, fd.FeintRecoveryFrames);
+    }
+
+    [Fact]
+    public void Constructor_ValidFeintRecoveryFrames_IsStored()
+    {
+        var fd = new MoveFrameData(startupFrames: 18, activeFrames: 4, recoveryFrames: 20,
+            feintWindowFrames: 12, feintRecoveryFrames: 8);
+        Assert.Equal(8, fd.FeintRecoveryFrames);
+    }
+
+    [Fact]
+    public void Constructor_NegativeFeintRecoveryFrames_Throws()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => new MoveFrameData(startupFrames: 18, activeFrames: 4, recoveryFrames: 20,
+                feintWindowFrames: 12, feintRecoveryFrames: -1));
+    }
+
+    [Fact]
+    public void Constructor_FeintRecoveryFramesExceedsRecovery_Throws()
+    {
+        // feintRecoveryFrames > recoveryFrames is nonsensical — a feint that
+        // costs more recovery than the completed move removes the commitment
+        // trade-off (ADR-0003) and breaks the pre-advance arithmetic in Feint().
+        Assert.Throws<ArgumentOutOfRangeException>(
+            () => new MoveFrameData(startupFrames: 18, activeFrames: 4, recoveryFrames: 20,
+                feintWindowFrames: 12, feintRecoveryFrames: 21));
+    }
+
+    [Fact]
+    public void Constructor_FeintWindowOneBeforeStartup_IsAccepted()
+    {
+        // window == startupFrames - 1 is the maximum valid value under the
+        // strict-< rule; this is the boundary case that must be accepted.
+        var fd = new MoveFrameData(startupFrames: 6, activeFrames: 4, recoveryFrames: 10, feintWindowFrames: 5);
+        Assert.Equal(5, fd.FeintWindowFrames);
     }
 }
