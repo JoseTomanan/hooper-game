@@ -205,6 +205,46 @@ public partial class PlayerController : CharacterBody3D
 	/// </summary>
 	public float Heading { get; private set; }
 
+	// ── Authoritative ball-hand (M9, issue #83, ADR-0012) ─────────────────────
+
+	/// <summary>
+	/// Server-authoritative hand the ball-handler holds the ball in. Promoted
+	/// from M7b's cosmetic-only value (issue #73) because the M9 crossover/hesi
+	/// model reads it to disambiguate a right-stick flick (toward the empty hand
+	/// = crossover + swap; toward the ball hand = hesitation). Since that drives
+	/// move resolution it must be server-owned and predicted + reconciled
+	/// (ADR-0002, ADR-0012), the same treatment as Heading and the move machine.
+	///
+	/// Mutated ONLY by the authoritative simulation: it flips to the opposite
+	/// hand on the tick a Crossover enters Active (the swap), inside
+	/// TickCommittedMoveBehavior — so the change rides the same predicted +
+	/// reconciled event the move itself does. A Hesitation does not change it.
+	/// Reset to the default (Left) when the player gains possession
+	/// (BallController.UpdateHandSide). Broadcast on ReceiveState like Heading;
+	/// the ball mesh's left/right offset READS it (BallController.HandSign).
+	/// </summary>
+	public HandSide HandSide { get; private set; } = HandSide.Left;
+
+	/// <summary>
+	/// Authoritative ball-hand from the latest server broadcast. Used for the
+	/// remote display copy (TickClientRemotePlayer adopts it, like _serverHeading)
+	/// and to restore the own player's predicted hand when a mispredicted move is
+	/// reverted on reconcile (ReconcileFromServer's force-Inactive branch). It is
+	/// deliberately NOT snapped every tick — see that branch's comment.
+	/// </summary>
+	private HandSide _serverHandSide = HandSide.Left;
+
+	/// <summary>
+	/// Resets the authoritative hand to the default (Left). Called by
+	/// BallController on a possession change (the new holder has no carried-over
+	/// hand state). Runs on every simulating role — server authoritative, client
+	/// predicted — so all machines agree; the client's remote copy instead adopts
+	/// the broadcast value. Left is the historical default (issue #73): with the
+	/// keyboard crossover hardcoded to a right flick, starting Left makes the
+	/// first crossover of a possession visibly switch Left→Right.
+	/// </summary>
+	public void ResetHandSide() => HandSide = HandSide.Left;
+
 	// ── Committed-move state (M3, local-only) ─────────────────────────────────
 
 	/// <summary>
@@ -561,7 +601,7 @@ public partial class PlayerController : CharacterBody3D
 		// Source: Rpc(MethodName.X) broadcasts to all peers.
 		Rpc(MethodName.ReceiveState, 0, GlobalPosition, Velocity,
 			(int)_machine.Phase, _machine.FrameInPhase, MoveIdOf(_machine.CurrentMove), MoveParamOf(_machine.CurrentMove),
-			Heading);
+			Heading, (int)HandSide);
 	}
 
 	/// <summary>
@@ -590,7 +630,7 @@ public partial class PlayerController : CharacterBody3D
 		// (see ReceiveState below for the payload rationale).
 		Rpc(MethodName.ReceiveState, _serverAckedSeq, GlobalPosition, Velocity,
 			(int)_machine.Phase, _machine.FrameInPhase, MoveIdOf(_machine.CurrentMove), MoveParamOf(_machine.CurrentMove),
-			Heading);
+			Heading, (int)HandSide);
 	}
 
 	/// <summary>
@@ -664,6 +704,11 @@ public partial class PlayerController : CharacterBody3D
 		// Setting it here ensures ApplyCosmetics displays the correct
 		// authoritative facing on the opponent's model.
 		Heading = _serverHeading;
+		// Same for the ball-hand (M9, #83): the remote copy never simulates the
+		// swap, so it adopts the broadcast value — this is how the opponent's
+		// crossover hand-switch renders on your screen (BallController.HandSign
+		// reads HandSide on the holder's node, whichever role it is).
+		HandSide = _serverHandSide;
 	}
 
 	// ── Server RPC: receive client input ─────────────────────────────────────
@@ -772,7 +817,11 @@ public partial class PlayerController : CharacterBody3D
 		}
 
 		if (moveId == "crossover")
+			// param is the body-relative flick sign (M9, #85) — the world burst
+			// direction is derived from Heading when the move reaches Active.
 			_machine.Begin(new Crossover(burstDirection: param));
+		else if (moveId == "hesitation")
+			_machine.Begin(new Hesitation());
 		else if (moveId == "jumpshot")
 			_machine.Begin(new JumpShot());
 		// Unrecognized moveId: silently ignored. A malformed/forged moveId
@@ -847,7 +896,7 @@ public partial class PlayerController : CharacterBody3D
 		 CallLocal = false,
 		 TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
 	private void ReceiveState(int ackSeq, Vector3 pos, Vector3 vel,
-		int movePhase, int frameInPhase, string moveId, float moveParam, float heading)
+		int movePhase, int frameInPhase, string moveId, float moveParam, float heading, int handSide)
 	{
 		_serverPos       = pos;
 		_serverVel       = vel;
@@ -855,6 +904,11 @@ public partial class PlayerController : CharacterBody3D
 		_serverMovePhase = (MovePhase)movePhase;
 		_serverMoveId    = moveId;
 		_serverMoveParam = moveParam;
+		// Authoritative ball-hand (M9, #83/ADR-0012). Same UnreliableOrdered
+		// snapshot properties as heading: the remote copy adopts it for display
+		// (TickClientRemotePlayer), the own player consults it only to restore a
+		// reverted predicted swap (ReconcileFromServer), never to snap every tick.
+		_serverHandSide  = (HandSide)handSide;
 		// Authoritative heading for reconcile (own player) and display
 		// (client's remote copy). Same UnreliableOrdered staleness properties
 		// as pos/vel — fine, since the replay loop catches the own player up
@@ -948,7 +1002,20 @@ public partial class PlayerController : CharacterBody3D
 		// the seq/ack system does for movement — more machinery than this
 		// milestone calls for; documented here as an accepted trade-off.
 		if (CommittedMoveMachine.ShouldForceInactive(_machine.Phase, _machine.IsActive, _serverMovePhase))
+		{
 			_machine.ForceState(MovePhase.Inactive, frameInPhase: 0, move: null);
+			// The reverted move may have been a crossover that already swapped the
+			// PREDICTED hand (M9, #83/ADR-0012). Restore the authoritative hand in
+			// this SAME branch — and only here, never every tick: an unconditional
+			// per-tick snap would force-revert a CORRECTLY predicted swap for ~1 RTT
+			// until the confirming broadcast arrives, flickering the ball between
+			// hands on every legitimate crossover — the exact trap the FrameInPhase
+			// reasoning above describes for move phase. The residual staleness of a
+			// confirmed swap is the accepted, self-correcting gap (ADR-0012),
+			// identical in spirit to the phantom-second-move artifact documented
+			// in Step 0 above.
+			HandSide = _serverHandSide;
+		}
 
 		// Step 1: prune confirmed inputs.
 		_buffer.Acknowledge(ackSeq);
@@ -1174,16 +1241,37 @@ public partial class PlayerController : CharacterBody3D
 		Vector2 aim = Input.GetVector("aim_left", "aim_right", "aim_up", "aim_down");
 		GestureResult gesture = _recognizer.Sample(aim);
 
-		// Keyboard Q = immediate crossover (right burst). Takes precedence over
-		// the recognizer so the keyboard and gamepad paths don't double-Begin().
-		float crossoverDir = float.NaN;
+		// One right-stick flick (or keyboard Q), disambiguated by which hand holds
+		// the ball (M9, ADR-0012): a flick TOWARD the empty hand is a crossover
+		// (ball swaps to that hand + a lateral burst that way); a flick TOWARD the
+		// ball hand is a hesitation (freeze/bait — no swap, no scripted burst; the
+		// player drives the exit with the left stick after the move resolves).
+		// Keyboard Q takes precedence over the recognizer so the two paths don't
+		// double-Begin; it flicks toward the player's right (+1).
+		float flick = float.NaN;
 		if (Input.IsActionJustPressed("move_crossover"))
-			crossoverDir = +1f;
+			flick = +1f;
 		else if (gesture.Kind == GestureKind.Crossover)
-			crossoverDir = gesture.Direction;
+			flick = gesture.Direction;
 
-		if (!float.IsNaN(crossoverDir) && _machine.Begin(new Crossover(crossoverDir)) && !isServer)
-			RpcId(1, MethodName.RequestBeginMove, "crossover", crossoverDir);
+		if (!float.IsNaN(flick))
+		{
+			int flickSign = System.Math.Sign(flick);
+			if (HandStateResolver.IsCrossover(HandSide, flickSign))
+			{
+				// Crossover carries the BODY-RELATIVE flick sign (M9, #85): the
+				// world burst direction is derived from Heading at apply time
+				// (TickCommittedMoveBehavior), so the burst follows the body's
+				// facing rather than a fixed screen axis. The wire param is the
+				// same single float RequestBeginMove already speaks.
+				if (_machine.Begin(new Crossover(flickSign)) && !isServer)
+					RpcId(1, MethodName.RequestBeginMove, "crossover", flickSign);
+			}
+			else if (_machine.Begin(new Hesitation()) && !isServer)
+			{
+				RpcId(1, MethodName.RequestBeginMove, "hesitation", 0f);
+			}
+		}
 
 		// Shoot: begin a JumpShot (M7b, issue #74) — this REPLACES the old
 		// instant "ball leaves hand on press" trigger that used to live in
@@ -1245,7 +1333,23 @@ public partial class PlayerController : CharacterBody3D
 				// this same tick — that is a SEPARATE node's read of this machine's
 				// state, not a side effect this switch needs to produce.
 				if (_machine.JustEnteredActive && _machine.CurrentMove is Crossover crossover)
-					Velocity = new Vector3(crossover.BurstDirection * BurstSpeed, 0f, 0f);
+				{
+					// World burst = the body-relative flick sign rotated by the
+					// authoritative Heading (M9, #85/ADR-0012) — the burst follows
+					// the body, never a fixed screen axis. Heading is reconciled,
+					// so server and client derive the identical world vector.
+					// BurstWorldDir returns a unit XZ vector; scale by BurstSpeed.
+					int sign     = System.Math.Sign(crossover.BurstDirection);
+					Vector2 dir  = HandStateResolver.BurstWorldDir(Heading, sign);
+					Velocity     = new Vector3(dir.X * BurstSpeed, 0f, dir.Y * BurstSpeed);
+
+					// The crossover swaps the ball to the (now near) empty hand —
+					// the authoritative hand-state change (M9, #83). It rides this
+					// same predicted + reconciled Active-entry event as the burst;
+					// a Hesitation is not a Crossover, so it never reaches here and
+					// the hand stays put.
+					HandSide = HandStateResolver.Opposite(HandSide);
+				}
 				MoveAndSlide();
 				break;
 
