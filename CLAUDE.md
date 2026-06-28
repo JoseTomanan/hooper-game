@@ -93,12 +93,28 @@ game-dev knowledge on the human's part.
 | M7a — Static readability pass | Done | #53 |
 | **M7b — Rigged humanoid animation** | **Active (parallel presentation track)** | #54 |
 | M8 — Realism & polish pass | DEFERRED (umbrella, accrues sub-issues); #70 (crossover clip) parked here | #61 |
+| M9 — Basketball-related controls (offense) | DEFERRED (umbrella, accrues sub-issues) | #75 |
+| M10 — Defense & the reactive read | DEFERRED (planning epic); sub-issues filed #95–#104 | #89 |
+| M11 — Stamina & resource economy | DEFERRED (planning epic) | #90 |
+| M12 — Match flow, HUD & session lifecycle | DEFERRED (planning epic) | #91 |
+| M13 — Audio & game feel | DEFERRED (planning epic) | #92 |
+| M14 — Training, onboarding & practice opponent | DEFERRED (planning epic) | #93 |
+| M15 — Mobile, performance & release readiness | DEFERRED (planning epic) | #94 |
 
 GitHub Issues is the source of truth for the live state of each milestone and its
 sub-issues; this table is the at-a-glance map.
 
+**M9–M15 are a forward roadmap, not a work queue.** They are deferred planning
+epics that record *what comes next and why*, in dependency order: M9–M10 complete
+the core duel (offense then defense), M11 adds the stamina pillar on top, M12–M13
+turn the loop into a game (flow + feel), M14 makes it learnable, M15 ships it on
+the committed mobile platform (ADR-0006). Their rows are listed here for the
+at-a-glance map; each stays DEFERRED until explicitly activated, at which point its
+"DEFERRED" status flips to "Active" and (for the umbrella epics) it stops merely
+accruing sub-issues.
+
 Do not build ahead of the current milestone unless asked. M6b and M7b are both
-open for work; M8 is not.
+open for work; M8 onward is not.
 
 ---
 

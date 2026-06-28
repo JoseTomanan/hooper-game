@@ -55,9 +55,11 @@ look for them; this is not a monorepo.
    decisions. Keep these boundaries; do not fold decisions into the wrong file.
 
 5. **Respect milestone scope.** This project is milestone-gated (see CLAUDE.md §2
-   and TASKS.md). Do not propose, scaffold, or build ahead of the current
-   milestone unless the human asks. "Improve the architecture" is bounded by the
-   current milestone, not the whole game.
+   and GitHub Issues — the live tracker; TASKS.md no longer exists). The status
+   table now maps the full M1–M15 arc, but M8 onward are DEFERRED planning epics:
+   do not propose, scaffold, or build ahead of the current milestone unless the
+   human asks. "Improve the architecture" is bounded by the current milestone,
+   not the whole game.
 
 6. **If a referenced file does not exist, proceed silently.** Do not flag absence
    or suggest creating docs upfront.
