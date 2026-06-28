@@ -1,10 +1,26 @@
-# EDITOR_TASKS.md — Your Godot editor checklist (the part AI can't do)
+# EDITOR_TASKS.md — Your Godot editor checklist (feel + verification)
 
-Claude Code writes the C# under `scripts/`. **You** do everything in this file,
-because it lives in the Godot editor and no AI tool can click for you. For
-Milestone 1 it's short and beginner-level, and you'll repeat the same few
-actions for a while. Defer everything visual (materials, animation, polish)
-until much later — none of it is needed to prove the game works.
+**Scope changed in [ADR-0011](docs/adr/0011-claude-authors-scenes.md) (2026-06-28).**
+This is no longer an *authoring* checklist. Claude Code now authors `.tscn`,
+`.tres`/`.res`, and `project.godot` by direct text-edit — adding/renaming nodes,
+setting properties, assigning exports/`NodePath`s, instancing sub-scenes, Input
+Map entries. **You** are left with the two things an AI can't do for you:
+
+- **Feel / tuning judgments** — deciding whether tuned values *feel* right (lean
+  degrees, burst speed, blend-space ranges, "does the telegraph read"). Claude
+  proposes the numbers; you accept or redirect.
+- **In-engine verification** — running the game (single- or dual-instance) to
+  confirm behaviour. This is what closes a `hitl` issue (`Done means proven`).
+
+Two structural exclusions also stay yours until a spike proves them
+text-authorable: **AnimationTree graph authoring** (BlendSpace points,
+state-machine nodes/transitions) and **import-dialog** settings not already
+scriptable headlessly.
+
+The historical steps below are kept as a record of scene structure. New steps
+should be written as *verification* steps, not wiring steps — the wiring now ships
+in Claude's PR. Defer everything visual (materials, polish) until much later —
+none of it is needed to prove the game works.
 
 ---
 

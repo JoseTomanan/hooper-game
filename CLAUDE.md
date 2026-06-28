@@ -20,6 +20,7 @@ locked unless explicitly revisited (see Decision Discipline in §4 below).
 | [ADR-0007](docs/adr/0007-dedicated-server-topology-discovery.md) | Dedicated-server topology (listen→headless) + LAN discovery wire format |
 | [ADR-0008](docs/adr/0008-possession-rules.md) | Half-court 1v1 possession rules: make-it-take-it, live rebound, take-it-back/clear |
 | [ADR-0010](docs/adr/0010-authoritative-heading.md) | Player heading: server-authoritative, bounded non-linear turn rate, integrated into Move() |
+| [ADR-0011](docs/adr/0011-claude-authors-scenes.md) | Claude authors `.tscn`/`.res`/`project.godot` by text-edit; human owns feel + verification only |
 
 ---
 
@@ -108,9 +109,17 @@ open for work; M8 is not.
   bugs relocating them).
 - **`scripts/`** — all C# code, the part Claude Code owns. Subfolders by
   responsibility: `Player/`, `Networking/`, `Input/`, `Ball/`, `Systems/`.
-- **`scenes/`** — `.tscn` scene files. Authored in the Godot editor by the human
-  (see EDITOR_TASKS.md). Claude Code writes the C# a scene's nodes reference, but
-  the human wires nodes in the editor.
+- **`scenes/`** — `.tscn` scene files, plus `.tres`/`.res` resources and
+  `project.godot`. Per [ADR-0011](docs/adr/0011-claude-authors-scenes.md), Claude
+  Code authors these by **direct text-edit** as ordinary AFK work: adding/renaming
+  nodes, setting properties, assigning exports/`NodePath`s, instancing sub-scenes,
+  and Input Map entries. The human's role narrows to **feel/tuning judgments** and
+  **in-engine verification** (see EDITOR_TASKS.md). Two structural exclusions stay
+  HITL until a spike proves them text-authorable: AnimationTree **graph authoring**
+  (BlendSpace points, state-machine nodes/transitions) and editor **import-dialog**
+  settings not already scriptable headlessly. Scene edits are fragile (`ext_resource`/
+  `sub_resource` IDs, `uid`, load-step counts) — so they ship in their own
+  single-concern commit with a headless load check where a Godot binary is available.
 - **`assets/`** — models, textures, sounds. Placeholder/gray is fine for now.
 - **Physics colliders (the project runs Jolt — `3d/physics_engine="Jolt Physics"`):**
   never apply a **non-uniform scale** to a `CylinderShape3D`, `CapsuleShape3D`, or
