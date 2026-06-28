@@ -615,4 +615,148 @@ public class CommittedMoveMachineTests
 
         Assert.False(result);
     }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // Feint with FeintRecoveryFrames == 0 — regression guard (existing behavior)
+    // ═════════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void Feint_WithFeintRecoveryZero_RoutesToInactiveImmediately()
+    {
+        // Regression guard: Crossover/Hesitation (feintRecoveryFrames == 0) must
+        // still abort straight to Inactive — no recovery ticks. The new routing
+        // logic in Feint() must not affect the default path.
+        var fd = new MoveFrameData(startupFrames: 6, activeFrames: 3, recoveryFrames: 10,
+            feintWindowFrames: 4, feintRecoveryFrames: 0);
+        var m = NewMachine();
+        m.Begin(TestMove(fd));
+        m.Tick(); // FrameInPhase = 1 (within window)
+
+        m.Feint();
+
+        Assert.Equal(MovePhase.Inactive, m.Phase);
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // Feint with FeintRecoveryFrames > 0 — pump-fake routing (#77)
+    // ═════════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void Feint_WithFeintRecovery_RoutesToRecovery()
+    {
+        // A feint on a move with feintRecoveryFrames > 0 should land in Recovery,
+        // not Inactive — the player still has to eat the shortened recovery cost.
+        var fd = new MoveFrameData(startupFrames: 18, activeFrames: 4, recoveryFrames: 20,
+            feintWindowFrames: 12, feintRecoveryFrames: 8);
+        var m = NewMachine();
+        m.Begin(new JumpShot(fd));
+        m.Tick(); // FrameInPhase = 1 (within 12-frame window)
+
+        m.Feint();
+
+        Assert.Equal(MovePhase.Recovery, m.Phase);
+    }
+
+    [Fact]
+    public void Feint_WithFeintRecovery_FrameInPhaseIsPreAdvanced()
+    {
+        // The machine enters Recovery at offset (RecoveryFrames - FeintRecoveryFrames)
+        // so Tick()'s existing threshold check (FrameInPhase >= RecoveryFrames) fires
+        // after exactly FeintRecoveryFrames more ticks — no new phase or wire state needed.
+        var fd = new MoveFrameData(startupFrames: 18, activeFrames: 4, recoveryFrames: 20,
+            feintWindowFrames: 12, feintRecoveryFrames: 8);
+        var m = NewMachine();
+        m.Begin(new JumpShot(fd));
+        m.Tick();
+
+        m.Feint();
+
+        // Should be RecoveryFrames - FeintRecoveryFrames = 20 - 8 = 12.
+        Assert.Equal(fd.RecoveryFrames - fd.FeintRecoveryFrames, m.FrameInPhase);
+    }
+
+    [Fact]
+    public void Feint_WithFeintRecovery_ExitsAfterExactlyFeintRecoveryFramesTicks()
+    {
+        // After the feint lands in pre-advanced Recovery, exactly FeintRecoveryFrames
+        // Tick() calls should return the machine to Inactive — not one sooner.
+        var fd = new MoveFrameData(startupFrames: 18, activeFrames: 4, recoveryFrames: 20,
+            feintWindowFrames: 12, feintRecoveryFrames: 8);
+        var m = NewMachine();
+        m.Begin(new JumpShot(fd));
+        m.Tick();
+        m.Feint();
+
+        // One tick short of the threshold — must still be in Recovery.
+        TickN(m, fd.FeintRecoveryFrames - 1);
+        Assert.Equal(MovePhase.Recovery, m.Phase);
+
+        // The final tick must cross the threshold.
+        m.Tick();
+        Assert.Equal(MovePhase.Inactive, m.Phase);
+    }
+
+    [Fact]
+    public void Feint_WithFeintRecovery_JustEnteredActiveNeverSetThroughoutSequence()
+    {
+        // A feint must NEVER set JustEnteredActive — the ball release is gated on
+        // that flag, so a pump-fake that triggers a release would be broken.
+        // Assert it stays false on every tick from the feint through return to Inactive.
+        var fd = new MoveFrameData(startupFrames: 18, activeFrames: 4, recoveryFrames: 20,
+            feintWindowFrames: 12, feintRecoveryFrames: 8);
+        var m = NewMachine();
+        m.Begin(new JumpShot(fd));
+        m.Tick();
+        m.Feint(); // enters pre-advanced Recovery
+
+        for (int i = 0; i < fd.FeintRecoveryFrames; i++)
+        {
+            Assert.False(m.JustEnteredActive, $"JustEnteredActive was true on tick {i} of feint recovery");
+            m.Tick();
+        }
+
+        Assert.Equal(MovePhase.Inactive, m.Phase);
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // Reconciliation: feint-recovery state is reconstructable from Phase + FrameInPhase
+    // ═════════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void ForceState_ToFeintRecoveryOffset_ExitsAfterExactlyFeintRecoveryFramesTicks()
+    {
+        // (Doubt-driven test #10) A feint-recovery landing point — Phase=Recovery,
+        // FrameInPhase = RecoveryFrames - FeintRecoveryFrames — must be
+        // reconstructable via ForceState() alone, with no extra wire state.
+        // This proves the server can broadcast (Recovery, offset) and the client
+        // will snap to the correct remaining duration.
+        var fd = new MoveFrameData(startupFrames: 18, activeFrames: 4, recoveryFrames: 20,
+            feintWindowFrames: 12, feintRecoveryFrames: 8);
+        var move = new JumpShot(fd);
+        var m = NewMachine();
+
+        int feintOffset = fd.RecoveryFrames - fd.FeintRecoveryFrames; // 12
+        m.ForceState(MovePhase.Recovery, frameInPhase: feintOffset, move);
+
+        TickN(m, fd.FeintRecoveryFrames - 1);
+        Assert.Equal(MovePhase.Recovery, m.Phase);
+
+        m.Tick();
+        Assert.Equal(MovePhase.Inactive, m.Phase);
+    }
+
+    [Fact]
+    public void ShouldForceInactive_ClientInRecoveryFromFeint_ServerInactive_ReturnsTrue()
+    {
+        // (Doubt-driven test #11) If the client predicted a feint into Recovery but
+        // the server rejected it and is already Inactive, the existing reconciliation
+        // logic must correctly snap the client back. ShouldForceInactive checks
+        // (localPhase != Startup && serverPhase == Inactive) — Recovery satisfies this,
+        // so the existing code already covers the feint-recovery mispredict case.
+        // This test documents that invariant explicitly.
+        bool result = CommittedMoveMachine.ShouldForceInactive(
+            localPhase: MovePhase.Recovery, localIsActive: true, serverPhase: MovePhase.Inactive);
+
+        Assert.True(result);
+    }
 }
