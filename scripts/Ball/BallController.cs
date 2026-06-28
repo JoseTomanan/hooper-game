@@ -1128,45 +1128,38 @@ public partial class BallController : Node3D
 			_arc.Velocity = bouncedVel;
 		}
 
-		// Out-of-bounds detection (issue #63): replaces the old unconditional clamp.
-		// When a loose ball crosses the play-court line, the play is dead — server
-		// awards possession to the player OPPOSITE the last shooter (real half-court
-		// "last-toucher-out → other ball" rule).
+		// Out-of-bounds detection (issue #63, ADR-0008 §Amendment 2026-06-28):
+		// replaces the old unconditional clamp.  When a loose ball crosses the
+		// play-court line, the play is dead — server awards possession to the player
+		// OPPOSITE the last shooter ("last-toucher-out → other ball" rule).
 		//
-		// Why server-gated (not predicted): OOB is a dead-ball ruling with no live
-		// scramble to contest, so there is no gameplay value in predicting it on
-		// clients.  Server-gating avoids prediction-flip risk (two clients briefly
-		// disagreeing on who holds the ball) for zero gameplay cost, mirroring the
-		// same rationale as ResolveServerMake.
+		// The three-branch decision table lives in OobResolution.Resolve (pure
+		// helper, ADR-0004 headless-seam discipline) so it can be unit-tested
+		// without a Godot runtime.  Engine lookups (IsServer, OtherPlayerPeerId)
+		// are resolved here before the call and passed in as plain values, keeping
+		// the pure helper engine-free.
 		//
-		// Why defender==0 falls back to clamp: with no opponent (solo editor test)
-		// there is nobody to award the ball to, and letting it vanish OOB forever
-		// would break solo testing.  The clamp keeps the ball in play, consistent
-		// with the ResolveServerMake defender==0 "leave loose" pattern.
-		//
-		// Ordering: OOB check runs BEFORE ResolveLooseBallRecovery so a ball that
-		// crossed the line is not also rebounded the same tick.  An awarded turnover
-		// returns immediately, skipping the rebound step entirely.
-		if (CourtBounds.IsOutOfBounds(_arc.Position, CourtMin, CourtMax))
+		// Ordering: runs BEFORE ResolveLooseBallRecovery so a ball that crossed the
+		// line is not also rebounded the same tick.  An Award returns immediately,
+		// skipping the rebound step.  ClampFallback falls through to the clamp below.
 		{
-			if (IsServer)
+			OobResolution.Result oob = OobResolution.Resolve(
+				CourtBounds.IsOutOfBounds(_arc.Position, CourtMin, CourtMax),
+				IsServer,
+				OtherPlayerPeerId(_lastShooterPeerId));
+
+			if (oob.Action == OobResolution.Action.Award)
 			{
-				int recipient = OtherPlayerPeerId(_lastShooterPeerId);
-				if (recipient != 0)
-				{
-					// Dead ball: award possession to the non-shooting player,
-					// uncleared (they must take it back before scoring — same as
-					// any turnover; ADR-0008 §Amendment 2026-06-21).
-					AwardPossession(recipient);
-					GlobalPosition = _arc.Position;
-					return; // skip rebound step — possession is already resolved
-				}
-				// else: no opponent present (solo editor test) — fall through to
-				// the clamp below so the ball stays in play.
+				// Dead ball: award possession to the non-shooting player, uncleared
+				// (they must take it back before scoring — ADR-0008 §Amendment 2026-06-21).
+				AwardPossession(oob.RecipientPeerId);
+				GlobalPosition = _arc.Position;
+				return; // skip rebound step — possession is already resolved
 			}
-			// Not the server, or no opponent: fall through to clamp.
-			// Clients keep the clamp so no regression occurs on the non-authoritative
-			// path; the server's ReceiveState broadcast will correct any divergence.
+			// NoOp: ball is in bounds, nothing to do.
+			// ClampFallback: no opponent present (solo test) or non-server client —
+			// fall through to CourtBounds.Clamp below so the ball stays in play.
+			// The server's ReceiveState broadcast corrects any divergence on clients.
 		}
 
 		// Half-court bound clamp: keeps XZ within the play-court rectangle.
