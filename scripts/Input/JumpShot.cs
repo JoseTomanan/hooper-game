@@ -24,19 +24,24 @@ namespace Hooper.Moves;
 ///             FIRST of these ticks (JustEnteredActive), the same one-shot
 ///             convention Crossover's burst already uses.
 ///   Recovery: 20 ticks — landing / punish window (~0.33s at 60Hz).
-///   Feint:     0 ticks — deliberately NO feint window yet. The existing
-///             generic Feint() input path (PlayerController.SampleMoveInput)
-///             is move-agnostic: any nonzero FeintWindowFrames here would
-///             silently turn on the pump-fake (issue #77) before #77's own
-///             scope says it's ready to wire. Zero keeps a pump-fake
-///             impossible until #77 is activated and deliberately raises
-///             this value alongside wiring the feint input for it.
+///   Feint window: 12 of 18 startup ticks (#77 — pump-fake now active). The
+///             remaining 6 frames are the "committed tail" — the point of no
+///             return where the feint window has closed and the player is
+///             committed to shooting (ADR-0003). Window = 12, startup = 18,
+///             tail = 6 frames.
+///   Feint recovery: 8 ticks — a pump-fake costs 8 ticks of recovery, shorter
+///             than the full 20-tick landing recovery because you never left
+///             the ground. CommittedMoveMachine.Feint() enters Recovery at the
+///             pre-advanced offset (RecoveryFrames - FeintRecoveryFrames = 12)
+///             so exactly 8 ticks remain before the machine returns to Inactive.
+///             These values are provisional — tuning for feel is deferred to M10.
 /// </summary>
 public sealed class JumpShot : CommittedMove
 {
     /// <summary>Default jump-shot frame data. Tunable per instance if needed.</summary>
     public static readonly MoveFrameData DefaultFrameData =
-        new(startupFrames: 18, activeFrames: 4, recoveryFrames: 20, feintWindowFrames: 0);
+        new(startupFrames: 18, activeFrames: 4, recoveryFrames: 20,
+            feintWindowFrames: 12, feintRecoveryFrames: 8);
 
     /// <param name="frameData">Override frame data; null uses DefaultFrameData.</param>
     public JumpShot(MoveFrameData? frameData = null)
