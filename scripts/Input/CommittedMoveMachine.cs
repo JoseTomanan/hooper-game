@@ -131,9 +131,24 @@ public sealed class CommittedMoveMachine
     /// Attempts a feint abort. Legal only while in Startup AND within the
     /// feint window (FrameInPhase &lt; FeintWindowFrames).
     ///
-    /// A successful feint cancels the move straight to Inactive — Active never
-    /// fires, and there are no recovery frames. This is the trade: the player
-    /// baited the opponent's read but must eat a small startup cost.
+    /// Two routing paths based on the current move's FeintRecoveryFrames:
+    ///
+    ///   • FeintRecoveryFrames == 0 (default — Crossover, Hesitation, etc.):
+    ///     Startup → Inactive immediately. No recovery cost.
+    ///
+    ///   • FeintRecoveryFrames &gt; 0 (pump-fake on JumpShot, #77):
+    ///     Startup → Recovery, but entered at a pre-advanced FrameInPhase of
+    ///     (RecoveryFrames - FeintRecoveryFrames). Tick()'s existing Recovery
+    ///     case exits to Inactive when FrameInPhase &gt;= RecoveryFrames, so
+    ///     starting at that offset means the machine spends exactly
+    ///     FeintRecoveryFrames more ticks in Recovery. This reuses the existing
+    ///     machinery with no new phase, no new serialized field, and no new
+    ///     wire state — the server can broadcast (Phase=Recovery, FrameInPhase=offset)
+    ///     and ForceState reconstructs the remaining duration correctly.
+    ///
+    ///     Phase and FrameInPhase are set directly (not via EnterPhase) so that
+    ///     JustEnteredActive is NEVER set — the ball release is gated on that flag,
+    ///     and a pump-fake must never release the ball.
     ///
     /// Returns false without changing state if outside the window or outside
     /// Startup — the machine is never disrupted by an ill-timed feint call.
@@ -144,8 +159,27 @@ public sealed class CommittedMoveMachine
         if (Phase != MovePhase.Startup) return false;
         if (FrameInPhase >= CurrentMove!.FrameData.FeintWindowFrames) return false;
 
-        // Abort to Inactive immediately — no recovery, Active never fires.
-        EnterPhase(MovePhase.Inactive);
+        MoveFrameData fd = CurrentMove.FrameData;
+
+        if (fd.FeintRecoveryFrames == 0)
+        {
+            // Default path (Crossover, Hesitation, zero-cost feint): abort to Inactive.
+            EnterPhase(MovePhase.Inactive);
+        }
+        else
+        {
+            // Pump-fake path (#77): enter Recovery at a pre-advanced offset so that
+            // exactly FeintRecoveryFrames ticks remain before Tick() exits to Inactive.
+            // We bypass EnterPhase() intentionally — EnterPhase() resets FrameInPhase
+            // to 0 and would set JustEnteredActive if entering Active. Neither is correct
+            // here: we need a non-zero FrameInPhase, and JustEnteredActive must stay false
+            // (a feint must never trigger the one-shot ball-release effect).
+            Phase        = MovePhase.Recovery;
+            FrameInPhase = fd.RecoveryFrames - fd.FeintRecoveryFrames;
+            // JustEnteredActive is already false (cleared at the top of Tick, or by Begin).
+            // Do NOT touch it here — leaving it false is what guarantees the ball never releases.
+        }
+
         return true;
     }
 
