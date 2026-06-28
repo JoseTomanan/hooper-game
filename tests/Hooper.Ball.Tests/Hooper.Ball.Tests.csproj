@@ -62,6 +62,7 @@
     <Compile Include="..\..\scripts\Input\CommittedMove.cs" />
     <Compile Include="..\..\scripts\Input\CommittedMoveMachine.cs" />
     <Compile Include="..\..\scripts\Input\Crossover.cs" />
+    <Compile Include="..\..\scripts\Input\Hesitation.cs" />
     <Compile Include="..\..\scripts\Input\GestureResult.cs" />
     <Compile Include="..\..\scripts\Input\RightStickGestureRecognizer.cs" />
     <Compile Include="..\..\scripts\Input\JumpShot.cs" />
@@ -108,7 +109,7 @@
     <Compile Include="..\..\scripts\Player\MoveAnimResolver.cs" />
     <Compile Include="..\..\scripts\Player\DisplayPhaseResolver.cs" />
     <Compile Include="..\..\scripts\Player\HandSide.cs" />
-    <Compile Include="..\..\scripts\Player\HandSideResolver.cs" />
+    <Compile Include="..\..\scripts\Player\HandStateResolver.cs" />
   </ItemGroup>
 
   <ItemGroup>

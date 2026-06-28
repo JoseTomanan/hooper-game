@@ -403,43 +403,16 @@ public partial class BallController : Node3D
 	private DribbleCycle _dribble;
 	private RimBackboard _basket;
 
-	/// <summary>
-	/// Last known horizontal facing direction of the holder. Persisted so the
-	/// dribble offset stays stable while the player is stationary. Initialised
-	/// to -Z (facing up the court). Reset effectively on each possession change
-	/// because the new holder's velocity drives it immediately on the first
-	/// moving tick; the server's ReceiveState broadcast corrects any 1-tick
-	/// directional divergence in the meantime.
-	/// </summary>
-	private Vector3 _lastHolderForward = new Vector3(0f, 0f, -1f);
-
 	// ── Ball-on-hand display (M7b, issue #73) ─────────────────────────────
 
 	/// <summary>
-	/// Which hand the ball is currently displayed in. Defaults to LEFT —
-	/// deliberately the OPPOSITE of the keyboard crossover's fixed burst
-	/// direction (PlayerController's Q is hardcoded to +1 = right). Because
-	/// HandSideResolver is direction-based (ball goes to the side you burst
-	/// toward), a Right default would make the first keyboard crossover a
-	/// silent no-op — burst-right onto an already-right ball moves nothing
-	/// (issue #73 diagnose). Starting on the left guarantees the first
-	/// crossover of every possession visibly switches the ball Left→Right.
-	/// Reset on every possession change (see _handSideHolderId) since a new
-	/// holder has no carried-over hand state to display. Cosmetic-only;
-	/// never read by gameplay logic.
+	/// The holder peer id the ball-hand was last reset for — detects a possession
+	/// change so the new holder's authoritative hand resets to the default
+	/// (M9, #83/ADR-0012). Ball-hand is no longer a cosmetic value derived here;
+	/// it lives on PlayerController.HandSide (server-authoritative, predicted +
+	/// reconciled) and the ball mesh merely READS it (HandSign). This field is the
+	/// edge-detector that fires the once-per-possession reset (UpdateHandSide).
 	/// </summary>
-	private HandSide _handSide = HandSide.Left;
-
-	/// <summary>
-	/// The holder's DISPLAY phase (PlayerController.DisplayMove) as of the
-	/// last UpdateHandSide call, so HandSideResolver can detect the tick the
-	/// phase first becomes Active without re-deriving JustEnteredActive
-	/// itself (see HandSideResolver's class doc for why a phase comparison,
-	/// not the machine's local flag, is the role-correct signal here).
-	/// </summary>
-	private MovePhase _lastHandDisplayPhase = MovePhase.Inactive;
-
-	/// <summary>The holder peer id _handSide was last computed for — detects a possession change so the hand can reset.</summary>
 	private int _handSideHolderId;
 
 	/// <summary>
@@ -870,22 +843,22 @@ public partial class BallController : Node3D
 	}
 
 	/// <summary>
-	/// Returns the holder's current horizontal facing direction as a normalised XZ vector.
-	/// Falls back to <see cref="_lastHolderForward"/> when the holder is absent or stationary
-	/// (speed below 0.1 m/s — just above the deceleration floor so the direction locks in
-	/// before the player fully stops rather than flickering at the last frame of movement).
-	/// Writes <see cref="_lastHolderForward"/> as a side-effect; the server broadcasts
-	/// position every tick so any client/server divergence in this field is absorbed by
-	/// <see cref="ReconcileFromServer"/> within one tick.
+	/// The holder's forward direction on the XZ plane, derived from their
+	/// server-authoritative <see cref="PlayerController.Heading"/> (ADR-0010) —
+	/// NOT from velocity. This is what makes the ball orbit the holder as they
+	/// turn, even while standing still: the old velocity-derived forward froze
+	/// the instant the player stopped moving, so a pivot or a stationary
+	/// crossover left the ball stranded on the pre-turn side. Heading is valid
+	/// and identical across roles (own/server set it in Move(); the client's
+	/// remote copy adopts the broadcast value in TickClientRemotePlayer), the
+	/// same guarantee <see cref="HandSign"/> relies on. A null holder
+	/// (pre-tipoff / loose) → heading 0 (+Z); the ball tracks the world origin
+	/// in that case anyway, so the exact fallback direction is immaterial.
 	/// </summary>
-	private Vector3 ComputeHolderForward(CharacterBody3D body)
+	private static Vector3 HolderForward(PlayerController holder)
 	{
-		if (body == null) return _lastHolderForward;
-		Vector3 vel = body.Velocity;
-		float horizontalSpeed = new Vector2(vel.X, vel.Z).Length();
-		if (horizontalSpeed < 0.1f) return _lastHolderForward;
-		_lastHolderForward = new Vector3(vel.X, 0f, vel.Z).Normalized();
-		return _lastHolderForward;
+		Vector2 fwd = HeadingMath.Forward(holder?.Heading ?? 0f);
+		return new Vector3(fwd.X, 0f, fwd.Y);
 	}
 
 	/// <summary>
@@ -913,15 +886,15 @@ public partial class BallController : Node3D
 	{
 		var holderBody = Players?.GetNodeOrNull(StateMachine.HolderPeerId.ToString()) as PlayerController;
 		Vector3 holderPos = holderBody?.GlobalPosition ?? Vector3.Zero;
-		Vector3 forward   = ComputeHolderForward(holderBody);
+		Vector3 forward   = HolderForward(holderBody);
 		Vector3 right     = HandRight(forward);
 		UpdateHandSide(holderBody);
 
 		// World-space Y = DribbleHandHeight, consistent with DribbleCycle's world-Y convention.
 		GlobalPosition = new Vector3(
-			holderPos.X + forward.X * DribbleForwardOffset + right.X * HandOffset * HandSign(),
+			holderPos.X + forward.X * DribbleForwardOffset + right.X * HandOffset * HandSign(holderBody),
 			DribbleHandHeight,
-			holderPos.Z + forward.Z * DribbleForwardOffset + right.Z * HandOffset * HandSign()
+			holderPos.Z + forward.Z * DribbleForwardOffset + right.Z * HandOffset * HandSign(holderBody)
 		);
 		CheckJumpShotRelease(holderBody);
 	}
@@ -932,15 +905,15 @@ public partial class BallController : Node3D
 		_dribble.Advance(dt);
 		var holderBody = Players?.GetNodeOrNull(StateMachine.HolderPeerId.ToString()) as PlayerController;
 		Vector3 holderPos = holderBody?.GlobalPosition ?? Vector3.Zero;
-		Vector3 forward   = ComputeHolderForward(holderBody);
+		Vector3 forward   = HolderForward(holderBody);
 		Vector3 right     = HandRight(forward);
 		UpdateHandSide(holderBody);
 
 		// Pass XZ-offset position; GetBallPosition discards the Y and uses HeightAtPhase instead.
 		GlobalPosition = _dribble.GetBallPosition(new Vector3(
-			holderPos.X + forward.X * DribbleForwardOffset + right.X * HandOffset * HandSign(),
+			holderPos.X + forward.X * DribbleForwardOffset + right.X * HandOffset * HandSign(holderBody),
 			holderPos.Y,
-			holderPos.Z + forward.Z * DribbleForwardOffset + right.Z * HandOffset * HandSign()
+			holderPos.Z + forward.Z * DribbleForwardOffset + right.Z * HandOffset * HandSign(holderBody)
 		));
 		CheckJumpShotRelease(holderBody);
 	}
@@ -948,37 +921,43 @@ public partial class BallController : Node3D
 	/// <summary>
 	/// The holder's world-space "right" direction given their forward vector
 	/// (issue #73) — Cross(forward, Up), matching the Godot convention
-	/// ComputeHolderForward's callers already assume (-Z is forward, +X is
+	/// HolderForward's callers already assume (-Z is forward, +X is
 	/// right). Used to place the ball to the side of the holder's centerline
 	/// rather than only in front of it.
 	/// </summary>
 	private static Vector3 HandRight(Vector3 forward) => new(-forward.Z, 0f, forward.X);
 
-	/// <summary>+1 when the ball is displayed in the right hand, -1 when in the left.</summary>
-	private float HandSign() => _handSide == HandSide.Right ? 1f : -1f;
+	/// <summary>
+	/// +1 when the ball renders in the holder's right hand, -1 when in the left.
+	/// READS the holder's server-authoritative HandSide (M9, #83/ADR-0012) — the
+	/// ball no longer derives its own hand from burst direction. Works for every
+	/// role: the holder's node carries the authoritative value (own/server) or the
+	/// broadcast value (the client's remote copy adopts it in TickClientRemotePlayer),
+	/// so the opponent's crossover hand-switch renders on your screen for free.
+	/// Null holder (pre-tipoff / loose) defaults to Left.
+	/// </summary>
+	private static float HandSign(PlayerController holder) =>
+		(holder?.HandSide ?? HandSide.Left) == HandSide.Right ? 1f : -1f;
 
 	/// <summary>
-	/// Updates which hand the ball displays in, riding the same DISPLAY path
-	/// #69 established (PlayerController.DisplayMove) so the opponent's hand
-	/// switch is visible too, not just the local player's — otherwise this
-	/// would silently repeat the #39/#69 gap (issue #73). Resets to the
-	/// default hand on every possession change: a new holder has no
-	/// carried-over hand state to display.
+	/// Resets the new holder's authoritative ball-hand to the default on a
+	/// possession change (M9, #83/ADR-0012): a new holder has no carried-over hand
+	/// state. Fires at most once per possession via the _handSideHolderId edge.
+	///
+	/// Runs on every machine — the state switch (TickHeld/TickDribbling) ticks on
+	/// server AND clients, and HolderPeerId is the broadcast authoritative holder
+	/// — so the server resets authoritatively, the client's own player predicts the
+	/// same reset, and the client's remote copy picks the reset up via the broadcast
+	/// HandSide. The per-possession swaps themselves are NOT touched here (they are
+	/// driven by the crossover's Active-entry in PlayerController); this only sets
+	/// the clean starting hand when possession changes.
 	/// </summary>
 	private void UpdateHandSide(PlayerController holder)
 	{
-		if (StateMachine.HolderPeerId != _handSideHolderId)
-		{
-			_handSideHolderId      = StateMachine.HolderPeerId;
-			_handSide               = HandSide.Left; // see _handSide's doc: opposite the keyboard burst so the next crossover is visible
-			_lastHandDisplayPhase   = MovePhase.Inactive;
-		}
+		if (StateMachine.HolderPeerId == _handSideHolderId) return;
 
-		if (holder == null) return;
-
-		(MovePhase phase, float burstDir) = holder.DisplayMove();
-		_handSide             = HandSideResolver.Resolve(_handSide, _lastHandDisplayPhase, phase, burstDir);
-		_lastHandDisplayPhase = phase;
+		_handSideHolderId = StateMachine.HolderPeerId;
+		holder?.ResetHandSide();
 	}
 
 	/// <summary>

@@ -227,4 +227,88 @@ public class HeadingMathTests
 
         Assert.Fail($"Did not converge to desiredYaw {desiredYaw:F4} within 120 ticks; last yaw = {currentYaw:F4}");
     }
+
+    // ── HeadingMath.Forward — cardinal headings ───────────────────────────────
+
+    private const float Tol = 1e-5f;
+
+    [Fact]
+    public void Forward_HeadingZero_FacesPositiveZ()
+    {
+        // h=0 → mesh faces +Z (Y-rotation=0 points toward +Z in Godot),
+        // so Forward(0) must be the unit vector (0, 1) in (worldX, worldZ).
+        Vector2 fwd = HeadingMath.Forward(0f);
+        Assert.True(MathF.Abs(fwd.X - 0f) < Tol, $"Expected X≈0, got {fwd.X}");
+        Assert.True(MathF.Abs(fwd.Y - 1f) < Tol, $"Expected Y≈1, got {fwd.Y}");
+    }
+
+    [Fact]
+    public void Forward_HeadingHalfPi_FacesPositiveX()
+    {
+        // h=π/2 → (sin π/2, cos π/2) = (1, 0): right along +X.
+        Vector2 fwd = HeadingMath.Forward(MathF.PI / 2f);
+        Assert.True(MathF.Abs(fwd.X - 1f) < Tol, $"Expected X≈1, got {fwd.X}");
+        Assert.True(MathF.Abs(fwd.Y - 0f) < Tol, $"Expected Y≈0, got {fwd.Y}");
+    }
+
+    [Fact]
+    public void Forward_HeadingPi_FacesNegativeZ()
+    {
+        // h=π → (sin π, cos π) = (0, -1): directly behind in +Z convention.
+        Vector2 fwd = HeadingMath.Forward(MathF.PI);
+        Assert.True(MathF.Abs(fwd.X - 0f) < Tol, $"Expected X≈0, got {fwd.X}");
+        Assert.True(MathF.Abs(fwd.Y - (-1f)) < Tol, $"Expected Y≈-1, got {fwd.Y}");
+    }
+
+    [Fact]
+    public void Forward_HeadingNegativeHalfPi_FacesNegativeX()
+    {
+        // h=-π/2 → (sin -π/2, cos -π/2) = (-1, 0): left along -X.
+        Vector2 fwd = HeadingMath.Forward(-MathF.PI / 2f);
+        Assert.True(MathF.Abs(fwd.X - (-1f)) < Tol, $"Expected X≈-1, got {fwd.X}");
+        Assert.True(MathF.Abs(fwd.Y - 0f) < Tol, $"Expected Y≈0, got {fwd.Y}");
+    }
+
+    // ── HeadingMath.Forward — round-trip property ─────────────────────────────
+
+    [Theory]
+    [InlineData(0f)]
+    [InlineData(MathF.PI / 4f)]
+    [InlineData(MathF.PI / 2f)]
+    [InlineData(MathF.PI - 0.001f)]   // near +π (avoid exact π where cos→-1 and sign differs)
+    [InlineData(-MathF.PI / 4f)]
+    [InlineData(-MathF.PI / 2f)]
+    [InlineData(-MathF.PI + 0.001f)]  // near -π
+    public void Forward_RoundTrip_Atan2EqualsOriginalHeading(float heading)
+    {
+        // Forward is the exact inverse of the Atan2(x, z) convention RotateToward
+        // uses to derive heading from intent: Atan2(Forward(h).X, Forward(h).Y) ≡ h.
+        // This pins that the ball-offset vector produced from Heading will feed back
+        // into the same convention if ever re-derived, with no drift.
+        Vector2 fwd      = HeadingMath.Forward(heading);
+        float   roundTrip = MathF.Atan2(fwd.X, fwd.Y);
+        Assert.True(MathF.Abs(roundTrip - heading) < Tol,
+            $"Round-trip failed for h={heading}: got {roundTrip}");
+    }
+
+    // ── HeadingMath.Forward — unit length ─────────────────────────────────────
+
+    [Theory]
+    [InlineData(0f)]
+    [InlineData(MathF.PI / 6f)]
+    [InlineData(MathF.PI / 3f)]
+    [InlineData(MathF.PI / 2f)]
+    [InlineData(2f * MathF.PI / 3f)]
+    [InlineData(-MathF.PI / 4f)]
+    [InlineData(-2f)]
+    public void Forward_AnyHeading_IsUnitLength(float heading)
+    {
+        // Forward must always be a unit vector — the callers (HolderForward in
+        // BallController) do not renormalise, so length ≠ 1 would scale the
+        // DribbleForwardOffset and HandOffset silently.
+        Vector2 fwd = HeadingMath.Forward(heading);
+        float   len = fwd.Length();
+        Assert.True(MathF.Abs(len - 1f) < Tol,
+            $"Expected unit length for h={heading}, got {len}");
+    }
 }

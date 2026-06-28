@@ -64,8 +64,8 @@ public static class HeadingMath
     /// <param name="maxTurnRateDeg">
     /// Nominal maximum turn speed in degrees/second, applied at small
     /// angular differences. Scaled down by the non-linear factor for large
-    /// differences. Default 400 °/s. A 180° back-turn at backTurnSlowFactor
-    /// 0.35 takes ≈ 0.75 s — this is the integrated time of the non-linear
+    /// differences. Default 530 °/s. A 180° back-turn at backTurnSlowFactor
+    /// 0.35 takes ≈ 0.55 s — this is the integrated time of the non-linear
     /// schedule, not the constant-rate 180/(rate×f) figure (which overestimates
     /// because the rate accelerates as the diff closes).
     /// </param>
@@ -125,6 +125,20 @@ public static class HeadingMath
         // and callers can compare it against Atan2 outputs directly.
         return NormalizeAngle(newYaw);
     }
+
+    /// <summary>
+    /// The unit world-space forward direction (XZ plane) for a given heading —
+    /// the inverse of the Atan2(x, z) convention <see cref="RotateToward"/> uses
+    /// to derive heading from intent. Heading h ⇒ forward (sin h, cos h), so
+    /// MathF.Atan2(Forward(h).X, Forward(h).Y) == h. Yaw 0 faces +Z, matching
+    /// PlayerController.ApplyCosmetics (_mesh.Rotation.Y = Heading): anything
+    /// positioned along this vector sits in front of the player's authoritative —
+    /// and rendered — facing, not their (possibly zero) velocity direction.
+    /// </summary>
+    /// <param name="heading">Heading in radians, Y-rotation, Godot convention.</param>
+    /// <returns>Unit (worldX, worldZ) forward direction.</returns>
+    public static Vector2 Forward(float heading) =>
+        new(MathF.Sin(heading), MathF.Cos(heading));
 
     // ── Internal helpers ──────────────────────────────────────────────────────
 
