@@ -839,7 +839,7 @@ doesn't merge regardless of how the visual change looks in the editor.
 
 **Do these only after the M7b PR (`feat/54-anim-integration`) has merged.** All the
 C# is already written and unit-test-covered (`MoveAnimResolver`, `DisplayPhaseResolver`,
-`HandSideResolver`, `JumpShotReleaseResolver`) — what's missing is the AnimationTree
+`JumpShotReleaseResolver`) — what's missing is the AnimationTree
 itself, which only the editor can author. Epic **#54**. Sub-issues in dependency
 order: #68 (rig + locomotion blend, this section's bulk) → #41 (placeholder
 committed-move states — same AnimationTree, mostly just adding 3 more nodes) →
@@ -1079,9 +1079,16 @@ Step 6 (#73) and Step 7 (#74) below before closing the epic.
 
 ### Step 6 — Issue #73: verify the ball switches hands (single + dual-instance)
 
-All the code is already merged — `HandSideResolver` (pure, unit-tested) and
-`BallController`'s lateral offset in `TickHeld`/`TickDribbling`. Nothing new to
-build; this is sign-off, same as Step 5 was for #69.
+All the code is already merged — the ball-hand display and `BallController`'s
+lateral offset in `TickHeld`/`TickDribbling`. Nothing new to build; this is
+sign-off, same as Step 5 was for #69.
+
+> **Superseded by M9 (#83 / ADR-0012):** ball-hand is no longer the cosmetic
+> `HandSideResolver` value this step originally verified — it was promoted to
+> server-authoritative `PlayerController.HandSide`, and the ball mesh now reads it
+> (`BallController.HandSign`). The M9 PR carries its own dual-instance verify
+> (both clients agree on hand-side across a crossover; a mispredicted crossover's
+> hand snaps back).
 
 1. Run `Main.tscn` solo. Dribble in place — on the **keyboard** the ball
    starts in the player's **left** hand (this is deliberate; see note below).
