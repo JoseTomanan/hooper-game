@@ -51,4 +51,30 @@ public static class CourtBounds
             Mathf.Clamp(position.Z, min.Y, max.Y)
         );
     }
+
+    /// <summary>
+    /// Returns <see langword="true"/> when <paramref name="position"/> lies
+    /// outside the play-court rectangle [<paramref name="min"/> …
+    /// <paramref name="max"/>] in the XZ plane.  Y is ignored — same reasoning
+    /// as <see cref="Clamp"/> ("Why XZ only").
+    ///
+    /// Same rectangle as <see cref="Clamp"/>, opposite verb: detect the crossing
+    /// instead of clamping back into it.  The boundary itself is considered
+    /// <em>in-bounds</em> (strict less-than / greater-than), consistent with
+    /// <see cref="Clamp"/> treating the edge as inside — a ball resting exactly
+    /// on the sideline is still in play.
+    /// </summary>
+    /// <param name="position">World position to test (typically the ball centre).</param>
+    /// <param name="min">Floor-plane lower bound: X = court left edge, Y = court near edge (smallest Z).</param>
+    /// <param name="max">Floor-plane upper bound: X = court right edge, Y = court far edge (largest Z).</param>
+    /// <returns>
+    /// <see langword="true"/> if X or Z (or both) fall outside the [min, max]
+    /// rectangle; <see langword="false"/> if the position is inside or exactly
+    /// on a boundary edge.
+    /// </returns>
+    public static bool IsOutOfBounds(Vector3 position, Vector2 min, Vector2 max)
+    {
+        return position.X < min.X || position.X > max.X
+            || position.Z < min.Y || position.Z > max.Y;
+    }
 }
