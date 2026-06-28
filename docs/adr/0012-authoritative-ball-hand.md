@@ -1,6 +1,6 @@
 # ADR-0012 — Ball-hand-side is server-authoritative state, not cosmetic
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-06-28
 - **Superseded-by:** —
 
