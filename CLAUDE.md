@@ -22,6 +22,7 @@ locked unless explicitly revisited (see Decision Discipline in §4 below).
 | [ADR-0010](docs/adr/0010-authoritative-heading.md) | Player heading: server-authoritative, bounded non-linear turn rate, integrated into Move() |
 | [ADR-0011](docs/adr/0011-claude-authors-scenes.md) | Claude authors `.tscn`/`.res`/`project.godot` by text-edit; human owns feel + verification only |
 | [ADR-0013](docs/adr/0013-afk-hitl-separate-issues.md) | AFK build work and HITL editor verification live in separate issues (no dual-labelled issue) |
+| [ADR-0014](docs/adr/0014-reference-game-decision-authority.md) | Reference-game decision authority: ranked references (real half-court ball > Undisputed 3 feel > 2K taxonomy) — self-resolve reference-grounded calls on the record, escalate only genuine design calls |
 
 ---
 
@@ -39,6 +40,15 @@ non-obvious choices, prefer clarity over cleverness, and never silently assume
 game-dev knowledge on the human's part.
 
 ### Design identity (do not relitigate without being asked)
+
+The identity itself is locked. But most day-to-day design questions are not
+identity changes — they are *reference-grounded* ("what does real half-court 1v1
+ball do here? how does *Undisputed 3* commit this? what does 2K call it?").
+**Self-resolve those on the record per [ADR-0014](docs/adr/0014-reference-game-decision-authority.md)**
+(ranked references, cite-or-ask) instead of routing them to the human. Only
+genuine design calls — an identity/anti-goal change, an ADR contradiction, a true
+reference deadlock, or a high-stakes irreversible decision — still come back to
+the human.
 
 - **Spine:** footwork / spacing — separation creation vs. denial is the core 1v1
   interaction.
