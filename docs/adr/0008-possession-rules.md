@@ -157,3 +157,49 @@ them and an instant put-back score.
 **Code:** `BallController.AwardPossession` accepts an optional `cleared` flag
 (default `false`); `ResolveServerMake` passes `cleared: true` on the counting-make
 path only.
+
+---
+
+## Amendment — 2026-06-28 (issue #63 out-of-bounds rule)
+
+**Status remains Accepted.**
+
+**New rule — loose-ball out-of-bounds:** A loose ball whose XZ position crosses
+the play-court boundary is out of bounds. The play is dead; the server awards
+possession to the player **opposite the last shooter** (`OtherPlayerPeerId(_lastShooterPeerId)`),
+starting uncleared (same as any turnover — the new holder must take it back before
+scoring, per §Decision-3 / Amendment 2026-06-21).
+
+**Replaces the unconditional clamp at the play-court line.** `TickLoose`
+previously clamped a loose ball back inside the rectangle so it could never leave.
+That clamp survives only as a **fallback** for two cases:
+
+1. **No opponent present** (solo editor test, defender == 0): with nobody to award
+   the ball to, the clamp keeps the ball in play; losing it forever would break
+   solo sessions. Mirrors the `ResolveServerMake` defender == 0 "leave loose" pattern.
+2. **Non-server peers:** clients keep the clamp unchanged. The server's authoritative
+   `ReceiveState` broadcast reconciles any divergence — identical to how all other
+   possession changes propagate.
+
+**Why server-gated (not predicted):** OOB is a dead-ball ruling, not a live
+scramble. There is no 50/50 proximity contest to predict (unlike rebounds). Gating
+the award on `IsServer` eliminates prediction-flip risk — two clients briefly
+disagreeing on the new holder — for zero gameplay cost, exactly the reasoning that
+gates `ResolveServerMake`.
+
+**Scope is loose-ball only.** A player carrying the ball who steps out of bounds
+is a natural later expansion; it is deliberately out of scope here. The holder is
+already wall-bounded (StaticBody3D walls), so no holder-OOB case can currently
+occur, and the design choice (who gets it — last holder or opponent) belongs to a
+future held-ball-OOB decision, not this one.
+
+**Rejected alternative — predict OOB like a rebound:** Rejected because OOB is
+a dead ball. Predicting it on clients as if it were a live scramble would require
+clients to resolve "who does OOB go to" from potentially stale remote-player
+positions, opening a flip-possession window without any gameplay upside — there is
+no contested recovery for clients to feel immediately.
+
+**Code:** `CourtBounds.IsOutOfBounds` (added to `scripts/Ball/CourtBounds.cs`) is
+the pure geometry check (XZ-only, boundary inclusive). `BallController.TickLoose`
+checks `IsOutOfBounds` before running `ResolveLooseBallRecovery`; an OOB turnover
+returns immediately so the rebound step is skipped that tick.

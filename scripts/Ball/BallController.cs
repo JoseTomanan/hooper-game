@@ -1128,20 +1128,57 @@ public partial class BallController : Node3D
 			_arc.Velocity = bouncedVel;
 		}
 
-		// Half-court bound: clamp XZ so the loose ball cannot roll off the floor
-		// edge (issue #46).  Y is preserved — the floor-contact check above already
-		// owns vertical containment.  Exported CourtMin/Max are the single source of
-		// truth for the bounds; the StaticBody3D walls in the editor must match them.
-		// Deterministic: same exported values on every peer → no reconciliation drift.
+		// Out-of-bounds detection (issue #63): replaces the old unconditional clamp.
+		// When a loose ball crosses the play-court line, the play is dead — server
+		// awards possession to the player OPPOSITE the last shooter (real half-court
+		// "last-toucher-out → other ball" rule).
 		//
-		// Ordering note: this must run AFTER the floor check above (which may have
-		// already written _arc.Position via the local `p` copy) so the final
-		// _arc.Position reflects both corrections before it is read into GlobalPosition.
+		// Why server-gated (not predicted): OOB is a dead-ball ruling with no live
+		// scramble to contest, so there is no gameplay value in predicting it on
+		// clients.  Server-gating avoids prediction-flip risk (two clients briefly
+		// disagreeing on who holds the ball) for zero gameplay cost, mirroring the
+		// same rationale as ResolveServerMake.
+		//
+		// Why defender==0 falls back to clamp: with no opponent (solo editor test)
+		// there is nobody to award the ball to, and letting it vanish OOB forever
+		// would break solo testing.  The clamp keeps the ball in play, consistent
+		// with the ResolveServerMake defender==0 "leave loose" pattern.
+		//
+		// Ordering: OOB check runs BEFORE ResolveLooseBallRecovery so a ball that
+		// crossed the line is not also rebounded the same tick.  An awarded turnover
+		// returns immediately, skipping the rebound step entirely.
+		if (CourtBounds.IsOutOfBounds(_arc.Position, CourtMin, CourtMax))
+		{
+			if (IsServer)
+			{
+				int recipient = OtherPlayerPeerId(_lastShooterPeerId);
+				if (recipient != 0)
+				{
+					// Dead ball: award possession to the non-shooting player,
+					// uncleared (they must take it back before scoring — same as
+					// any turnover; ADR-0008 §Amendment 2026-06-21).
+					AwardPossession(recipient);
+					GlobalPosition = _arc.Position;
+					return; // skip rebound step — possession is already resolved
+				}
+				// else: no opponent present (solo editor test) — fall through to
+				// the clamp below so the ball stays in play.
+			}
+			// Not the server, or no opponent: fall through to clamp.
+			// Clients keep the clamp so no regression occurs on the non-authoritative
+			// path; the server's ReceiveState broadcast will correct any divergence.
+		}
+
+		// Half-court bound clamp: keeps XZ within the play-court rectangle.
+		// Runs on every peer (deterministic: same CourtMin/Max exports → no drift).
+		// This is now the fallback path for the client and the no-opponent solo case;
+		// the server's authoritative OOB turnover above has already returned when an
+		// opponent exists.  Y is preserved — the floor-contact check above already
+		// owns vertical containment.
 		//
 		// Velocity zeroing: when the clamp fires on an axis, zero the matching
 		// velocity component so the integrator does not keep pushing the ball
-		// through the wall every tick (analogous to the floor-contact Velocity=Zero
-		// at line 712).
+		// through the wall every tick.
 		Vector3 preclamp = _arc.Position;
 		_arc.Position = CourtBounds.Clamp(_arc.Position, CourtMin, CourtMax);
 
