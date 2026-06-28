@@ -126,6 +126,20 @@ public static class HeadingMath
         return NormalizeAngle(newYaw);
     }
 
+    /// <summary>
+    /// The unit world-space forward direction (XZ plane) for a given heading —
+    /// the inverse of the Atan2(x, z) convention <see cref="RotateToward"/> uses
+    /// to derive heading from intent. Heading h ⇒ forward (sin h, cos h), so
+    /// MathF.Atan2(Forward(h).X, Forward(h).Y) == h. Yaw 0 faces +Z, matching
+    /// PlayerController.ApplyCosmetics (_mesh.Rotation.Y = Heading): anything
+    /// positioned along this vector sits in front of the player's authoritative —
+    /// and rendered — facing, not their (possibly zero) velocity direction.
+    /// </summary>
+    /// <param name="heading">Heading in radians, Y-rotation, Godot convention.</param>
+    /// <returns>Unit (worldX, worldZ) forward direction.</returns>
+    public static Vector2 Forward(float heading) =>
+        new(MathF.Sin(heading), MathF.Cos(heading));
+
     // ── Internal helpers ──────────────────────────────────────────────────────
 
     /// <summary>

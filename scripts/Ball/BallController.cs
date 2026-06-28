@@ -403,16 +403,6 @@ public partial class BallController : Node3D
 	private DribbleCycle _dribble;
 	private RimBackboard _basket;
 
-	/// <summary>
-	/// Last known horizontal facing direction of the holder. Persisted so the
-	/// dribble offset stays stable while the player is stationary. Initialised
-	/// to -Z (facing up the court). Reset effectively on each possession change
-	/// because the new holder's velocity drives it immediately on the first
-	/// moving tick; the server's ReceiveState broadcast corrects any 1-tick
-	/// directional divergence in the meantime.
-	/// </summary>
-	private Vector3 _lastHolderForward = new Vector3(0f, 0f, -1f);
-
 	// ── Ball-on-hand display (M7b, issue #73) ─────────────────────────────
 
 	/// <summary>
@@ -853,22 +843,22 @@ public partial class BallController : Node3D
 	}
 
 	/// <summary>
-	/// Returns the holder's current horizontal facing direction as a normalised XZ vector.
-	/// Falls back to <see cref="_lastHolderForward"/> when the holder is absent or stationary
-	/// (speed below 0.1 m/s — just above the deceleration floor so the direction locks in
-	/// before the player fully stops rather than flickering at the last frame of movement).
-	/// Writes <see cref="_lastHolderForward"/> as a side-effect; the server broadcasts
-	/// position every tick so any client/server divergence in this field is absorbed by
-	/// <see cref="ReconcileFromServer"/> within one tick.
+	/// The holder's forward direction on the XZ plane, derived from their
+	/// server-authoritative <see cref="PlayerController.Heading"/> (ADR-0010) —
+	/// NOT from velocity. This is what makes the ball orbit the holder as they
+	/// turn, even while standing still: the old velocity-derived forward froze
+	/// the instant the player stopped moving, so a pivot or a stationary
+	/// crossover left the ball stranded on the pre-turn side. Heading is valid
+	/// and identical across roles (own/server set it in Move(); the client's
+	/// remote copy adopts the broadcast value in TickClientRemotePlayer), the
+	/// same guarantee <see cref="HandSign"/> relies on. A null holder
+	/// (pre-tipoff / loose) → heading 0 (+Z); the ball tracks the world origin
+	/// in that case anyway, so the exact fallback direction is immaterial.
 	/// </summary>
-	private Vector3 ComputeHolderForward(CharacterBody3D body)
+	private static Vector3 HolderForward(PlayerController holder)
 	{
-		if (body == null) return _lastHolderForward;
-		Vector3 vel = body.Velocity;
-		float horizontalSpeed = new Vector2(vel.X, vel.Z).Length();
-		if (horizontalSpeed < 0.1f) return _lastHolderForward;
-		_lastHolderForward = new Vector3(vel.X, 0f, vel.Z).Normalized();
-		return _lastHolderForward;
+		Vector2 fwd = HeadingMath.Forward(holder?.Heading ?? 0f);
+		return new Vector3(fwd.X, 0f, fwd.Y);
 	}
 
 	/// <summary>
@@ -896,7 +886,7 @@ public partial class BallController : Node3D
 	{
 		var holderBody = Players?.GetNodeOrNull(StateMachine.HolderPeerId.ToString()) as PlayerController;
 		Vector3 holderPos = holderBody?.GlobalPosition ?? Vector3.Zero;
-		Vector3 forward   = ComputeHolderForward(holderBody);
+		Vector3 forward   = HolderForward(holderBody);
 		Vector3 right     = HandRight(forward);
 		UpdateHandSide(holderBody);
 
@@ -915,7 +905,7 @@ public partial class BallController : Node3D
 		_dribble.Advance(dt);
 		var holderBody = Players?.GetNodeOrNull(StateMachine.HolderPeerId.ToString()) as PlayerController;
 		Vector3 holderPos = holderBody?.GlobalPosition ?? Vector3.Zero;
-		Vector3 forward   = ComputeHolderForward(holderBody);
+		Vector3 forward   = HolderForward(holderBody);
 		Vector3 right     = HandRight(forward);
 		UpdateHandSide(holderBody);
 
@@ -931,7 +921,7 @@ public partial class BallController : Node3D
 	/// <summary>
 	/// The holder's world-space "right" direction given their forward vector
 	/// (issue #73) — Cross(forward, Up), matching the Godot convention
-	/// ComputeHolderForward's callers already assume (-Z is forward, +X is
+	/// HolderForward's callers already assume (-Z is forward, +X is
 	/// right). Used to place the ball to the side of the holder's centerline
 	/// rather than only in front of it.
 	/// </summary>
