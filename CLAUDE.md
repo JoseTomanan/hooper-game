@@ -103,7 +103,7 @@ the human.
 | **M6b — Possession loop** | **Active (current)** | #46 |
 | M7a — Static readability pass | Done | #53 |
 | **M7b — Rigged humanoid animation** | **Active (parallel presentation track)** | #54 |
-| M8 — Realism & polish pass | DEFERRED (umbrella, accrues sub-issues); #70 (crossover clip) parked here | #61 |
+| **M8 — Realism & polish pass** | **Active** (umbrella; #62 shot-scatter done, #63 OOB rule build done PR #116; #70 crossover clip parked here) | #61 |
 | **M9 — Basketball-related controls (offense)** | **Active** (umbrella; crossover/hesi pass landed PR #88, verify #114) | #75 |
 | M10 — Defense & the reactive read | DEFERRED (planning epic); sub-issues filed #95–#104 | #89 |
 | M11 — Stamina & resource economy | DEFERRED (planning epic) | #90 |
@@ -126,8 +126,8 @@ accruing sub-issues. M9 (offense) is now active — its first crossover/hesi pas
 has landed — but remains an umbrella that still accrues sub-issues (the seed
 ball-hand-steal and pump-fake follow-ups are not yet scoped).
 
-Do not build ahead of the current milestone unless asked. M6b, M7b, and M9 are
-open for work; M8 and M10 onward are not.
+Do not build ahead of the current milestone unless asked. M6b, M7b, M8, and M9
+are open for work; M10 onward is not.
 
 ---
 
