@@ -133,10 +133,13 @@ open for work; M8 and M10 onward are not.
   Code authors these by **direct text-edit** as ordinary AFK work: adding/renaming
   nodes, setting properties, assigning exports/`NodePath`s, instancing sub-scenes,
   and Input Map entries. The human's role narrows to **feel/tuning judgments** and
-  **in-engine verification** (see EDITOR_TASKS.md). Two structural exclusions stay
-  HITL until a spike proves them text-authorable: AnimationTree **graph authoring**
-  (BlendSpace points, state-machine nodes/transitions) and editor **import-dialog**
-  settings not already scriptable headlessly. Scene edits are fragile (`ext_resource`/
+  **in-engine verification** (see EDITOR_TASKS.md). AnimationTree **graph authoring**
+  (BlendSpace points, state-machine nodes/transitions) is now **AFK** — spike #87
+  proved a hand-authored tree loads and runs identically to an editor-authored one
+  (see `docs/spikes/0011-animationtree-text-authoring.md` for the authoring gotchas,
+  esp. the fragile flat `transitions` array). One structural exclusion remains HITL:
+  editor **import-dialog** settings not already scriptable headlessly. Scene edits
+  are fragile (`ext_resource`/
   `sub_resource` IDs, `uid`, load-step counts) — so they ship in their own
   single-concern commit with a headless load check where a Godot binary is available.
 - **`assets/`** — models, textures, sounds. Placeholder/gray is fine for now.

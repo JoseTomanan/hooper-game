@@ -3,8 +3,11 @@
 - **Issue:** #87
 - **Gates:** ADR-0011's deliberate exclusion of AnimationTree graph authoring; M7b (#54) Steps 3–4.
 - **Date:** 2026-06-28
-- **Verdict:** **PASS** (AFK structural + headless-load proof). One-time human in-editor
-  visual confirm is the remaining HITL tail.
+- **Verdict:** **PASS — fully proven.** AFK structural + headless-load proof (31/31)
+  *and* the human's one-time in-editor visual confirm both passed (2026-06-28). The
+  text-authored tree was swapped into `Player.tscn`'s `AnimationTree.tree_root`, run,
+  and confirmed to animate identically (then reverted). ADR-0011's AnimationTree
+  exclusion is **lifted**; AnimationTree graph authoring is now AFK.
 
 ## Question
 
@@ -104,10 +107,14 @@ ADR-0011 Consequences + CLAUDE.md §3 to drop AnimationTree graph authoring from
 exclusions, keeping the standing scene-edit guardrails (isolated single-concern commit +
 headless load check) and the gotchas above as the authoring checklist.
 
-## Remaining HITL
+## HITL confirm — DONE (2026-06-28)
 
-One-time, in the Godot editor, on `scenes/Player.tscn` (or a throwaway scene wiring
-`loco_text.tres` as an AnimationTree's `tree_root` over the rig + locomotion library):
-play idle→run and the committed-move states and confirm the text-authored tree **looks
-and runs identically** to the editor-authored baseline. That confirm closes the spike's
-HITL tail and authorizes the ADR-0011/CLAUDE.md flip.
+The human swapped `loco_text.tres` into `scenes/Player.tscn`'s `AnimationTree.tree_root`,
+ran the game, confirmed idle→run and the committed-move states animate identically to the
+editor-authored baseline, and reverted the swap. With that, the ADR-0011/CLAUDE.md flip
+landed (exclusion lifted) and issue #87 is closed.
+
+### Bonus finding
+Loading the hand-authored `loco_text.tres` in the editor round-trips it harmlessly: the
+editor adds a `uid://` header and reorders the `sub_resource` blocks, with **no behavioral
+change**. So a hand-authored `.tres` is stable under an editor open/save cycle.

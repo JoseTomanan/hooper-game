@@ -107,8 +107,13 @@ exports and `NodePath`s, instancing sub-scenes, Input Map entries, and wiring
 exports onto nodes that already exist — moves to **AFK**.
 
 **Boundary that stays HITL (this ADR's deliberate exclusions):**
-- AnimationTree **graph authoring** (BlendSpace points, state-machine nodes/
-  transitions) — HITL until the spike below proves text-authoring reliable.
+- ~~AnimationTree **graph authoring** (BlendSpace points, state-machine nodes/
+  transitions) — HITL until the spike below proves text-authoring reliable.~~
+  **Lifted 2026-06-28** — the spike (#87) proved a hand-authored `AnimationTree`
+  (StateMachine + BlendSpace1D) loads clean and runs identically to an
+  editor-authored one (in-engine confirmed). AnimationTree **graph authoring is
+  now AFK**, under the standing guardrails below plus the authoring gotchas in
+  `docs/spikes/0011-animationtree-text-authoring.md`. See Consequences.
 - Editor **import-dialog** settings not already scriptable headlessly.
 - All **feel/verification** runs.
 
@@ -142,10 +147,20 @@ exports onto nodes that already exist — moves to **AFK**.
   optional. New failure modes — unresolved `ext_resource`, duplicate/again-used
   IDs, wrong `uid`, stale load-step counts — must be checked for, not assumed
   absent.
-- **AnimationTree authoring stays a manual gap** until a dedicated spike proves a
+- ~~**AnimationTree authoring stays a manual gap** until a dedicated spike proves a
   text-authored `AnimationTree` (state machine + BlendSpace1D) loads and runs
   identically to an editor-authored one. Until then M7b Steps 3–4 remain HITL.
-  This spike is the natural next follow-up to this ADR.
+  This spike is the natural next follow-up to this ADR.~~ **Resolved 2026-06-28
+  (spike #87, PASS).** A hand-authored `AnimationNodeStateMachine` + BlendSpace1D
+  matched the editor baseline on all 31 structural/behavioral checks (clean
+  headless load, identical states/node-types/blend-points/transitions) and was
+  confirmed running identically in-editor by the human. AnimationTree graph
+  authoring moves to AFK. The text-authoring failure modes the spike surfaced —
+  the flat interleaved `transitions` array (off-by-one in sub_resource block count
+  misparses silently), default `advance_mode = 1` on empty transition blocks,
+  32-bit float round-off in `min_space`/`max_space`, virtual `Start`/`End` states
+  — are recorded in `docs/spikes/0011-animationtree-text-authoring.md` as the
+  authoring checklist. M7b Steps 3–4 (#41, #69) are no longer HITL-gated on this.
 - **Documentation must be updated on acceptance, in the accepting commit**
   (Decision Discipline): rewrite CLAUDE.md §3's "scenes are authored by the
   human" paragraph to reflect the new boundary, add this ADR (0011) to CLAUDE.md's
