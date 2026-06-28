@@ -5,6 +5,10 @@
 - **Refined:** 2026-06-17 — anti-goal reframed from "polished sports-game feel" to
   *arcade decoupling of action from physical commitment*; polish is no longer
   treated as the enemy. See *Frame legibility* below.
+- **Refined:** 2026-06-28 (M9, #85/#86) — added the *no stick free-aim* anti-goal
+  (the right stick is a binary L/R trigger, not an analog aim) and the design note
+  that *combat-sport feints do not apply to dribbling*. See *Right-stick is a
+  binary trigger* and *Feints vs. hesitation* below.
 - **Superseded-by:** —
 
 ---
@@ -83,6 +87,45 @@ This is bounded on both sides:
 
 Animation notes, playtest requests, or assets pushing toward either anti-target
 contradict this decision; they do not refine it.
+
+### Right-stick is a binary trigger, not an analog aim (M9, #85)
+
+The right-stick committed-move gestures are read as a **binary left/right
+trigger only** — the sign of the horizontal flick, nothing more.
+`RightStickGestureRecognizer` already collapses the stick to `±1` and ignores
+magnitude and the vertical axis; that is deliberate and **must stay that way.**
+
+- **Anti-goal — burst toward wherever the stick points.** There is no "free-aim"
+  analog burst. A crossover/hesitation does not fire in an arbitrary stick-chosen
+  direction; the flick selects *which side* (the player's left or right), and the
+  resulting **world** direction follows the player's server-authoritative heading
+  (ADR-0010) — the burst follows the body, not the screen and not a free analog
+  vector. Free-aim dribble bursts are not basketball-realistic and would dissolve
+  the legible, committed read this ADR is built on.
+- **Heading-relative, not camera/screen-relative.** For a fixed half-court camera,
+  "the player's left/right" (heading-relative) is the meaningful interpretation of
+  a directional flick. Stick-right while facing forward bursts world-right; stick-
+  right while facing reversed bursts world-left.
+
+A request to "let the stick aim the dribble" contradicts this decision; it does
+not refine it.
+
+### Feints vs. hesitation — combat-sport feints do not apply to dribbling (M9, #86)
+
+A traditional combat-sport **feint** recalls/aborts a committed strike inside its
+startup window — you wind up a punch and pull it back. `CommittedMoveMachine.Feint()`
+(Startup → Inactive within the feint window) models exactly that recall.
+
+That recall is **not basketball-realistic for a dribble move:** once the ball is
+headed to the floor you physically cannot pull it back. The realistic fake is a
+**hesitation** — its own honest dribble setup (a freeze/stutter that baits a
+reaction), **not** "a crossover you cancelled." The hesitation is therefore a
+distinct committed move (no hand-swap, no scripted burst; the player drives the
+exit with the left stick), *not* a `Feint()` of a crossover.
+
+`Feint()` is **kept for now** (it is wired and harmless) but is flagged here as
+**non-realistic and slated for reconsideration** — do not build new dribble
+mechanics on top of the recall model.
 
 ## Consequences
 
