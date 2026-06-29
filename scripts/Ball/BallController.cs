@@ -1058,12 +1058,18 @@ public partial class BallController : Node3D
 	{
 		if (IsCleared)
 		{
-			GetGameManager()?.RegisterBasket(_lastShooterPeerId);
+			// Resolve the GameManager ONCE: RegisterBasket can set IsGameOver
+			// synchronously (and fires the GameOver signal whose handlers may
+			// mutate the tree), so re-calling GetGameManager() for the IsGameOver
+			// read could observe a different — or null-fallback — node and
+			// wrongly award a post-game possession (#136). One reference, one tick.
+			GameManager gm = GetGameManager();
+			gm?.RegisterBasket(_lastShooterPeerId);
 
 			// Make-it-take-it, unless the basket ended the game — then the
 			// game-over freeze stands (see _PhysicsProcess's no-freeze note).
 			// cleared: true — the scorer already earned their trip (see doc).
-			if (!(GetGameManager()?.IsGameOver ?? false))
+			if (!(gm?.IsGameOver ?? false))
 				AwardPossession(_lastShooterPeerId, cleared: true);
 			return;
 		}
