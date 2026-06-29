@@ -23,6 +23,9 @@ locked unless explicitly revisited (see Decision Discipline in §4 below).
 | [ADR-0011](docs/adr/0011-claude-authors-scenes.md) | Claude authors `.tscn`/`.res`/`project.godot` by text-edit; human owns feel + verification only |
 | [ADR-0013](docs/adr/0013-afk-hitl-separate-issues.md) | AFK build work and HITL editor verification live in separate issues (no dual-labelled issue) |
 | [ADR-0014](docs/adr/0014-reference-game-decision-authority.md) | Reference-game decision authority: ranked references (real half-court ball > Undisputed 3 feel > 2K taxonomy) — self-resolve reference-grounded calls on the record, escalate only genuine design calls |
+| [ADR-0015](docs/adr/0015-autonomous-merge-proven-by-harness.md) | Autonomous merge for the AFK lane + harness-closed `hitl`; "Done means proven" redefined as proven-by-harness (supersedes "human owns merges"); feel batched to one human pass per milestone |
+| [ADR-0016](docs/adr/0016-headless-verification-harness.md) | Headless Godot harness (`tests/integration/`, `--headless`, exit-code pass/fail) is the official verification surface — the automated stand-in for human in-editor verification of state-checkable acceptance criteria |
+| [ADR-0017](docs/adr/0017-autopilot-activates-deferred-milestones.md) | Autopilot may activate DEFERRED milestones in the §2 dependency order without a per-milestone human "go" (supersedes "do not build ahead of the current milestone"); activation gates pickup, not merge |
 
 ---
 
@@ -126,8 +129,15 @@ accruing sub-issues. M9 (offense) is now active — its first crossover/hesi pas
 has landed — but remains an umbrella that still accrues sub-issues (the seed
 ball-hand-steal and pump-fake follow-ups are not yet scoped).
 
-Do not build ahead of the current milestone unless asked. M6b, M7b, M8, and M9
-are open for work; M10 onward is not.
+**Autopilot exception ([ADR-0017](docs/adr/0017-autopilot-activates-deferred-milestones.md)):**
+the human has pre-authorised driving the full roadmap to M15, so the autopilot
+**may** activate a DEFERRED milestone without a per-milestone human "go" —
+**but only by walking the dependency order documented in this table**, and only
+after each predecessor milestone's epic is genuinely closed (CI + harness +
+code-review + its one feel pass) under [ADR-0015](docs/adr/0015-autonomous-merge-proven-by-harness.md).
+Activation flips DEFERRED → Active in this table and gates *pickup*, not *merge*.
+Outside that autopilot walk, the old rule still holds: do not build ahead of the
+current milestone unless asked.
 
 ---
 
@@ -175,9 +185,9 @@ are open for work; M10 onward is not.
 GitHub Issues is the sole task tracker. TASKS.md no longer exists.
 
 - Issues labeled `afk` are Claude Code's to implement.
-- Issues labeled `hitl` require a human editor step (see EDITOR_TASKS.md) before they can close.
+- Issues labeled `hitl` require an editor-level verification step (see EDITOR_TASKS.md) before they can close. Under autopilot ([ADR-0016](docs/adr/0016-headless-verification-harness.md)) that verification is performed by the **headless harness** wherever the acceptance criterion is state-checkable; only irreducibly *feel* criteria still need a human (batched per milestone, [ADR-0015](docs/adr/0015-autonomous-merge-proven-by-harness.md)).
 - **AFK build and HITL verify are separate issues** ([ADR-0013](docs/adr/0013-afk-hitl-separate-issues.md)). An issue is single-purpose: either an `afk` build issue (closes on merge) or a `hitl` verify issue (closes only when proven in-engine) — **do not file or leave an issue carrying both labels.** If work has a build half and a verification half, split it; the `afk` issue merges and a separate `hitl` issue holds the dual-instance verify. When a legacy dual-labelled `afk` issue's code merges, close it and move the verify into a `hitl` issue (name the destination in the closing comment, name the sources in the verify issue — the #83–#86 → #114 pattern). One `hitl` issue may consolidate several AFK features proven in the same editor session.
-- **Done means proven, not written.** A `hitl` issue is only closed after the human confirms it in the editor (the relevant EDITOR_TASKS steps). Do not close it on code alone.
+- **Done means proven, not written** — *proven* now means **proven by the harness** ([ADR-0015](docs/adr/0015-autonomous-merge-proven-by-harness.md)/[ADR-0016](docs/adr/0016-headless-verification-harness.md)). A `hitl` issue whose acceptance criteria are state-checkable is closed when the headless harness asserts them green in CI; a criterion that is irreducibly *feel* is closed at the per-milestone human feel pass. The bar (proof before close) is unchanged — the prover moved from a human to the harness. Never close on code/compile alone.
 - When finishing a unit of work, tell the human which issue(s) to close and which EDITOR_TASKS steps (if any) they must complete first.
 - **Closing keyword placement.** Exactly one artifact closes an issue, and it carries `Closes #X` in its *description/body* (never the subject line), so GitHub auto-closes the issue and the close is traceable:
   - **Single-commit fix → straight to `main`:** that commit's body carries `Closes #X` (the M1a pattern).
@@ -222,13 +232,20 @@ gives the change a single review surface.
   PR fully resolves) in the PR *body*. Merging to `main` is what closes them.
 - **Merge, don't squash.** Preserve the focused commit history — the per-step
   rationale is the documentation trail for a big change; squashing discards it.
-- **`hitl` still means proven.** A PR may merge the *code*, but must not
-  auto-close a `hitl` issue before the human verifies in-editor. For a `hitl`
-  issue, omit its `Closes` from the PR and let the human close it after the
-  EDITOR_TASKS step (or have them verify before merge). `Done means proven`
-  overrides auto-close.
-- **The human owns merges**, as they own commits: open the PR with `gh`, but let
-  the human review and merge.
+- **`hitl` still means proven.** A PR may merge the *code*, but the issue closes
+  only on proof. Under autopilot the **harness** supplies that proof for
+  state-checkable criteria ([ADR-0016](docs/adr/0016-headless-verification-harness.md)):
+  a `hitl` issue's `Closes #X` may ride the PR when its acceptance is asserted by
+  a green integration test in CI. Where proof is irreducibly *feel*, omit `Closes`
+  and let the per-milestone human feel pass close it. `Done means proven`
+  (now proven-by-harness) still overrides bare auto-close.
+- **Merges are autonomous on green ([ADR-0015](docs/adr/0015-autonomous-merge-proven-by-harness.md)).**
+  The orchestrator opens the PR with `gh` and merges it (merge-commit, not squash)
+  once ALL gates are green: game build, full `dotnet test`, the headless harness
+  (ADR-0016) for harness-checkable issues, and `/code-review` with no unresolved
+  correctness findings. **No merge on red, ever.** Feel is never auto-accepted as
+  feel — it is the per-milestone human pass. (Pre-autopilot default, still valid
+  when not running the autopilot: the human owns the merge.)
 
 ### Decision Discipline
 

@@ -8,9 +8,14 @@
   <!--
     The Godot.NET.Sdk globs **/*.cs from this directory (the repo root), which
     would otherwise pull the xUnit test sources under tests/ into the GAME
-    assembly and break the build. The tests are their own project; exclude them.
+    assembly and break the build. The xUnit tests are their own project; exclude
+    them. BUT the headless integration harness (tests/integration/, ADR-0016) is
+    engine code: it runs inside the Godot .NET runtime and is referenced by
+    .tscn scenes, so it MUST compile into the game assembly. Remove all of
+    tests/, then add just the integration subtree back.
   -->
   <ItemGroup>
     <Compile Remove="tests/**/*.cs" />
+    <Compile Include="tests/integration/**/*.cs" />
   </ItemGroup>
 </Project>

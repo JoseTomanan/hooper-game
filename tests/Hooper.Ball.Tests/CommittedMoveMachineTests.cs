@@ -374,6 +374,45 @@ public class CommittedMoveMachineTests
         Assert.Equal(MovePhase.Startup, m.Phase);
     }
 
+    // ── Feint min-startup floor (#138) ──────────────────────────────────────
+
+    /// <summary>A move with a feint floor: legal window is [2, 4) of Startup.</summary>
+    private static MoveFrameData FlooredFeintData =>
+        new(startupFrames: 6, activeFrames: 3, recoveryFrames: 10,
+            feintWindowFrames: 4, feintRecoveryFrames: 0, feintMinStartupFrames: 2);
+
+    [Fact]
+    public void Feint_BeforeMinStartupFrames_ReturnsFalse()
+    {
+        // A feint must be rejected until FeintMinStartupFrames startup ticks have
+        // elapsed, so a same-tick begin+feint cannot produce a zero-startup
+        // (invisible) move (#138, ADR-0003 legibility).
+        var m = NewMachine();
+        m.Begin(TestMove(FlooredFeintData)); // FrameInPhase = 0
+        Assert.False(m.Feint(), "feint at frame 0 must be below the min-startup floor (2)");
+        m.Tick();                            // FrameInPhase = 1
+        Assert.False(m.Feint(), "feint at frame 1 must be below the min-startup floor (2)");
+    }
+
+    [Fact]
+    public void Feint_BelowMinStartup_PhaseStaysStartup()
+    {
+        var m = NewMachine();
+        m.Begin(TestMove(FlooredFeintData));
+        m.Feint(); // rejected, must not disrupt the move
+        Assert.Equal(MovePhase.Startup, m.Phase);
+    }
+
+    [Fact]
+    public void Feint_AtMinStartupFrame_ReturnsTrue()
+    {
+        // Frame 2 == floor and still inside the window (< 4): feint is now legal.
+        var m = NewMachine();
+        m.Begin(TestMove(FlooredFeintData));
+        TickN(m, 2); // FrameInPhase = 2
+        Assert.True(m.Feint(), "feint at frame 2 (== floor, < window 4) should be allowed");
+    }
+
     [Fact]
     public void Feint_AfterWindowClosed_ReturnsFalse()
     {

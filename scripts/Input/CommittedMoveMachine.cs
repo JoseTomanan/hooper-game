@@ -21,7 +21,7 @@ namespace Hooper.Moves;
 ///
 ///   Begin()  : Inactive → Startup  (returns false if already in a move)
 ///   Tick()   : advances one frame; Startup→Active→Recovery→Inactive by frame counts
-///   Feint()  : Startup → Inactive  (only if FrameInPhase &lt; FeintWindowFrames)
+///   Feint()  : Startup → Inactive  (only if FeintMinStartupFrames &lt;= FrameInPhase &lt; FeintWindowFrames)
 ///
 /// ── No flow-cancel ───────────────────────────────────────────────────────────
 /// There is intentionally no Cancel() or Interrupt() method. A committed move
@@ -157,7 +157,12 @@ public sealed class CommittedMoveMachine
     public bool Feint()
     {
         if (Phase != MovePhase.Startup) return false;
-        if (FrameInPhase >= CurrentMove!.FrameData.FeintWindowFrames) return false;
+        // Below the min-startup floor the move has not yet shown a visible
+        // telegraph — a same-tick begin+feint would otherwise abort with zero
+        // startup, an invisible move (#138, ADR-0003 legibility). 0 floor (the
+        // default) preserves the original frame-0-legal feint behaviour.
+        if (FrameInPhase < CurrentMove!.FrameData.FeintMinStartupFrames) return false;
+        if (FrameInPhase >= CurrentMove.FrameData.FeintWindowFrames) return false;
 
         MoveFrameData fd = CurrentMove.FrameData;
 

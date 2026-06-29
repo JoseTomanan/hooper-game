@@ -827,10 +827,36 @@ public partial class PlayerController : CharacterBody3D
 		else if (moveId == "hesitation")
 			_machine.Begin(new Hesitation());
 		else if (moveId == "jumpshot")
-			_machine.Begin(new JumpShot());
+		{
+			// Capture the server-authoritative pre-plant speed at begin for the
+			// movement scatter penalty (#137) — see ShotInitiationSpeed.
+			if (_machine.Begin(new JumpShot()))
+				CaptureShotInitiationSpeed();
+		}
 		// Unrecognized moveId: silently ignored. A malformed/forged moveId
 		// from a tampered client simply does nothing.
 	}
+
+	/// <summary>
+	/// XZ-plane speed of the shooter at the tick their JumpShot BEGAN — captured
+	/// before the committed-move Startup plant zeroes Velocity. The shot's movement
+	/// scatter penalty (#64/#137) reads this, NOT the (planted, ~0) release-time
+	/// velocity: a committed jump shot always plants the feet for legibility
+	/// (ADR-0003), so the velocity present at release no longer reflects whether the
+	/// shot was a set shot or a sprinting pull-up. Server-authoritative for the
+	/// make/miss (shot scatter is computed server-side only); each peer also sets
+	/// its own value on Begin, but a client's is never read for the outcome.
+	/// </summary>
+	public float ShotInitiationSpeed { get; private set; }
+
+	/// <summary>
+	/// Records <see cref="ShotInitiationSpeed"/> from the current (pre-plant)
+	/// Velocity. Called on the tick a JumpShot's Begin() succeeds, at every begin
+	/// site (local prediction in SampleMoveInput and the authoritative
+	/// RequestBeginMove handler).
+	/// </summary>
+	private void CaptureShotInitiationSpeed() =>
+		ShotInitiationSpeed = new Vector2(Velocity.X, Velocity.Z).Length();
 
 	/// <summary>
 	/// Called BY THE CLIENT on the SERVER's copy of this node, requesting the
@@ -1288,12 +1314,26 @@ public partial class PlayerController : CharacterBody3D
 		// BallController.CheckJumpShotRelease reads via JustReleasedJumpShot.
 		BallController ball = GetBall();
 		if (ball != null && Input.IsActionJustPressed(ball.ShootAction) && IsBallHolder
-			&& _machine.Begin(new JumpShot()) && !isServer)
-			RpcId(1, MethodName.RequestBeginMove, "jumpshot", 0f);
+			&& _machine.Begin(new JumpShot()))
+		{
+			// Capture the pre-plant locomotion speed NOW — Startup zeroes Velocity,
+			// so the movement scatter penalty must read speed at shot initiation,
+			// not at release (#137). Only the server's value feeds the outcome.
+			CaptureShotInitiationSpeed();
+			if (!isServer)
+				RpcId(1, MethodName.RequestBeginMove, "jumpshot", 0f);
+		}
 
-		// Feint modifier: abort during the startup window.
-		// The machine enforces the feint-window guard; false return is silent.
-		if (Input.IsActionJustPressed("move_feint") && _machine.Feint() && !isServer)
+		// Feint modifier: abort during the startup window. Two input paths feed
+		// the SAME Feint() call (#139): the discrete "move_feint" key, and the
+		// right-stick quick-return gesture the recognizer reports as
+		// GestureKind.Feint (its own doc says the caller must map it). A single
+		// flick is exactly one GestureKind, so this never double-fires with the
+		// crossover branch above. The machine enforces the feint-window guard;
+		// false return is silent.
+		bool feintInput = Input.IsActionJustPressed("move_feint")
+			|| gesture.Kind == GestureKind.Feint;
+		if (feintInput && _machine.Feint() && !isServer)
 			RpcId(1, MethodName.RequestFeint);
 
 		_machine.Tick(); // advance one frame — always called, including Inactive (no-op)

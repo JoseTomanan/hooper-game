@@ -17,6 +17,21 @@ text-authorable: **AnimationTree graph authoring** (BlendSpace points,
 state-machine nodes/transitions) and **import-dialog** settings not already
 scriptable headlessly.
 
+**Scope narrowed again under autopilot ([ADR-0016](docs/adr/0016-headless-verification-harness.md),
+2026-06-29).** *State-checkable* verification — scene loads clean, an export
+resolves, the score increments, the ball goes loose, a remote committed-move
+phase renders, two peers converge — has moved to the **headless Godot harness**
+under `tests/integration/` (booted `--headless`, asserting real engine state,
+reporting pass/fail by `GetTree().Quit(exitCode)`). Those checks now run in CI on
+every PR, and a `hitl` issue whose acceptance is expressible that way is closed by
+a green harness run ([ADR-0015](docs/adr/0015-autonomous-merge-proven-by-harness.md)),
+not a manual session. **What is left for you is only what a harness cannot
+assert:** *feel* — lean degrees, telegraph readability, burst weight, "does it
+look right" — collected into **one feel-acceptance pass per milestone**, plus any
+not-yet-automated residue. The historical per-milestone dual-instance checklists
+below are the spec the harness scenes encode; read them as "what the integration
+test asserts," not "what you must click."
+
 The historical steps below are kept as a record of scene structure. New steps
 should be written as *verification* steps, not wiring steps — the wiring now ships
 in Claude's PR. Defer everything visual (materials, polish) until much later —
