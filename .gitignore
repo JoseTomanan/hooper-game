@@ -24,6 +24,12 @@ build/
 
 # Godot resource UID sidecar files (auto-generated, not source)
 *.uid
+# Exception: locomotion.res is a hand-saved AnimationLibrary with no importer,
+# so Godot never regenerates its sidecar — unlike .cs/.import-backed resources.
+# Player.tscn references it by uid (#140), so this one sidecar IS the only
+# backing for that uid and MUST ship, or the library fails to resolve off this
+# machine (humanoid stuck in bind pose).
+!assets/locomotion.res.uid
 
 # Cross-session handoffs are scratch (in-flight state, not durable docs).
 # Keep the folder + its README in the repo so the convention is discoverable,
