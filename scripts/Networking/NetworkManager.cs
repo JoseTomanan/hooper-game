@@ -119,6 +119,24 @@ public partial class NetworkManager : Node
 	/// </summary>
 	private bool _isDedicated;
 
+	/// <summary>
+	/// Which lifecycle-signal pair we actually subscribed, so _ExitTree
+	/// disconnects exactly those and no others. The server entry (StartServer,
+	/// shared by HostGame + StartDedicatedServer) connects PeerConnected +
+	/// PeerDisconnected; the client entry (JoinGame) connects ConnectedToServer +
+	/// ConnectionFailed. Only meaningful once _started is true.
+	///
+	/// Why a tracked role instead of guarding each disconnect with IsConnected:
+	/// the subscriptions are made via C#'s `+=` event syntax, which wraps the
+	/// delegate in an internally-cached Callable; an IsConnected check with a
+	/// freshly-built Callable.From(handler) would depend on that wrapper matching.
+	/// Tracking the role sidesteps callable-equality entirely and is provably
+	/// correct. (Found by the dual-instance node-replication harness, issue #147:
+	/// the unconditional 4-signal disconnect spammed "nonexistent connection"
+	/// errors at teardown for the two signals the role never connected.)
+	/// </summary>
+	private bool _isServerSide;
+
 	// ── Host / Join ──────────────────────────────────────────────────────────
 
 	/// <summary>
@@ -197,6 +215,7 @@ public partial class NetworkManager : Node
 		}
 
 		_started = true;
+		_isServerSide = true;  // PeerConnected/PeerDisconnected pair below; see _ExitTree.
 
 		// Assign to the scene-tree Multiplayer singleton. From this point
 		// _PhysicsProcess on all nodes runs under the multiplayer context.
@@ -242,6 +261,7 @@ public partial class NetworkManager : Node
 		}
 
 		_started = true;
+		_isServerSide = false;  // ConnectedToServer/ConnectionFailed pair below; see _ExitTree.
 		Multiplayer.MultiplayerPeer = peer;
 
 		// For clients, connection success arrives via ConnectedToServer.
@@ -261,11 +281,22 @@ public partial class NetworkManager : Node
 	/// </summary>
 	public override void _ExitTree()
 	{
-		if (Multiplayer == null) return;
-		Multiplayer.PeerConnected     -= OnPeerConnected;
-		Multiplayer.PeerDisconnected  -= OnPeerDisconnected;
-		Multiplayer.ConnectedToServer -= OnConnectedToServer;
-		Multiplayer.ConnectionFailed  -= OnConnectionFailed;
+		// Nothing subscribed unless a server/client entry succeeded; disconnect
+		// ONLY the pair that role connected. Disconnecting a never-connected
+		// signal logs a "nonexistent connection" error (issue #147), which is
+		// error-level noise that masks real failures in headless/CI output.
+		if (Multiplayer == null || !_started) return;
+
+		if (_isServerSide)
+		{
+			Multiplayer.PeerConnected    -= OnPeerConnected;
+			Multiplayer.PeerDisconnected -= OnPeerDisconnected;
+		}
+		else
+		{
+			Multiplayer.ConnectedToServer -= OnConnectedToServer;
+			Multiplayer.ConnectionFailed  -= OnConnectionFailed;
+		}
 	}
 
 	// ── Server-side: peer lifecycle ──────────────────────────────────────────
