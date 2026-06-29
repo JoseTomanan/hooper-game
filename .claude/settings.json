@@ -1,0 +1,27 @@
+{
+  "$comment": "Shared project settings (tracked). The green-gate hooks are the local mirror of ADR-0015's 'no agent reports done on red': on Stop / SubagentStop they run the same build + test gates CI runs and block finishing while either is red. Loop-bounded inside the script. CI remains the authoritative merge gate.",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/verify-green.sh",
+            "timeout": 300
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/verify-green.sh",
+            "timeout": 300
+          }
+        ]
+      }
+    ]
+  }
+}
