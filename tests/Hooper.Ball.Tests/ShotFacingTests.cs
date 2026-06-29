@@ -160,6 +160,24 @@ public class ShotFacingTests
             $"K=0 at 180° should give 1.0, got {result:F6}");
     }
 
+    // ── Contract floor: multiplier is never below 1, even for a bad K ─────
+
+    [Fact]
+    public void Multiplier_NegativeK_NeverBelowOne()
+    {
+        // The doc contract promises "always >= 1 and finite" (and ShotScatter
+        // multiplies the scatter radius by this with no downstream clamp). A
+        // misconfigured negative FacingScatterK must NOT invert the penalty into
+        // an accuracy *bonus* (or a negative radius). Worst-case angle = 180°.
+        float targetYaw = MathF.Atan2(Rim.X - ShooterSquaredUp.X, Rim.Z - ShooterSquaredUp.Z);
+        float backYaw   = NormaliseAngle(targetYaw + MathF.PI);
+
+        float result = ShotFacing.Multiplier(backYaw, ShooterSquaredUp, Rim, facingScatterK: -0.8f);
+
+        Assert.True(result >= 1f,
+            $"Negative K must be floored to >= 1 (no inverted penalty), got {result:F6}");
+    }
+
     // ── Helper ───────────────────────────────────────────────────────────
 
     private static float NormaliseAngle(float a)

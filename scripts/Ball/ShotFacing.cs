@@ -105,6 +105,12 @@ public static class ShotFacing
         // Linear penalty: 1.0 at 0°, (1 + facingScatterK) at 180°.
         // Each π/facingScatterK radians of deviation adds 1/π of the full
         // penalty — simple, monotonic, and balance-tunable via a single export.
-        return 1f + facingScatterK * (angle / MathF.PI);
+        //
+        // Floored at 1.0 to honour the "always ≥ 1" contract even if a
+        // misconfigured negative facingScatterK is passed (the export is also
+        // range-clamped, but ShotScatter has no downstream clamp, so a sub-1
+        // multiplier would shrink — or a negative would invert — the scatter
+        // radius. Defence in depth: the pure function guarantees its own range).
+        return MathF.Max(1f, 1f + facingScatterK * (angle / MathF.PI));
     }
 }

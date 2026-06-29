@@ -288,7 +288,7 @@ public partial class BallController : Node3D
 	/// ADR-0003's hybrid committed-move model better.  Default continuous
 	/// pending human review.
 	/// </summary>
-	[Export] public float MovementScatterK { get; set; } = 0.8f;
+	[Export(PropertyHint.Range, "0,3,0.05")] public float MovementScatterK { get; set; } = 0.8f;
 
 	/// <summary>
 	/// Strength of the defender-contest penalty applied to shot scatter (issue
@@ -311,7 +311,7 @@ public partial class BallController : Node3D
 	/// here — that belongs in a later milestone.  Default proximity-only
 	/// pending human review.
 	/// </summary>
-	[Export] public float ContestScatterK { get; set; } = 1.0f;
+	[Export(PropertyHint.Range, "0,3,0.05")] public float ContestScatterK { get; set; } = 1.0f;
 
 	/// <summary>
 	/// XZ-plane distance (metres) within which the other player contests a
@@ -348,7 +348,7 @@ public partial class BallController : Node3D
 	/// FacingResolver is cosmetic-only and cannot feed an authoritative outcome
 	/// (see ADR-0004 and ADR-0009 §Resolved 2026-06-27).
 	/// </summary>
-	[Export] public float FacingScatterK { get; set; } = 0.8f;
+	[Export(PropertyHint.Range, "0,3,0.05")] public float FacingScatterK { get; set; } = 0.8f;
 
 	// ── Reconciliation tuning (mirrors PlayerController's tunables) ───────
 
