@@ -39,3 +39,52 @@ jobs:
       # Build + run the deterministic ball / physics test suite.
       - name: Run tests
         run: dotnet test tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj --configuration Debug
+
+  # The headless integration harness (ADR-0016) — the third verification surface.
+  # Unlike build-and-test (which only compiles C# and runs engine-FREE unit
+  # tests), this job boots a REAL Godot .NET engine under --headless, loads a
+  # real scene, pumps its fixed-tick physics loop, and reads pass/fail from the
+  # scene's process exit code (GetTree().Quit). It reaches what unit tests
+  # structurally cannot: scene loading, the Node lifecycle, and the live sim.
+  #
+  # This is the project's go/no-go bet (ADR-0016): if Godot cannot verify
+  # headless on hosted CI, we fall back to a human feel gate + afk-only
+  # auto-merge (ADR-0015 alternative 2). Kept a SEPARATE job so its slower,
+  # flakier engine-boot profile doesn't contaminate the fast unit gate above.
+  integration-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # Install the .NET/Mono build of Godot. The version is given as a
+      # GodotSharp version string and MUST match the Godot.NET.Sdk / GodotSharp
+      # version the project pins (4.6.3) so the C# bindings line up.
+      - name: Set up Godot (.NET)
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.6.3
+          use-dotnet: true
+          include-templates: false
+
+      # Generate the GodotSharp bindings + import the project (creates .godot/).
+      # This first headless launch can return non-zero spuriously while it
+      # bootstraps the .NET glue, so tolerate it — the real gate is the run step.
+      - name: Generate .NET bindings & import project
+        run: godot --headless --build-solutions --quit || exit 0
+
+      # Explicitly build the game assembly so a genuine C# error surfaces here
+      # rather than as a confusing "script not found" at scene-load time.
+      - name: Build game assembly
+        run: dotnet build "HOOPER GAME.csproj" --configuration Debug
+
+      # Run the smoke scene headless. Godot exits with the code the scene passes
+      # to GetTree().Quit(): 0 = PASS, 1 = FAIL. A crash (non 0/1) also fails the
+      # job, which is correct — it means the harness itself broke.
+      - name: Run headless integration smoke test
+        run: godot --headless --path . res://tests/integration/SmokeTest.tscn
