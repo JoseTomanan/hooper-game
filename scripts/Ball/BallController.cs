@@ -1488,6 +1488,31 @@ public partial class BallController : Node3D
 	/// regardless of which id it's called with.
 	private bool ApplyShootLocally(PlayerController holder)
 	{
+		// (#120) A holder who is out of bounds at the moment of release has
+		// already turned the ball over — in real half-court 1v1 the ball is
+		// dead the instant you step on/over the line (ADR-0008, ADR-0014
+		// real-ball authority), so the shot must NOT count. Without this guard,
+		// Shoot() transitions to InFlight here, INSIDE the TickHeld/TickDribbling
+		// switch, which runs BEFORE _PhysicsProcess's ResolvePlayerOutOfBounds()
+		// (line ~720); that later check then sees InFlight and no-ops, letting a
+		// make from an OOB release score.
+		//
+		// We deliberately reuse ResolvePlayerOutOfBounds() — the SAME rule the
+		// carry-OOB turnover uses — rather than inventing a release-specific OOB
+		// test: one OOB definition, one recipient-eligibility path, one ADR-0008
+		// award (and the same clamp fallback when no eligible recipient exists).
+		// State is still Held/Dribbling at this call site, so that method resolves
+		// the turnover correctly. Server-authoritative: possession is never
+		// client-computed (clients only reconcile), so the predicting client's
+		// shot is corrected to the turnover by the next ReceiveState broadcast —
+		// the same mispredict-then-reconcile path a scattered miss already uses.
+		if (IsServer
+			&& CourtBounds.IsOutOfBounds(HolderPosition(), CourtMin, CourtMax))
+		{
+			ResolvePlayerOutOfBounds();
+			return false;
+		}
+
 		int holderAtShootTime = StateMachine.HolderPeerId;
 		if (!StateMachine.Shoot()) return false;
 

@@ -266,12 +266,55 @@ ADR-0002).
   still the old holder's hand (the state switch ran before the turnover check);
   `TickHeld`/`TickDribbling` re-centres it on the new holder the next tick. A
   sub-frame artefact, smoothed, consistent with the loose-ball award.
-- *Shoot-while-OOB:* shot release is processed (in `TickHeld`/`TickDribbling`)
-  before the OOB check, so a holder who crosses the line and releases on the same
-  tick gets the shot off; the loose-ball OOB path may then catch the miss. Whether
-  an OOB release should be voided is a future refinement, deliberately out of scope.
+- *Shoot-while-OOB:* ~~shot release is processed before the OOB check, so a holder
+  who crosses the line and releases on the same tick gets the shot off~~ **Resolved
+  by Amendment 2026-06-29b (issue #120)** — an OOB release is now voided as a
+  turnover before `Shoot()` runs. See below.
 
 **Code:** `FlightTermination.ShouldGoLoose` and `BallStateMachine.Turnover` (both
 unit-tested headless), `BallController.ResolvePlayerOutOfBounds` (server-only,
 called before `UpdateClearStatus` so the clear check sees the new holder), and the
 state-driven edge selection in `AwardPossession`.
+
+## Amendment — 2026-06-29b (issue #120: void a shot released while OOB)
+
+**Status remains Accepted.** Closes the *Shoot-while-OOB* edge the 2026-06-29
+amendment deliberately deferred.
+
+**The gap.** Shot release is applied in `ApplyShootLocally`, called from the
+`TickHeld`/`TickDribbling` state switch — which runs *before*
+`ResolvePlayerOutOfBounds` in `_PhysicsProcess`. So a holder who has crossed the
+court line and releases on the same tick reached `StateMachine.Shoot()` →
+`InFlight` (clearing the holder) *first*; the later player-OOB check then saw
+`InFlight` and no-opped. A **make from an out-of-bounds release counted.**
+
+**New rule — OOB at release is a turnover, not a shot.** Per the real-ball
+authority (ADR-0014): the ball is dead the instant the handler is out of bounds,
+so a shot released from out of bounds must not count. On the **server**,
+`ApplyShootLocally` now checks `CourtBounds.IsOutOfBounds(HolderPosition())`
+*before* `Shoot()`; if the holder is out of bounds it invokes the **same**
+`ResolvePlayerOutOfBounds` the carry rule uses and returns without shooting.
+
+**Why reuse `ResolvePlayerOutOfBounds` rather than a release-specific check:**
+one OOB definition, one recipient-eligibility path (opponent must be a live node
+**and** in-bounds), one ADR-0008 award, and the same no-award outcome when no
+recipient is eligible. At the call site the state is still `Held`/`Dribbling`, so
+that method resolves the turnover exactly as it does on a carry tick. This is the
+right altitude: "released while OOB" and "carried while OOB" are the *same* dead
+ball, not two rules.
+
+**Boundary convention.** The court edge is **in-bounds** (`CourtBounds.IsOutOfBounds`
+uses strict `<`/`>`), so a release with a toe on the line still scores — the
+"toe-on-line" edge #120 raised is answered by the single existing definition, not
+a new one.
+
+**Why server-gated:** identical to the other two OOB rules — a dead-ball ruling
+has no contest to predict. A predicting client still shoots locally and is
+reconciled to the turnover by the next `ReceiveState` broadcast (the accepted
+client-prediction cost, ADR-0002).
+
+**Code:** `BallController.ApplyShootLocally` (server-gated guard before
+`StateMachine.Shoot()`). Decision logic proven headless over the pure
+collaborators (`CourtBounds.IsOutOfBounds` + `OobResolution.Resolve`) in
+`OobShotReleaseTests` — the same Node-can't-run-headless pattern (ADR-0004) used
+by `FlightTerminationIntegrationTests`.
