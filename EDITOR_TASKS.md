@@ -702,6 +702,59 @@ Run two instances.  Confirm:
 
 When all four hold, **close issue #46** (the epic).
 
+> **⚠️ Superseded by the M8 OOB rule (below).** Step 3's table originally put the
+> walls *on* the court line (±4.88). That has been replaced: the walls are now a
+> **far backstop** sitting *outside* the court line (the scene ships them at ≈ X
+> ±10), and crossing the *court line* with the ball is a **turnover**, not a wall
+> bump. If your walls are at ±4.88, move them out — otherwise a player can never
+> cross the line and the turnover can never fire. See the next section.
+
+---
+
+## Milestone 8 — out-of-bounds rule fixes (issue #63 follow-up, hitl verify)
+
+These three fixes are **code-complete and unit-tested** (485 tests; headless
+scene-load verified). They need a **two-instance** play session to confirm in
+engine — that is the only part that cannot be automated.
+
+### Background — what changed and why
+
+- **The ball no longer disappears.** A missed shot or pass that touches neither
+  rim nor backboard used to fly forever (through the floor / through the walls),
+  because the deterministic ball ignores Godot colliders (ADR-0004) and its only
+  containment ran in the loose-ball state it never reached. It now ends its
+  flight on floor-contact or at the court line, then bounces / turns over normally.
+- **Going out of bounds with the ball is now a turnover.** When the player
+  *holding* the ball crosses the court line, the server gives the ball to the
+  opponent (uncleared). The court line — not the walls — is the boundary that
+  matters.
+- **Walls are only a far backstop.** They stop a player from running to infinity;
+  they are intentionally *outside* the court line so the turnover fires first.
+
+### Step 1 — Confirm wall placement (one-time)
+
+Open `Main.tscn`. The four `Walls/WallCollision*` shapes should sit **outside**
+the `CourtMin (-4.88, -1.0)` / `CourtMax (4.88, 11.88)` rectangle (the scene
+ships them at ≈ X ±10, Z ≈ −2.1 / 12.1). If any wall is *on* the court line,
+move it out by a metre or two. Do **not** put a wall on the court line.
+
+### Step 2 — Verify (two instances, host + join)
+
+1. **Ball containment:** shoot an intentional air ball (aim well wide of the rim)
+   and a wild pass. Confirm the ball **comes down and bounces / is awarded** —
+   it never sinks through the floor or vanishes past a wall.
+2. **Held-ball OOB turnover:** dribble straight across a sideline / baseline
+   (the court line, well before the far wall). Confirm **possession flips to the
+   opponent** and the HUD shows the new holder, starting **uncleared** (red
+   clear-arc — they must take it back before scoring).
+3. **Defender is unaffected:** the player *without* the ball may step across the
+   line with **no turnover**.
+4. **No strobe:** if *both* players are over the line, possession must **not**
+   flip every frame — it stays put until someone steps back in bounds.
+
+When all four hold, close the M8 OOB-rule **hitl verify** issue (per ADR-0013,
+the code merges via PR; this verify is its own issue — see the PR for the number).
+
 ---
 
 ## Milestone 7a editor tasks — static readability pass (issue #53)
