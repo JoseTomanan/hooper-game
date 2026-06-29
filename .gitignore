@@ -2,6 +2,10 @@
 .claude/*
 !.claude/skills/doubt-driven-development/
 !.claude/skills/source-driven-development/
+# Autonomy scaffolding (ADR-0015/0016): shared so every session + CI inherits it.
+!.claude/agents/
+!.claude/hooks/
+!.claude/settings.json
 
 # Godot 4
 .godot/
