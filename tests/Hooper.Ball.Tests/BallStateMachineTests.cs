@@ -469,4 +469,69 @@ public class BallStateMachineTests
 
         Assert.Equal(BallState.Dribbling, sm.Current);
     }
+
+    // ═════════════════════════════════════════════════════════════════════
+    // Turnover — Held/Dribbling → Held (by a NEW holder)
+    //
+    // A dead-ball change of possession (out-of-bounds violation): the ball
+    // passes DIRECTLY from the current handler to the opponent without first
+    // going loose for a scramble. Distinct from Catch (recovers an InFlight/
+    // Loose ball) and GoLoose (makes the ball uncontrolled). Legal only while a
+    // player actually holds the ball.
+    // ═════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void Turnover_WhenHeld_ReturnsTrueAndStateIsHeldByNewHolder()
+    {
+        var sm = NewMachine(holderId: 1);
+
+        bool result = sm.Turnover(newHolderPeerId: 2);
+
+        Assert.True(result);
+        Assert.Equal(BallState.Held, sm.Current);
+        Assert.Equal(2, sm.HolderPeerId);
+    }
+
+    [Fact]
+    public void Turnover_WhenDribbling_ReturnsTrueAndStateIsHeldByNewHolder()
+    {
+        var sm = NewMachine(holderId: 1);
+        sm.StartDribble(); // Held → Dribbling
+
+        bool result = sm.Turnover(newHolderPeerId: 2);
+
+        Assert.True(result);
+        Assert.Equal(BallState.Held, sm.Current);
+        Assert.Equal(2, sm.HolderPeerId);
+    }
+
+    [Fact]
+    public void Turnover_WhenInFlight_ReturnsFalseAndStateUnchanged()
+    {
+        // A ball in flight has no handler to take it from — recovery is Catch,
+        // not a turnover. Reject so a stray call cannot fabricate a holder.
+        var sm = NewMachine(holderId: 1);
+        sm.Shoot(); // Held → InFlight, holder cleared
+
+        bool result = sm.Turnover(newHolderPeerId: 2);
+
+        Assert.False(result);
+        Assert.Equal(BallState.InFlight, sm.Current);
+        Assert.Equal(0, sm.HolderPeerId);
+    }
+
+    [Fact]
+    public void Turnover_WhenLoose_ReturnsFalseAndStateUnchanged()
+    {
+        // A loose ball is recovered by Catch (a live scramble), not handed over.
+        var sm = NewMachine(holderId: 1);
+        sm.StartDribble();
+        sm.GoLoose(); // Dribbling → Loose, holder cleared
+
+        bool result = sm.Turnover(newHolderPeerId: 2);
+
+        Assert.False(result);
+        Assert.Equal(BallState.Loose, sm.Current);
+        Assert.Equal(0, sm.HolderPeerId);
+    }
 }

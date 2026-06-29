@@ -33,6 +33,12 @@ namespace Hooper.Ball;
 ///   InFlight   → Loose      : GoLoose()        (missed shot / block)
 ///   InFlight   → Held       : Catch()          (caught pass / alley-oop)
 ///   Loose      → Held       : Catch()          (picked up off the floor)
+///   Held       → Held       : Turnover()       (dead-ball handoff: held-ball OOB, #63)
+///   Dribbling  → Held       : Turnover()       (dead-ball handoff: held-ball OOB, #63)
+///
+/// (The Held/Dribbling → Held Turnover edge re-assigns the holder without a
+///  loose scramble — see Turnover() below. Omitted from the diagram above to
+///  keep it legible; it is a same-or-adjacent-state self-handoff, not a new path.)
 ///
 /// All other transitions are INVALID and return false (no throw — callers
 /// are expected to guard, but an invalid call should never crash a game tick).
@@ -151,6 +157,35 @@ public sealed class BallStateMachine
 
         Current      = BallState.Loose;
         HolderPeerId = 0;
+        return true;
+    }
+
+    /// <summary>
+    /// Held or Dribbling → Held (by a NEW holder).  A dead-ball change of
+    /// possession — the ball passes DIRECTLY from the current handler to a new
+    /// one without going loose for a scramble.  Models an out-of-bounds
+    /// violation (the ballhandler crossed the court line): play stops and the
+    /// opponent is awarded the ball.
+    ///
+    /// Distinct from the two adjacent edges:
+    ///   • Catch    recovers an InFlight / Loose ball (a live recovery).
+    ///   • GoLoose  makes a controlled ball uncontrolled (a live scramble).
+    ///   • Turnover is a dead-ball handoff between two players, no scramble.
+    ///
+    /// Legal ONLY while a player actually holds the ball (Held or Dribbling);
+    /// rejected otherwise so a stray call can never fabricate a holder out of a
+    /// loose or in-flight ball (those go through Catch, which enforces its own
+    /// recovery rules).  Lands in Held — the awarding glue (AwardPossession)
+    /// then begins a dribble, matching the post-Catch possession shape.
+    /// </summary>
+    /// <param name="newHolderPeerId">Peer ID of the player awarded the ball.</param>
+    /// <returns>True if the transition was legal; false if it was not.</returns>
+    public bool Turnover(int newHolderPeerId)
+    {
+        if (Current != BallState.Held && Current != BallState.Dribbling) return false;
+
+        Current      = BallState.Held;
+        HolderPeerId = newHolderPeerId;
         return true;
     }
 

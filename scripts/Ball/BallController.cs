@@ -713,6 +713,12 @@ public partial class BallController : Node3D
 			TryAssignTipoffHolder();
 		}
 
+		// Server-only: turn the ball over if the BALLHANDLER has crossed the court
+		// line (player-OOB rule). Runs before UpdateClearStatus so the clear check
+		// below evaluates the NEW holder, not the one being dispossessed.
+		if (IsServer)
+			ResolvePlayerOutOfBounds();
+
 		// Server-only: clear the possession once the handler carries the ball
 		// back behind the clear line (#50). Server-authoritative; clients
 		// receive the flag in the broadcast below, never compute it.
@@ -879,6 +885,75 @@ public partial class BallController : Node3D
 			IsCleared = true;
 	}
 
+	/// <summary>
+	/// Server-only: turn the ball over when the BALLHANDLER crosses the court
+	/// line — the half-court 1v1 analogue of stepping out of bounds with the
+	/// ball. Mirrors the loose-ball OOB rule (TickLoose + OobResolution) but keyed
+	/// on the HOLDER's position instead of the ball's: a dead-ball turnover awarded
+	/// directly to the opponent, uncleared (they must take it back before they can
+	/// score — ADR-0008 §Amendment 2026-06-21).
+	///
+	/// ── Why the court line and not the walls ──────────────────────────────
+	/// The scene walls sit well OUTSIDE this line (≈ X ±10 vs the court's X ±4.88),
+	/// so they act only as a far backstop; the turnover fires at the court line
+	/// long before a player could reach a wall. The deterministic ball ignores the
+	/// walls entirely (ADR-0004) — this rule, not a collider, is what makes leaving
+	/// the court matter.
+	///
+	/// ── Why server-authoritative ──────────────────────────────────────────
+	/// Same authority boundary as UpdateClearStatus and the loose-ball OOB award:
+	/// only the server holds truthful player positions, and gating the award on the
+	/// server removes prediction-flip risk (two peers briefly disagreeing on the new
+	/// holder) for zero gameplay cost — a dead-ball ruling has no 50/50 proximity
+	/// contest to predict, unlike a rebound. A client keeps its predicted possession
+	/// for up to one RTT until the broadcast corrects it; any shot it fires in that
+	/// window is reconciled away — the same accepted cost as the live-rebound
+	/// contest (ADR-0002).
+	///
+	/// The decision table is OobResolution.Resolve, reused verbatim from the
+	/// loose-ball path: OOB + server + opponent-present → Award; otherwise NoOp /
+	/// ClampFallback. ClampFallback here means "no eligible recipient" (a solo
+	/// editor test, or the opponent is unreachable — see the recipient gate
+	/// below): we never clamp a PLAYER (only the ball is clamped), so a lone holder
+	/// may roam past the line with no turnover — there is nobody to award it to.
+	///
+	/// ── Why the recipient must be present AND in-bounds ───────────────────
+	/// The award only fires if the opponent's node exists and is itself inside the
+	/// court. Two reasons, both load-bearing:
+	///   1. Both players OOB: awarding to an also-OOB opponent would turn the ball
+	///      straight back the very next tick — a 60 Hz possession strobe. Gating on
+	///      the recipient being in-bounds breaks the ping-pong: nobody is awarded
+	///      until one player steps back inside.
+	///   2. Disconnected/ghost opponent: a peer whose PlayerController has been
+	///      freed must not be handed the ball (it would park at the origin forever).
+	///      Requiring a live Node3D fails safe — no turnover rather than a lost ball.
+	/// When the recipient is ineligible we pass recipient = 0, which OobResolution
+	/// maps to ClampFallback → no award this tick.
+	/// </summary>
+	private void ResolvePlayerOutOfBounds()
+	{
+		if (State != BallState.Held && State != BallState.Dribbling) return;
+		if (StateMachine.HolderPeerId == 0) return; // no holder yet (pre-tipoff)
+
+		int opponent = OtherPlayerPeerId(StateMachine.HolderPeerId);
+
+		// Recipient eligibility: the opponent must be a live node AND in-bounds to
+		// receive the turnover (see doc "Why the recipient must be present AND
+		// in-bounds"). Ineligible → recipient 0 → OobResolution yields no award.
+		bool recipientCanReceive =
+			opponent != 0
+			&& Players?.GetNodeOrNull(opponent.ToString()) is Node3D opp
+			&& !CourtBounds.IsOutOfBounds(opp.GlobalPosition, CourtMin, CourtMax);
+
+		OobResolution.Result oob = OobResolution.Resolve(
+			CourtBounds.IsOutOfBounds(HolderPosition(), CourtMin, CourtMax),
+			IsServer,
+			recipientCanReceive ? opponent : 0);
+
+		if (oob.Action == OobResolution.Action.Award)
+			AwardPossession(oob.RecipientPeerId); // uncleared turnover
+	}
+
 	// ── Per-state behaviour ───────────────────────────────────────────────
 
 	/// <summary>Ball cradled at hand height in front of the holder. Shoot to release.</summary>
@@ -1037,6 +1112,26 @@ public partial class BallController : Node3D
 				if (IsServer)
 					ResolveServerMake();
 				break;
+
+			case ContactResult.None:
+				// No rim or backboard contact this tick. A clean miss (air ball),
+				// a shot scattered wide of the rim, or a long pass must STILL end
+				// its flight — otherwise the arc integrates forever and the ball
+				// sinks through the floor (Y → −∞) or sails through the walls. The
+				// deterministic mini-physics ball never consults Godot's collision
+				// system (ADR-0004), so the scene walls cannot contain it; its only
+				// containment lives in TickLoose, which a never-terminating flight
+				// never reaches. FlightTermination ends the flight on floor-contact
+				// or OOB (pure helper, headless-seam). After GoLoose, TickLoose
+				// takes over: FloorBounce + rebound contest in bounds, or
+				// OobResolution's turnover award when out of bounds.
+				//
+				// Runs on EVERY peer as deterministic prediction, exactly like the
+				// Bounce/Make branches — ShouldGoLoose is a pure function of the
+				// arc position and the CourtMin/Max exports, identical everywhere.
+				if (FlightTermination.ShouldGoLoose(_arc.Position, BallRadius, CourtMin, CourtMax))
+					StateMachine.GoLoose();
+				break;
 		}
 	}
 
@@ -1134,20 +1229,50 @@ public partial class BallController : Node3D
 			_arc.Velocity = bouncedVel;
 		}
 
-		// Half-court bound: clamp XZ so the loose ball cannot roll off the floor
-		// edge (issue #46).  Y is preserved — the floor-contact check above already
-		// owns vertical containment.  Exported CourtMin/Max are the single source of
-		// truth for the bounds; the StaticBody3D walls in the editor must match them.
-		// Deterministic: same exported values on every peer → no reconciliation drift.
+		// Out-of-bounds detection (issue #63, ADR-0008 §Amendment 2026-06-28):
+		// replaces the old unconditional clamp.  When a loose ball crosses the
+		// play-court line, the play is dead — server awards possession to the player
+		// OPPOSITE the last shooter ("last-toucher-out → other ball" rule).
 		//
-		// Ordering note: this must run AFTER the floor check above (which may have
-		// already written _arc.Position via the local `p` copy) so the final
-		// _arc.Position reflects both corrections before it is read into GlobalPosition.
+		// The three-branch decision table lives in OobResolution.Resolve (pure
+		// helper, ADR-0004 headless-seam discipline) so it can be unit-tested
+		// without a Godot runtime.  Engine lookups (IsServer, OtherPlayerPeerId)
+		// are resolved here before the call and passed in as plain values, keeping
+		// the pure helper engine-free.
+		//
+		// Ordering: runs BEFORE ResolveLooseBallRecovery so a ball that crossed the
+		// line is not also rebounded the same tick.  An Award returns immediately,
+		// skipping the rebound step.  ClampFallback falls through to the clamp below.
+		{
+			OobResolution.Result oob = OobResolution.Resolve(
+				CourtBounds.IsOutOfBounds(_arc.Position, CourtMin, CourtMax),
+				IsServer,
+				OtherPlayerPeerId(_lastShooterPeerId));
+
+			if (oob.Action == OobResolution.Action.Award)
+			{
+				// Dead ball: award possession to the non-shooting player, uncleared
+				// (they must take it back before scoring — ADR-0008 §Amendment 2026-06-21).
+				AwardPossession(oob.RecipientPeerId);
+				GlobalPosition = _arc.Position;
+				return; // skip rebound step — possession is already resolved
+			}
+			// NoOp: ball is in bounds, nothing to do.
+			// ClampFallback: no opponent present (solo test) or non-server client —
+			// fall through to CourtBounds.Clamp below so the ball stays in play.
+			// The server's ReceiveState broadcast corrects any divergence on clients.
+		}
+
+		// Half-court bound clamp: keeps XZ within the play-court rectangle.
+		// Runs on every peer (deterministic: same CourtMin/Max exports → no drift).
+		// This is now the fallback path for the client and the no-opponent solo case;
+		// the server's authoritative OOB turnover above has already returned when an
+		// opponent exists.  Y is preserved — the floor-contact check above already
+		// owns vertical containment.
 		//
 		// Velocity zeroing: when the clamp fires on an axis, zero the matching
 		// velocity component so the integrator does not keep pushing the ball
-		// through the wall every tick (analogous to the floor-contact Velocity=Zero
-		// at line 712).
+		// through the wall every tick.
 		Vector3 preclamp = _arc.Position;
 		_arc.Position = CourtBounds.Clamp(_arc.Position, CourtMin, CourtMax);
 
@@ -1232,16 +1357,32 @@ public partial class BallController : Node3D
 	/// </summary>
 	private void AwardPossession(int peerId, bool cleared = false)
 	{
-		if (!StateMachine.Catch(peerId))
+		// Pick the legal edge by the ball's current state:
+		//   • Loose / InFlight  → Catch    : a live recovery (rebound, made-shot
+		//     reset, OOB award after a loose ball crossed the line). The original
+		//     and only pre-OOB-turnover callers always reach here while Loose.
+		//   • Held / Dribbling  → Turnover : a dead-ball handoff while a player
+		//     still controls the ball — the player-OOB turnover (the ballhandler
+		//     crossed the court line). Catch is illegal from these states, so a
+		//     single AwardPossession serves both award kinds without the caller
+		//     having to know which edge applies.
+		bool awarded = (State == BallState.Held || State == BallState.Dribbling)
+			? StateMachine.Turnover(peerId)
+			: StateMachine.Catch(peerId);
+
+		if (!awarded)
 		{
-			// Both callers reach here while the ball is Loose, so Catch (Loose→Held)
-			// is legal and this branch is unreachable in normal play.  "Unreachable"
-			// holds even for the client prediction path: ReconcileFromServer runs at
-			// the TOP of _PhysicsProcess, before the state switch, so TickLoose (and
-			// thus this method) only ever dispatches when State == Loose.  Surface
-			// loudly per CLAUDE.md loud-failure rule so a future regression is not
-			// silent.
-			GD.PrintErr($"[BallController] AwardPossession({peerId}) called in state {State}; Catch rejected, possession unchanged.");
+			// Defensive backstop. Today all four ball states map to a legal edge
+			// (Loose/InFlight→Catch, Held/Dribbling→Turnover), so this branch is
+			// unreachable in normal play. It is deliberately kept — NOT dead code —
+			// because generalizing the edge selection removed the old "Catch fails
+			// loudly when called in Held/Dribbling" guard: should a future state be
+			// added (or an edge guard tightened) and leave a hole, this surfaces it
+			// loudly per CLAUDE.md's loud-failure rule instead of silently dropping
+			// the award. Reconciliation is unaffected: ReconcileFromServer runs at
+			// the TOP of _PhysicsProcess, before the state switch, so the
+			// dispatching tick state is authoritative.
+			GD.PrintErr($"[BallController] AwardPossession({peerId}) rejected in state {State}; possession unchanged.");
 			return;
 		}
 

@@ -45,6 +45,8 @@
     <Compile Include="..\..\scripts\Ball\ReboundContest.cs" />
     <Compile Include="..\..\scripts\Ball\ClearLine.cs" />
     <Compile Include="..\..\scripts\Ball\CourtBounds.cs" />
+    <Compile Include="..\..\scripts\Ball\OobResolution.cs" />
+    <Compile Include="..\..\scripts\Ball\FlightTermination.cs" />
     <Compile Include="..\..\scripts\Ball\ShotScatter.cs" />
     <Compile Include="..\..\scripts\Ball\ShotFacing.cs" />
     <Compile Include="..\..\scripts\Ball\FloorBounce.cs" />
