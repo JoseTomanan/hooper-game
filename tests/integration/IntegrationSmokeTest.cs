@@ -41,6 +41,7 @@ public partial class IntegrationSmokeTest : Node
     private int _ticks;
     private double _accumulatedDelta;
     private int _failures;
+    private bool _finished;
 
     public override void _Ready()
     {
@@ -61,6 +62,16 @@ public partial class IntegrationSmokeTest : Node
 
     public override void _PhysicsProcess(double delta)
     {
+        // GetTree().Quit() requests termination at frame end, but Godot does not
+        // strictly guarantee zero further _PhysicsProcess calls. Without this
+        // guard a stray extra tick would re-enter the TargetTicks branch, where
+        // expectedTotal is pinned to TargetTicks but _accumulatedDelta has grown,
+        // failing the drift check and flipping the exit code 0→1 spuriously.
+        if (_finished)
+        {
+            return;
+        }
+
         _ticks++;
         _accumulatedDelta += delta;
 
@@ -90,6 +101,7 @@ public partial class IntegrationSmokeTest : Node
 
     private void Finish()
     {
+        _finished = true;
         if (_failures == 0)
         {
             GD.Print($"[harness] PASS — {_ticks} fixed ticks, deterministic, " +
