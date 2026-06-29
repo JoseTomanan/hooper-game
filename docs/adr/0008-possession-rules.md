@@ -203,3 +203,75 @@ no contested recovery for clients to feel immediately.
 the pure geometry check (XZ-only, boundary inclusive). `BallController.TickLoose`
 checks `IsOutOfBounds` before running `ResolveLooseBallRecovery`; an OOB turnover
 returns immediately so the rebound step is skipped that tick.
+
+## Amendment — 2026-06-29 (held-ball OOB + in-flight termination)
+
+**Status remains Accepted.** This amendment extends the 2026-06-28 rule from
+loose-ball-only to *all* out-of-bounds cases and fixes the bug that let a missed
+shot never end. It **supersedes the "Scope is loose-ball only" paragraph above**,
+including its premise that "the holder is already wall-bounded … so no holder-OOB
+case can currently occur."
+
+**Walls are a far backstop, not the play boundary.** The scene's `StaticBody3D`
+walls sit well outside the court rectangle (≈ X ±10 vs the court's X ±4.88), and
+the deterministic mini-physics ball never consults them anyway (ADR-0004). The
+*court line* (`CourtMin`/`CourtMax`) is the real boundary for both ball and player;
+the walls only stop a player from running to infinity.
+
+**New rule 1 — in-flight termination.** A shot/pass arc that makes no rim or
+backboard contact (an air ball, a wide-scattered shot, a long pass) now ends the
+`InFlight` state the moment the ball reaches the floor **or** crosses the court
+line, via the pure `FlightTermination.ShouldGoLoose` predicate in the
+`ContactResult.None` branch of `TickInFlight`. Previously such a ball integrated
+forever — falling through the floor or sailing past the walls (the "ball
+disappears" bug) — because the only containment, `CourtBounds`, lived in
+`TickLoose`, which a never-terminating flight never reached. Once Loose, the
+existing path resolves it (FloorBounce + rebound in bounds; the loose-ball OOB
+award when out).
+
+**New rule 2 — held-ball (player) OOB turnover.** When the player **currently
+holding** the ball (state Held or Dribbling) crosses the court line, the server
+awards possession directly to the opponent — a dead-ball turnover, starting
+uncleared (the new holder must take it back before scoring). This is the
+half-court 1v1 analogue of stepping out with the ball. Recipient: the **opponent
+of the current holder** (`OtherPlayerPeerId(HolderPeerId)`) — chosen to match real
+half-court rules and *Undisputed 3* (ADR-0014 reference authority), and distinct
+from the loose-ball rule's "opposite the last *shooter*," because a live holder,
+not a shot, is what went out.
+
+**Mechanism — the `Turnover` edge.** A live possession cannot go through `Catch`
+(legal only from InFlight/Loose). A new `BallStateMachine.Turnover` edge
+(Held/Dribbling → Held-by-new-holder) models the dead-ball handoff — no loose
+scramble. `AwardPossession` now selects the legal edge by current state
+(Loose/InFlight → `Catch`; Held/Dribbling → `Turnover`), so one method serves both
+the rebound/make awards and the OOB turnover.
+
+**Recipient-eligibility gate.** The held-ball turnover fires only if the opponent
+is a **live node AND in-bounds**. Two reasons: (1) if both players are OOB,
+awarding to an also-OOB opponent would turn the ball straight back next tick — a
+60 Hz possession strobe; gating on the recipient being in-bounds breaks the
+ping-pong. (2) a disconnected/ghost opponent must not be handed the ball (it would
+park at the origin). An ineligible recipient is passed as `0`, which
+`OobResolution.Resolve` maps to no award.
+
+**Why server-gated:** identical reasoning to the loose-ball rule — a dead-ball
+ruling has no 50/50 contest to predict, so gating on `IsServer` removes
+prediction-flip risk for zero cost. A dispossessed client keeps its predicted
+possession for ≤1 RTT until the `ReceiveState` broadcast corrects it; any shot it
+fires in that window is reconciled away (the accepted client-prediction cost,
+ADR-0002).
+
+**Known accepted limitations (surfaced by adversarial review, judged minor):**
+- *One-tick ball position:* on the turnover tick the ball's broadcast position is
+  still the old holder's hand (the state switch ran before the turnover check);
+  `TickHeld`/`TickDribbling` re-centres it on the new holder the next tick. A
+  sub-frame artefact, smoothed, consistent with the loose-ball award.
+- *Shoot-while-OOB:* shot release is processed (in `TickHeld`/`TickDribbling`)
+  before the OOB check, so a holder who crosses the line and releases on the same
+  tick gets the shot off; the loose-ball OOB path may then catch the miss. Whether
+  an OOB release should be voided is a future refinement, deliberately out of scope.
+
+**Code:** `FlightTermination.ShouldGoLoose` and `BallStateMachine.Turnover` (both
+unit-tested headless), `BallController.ResolvePlayerOutOfBounds` (server-only,
+called before `UpdateClearStatus` so the clear check sees the new holder), and the
+state-driven edge selection in `AwardPossession`.

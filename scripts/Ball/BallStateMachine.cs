@@ -154,6 +154,35 @@ public sealed class BallStateMachine
         return true;
     }
 
+    /// <summary>
+    /// Held or Dribbling → Held (by a NEW holder).  A dead-ball change of
+    /// possession — the ball passes DIRECTLY from the current handler to a new
+    /// one without going loose for a scramble.  Models an out-of-bounds
+    /// violation (the ballhandler crossed the court line): play stops and the
+    /// opponent is awarded the ball.
+    ///
+    /// Distinct from the two adjacent edges:
+    ///   • Catch    recovers an InFlight / Loose ball (a live recovery).
+    ///   • GoLoose  makes a controlled ball uncontrolled (a live scramble).
+    ///   • Turnover is a dead-ball handoff between two players, no scramble.
+    ///
+    /// Legal ONLY while a player actually holds the ball (Held or Dribbling);
+    /// rejected otherwise so a stray call can never fabricate a holder out of a
+    /// loose or in-flight ball (those go through Catch, which enforces its own
+    /// recovery rules).  Lands in Held — the awarding glue (AwardPossession)
+    /// then begins a dribble, matching the post-Catch possession shape.
+    /// </summary>
+    /// <param name="newHolderPeerId">Peer ID of the player awarded the ball.</param>
+    /// <returns>True if the transition was legal; false if it was not.</returns>
+    public bool Turnover(int newHolderPeerId)
+    {
+        if (Current != BallState.Held && Current != BallState.Dribbling) return false;
+
+        Current      = BallState.Held;
+        HolderPeerId = newHolderPeerId;
+        return true;
+    }
+
     // ── Network reconciliation ───────────────────────────────────────────
 
     /// <summary>
