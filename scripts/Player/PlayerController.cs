@@ -1291,9 +1291,16 @@ public partial class PlayerController : CharacterBody3D
 			&& _machine.Begin(new JumpShot()) && !isServer)
 			RpcId(1, MethodName.RequestBeginMove, "jumpshot", 0f);
 
-		// Feint modifier: abort during the startup window.
-		// The machine enforces the feint-window guard; false return is silent.
-		if (Input.IsActionJustPressed("move_feint") && _machine.Feint() && !isServer)
+		// Feint modifier: abort during the startup window. Two input paths feed
+		// the SAME Feint() call (#139): the discrete "move_feint" key, and the
+		// right-stick quick-return gesture the recognizer reports as
+		// GestureKind.Feint (its own doc says the caller must map it). A single
+		// flick is exactly one GestureKind, so this never double-fires with the
+		// crossover branch above. The machine enforces the feint-window guard;
+		// false return is silent.
+		bool feintInput = Input.IsActionJustPressed("move_feint")
+			|| gesture.Kind == GestureKind.Feint;
+		if (feintInput && _machine.Feint() && !isServer)
 			RpcId(1, MethodName.RequestFeint);
 
 		_machine.Tick(); // advance one frame — always called, including Inactive (no-op)
