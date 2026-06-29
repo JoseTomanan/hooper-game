@@ -1244,10 +1244,24 @@ public partial class BallController : Node3D
 		// line is not also rebounded the same tick.  An Award returns immediately,
 		// skipping the rebound step.  ClampFallback falls through to the clamp below.
 		{
+			// (#118.2) Pre-shot OOB: before any shot has been fired this match,
+			// _lastShooterPeerId is still its default 0 — and OtherPlayerPeerId(0)
+			// returns the FIRST player in spawn order (its int.TryParse loop just
+			// skips id 0), i.e. an arbitrary award with no game context. There is no
+			// "last shooter" to award opposite of, so short-circuit to recipient 0,
+			// which OobResolution maps to ClampFallback: the ball clamps and stays
+			// in play instead of teleporting possession to a spawn-order-arbitrary
+			// player. (Real-ball: a loose ball with no possession history is nobody's
+			// turnover.) Short-circuit also skips the wasted lookup. Forward-
+			// compatible with #118.1 — a future last-TOUCHER id is likewise 0 before
+			// anyone has touched the ball, so the same guard holds.
+			int resolvedRecipient =
+				_lastShooterPeerId == 0 ? 0 : OtherPlayerPeerId(_lastShooterPeerId);
+
 			OobResolution.Result oob = OobResolution.Resolve(
 				CourtBounds.IsOutOfBounds(_arc.Position, CourtMin, CourtMax),
 				IsServer,
-				OtherPlayerPeerId(_lastShooterPeerId));
+				resolvedRecipient);
 
 			if (oob.Action == OobResolution.Action.Award)
 			{

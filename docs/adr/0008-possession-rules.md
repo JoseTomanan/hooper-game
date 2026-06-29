@@ -318,3 +318,28 @@ client-prediction cost, ADR-0002).
 collaborators (`CourtBounds.IsOutOfBounds` + `OobResolution.Resolve`) in
 `OobShotReleaseTests` — the same Node-can't-run-headless pattern (ADR-0004) used
 by `FlightTerminationIntegrationTests`.
+
+## Amendment — 2026-06-29c (issue #118 part 2: pre-shot loose-ball OOB)
+
+**Status remains Accepted.** A correctness clarification to the 2026-06-28
+loose-ball OOB rule; the award logic is unchanged once a shot exists.
+
+**The edge.** The loose-ball OOB award computes its recipient as
+`OtherPlayerPeerId(_lastShooterPeerId)`. Before any shot has been fired
+`_lastShooterPeerId` is its default `0`, and `OtherPlayerPeerId(0)` returns the
+**first player in spawn order** (its parse loop merely skips id 0) — an arbitrary
+award with no game context.
+
+**Rule.** With no last shooter there is nothing to award *opposite of*, so the
+recipient resolves to `0` → `OobResolution.ClampFallback`: the ball clamps and
+stays in play rather than teleporting possession to a spawn-order-arbitrary
+player. Real-ball: a loose ball with no possession history is nobody's turnover.
+
+**Code:** `BallController.TickLoose` (`_lastShooterPeerId == 0 ? 0 : OtherPlayerPeerId(...)`
+short-circuit). Pinned headless in `LooseBallOobRecipientTests`.
+
+> **Note — issue #118 part 1 (last-shooter vs last-toucher) is NOT resolved here.**
+> Switching the award key from last-*shooter* to last-*toucher* would reverse the
+> deliberate 2026-06-28 amendment, so per ADR-0014 it is left as a design call for
+> the human rather than self-resolved. This part-2 guard is forward-compatible
+> with either outcome (a last-toucher id is likewise 0 before anyone has touched).
