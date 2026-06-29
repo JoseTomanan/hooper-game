@@ -1037,6 +1037,26 @@ public partial class BallController : Node3D
 				if (IsServer)
 					ResolveServerMake();
 				break;
+
+			case ContactResult.None:
+				// No rim or backboard contact this tick. A clean miss (air ball),
+				// a shot scattered wide of the rim, or a long pass must STILL end
+				// its flight — otherwise the arc integrates forever and the ball
+				// sinks through the floor (Y → −∞) or sails through the walls. The
+				// deterministic mini-physics ball never consults Godot's collision
+				// system (ADR-0004), so the scene walls cannot contain it; its only
+				// containment lives in TickLoose, which a never-terminating flight
+				// never reaches. FlightTermination ends the flight on floor-contact
+				// or OOB (pure helper, headless-seam). After GoLoose, TickLoose
+				// takes over: FloorBounce + rebound contest in bounds, or
+				// OobResolution's turnover award when out of bounds.
+				//
+				// Runs on EVERY peer as deterministic prediction, exactly like the
+				// Bounce/Make branches — ShouldGoLoose is a pure function of the
+				// arc position and the CourtMin/Max exports, identical everywhere.
+				if (FlightTermination.ShouldGoLoose(_arc.Position, BallRadius, CourtMin, CourtMax))
+					StateMachine.GoLoose();
+				break;
 		}
 	}
 
