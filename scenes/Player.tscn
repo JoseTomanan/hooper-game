@@ -3,7 +3,7 @@
 [ext_resource type="Script" uid="uid://erpigohkoatw" path="res://scripts/Player/PlayerController.cs" id="1_p0vlq"]
 [ext_resource type="Script" uid="uid://b2cug8lv7pgn8" path="res://scripts/Systems/BlobShadow.cs" id="2_blobshadow"]
 [ext_resource type="PackedScene" uid="uid://b58mjs28h2dpi" path="res://assets/characterMedium.fbx" id="3_3li8b"]
-[ext_resource type="AnimationLibrary" path="res://assets/locomotion.res" id="4_mdl7e"]
+[ext_resource type="AnimationLibrary" uid="uid://beyrxgsi2rt6p" path="res://assets/locomotion.res" id="4_mdl7e"]
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_p0vlq"]
 
