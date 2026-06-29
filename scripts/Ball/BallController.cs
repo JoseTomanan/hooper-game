@@ -1384,8 +1384,13 @@ public partial class BallController : Node3D
 
 			// #64 — movement penalty: full-sprint shot scatters most.
 			// speedRatio is in [0,1]: 0 = standing still, 1 = full MoveSpeed.
+			// Reads ShotInitiationSpeed (XZ speed captured when the JumpShot
+			// BEGAN), NOT the release-time Velocity: the committed shot plants the
+			// feet (Velocity≈0) by the time it releases, so reading Velocity here
+			// made the penalty inert — a sprint pull-up scattered like a set shot
+			// (#137). ShotInitiationSpeed is server-authoritative for this calc.
 			float speedRatio      = holder.MoveSpeed > 0f
-				? Math.Clamp(holder.Velocity.Length() / holder.MoveSpeed, 0f, 1f)
+				? Math.Clamp(holder.ShotInitiationSpeed / holder.MoveSpeed, 0f, 1f)
 				: 0f;
 			float movementFactor  = 1f + MovementScatterK * speedRatio;
 
