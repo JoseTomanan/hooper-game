@@ -38,10 +38,13 @@ namespace Hooper.Ball.Tests;
 ///     boundary (the ball physically clips the rim even when the aim-point is
 ///     just inside the circle).
 ///   • At high multipliers (heavy penalties): simulated can be 10–15 pp ABOVE
-///     closed form because the backboard catches some wayward shots that the
-///     closed form would count as misses.  A scattered aim-point that lands
-///     behind the board can bounce in off the glass.  This effect grows with
-///     scatter radius.
+///     closed form because the make test is a 3-D capture cylinder, not a flat
+///     disc — a make fires whenever the descending ball centre is within
+///     innerRadius horizontally AND within ±2·BallRadius of rim height, so an
+///     arc whose aim-point lands just past the rim still sweeps through it on
+///     the way down.  This effect grows with scatter radius.  (NOT a backboard
+///     effect: RimBackboard returns Bounce for board contact, and IsMake counts
+///     any Bounce as a miss — the board can only reduce makes here.)
 /// </summary>
 public class ShotScatterCurveCharacterizationTests
 {
@@ -123,7 +126,7 @@ public class ShotScatterCurveCharacterizationTests
     ///   1 m | 0.0260 |   100.0 |     100.0 | rMax &lt; 0.11 → all samples make
     ///   2 m | 0.0520 |   100.0 |     100.0 |
     ///   3 m | 0.0780 |   100.0 |     100.0 |
-    ///   4 m | 0.1040 |   100.0 |      92.7 | rMax just over 0.11; rim-outs begin
+    ///   4 m | 0.1040 |   100.0 |      92.7 | rMax just under 0.11; arc-angle rim-outs begin
     ///   5 m | 0.1300 |    71.6 |      67.3 | mid-range falloff; ~4 pp below closed
     ///   6 m | 0.1560 |    49.7 |      49.9 | close to closed form
     /// 6.75m | 0.1755 |    39.3 |      41.0 | NBA wide-open 3pt ≈ 38–40 % — design anchor
@@ -133,8 +136,8 @@ public class ShotScatterCurveCharacterizationTests
     ///  10 m | 0.2600 |    17.9 |      20.8 |
     ///  11 m | 0.2860 |    14.8 |      17.5 |
     ///
-    /// At ≥ 6 m the backboard begins catching some wayward shots: measured is
-    /// 2–3 pp ABOVE the closed form (which counts all misses as clean misses).
+    /// At ≥ 6 m the 3-D capture cylinder catches overshooting arcs: measured is
+    /// 2–3 pp ABOVE the closed form (which is a flat 2-D disc-area ratio).
     /// At 4–5 m the rim-out effect dominates: measured is 4–7 pp below closed form.
     /// </summary>
     [Theory(Skip = "characterization: run manually; not a CI gate")]
@@ -178,8 +181,9 @@ public class ShotScatterCurveCharacterizationTests
     ///   0.75     | 1.60 |  0.2080  |    28.0 |      40.3
     ///   1.00     | 1.80 |  0.2340  |    22.1 |      35.4  (full sprint)
     ///
-    /// Note: measured is above closed form at mult > 1.0 because the backboard
-    /// catches some shots scattered past the inner rim circle (glass assists).
+    /// Note: measured is above closed form at mult > 1.0 because the 3-D capture
+    /// cylinder catches overshooting arcs scattered just past the inner rim circle
+    /// (not glass assists — board contact is a miss in this harness).
     /// </summary>
     [Theory(Skip = "characterization: run manually; not a CI gate")]
     // speedRatio, mult = 1 + 0.8 * speedRatio
@@ -214,7 +218,7 @@ public class ShotScatterCurveCharacterizationTests
     ///   1.00    | 2.00 |  0.2600  |    17.9 |      31.5  (on-ball closeout)
     ///
     /// Maximum single-factor penalty (2.0×) is the hardest single-axis penalty.
-    /// Measured is 5–14 pp above closed form at mult > 1.0 (backboard glass assists).
+    /// Measured is 5–14 pp above closed form at mult > 1.0 (capture-cylinder rescue).
     /// </summary>
     [Theory(Skip = "characterization: run manually; not a CI gate")]
     // proximity, mult = 1 + 1.0 * proximity
@@ -251,7 +255,7 @@ public class ShotScatterCurveCharacterizationTests
     /// Note: FacK=0.8 matches MovK=0.8 — identical mult table to movement penalty.
     /// Both are below ContK=1.0 (1.0–2.0 range): a fully-contested shot is harder
     /// than any single-axis penalty alone — design intent from ADR-0009 §facing.
-    /// Measured is 6–13 pp above closed form at mult > 1.0 (same backboard effect).
+    /// Measured is 6–13 pp above closed form at mult > 1.0 (same capture-cylinder rescue).
     /// </summary>
     [Theory(Skip = "characterization: run manually; not a CI gate")]
     // angleDeg, mult = 1 + 0.8 * (angleDeg/180)
