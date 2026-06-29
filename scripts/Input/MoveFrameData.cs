@@ -65,13 +65,27 @@ public sealed class MoveFrameData
     /// </summary>
     public int FeintRecoveryFrames { get; }
 
+    /// <summary>
+    /// Earliest Startup frame on which a feint becomes legal — a feint is rejected
+    /// while <c>FrameInPhase &lt; FeintMinStartupFrames</c> (#138, ADR-0003). 0 (the
+    /// default) means a feint is legal from frame 0, preserving the original
+    /// Crossover/Hesitation zero-cost-abort behaviour. A positive value guarantees
+    /// a minimum visible telegraph before the move can be aborted — without it a
+    /// same-tick begin+feint produces a zero-startup, invisible move (the
+    /// arcade-decoupling anti-goal). When the feint window is open
+    /// (<see cref="FeintWindowFrames"/> &gt; 0) this must be strictly less than it,
+    /// so the legal feint window [min, window) is non-empty.
+    /// </summary>
+    public int FeintMinStartupFrames { get; }
+
     /// <param name="startupFrames">Physics ticks in Startup. Must be >= 1.</param>
     /// <param name="activeFrames">Physics ticks in Active. Must be >= 1.</param>
     /// <param name="recoveryFrames">Physics ticks in Recovery. Must be >= 1.</param>
     /// <param name="feintWindowFrames">Feint-legal ticks from start of Startup. 0 = no feint. Must be strictly &lt; startupFrames (or 0).</param>
     /// <param name="feintRecoveryFrames">Recovery ticks a feint costs. 0 = abort to Inactive. Must be &lt;= recoveryFrames.</param>
+    /// <param name="feintMinStartupFrames">Earliest feint-legal Startup frame. 0 = legal from frame 0. Must be &lt; feintWindowFrames when the window is open.</param>
     public MoveFrameData(int startupFrames, int activeFrames, int recoveryFrames,
-        int feintWindowFrames, int feintRecoveryFrames = 0)
+        int feintWindowFrames, int feintRecoveryFrames = 0, int feintMinStartupFrames = 0)
     {
         if (startupFrames  < 1) throw new ArgumentOutOfRangeException(nameof(startupFrames),  "Must be >= 1.");
         if (activeFrames   < 1) throw new ArgumentOutOfRangeException(nameof(activeFrames),   "Must be >= 1.");
@@ -89,11 +103,20 @@ public sealed class MoveFrameData
         if (feintRecoveryFrames > recoveryFrames)
             throw new ArgumentOutOfRangeException(nameof(feintRecoveryFrames),
                 "Cannot exceed recoveryFrames — a feint cannot cost more recovery than the completed move.");
+        if (feintMinStartupFrames < 0)
+            throw new ArgumentOutOfRangeException(nameof(feintMinStartupFrames), "Must be >= 0.");
+        // The legal feint window is [feintMinStartupFrames, feintWindowFrames). When a
+        // feint window is open it must be non-empty, so the floor must sit strictly
+        // below it — otherwise the move would advertise a feint that can never fire.
+        if (feintMinStartupFrames > 0 && feintMinStartupFrames >= feintWindowFrames)
+            throw new ArgumentOutOfRangeException(nameof(feintMinStartupFrames),
+                "Must be strictly < feintWindowFrames — the legal feint window [min, window) must be non-empty.");
 
-        StartupFrames       = startupFrames;
-        ActiveFrames        = activeFrames;
-        RecoveryFrames      = recoveryFrames;
-        FeintWindowFrames   = feintWindowFrames;
-        FeintRecoveryFrames = feintRecoveryFrames;
+        StartupFrames         = startupFrames;
+        ActiveFrames          = activeFrames;
+        RecoveryFrames        = recoveryFrames;
+        FeintWindowFrames     = feintWindowFrames;
+        FeintRecoveryFrames   = feintRecoveryFrames;
+        FeintMinStartupFrames = feintMinStartupFrames;
     }
 }
