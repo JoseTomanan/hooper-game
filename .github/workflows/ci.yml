@@ -88,3 +88,13 @@ jobs:
       # job, which is correct — it means the harness itself broke.
       - name: Run headless integration smoke test
         run: godot --headless --path . res://tests/integration/SmokeTest.tscn
+
+      # Dual-instance harness, increment 1: two headless Godot processes complete
+      # a real ENet handshake over localhost. The orchestrator launches a server
+      # and a client of the same scene and reads the client's exit code. This is
+      # the two-process capability the single-instance smoke test cannot cover —
+      # the foundation the server-authoritative verifies (ADR-0002) build on.
+      - name: Run dual-instance ENet handshake harness
+        run: |
+          chmod +x tests/integration/run-net-handshake.sh
+          tests/integration/run-net-handshake.sh godot
