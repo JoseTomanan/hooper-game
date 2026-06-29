@@ -288,7 +288,7 @@ public partial class BallController : Node3D
 	/// ADR-0003's hybrid committed-move model better.  Default continuous
 	/// pending human review.
 	/// </summary>
-	[Export] public float MovementScatterK { get; set; } = 0.8f;
+	[Export(PropertyHint.Range, "0,3,0.05")] public float MovementScatterK { get; set; } = 0.8f;
 
 	/// <summary>
 	/// Strength of the defender-contest penalty applied to shot scatter (issue
@@ -311,7 +311,7 @@ public partial class BallController : Node3D
 	/// here — that belongs in a later milestone.  Default proximity-only
 	/// pending human review.
 	/// </summary>
-	[Export] public float ContestScatterK { get; set; } = 1.0f;
+	[Export(PropertyHint.Range, "0,3,0.05")] public float ContestScatterK { get; set; } = 1.0f;
 
 	/// <summary>
 	/// XZ-plane distance (metres) within which the other player contests a
@@ -348,7 +348,7 @@ public partial class BallController : Node3D
 	/// FacingResolver is cosmetic-only and cannot feed an authoritative outcome
 	/// (see ADR-0004 and ADR-0009 §Resolved 2026-06-27).
 	/// </summary>
-	[Export] public float FacingScatterK { get; set; } = 0.8f;
+	[Export(PropertyHint.Range, "0,3,0.05")] public float FacingScatterK { get; set; } = 0.8f;
 
 	// ── Reconciliation tuning (mirrors PlayerController's tunables) ───────
 
@@ -1058,12 +1058,18 @@ public partial class BallController : Node3D
 	{
 		if (IsCleared)
 		{
-			GetGameManager()?.RegisterBasket(_lastShooterPeerId);
+			// Resolve the GameManager ONCE: RegisterBasket can set IsGameOver
+			// synchronously (and fires the GameOver signal whose handlers may
+			// mutate the tree), so re-calling GetGameManager() for the IsGameOver
+			// read could observe a different — or null-fallback — node and
+			// wrongly award a post-game possession (#136). One reference, one tick.
+			GameManager gm = GetGameManager();
+			gm?.RegisterBasket(_lastShooterPeerId);
 
 			// Make-it-take-it, unless the basket ended the game — then the
 			// game-over freeze stands (see _PhysicsProcess's no-freeze note).
 			// cleared: true — the scorer already earned their trip (see doc).
-			if (!(GetGameManager()?.IsGameOver ?? false))
+			if (!(gm?.IsGameOver ?? false))
 				AwardPossession(_lastShooterPeerId, cleared: true);
 			return;
 		}
@@ -1378,8 +1384,13 @@ public partial class BallController : Node3D
 
 			// #64 — movement penalty: full-sprint shot scatters most.
 			// speedRatio is in [0,1]: 0 = standing still, 1 = full MoveSpeed.
+			// Reads ShotInitiationSpeed (XZ speed captured when the JumpShot
+			// BEGAN), NOT the release-time Velocity: the committed shot plants the
+			// feet (Velocity≈0) by the time it releases, so reading Velocity here
+			// made the penalty inert — a sprint pull-up scattered like a set shot
+			// (#137). ShotInitiationSpeed is server-authoritative for this calc.
 			float speedRatio      = holder.MoveSpeed > 0f
-				? Math.Clamp(holder.Velocity.Length() / holder.MoveSpeed, 0f, 1f)
+				? Math.Clamp(holder.ShotInitiationSpeed / holder.MoveSpeed, 0f, 1f)
 				: 0f;
 			float movementFactor  = 1f + MovementScatterK * speedRatio;
 

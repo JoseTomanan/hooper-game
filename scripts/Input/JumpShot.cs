@@ -24,11 +24,13 @@ namespace Hooper.Moves;
 ///             FIRST of these ticks (JustEnteredActive), the same one-shot
 ///             convention Crossover's burst already uses.
 ///   Recovery: 20 ticks — landing / punish window (~0.33s at 60Hz).
-///   Feint window: 12 of 18 startup ticks (#77 — pump-fake now active). The
-///             remaining 6 frames are the "committed tail" — the point of no
-///             return where the feint window has closed and the player is
-///             committed to shooting (ADR-0003). Window = 12, startup = 18,
-///             tail = 6 frames.
+///   Feint window: frames 3..11 of 18 startup ticks (#77 pump-fake, #138 floor).
+///             The legal feint window is [feintMinStartup, feintWindow) = [3, 12):
+///             a feint is illegal for the first 3 frames so the shot wind-up is
+///             always visibly telegraphed before it can be aborted (a same-tick
+///             shoot+feint would otherwise be a zero-startup invisible fake —
+///             the arcade-decoupling anti-goal, ADR-0003). Frames 12..17 are the
+///             "committed tail" — the point of no return. startup = 18, tail = 6.
 ///   Feint recovery: 8 ticks — a pump-fake costs 8 ticks of recovery, shorter
 ///             than the full 20-tick landing recovery because you never left
 ///             the ground. CommittedMoveMachine.Feint() enters Recovery at the
@@ -41,7 +43,7 @@ public sealed class JumpShot : CommittedMove
     /// <summary>Default jump-shot frame data. Tunable per instance if needed.</summary>
     public static readonly MoveFrameData DefaultFrameData =
         new(startupFrames: 18, activeFrames: 4, recoveryFrames: 20,
-            feintWindowFrames: 12, feintRecoveryFrames: 8);
+            feintWindowFrames: 12, feintRecoveryFrames: 8, feintMinStartupFrames: 3);
 
     /// <param name="frameData">Override frame data; null uses DefaultFrameData.</param>
     public JumpShot(MoveFrameData? frameData = null)
