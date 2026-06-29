@@ -98,3 +98,14 @@ jobs:
         run: |
           chmod +x tests/integration/run-net-handshake.sh
           tests/integration/run-net-handshake.sh godot
+
+      # Dual-instance harness, increment 2: the server (multiplayer authority)
+      # broadcasts a strictly-increasing authoritative value to the client every
+      # physics tick via RPC — the same ReceiveState cadence the real sim uses
+      # (ADR-0002). The client passes only after receiving a sustained in-order
+      # run, proving authoritative state actually crosses the wire, not just the
+      # handshake. This is the mechanism every server-authoritative verify needs.
+      - name: Run dual-instance authoritative state-sync harness
+        run: |
+          chmod +x tests/integration/run-net-state-sync.sh
+          tests/integration/run-net-state-sync.sh godot
