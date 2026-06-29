@@ -1,0 +1,14 @@
+[gd_scene format=3]
+
+; Minimal spawnable for the dual-instance node-replication harness (increment 3).
+;
+; Deliberately a BARE Node3D, not the real scenes/Player.tscn. The harness proves
+; that MultiplayerSpawner replicates a server-spawned node's *existence* (and its
+; peer-id name — the identity contract in NetworkManager.SpawnPlayer) to a real
+; connected client. The spawner does NOT replicate transform/state — that rides
+; the game's own RPC tick loop, which increment 2 (NetStateSyncTest) already
+; proves. So instancing the heavyweight Player.tscn (FBX + AnimationTree) here
+; would only add unrelated headless surface for no extra coverage. The root must
+; be a Node3D because NetworkManager.SpawnPlayer sets Position on it.
+
+[node name="HarnessPlayer" type="Node3D"]

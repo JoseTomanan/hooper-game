@@ -109,3 +109,17 @@ jobs:
         run: |
           chmod +x tests/integration/run-net-state-sync.sh
           tests/integration/run-net-state-sync.sh godot
+
+      # Dual-instance harness, increment 3: the SHIPPED netcode end-to-end. The
+      # server boots via NetworkManager.StartDedicatedServer (the headless
+      # authoritative-host path, ADR-0007, never before proven on CI — issue #32);
+      # the client joins via NetworkManager.JoinGame; the server's SpawnPlayer +
+      # the sibling MultiplayerSpawner replicate a server-authored player node to
+      # the client, named by peer id (the identity contract). The client passes
+      # only once it observes its own node appear. This is the existence-replication
+      # channel every server-authoritative dual-instance verify builds on, proven
+      # against the real game's NetworkManager rather than throwaway harness code.
+      - name: Run dual-instance node-replication harness
+        run: |
+          chmod +x tests/integration/run-net-node-replication.sh
+          tests/integration/run-net-node-replication.sh godot

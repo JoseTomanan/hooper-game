@@ -1,0 +1,18 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://tests/integration/NetNodeReplicationTest.cs" id="1_noderepl"]
+[ext_resource type="Script" path="res://scripts/Networking/NetworkManager.cs" id="2_netmgr"]
+
+[node name="NetNodeReplicationTest" type="Node3D"]
+script = ExtResource("1_noderepl")
+
+[node name="Players" type="Node3D" parent="."]
+
+[node name="MultiplayerSpawner" type="MultiplayerSpawner" parent="."]
+_spawnable_scenes = PackedStringArray("res://tests/integration/HarnessPlayer.tscn")
+spawn_path = NodePath("../Players")
+spawn_limit = 2
+
+[node name="NetworkManager" type="Node" parent="." node_paths=PackedStringArray("Players")]
+script = ExtResource("2_netmgr")
+Players = NodePath("../Players")
