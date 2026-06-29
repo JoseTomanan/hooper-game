@@ -34,7 +34,10 @@ closed-form approximation.
 ## Current default constants
 
 These are the `BallController` `[Export]` defaults at the time of this analysis.
-All numbers below are invalid if these change.
+All numbers below are invalid if these change. The numbers also depend on the
+fixed `RimBackboard` geometry (rim/board position, `BoardHalfWidth` 0.46 m,
+`BoardHalfHeight` 0.30 m, `RimRestitution`/`BoardRestitution` 0.65) and the shot
+arc apex — a change to any of those invalidates the curve too.
 
 | Constant | Value | Meaning |
 |---|---|---|
@@ -71,12 +74,12 @@ No movement, no contest, squared-up. This is the baseline curve.
 | 1 m      | 0.0260 | 100.0       | 100.0     | rMax < inner radius (0.11 m) — all makes |
 | 2 m      | 0.0520 | 100.0       | 100.0     | rMax < inner radius — all makes |
 | 3 m      | 0.0780 | 100.0       | 100.0     | rMax < inner radius — all makes |
-| 4 m      | 0.1040 | 100.0       | 92.7      | rMax just above inner radius; rim-outs begin |
+| 4 m      | 0.1040 | 100.0       | 92.7      | rMax just *below* inner radius (0.104 < 0.11); arc-angle rim-outs begin |
 | 5 m      | 0.1300 | 71.6        | 67.3      | Mid-range falloff; ~4 pp below closed form |
 | 6 m      | 0.1560 | 49.7        | 49.9      | Close to closed form |
 | **6.75 m** | **0.1755** | **39.3** | **41.0** | **NBA wide-open 3-pt ≈ 38–40% — design anchor** |
 | 7 m      | 0.1820 | 36.5        | 38.5      | |
-| 8 m      | 0.2080 | 28.0        | 30.6      | Backboard assist grows measurably |
+| 8 m      | 0.2080 | 28.0        | 30.6      | Capture-cylinder rescues grow (see below) |
 | 9 m      | 0.2340 | 22.1        | 25.0      | |
 | 10 m     | 0.2600 | 17.9        | 20.8      | |
 | 11 m     | 0.2860 | 14.8        | 17.5      | |
@@ -91,13 +94,24 @@ Two opposing effects push measured away from closed form:
    the inner boundary rim out. Effect is largest at 4–5 m where the scatter
    radius sits just above the boundary (4 pp gap at 5 m).
 
-2. **Backboard assist (≥ 6 m, measured > closed):** The closed form counts every
-   aim-point outside the inner-rim circle as a miss. The real physics includes a
-   backboard (`BoardCenter = (0, 3.5, 0.3)`, `BoardNormal = (0, 0, -1)`). Shots
-   scattered behind the board can bounce off the glass and drop through the rim.
-   This effect grows with scatter radius and becomes significant at distance ≥ 6 m
-   or under heavy penalties. At 10 m open the gap is +2.9 pp; at 5 m full-sprint
-   (mult=1.80) the gap is +13.3 pp.
+2. **Capture-cylinder rescue (≥ 6 m, measured > closed):** The closed form is a
+   flat 2-D disc-area ratio — it counts only aim-points landing *inside* the
+   inner-rim circle (`r < 0.11 m`). The real make test (`RimBackboard.Resolve`,
+   the make branch) is 3-D: a make fires on any tick where the descending ball
+   centre is within `innerRadius` horizontally **and** within ±`2·BallRadius`
+   (±0.24 m) of rim height. That is a vertical *capture cylinder*, not a flat
+   disc. An arc whose 2-D aim-point lands just *past* the rim still sweeps through
+   that cylinder on the way down, so the sim makes some shots the closed form
+   scores as misses. The effect grows with scatter radius (more overshooting
+   arcs). At 10 m open the gap is +2.9 pp; at 5 m full-sprint (mult=1.80) +13.3 pp.
+
+   **Note — the backboard does NOT assist here.** `RimBackboard.Resolve` returns
+   `ContactResult.Bounce` for board contact (not `Make`), and this harness counts
+   any `Bounce` as a miss (the loop stops on the first contact). So the board can
+   only *reduce* makes — an overshoot that reaches the glass is killed, not
+   rescued. An earlier draft of this doc attributed the measured > closed gap to
+   "glass assists"; that is mechanically impossible in the harness and has been
+   corrected to the capture-cylinder geometry above.
 
 ---
 
@@ -114,7 +128,7 @@ Two opposing effects push measured away from closed form:
 | 1.00      | 1.80 | 0.2340   | 22.1    | 35.4      |
 
 Full-sprint (speedRatio=1.0) at 5 m: measured 35.4% vs closed-form 22.1%. The
-+13.3 pp gap is the backboard-assist effect described above.
++13.3 pp gap is the capture-cylinder rescue described above.
 
 ---
 
@@ -132,7 +146,7 @@ Full-sprint (speedRatio=1.0) at 5 m: measured 35.4% vs closed-form 22.1%. The
 
 The contest penalty is the steepest single-axis penalty (ContK=1.0 vs 0.8 for
 movement and facing). Full closeout (proximity=1.0) at 5 m: measured 31.5%.
-The measured value is 13.6 pp above closed form due to the backboard-assist effect.
+The measured value is 13.6 pp above closed form due to the capture-cylinder rescue.
 
 ---
 
@@ -197,13 +211,13 @@ measured curve:
 |----------|---------------|-----------|
 | ≤ 3 m    | "~100%, open layup — automatic" | 100.0% ✓ |
 | 5 m      | "~67%, open mid-range" | 67.3% ✓ |
-| 5.8 m    | "~53%, at the clear line" | ~51% (interpolated between 5 m and 6 m) |
+| 5.8 m    | "~53%, at the clear line" | ~53% (interpolated between 5 m and 6 m) |
 | **6.75 m** | **"~41%, NBA wide-open three ≈ 38–40%"** | **41.0% ✓** |
 | 10 m     | "~21%, steep falloff rewards spacing" | 20.8% ✓ |
 
-The 6.75 m measured value (41.0%) lands squarely in the NBA wide-open 3-pt band
-(38–40%), and is consistent with the ADR-0009 tuning target. The ADR quoted 41%
-as the design anchor; the simulation confirms this at 41.0%.
+The 6.75 m measured value (41.0%) sits just above the NBA wide-open 3-pt band
+(38–40%) and matches the ADR-0009 design anchor exactly: the ADR quoted 41% as
+the target, and the simulation confirms 41.0%.
 
 ### Candidate tuning observations (no prescription — human's feel call)
 
@@ -211,19 +225,22 @@ These observations describe where the curve sits relative to reference points.
 They do not prescribe any change; that decision belongs to the feel playtest.
 
 1. **4 m is not automatic (92.7%).** The inner-radius boundary falls between
-   3 m (rMax=0.078 < 0.11, automatic) and 4 m (rMax=0.104, just above 0.11).
-   A straight-drive layup from 4 m misses 7.3% of the time even uncontested. If
+   3 m (rMax=0.078 < 0.11, automatic) and 4 m (rMax=0.104, just below 0.11). Even
+   though the aim-point disc at 4 m still fits inside the inner circle (closed
+   form 100%), arc-angle rim-outs cost 7.3% — a straight-drive layup from 4 m
+   misses 7.3% of the time even uncontested. If
    the design intent is "inside ~4 m is automatic", Spm would need to drop
    slightly (or a fixed inner-deadzone added). If the intent is a gradual
    falloff starting around 4 m, the current curve matches.
 
-2. **Penalty penalties are more forgiving than closed-form predicts.** At full
+2. **Penalised shots are more forgiving than closed-form predicts.** At full
    single-axis penalty (mult=1.80 at 5 m), measured is 35.4% — not 22.1%. This
-   is because the backboard rescues shots that the closed form would count as
-   misses. Whether this extra forgiveness feels right or too forgiving is a
-   playtest question. Reducing `MaxShotScatter` or `ContK`/`MovK` would
-   tighten the curve; the simulation numbers in this doc are the ground truth
-   for any such adjustment.
+   is the capture-cylinder rescue: the 3-D make test catches overshooting arcs
+   that the flat closed form counts as misses (NOT a backboard effect — board
+   contact is a miss in this harness). Whether this extra forgiveness feels right
+   or too forgiving is a playtest question. Reducing `MaxShotScatter` or
+   `ContK`/`MovK` would tighten the curve; the simulation numbers in this doc are
+   the ground truth for any such adjustment.
 
 3. **6.75 m is the design anchor and it is confirmed.** No tuning pressure at
    the three-point line unless the feel pass identifies a reason to move it.
