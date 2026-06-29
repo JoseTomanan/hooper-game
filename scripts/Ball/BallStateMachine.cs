@@ -33,6 +33,12 @@ namespace Hooper.Ball;
 ///   InFlight   → Loose      : GoLoose()        (missed shot / block)
 ///   InFlight   → Held       : Catch()          (caught pass / alley-oop)
 ///   Loose      → Held       : Catch()          (picked up off the floor)
+///   Held       → Held       : Turnover()       (dead-ball handoff: held-ball OOB, #63)
+///   Dribbling  → Held       : Turnover()       (dead-ball handoff: held-ball OOB, #63)
+///
+/// (The Held/Dribbling → Held Turnover edge re-assigns the holder without a
+///  loose scramble — see Turnover() below. Omitted from the diagram above to
+///  keep it legible; it is a same-or-adjacent-state self-handoff, not a new path.)
 ///
 /// All other transitions are INVALID and return false (no throw — callers
 /// are expected to guard, but an invalid call should never crash a game tick).
