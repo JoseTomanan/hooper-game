@@ -139,6 +139,18 @@ Concretely:
   genuine attempt, record the failure, fall back to ADR-0015 alternative 2
   (afk-lane auto-merge only; human retains `hitl` verification), and revisit.
 
+**Outcome: GO (proven 2026-06-29, spike PR #131).** The Phase-1 smoke scene
+(`tests/integration/SmokeTest.tscn` + `IntegrationSmokeTest.cs`) booted on
+GitHub-hosted `ubuntu-latest` under `Godot_v4.6.3-stable_mono_linux_x86_64`
+`--headless`, pumped 30 fixed physics ticks at 60 Hz (accumulated 0.49999…s with
+no drift), asserted the fixed-tick determinism invariant, printed
+`[harness] PASS`, and exited 0 — read green by the `integration-test` CI job
+alongside the 459-test unit suite. The mechanism (engine boots headless → loads a
+real scene → pumps physics → runs compiled C# → reports via exit code) is proven
+on hosted CI with no self-hosted runner. The strong form of ADR-0015 is therefore
+live; the afk-only fallback is not needed. Phase-2 follow-ups (load `Main.tscn`,
+the dual-instance server-authoritative network smoke test) build on this surface.
+
 ## Consequences
 
 **Easier:**
