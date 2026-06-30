@@ -26,6 +26,7 @@ locked unless explicitly revisited (see Decision Discipline in §4 below).
 | [ADR-0015](docs/adr/0015-autonomous-merge-proven-by-harness.md) | Autonomous merge for the AFK lane + harness-closed `hitl`; "Done means proven" redefined as proven-by-harness (supersedes "human owns merges"); feel batched to one human pass per milestone |
 | [ADR-0016](docs/adr/0016-headless-verification-harness.md) | Headless Godot harness (`tests/integration/`, `--headless`, exit-code pass/fail) is the official verification surface — the automated stand-in for human in-editor verification of state-checkable acceptance criteria |
 | [ADR-0017](docs/adr/0017-autopilot-activates-deferred-milestones.md) | Autopilot may activate DEFERRED milestones in the §2 dependency order without a per-milestone human "go" (supersedes "do not build ahead of the current milestone"); activation gates pickup, not merge |
+| [ADR-0019](docs/adr/0019-session-driven-orchestration-loop.md) | Session-driven orchestration loop: an Opus `orchestrator` agent runs dispatch→review→merge within a live human-started session (no unattended cron / stored credential — rejected as overengineering for a solo dev) |
 
 ---
 
