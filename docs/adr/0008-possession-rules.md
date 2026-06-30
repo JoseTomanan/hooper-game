@@ -431,3 +431,55 @@ than awarding arbitrarily (Amendment 2026-06-29c, now keyed off the toucher).
 `OobResolution.ResolveRecipient(lastToucher, opponentOfToucher)` (`LooseBallOobRecipientTests`);
 `BallController` writes `_lastToucherPeerId` in `TryAssignTipoffHolder` and
 `AwardPossession`, and `TickLoose` feeds it through `ResolveRecipient`.
+
+## Amendment — 2026-06-30 (issue #97: steal/block as defense-induced turnover paths)
+
+**Status remains Accepted.** This amendment records two new possession-change
+causes — defense-induced turnovers — that ADR-0008 did not previously cover. No
+prior rule changes; this fills a gap in the taxonomy before the implementing
+issues (#96 steal, #98 block) are built.
+
+**Two new turnover paths:**
+
+- **Steal (issue #96):** A successful steal transitions the ball
+  `Dribbling → Loose`. The defender's `Active` window overlaps the dribble-exposed
+  phase on the correct hand (ADR-0018 §2); on a successful overlap, `HolderPeerId`
+  clears and the ball enters `BallState.Loose` at the point of dispossession.
+- **Block (issue #98):** A successful block transitions the ball
+  `InFlight → Loose`. The defender's `Active` window overlaps the shot's
+  release/early-flight window (ADR-0018 §2); on a successful overlap, the in-flight
+  arc terminates and the ball enters `BallState.Loose`.
+
+Both are defense-induced **changes of possession** and both route through the
+**existing loose-ball proximity scramble** (§Decision-2): each tick the ball is
+loose, the server checks which player closes within pickup radius and awards via
+`BallStateMachine.Catch(peerId)`, with the nearer player winning when both are in
+range. No new resolution mechanism is introduced — these paths simply join the
+rebound scramble already defined by §Decision-2.
+
+**Possession after a steal or block starts uncleared.** This is consistent with
+the 2026-06-21 amendment's reasoning: a change of possession to the
+defender or scramble-winner must clear the ball before scoring, so the defensive
+moment carries genuine weight rather than becoming an instant put-back path. The
+same logic applies here — a steal that converted directly into a score would erase
+the clear rule's barrier in exactly the scenario it was designed for (defense
+winning possession off offense). The 2026-06-21 amendment narrowed the uncleared
+start to *changes* of possession (specifically preserving make-it-take-it as
+pre-cleared); steal and block are unambiguously changes of possession and therefore
+start uncleared by that same reasoning.
+
+**What did NOT change:**
+- The clear-line geometry, `IsCleared` broadcast path, and HUD are all unchanged.
+- The existing `AwardPossession` path (with its `cleared: false` default) handles
+  awarding from the Loose scramble — no new possession-award code is needed beyond
+  what #96/#98 add to initiate the `Dribbling → Loose` and `InFlight → Loose`
+  transitions.
+- Make-it-take-it (§Decision-1) and its pre-cleared start (Amendment 2026-06-21)
+  are unchanged — those are offense-retained-possession paths, not changes of
+  possession.
+
+**Implementers:** ADR-0018 defines the shared success predicate
+(`DefensiveResolution.Succeeds`) and the per-move vulnerable windows that govern
+*when* a steal or block connects. Issue #96 (steal) implements the
+`Dribbling → Loose` transition; issue #98 (block) implements the
+`InFlight → Loose` transition.
