@@ -81,4 +81,80 @@ public class ClearLineTests
         bool cleared = ClearLine.IsBehindClearLine(new Vector3(0f, 0f, 0f), offsetHoop, ClearDistance);
         Assert.True(cleared); // 10 m from the hoop > 5.8
     }
+
+    // ── Advance: crossing-detection take-it-back (#135) ──────────────────────
+    // A possession clears only on a genuine take-back — the handler must have
+    // been inside the clear line during this possession and then carried the
+    // ball back behind it. Standing behind the line without that round-trip
+    // (e.g. rebounding your own miss from behind the arc) must NOT clear.
+
+    [Fact]
+    public void Advance_BehindLineAfterHavingBeenInside_Clears()
+    {
+        // The genuine take-back: hasBeenInside already latched, now behind the
+        // line → the possession clears.
+        var (cleared, _) = ClearLine.Advance(
+            cleared: false, hasBeenInside: true,
+            handlerPosition: new Vector3(0f, 0f, 8f), hoopCenter: Hoop, clearLineDistance: ClearDistance);
+        Assert.True(cleared);
+    }
+
+    [Fact]
+    public void Advance_BehindLineWithoutHavingBeenInside_DoesNotClear()
+    {
+        // The #135 fix: a rebound recovered while already behind the line (the
+        // offensive board from behind the arc) has done no take-back, so it must
+        // NOT clear — no instant put-back three.
+        var (cleared, hasBeenInside) = ClearLine.Advance(
+            cleared: false, hasBeenInside: false,
+            handlerPosition: new Vector3(0f, 0f, 8f), hoopCenter: Hoop, clearLineDistance: ClearDistance);
+        Assert.False(cleared);
+        Assert.False(hasBeenInside); // standing behind the line is not "being inside"
+    }
+
+    [Fact]
+    public void Advance_InsideLine_LatchesHasBeenInside_NotCleared()
+    {
+        // Inside the clear line: not cleared, but the take-back round-trip is now
+        // underway — latch hasBeenInside so a later step behind the line can clear.
+        var (cleared, hasBeenInside) = ClearLine.Advance(
+            cleared: false, hasBeenInside: false,
+            handlerPosition: new Vector3(0f, 0f, 0f), hoopCenter: Hoop, clearLineDistance: ClearDistance);
+        Assert.False(cleared);
+        Assert.True(hasBeenInside);
+    }
+
+    [Fact]
+    public void Advance_AlreadyCleared_StaysClearedRegardlessOfPosition()
+    {
+        // Once cleared, the possession stays cleared even back inside the line —
+        // the existing one-way-within-a-possession guarantee (BallController early
+        // returns on IsCleared; Advance preserves it defensively).
+        var (cleared, _) = ClearLine.Advance(
+            cleared: true, hasBeenInside: true,
+            handlerPosition: new Vector3(0f, 0f, 0f), hoopCenter: Hoop, clearLineDistance: ClearDistance);
+        Assert.True(cleared);
+    }
+
+    [Fact]
+    public void Advance_ReboundBehindArc_RequiresRoundTrip_ToClear()
+    {
+        // End-to-end take-back for the #135 case: rebound your own miss behind the
+        // arc (behind the line, never been inside), then drive inside and carry it
+        // back out. Only the final step — behind AFTER the inside latch — clears.
+        bool cleared = false, inside = false;
+
+        // 1. Recover the ball behind the line: no take-back yet.
+        (cleared, inside) = ClearLine.Advance(cleared, inside, new Vector3(0f, 0f, 8f), Hoop, ClearDistance);
+        Assert.False(cleared);
+
+        // 2. Drive inside the line: latches the round-trip, still not cleared.
+        (cleared, inside) = ClearLine.Advance(cleared, inside, new Vector3(0f, 0f, 1f), Hoop, ClearDistance);
+        Assert.False(cleared);
+        Assert.True(inside);
+
+        // 3. Carry it back behind the line: the take-back is complete → cleared.
+        (cleared, inside) = ClearLine.Advance(cleared, inside, new Vector3(0f, 0f, 8f), Hoop, ClearDistance);
+        Assert.True(cleared);
+    }
 }

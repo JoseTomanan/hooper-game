@@ -343,3 +343,45 @@ short-circuit). Pinned headless in `LooseBallOobRecipientTests`.
 > deliberate 2026-06-28 amendment, so per ADR-0014 it is left as a design call for
 > the human rather than self-resolved. This part-2 guard is forward-compatible
 > with either outcome (a last-toucher id is likewise 0 before anyone has touched).
+
+## Amendment — 2026-06-29d (issue #135: clear = a genuine take-back, not a static position)
+
+**Status remains Accepted.** Tightens *how* §Decision-3's clear flag flips; the
+when (every change of possession resets it) and the broadcast treatment are
+unchanged.
+
+**The gap (surfaced by the #57 doubt-driven retro-audit).** §Decision-3 reads
+"Set true the moment the current holder **carries** the ball behind the clear
+line," but the implementation was a static *position* test: each server tick it set
+`IsCleared = true` whenever the holder was currently behind the line. So a player
+who recovered a loose ball while **already** behind the line — an offensive rebound
+of their own missed three from behind the arc — was cleared the same tick the
+rebound reset it, and could put back another three with no take-back. That erases
+the possession change as a defensive moment, the exact failure §Consequences
+rejected under "Live rebound with no clear line."
+
+**Rule — crossing-detection.** A possession clears only on a genuine take-back: the
+holder must have been **inside** the clear line at some point during this
+possession and then carry the ball **behind** it (inside → behind). Recovering the
+ball while already behind the line is not a take-back and does not clear; that
+holder must drive inside the line and bring it back out. This is the literal
+reading of "carries … behind the clear line." Human design call (the lenient
+"secured behind the line = cleared" real-ball convention was the considered
+alternative); resolved toward the stricter take-back because the clear rule's whole
+purpose is the defensive barrier against an instant put-back (CLAUDE.md §1; ADR-0014
+real-ball + *Undisputed 3* authority).
+
+**What did NOT change:**
+- Every possession still *starts* uncleared on a change of possession, cleared on a
+  make-it-take-it / tipoff (Amendment 2026-06-21 + tipoff pre-clear). The latch is
+  moot for pre-cleared possessions — the clear check early-returns on `IsCleared`.
+- `IsCleared` is still server-authoritative and never predicted; clients take it
+  verbatim from `ReceiveState`. The new "has been inside this possession" latch is
+  **server-only** state (only the server runs the clear check), so it cannot desync
+  client prediction.
+- The clear-line geometry, broadcast path, and HUD are unchanged.
+
+**Code:** the decision is the pure, headless-tested `ClearLine.Advance(cleared,
+hasBeenInside, …)` (crossing logic, `ClearLineTests`); `BallController` holds a
+server-only `_holderHasBeenInsideClearLine` latch reset in `AwardPossession` and
+advanced in `UpdateClearStatus`.

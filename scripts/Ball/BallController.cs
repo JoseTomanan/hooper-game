@@ -392,6 +392,17 @@ public partial class BallController : Node3D
 	public bool IsCleared { get; private set; }
 
 	/// <summary>
+	/// Server-only: has the current holder been INSIDE the clear line at some point
+	/// during this possession? Crossing-detection for the take-it-back rule (#135):
+	/// a possession clears only on a genuine take-back (inside → behind), not by
+	/// merely standing behind the line on recovery (an offensive rebound from behind
+	/// the arc). Reset to false on every change of possession (AwardPossession),
+	/// advanced by UpdateClearStatus via ClearLine.Advance. Never broadcast — only
+	/// the resulting IsCleared flag is (clients never compute the flip; see IsCleared).
+	/// </summary>
+	private bool _holderHasBeenInsideClearLine;
+
+	/// <summary>
 	/// Emitted on every peer whenever the holder or the cleared flag changes —
 	/// the push-driven cue the possession HUD (#51) refreshes on, mirroring how
 	/// GameManager.ScoreChanged drives ScoreHud. Fires from the same per-tick
@@ -869,11 +880,17 @@ public partial class BallController : Node3D
 
 	/// <summary>
 	/// Server-only: flip the current possession to cleared once the handler has
-	/// carried the ball back behind the clear line (#50, ADR-0008). Only checked
-	/// while a player actually holds the ball (Held/Dribbling) and only until it
-	/// flips — once cleared, the possession stays cleared until the next change
-	/// of possession resets it (AwardPossession). One-way within a possession, so
+	/// actually carried the ball back behind the clear line (#50, ADR-0008). Only
+	/// checked while a player holds the ball (Held/Dribbling) and only until it
+	/// flips — once cleared, the possession stays cleared until the next change of
+	/// possession resets it (AwardPossession). One-way within a possession, so
 	/// stepping back inside the line after clearing does not un-clear it.
+	///
+	/// Uses crossing-detection (#135), not a static position test: a holder must
+	/// have been inside the line this possession and then carry the ball back
+	/// behind it. Recovering a loose ball while already behind the line (an
+	/// offensive rebound from behind the arc) is NOT a take-back and does not clear
+	/// — the rule decision lives in the pure, headless-tested ClearLine.Advance.
 	/// </summary>
 	private void UpdateClearStatus()
 	{
@@ -881,8 +898,10 @@ public partial class BallController : Node3D
 		if (State != BallState.Held && State != BallState.Dribbling) return;
 		if (StateMachine.HolderPeerId == 0) return; // no holder to measure (pre-tipoff)
 
-		if (ClearLine.IsBehindClearLine(HolderPosition(), RimCenter, ClearLineDistance))
-			IsCleared = true;
+		bool cleared;
+		(cleared, _holderHasBeenInsideClearLine) = ClearLine.Advance(
+			IsCleared, _holderHasBeenInsideClearLine, HolderPosition(), RimCenter, ClearLineDistance);
+		IsCleared = cleared;
 	}
 
 	/// <summary>
@@ -1417,6 +1436,13 @@ public partial class BallController : Node3D
 		// briefly shows "take it back" after a counting make is an accepted cosmetic
 		// artefact — sub-frame at LAN latency, inherent to client prediction.
 		IsCleared = cleared;
+
+		// New possession → restart the take-back crossing latch (#135). Server-only
+		// state, harmless on clients (they never run UpdateClearStatus). For a
+		// pre-cleared award (make-it-take-it) the latch is moot — UpdateClearStatus
+		// early-returns on IsCleared — but resetting unconditionally keeps the
+		// invariant simple: every possession begins with the take-back not yet done.
+		_holderHasBeenInsideClearLine = false;
 	}
 
 	// ── Shot trigger / input authority (M4 → M7b #74) ───────────────────────

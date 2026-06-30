@@ -40,4 +40,34 @@ public static class ClearLine
 
         return horizontalDistSq >= clearLineDistance * clearLineDistance;
     }
+
+    /// <summary>
+    /// Advances a possession's clear progress by one server tick using
+    /// crossing-detection rather than a static position test (#135). A possession
+    /// clears only on a genuine take-back: the handler must have been *inside* the
+    /// clear line at some point this possession (<paramref name="hasBeenInside"/>)
+    /// and then carried the ball back *behind* it. Merely standing behind the line
+    /// without that round-trip — e.g. rebounding one's own miss from behind the arc
+    /// — does NOT clear, preserving the take-it-back rule's defensive purpose
+    /// (ADR-0008 §Decision-3: the handler "carries the ball behind the clear line").
+    ///
+    /// Pure, so the rule is headless-testable (ADR-0004); the caller
+    /// (BallController, server-only) owns the two flags and the holder position.
+    /// Returns the updated (cleared, hasBeenInside) pair. <paramref name="hasBeenInside"/>
+    /// is monotonic within a possession — it latches true and never clears until
+    /// the next possession resets it.
+    /// </summary>
+    public static (bool cleared, bool hasBeenInside) Advance(
+        bool cleared, bool hasBeenInside, Vector3 handlerPosition, Vector3 hoopCenter, float clearLineDistance)
+    {
+        if (cleared)
+            return (true, hasBeenInside);
+
+        if (IsBehindClearLine(handlerPosition, hoopCenter, clearLineDistance))
+            // Behind the line: clears only if the take-back round-trip happened.
+            return (hasBeenInside, hasBeenInside);
+
+        // Inside the line: latch that the handler has been inside this possession.
+        return (false, true);
+    }
 }
