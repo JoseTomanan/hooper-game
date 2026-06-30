@@ -109,7 +109,7 @@ the human.
 | **M7b — Rigged humanoid animation** | **Active (parallel presentation track)** | #54 |
 | **M8 — Realism & polish pass** | **Active** (umbrella; #62 shot-scatter done, #63 OOB rule build done PR #116; #70 crossover clip parked here) | #61 |
 | **M9 — Basketball-related controls (offense)** | **Active** (umbrella; crossover/hesi pass landed PR #88, verify #114) | #75 |
-| M10 — Defense & the reactive read | DEFERRED (planning epic); sub-issues filed #95–#104 | #89 |
+| **M10 — Defense & the reactive read** | **Active** (umbrella; defensive committed reads — steal/block/contest; sub-issues #95–#104, foundation ADR #95 gates the mechanics) | #89 |
 | M11 — Stamina & resource economy | DEFERRED (planning epic) | #90 |
 | M12 — Match flow, HUD & session lifecycle | DEFERRED (planning epic) | #91 |
 | M13 — Audio & game feel | DEFERRED (planning epic) | #92 |
@@ -119,16 +119,19 @@ the human.
 GitHub Issues is the source of truth for the live state of each milestone and its
 sub-issues; this table is the at-a-glance map.
 
-**M10–M15 are a forward roadmap, not a work queue.** They are deferred planning
+**M11–M15 are a forward roadmap, not a work queue.** They are deferred planning
 epics that record *what comes next and why*, in dependency order: M9–M10 complete
 the core duel (offense then defense), M11 adds the stamina pillar on top, M12–M13
 turn the loop into a game (flow + feel), M14 makes it learnable, M15 ships it on
 the committed mobile platform (ADR-0006). Their rows are listed here for the
 at-a-glance map; each stays DEFERRED until explicitly activated, at which point its
 "DEFERRED" status flips to "Active" and (for the umbrella epics) it stops merely
-accruing sub-issues. M9 (offense) is now active — its first crossover/hesi pass
-has landed — but remains an umbrella that still accrues sub-issues (the seed
-ball-hand-steal and pump-fake follow-ups are not yet scoped).
+accruing sub-issues. M9 (offense) and M10 (defense) are both now active — M9's
+crossover/hesi pass has landed, and M10 was activated by human design call
+(2026-06-30) ahead of the combined M9+M10 feel pass (#114), which is explicitly
+deferred and batched rather than gating M10. Within M10 the foundation ADR (#95)
+gates all the mechanical sub-issues (steal/block/contest/whiff-punish); both
+epics remain umbrellas that still accrue sub-issues.
 
 **Autopilot exception ([ADR-0017](docs/adr/0017-autopilot-activates-deferred-milestones.md)):**
 the human has pre-authorised driving the full roadmap to M15, so the autopilot
