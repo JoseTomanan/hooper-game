@@ -149,7 +149,7 @@ pass is a human checkpoint you cannot perform — so:
 
 After a merge (or a decomposition), refresh and start the next iteration. Pace
 yourself **within the live session** — there is no unattended heartbeat, and that
-is intended (ADR-0018): the human starting/ending the session is the loop's on/off
+is intended (ADR-0019): the human starting/ending the session is the loop's on/off
 switch.
 
 - Use **ScheduleWakeup** (or the `/loop` skill) to re-arm the next iteration and

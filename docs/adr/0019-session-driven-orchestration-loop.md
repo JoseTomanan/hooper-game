@@ -1,4 +1,4 @@
-# ADR-0018 — Session-driven orchestration loop (the autopilot brain)
+# ADR-0019 — Session-driven orchestration loop (the autopilot brain)
 
 - **Status:** Accepted
 - **Date:** 2026-06-30
