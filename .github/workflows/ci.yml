@@ -89,6 +89,14 @@ jobs:
       - name: Run headless integration smoke test
         run: godot --headless --path . res://tests/integration/SmokeTest.tscn
 
+      # Assert that the three M10 defensive Input Map actions (def_steal,
+      # def_block, def_contest) are registered in the live engine InputMap.
+      # Checks InputMap.HasAction() for each — a bare headless load only proves
+      # the INI parsed; a silent drop (malformed entry) would pass that and fail
+      # here. Exits 0 = all present, 1 = any missing (ADR-0016 exit-code contract).
+      - name: Run InputMap defensive-actions assertion
+        run: godot --headless --path . res://tests/integration/InputMapDefensiveActionsTest.tscn
+
       # Dual-instance harness, increment 1: two headless Godot processes complete
       # a real ENet handshake over localhost. The orchestrator launches a server
       # and a client of the same scene and reads the client's exit code. This is
