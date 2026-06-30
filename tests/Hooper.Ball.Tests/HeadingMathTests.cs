@@ -25,7 +25,7 @@ public class HeadingMathTests
 {
     // Shared test defaults — match PlayerController's exported defaults
     // so the tests reflect real in-game behaviour.
-    private const float MaxTurnDeg      = 400f;
+    private const float MaxTurnDeg      = 530f;
     private const float BackTurnSlow    = 0.35f;
     private const double BigDelta       = 1.0 / 60.0;  // one physics tick at 60 Hz
 
@@ -79,8 +79,8 @@ public class HeadingMathTests
     [Fact]
     public void RotateToward_SmallDiff_CanCompleteInOneTick()
     {
-        // A 5° difference with MaxTurnDeg=400 and delta=1/60: max step per tick
-        // is 400/60 ≈ 6.7° — well above 5°, so one tick must land exactly on target.
+        // A 5° difference with MaxTurnDeg=530 and delta=1/60: max step per tick
+        // is 530/60 ≈ 8.8° — well above 5°, so one tick must land exactly on target.
         float desiredYaw = 5f * MathF.PI / 180f;   // 5 degrees in radians
         float currentYaw = 0f;
         // Build a wishDir whose Atan2 equals desiredYaw: Atan2(sin, cos).
@@ -98,8 +98,8 @@ public class HeadingMathTests
     [Fact]
     public void RotateToward_LargeDiff_IsRateLimitedInOneTick()
     {
-        // A 170° difference: one tick at 400 °/s × 0.35 slow-factor (near-180°)
-        // ≈ 2.33 °/tick — nowhere near 170°. The result must be strictly between
+        // A 170° difference: one tick at 530 °/s × 0.35 slow-factor (near-180°)
+        // ≈ 3.1 °/tick — nowhere near 170°. The result must be strictly between
         // start and target, not at the target.
         float currentYaw = 0f;
         float desiredYaw = 170f * MathF.PI / 180f;
@@ -117,7 +117,7 @@ public class HeadingMathTests
     [Fact]
     public void RotateToward_FullBackTurn_DoesNotCompleteInOneTick()
     {
-        // A 180° (π) back-turn at BackTurnSlow=0.35: max step ≈ 400×0.35/60 ≈ 2.33 °.
+        // A 180° (π) back-turn at BackTurnSlow=0.35: max step ≈ 530×0.35/60 ≈ 3.09 °.
         // One tick cannot cover 180° — this is the commitment cost of issue #80.
         float currentYaw = 0f;
         Vector2 wishDir  = new Vector2(0f, -1f); // desire = Atan2(0, -1) = π
@@ -205,8 +205,8 @@ public class HeadingMathTests
     {
         // Regardless of starting yaw, repeatedly calling RotateToward must
         // converge to the desired yaw within a finite number of ticks.
-        // 120 ticks = 2 s at 60 Hz — a 180° back-turn at max=400 takes ≈ 0.75 s
-        // (~45 ticks); 120 ticks is a comfortable safety margin (~2.7× the true time).
+        // 120 ticks = 2 s at 60 Hz — a 180° back-turn at max=530 takes ≈ 0.55 s
+        // (~33 ticks); 120 ticks is a comfortable safety margin (~3.6× the true time).
         float currentYaw = 0f;
         Vector2 wishDir  = new Vector2(0f, -1f); // desiredYaw = π (full back-turn)
         float desiredYaw = MathF.PI;

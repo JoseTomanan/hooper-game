@@ -91,7 +91,7 @@ backTurnSlowFactor, |diff|/π)`. Default values:
 
 | Export | Default | Reasoning |
 |--------|---------|-----------|
-| `MaxTurnRateDeg` | 400 °/s | At `BackTurnSlowFactor` 0.35, a 180° back-turn takes ≈ 0.75 s (integrated time of the non-linear schedule — the constant-rate 180/(rate×f) estimate overestimates because the rate accelerates as the diff closes). A 20° correction takes ≈ 0.07 s — effectively instant to a human player. |
+| `MaxTurnRateDeg` | 530 °/s | At `BackTurnSlowFactor` 0.35, a 180° back-turn takes ≈ 0.55 s (integrated time of the non-linear schedule — the constant-rate 180/(rate×f) estimate overestimates because the rate accelerates as the diff closes). A 20° correction takes ≈ 0.05 s — effectively instant to a human player. **Retuned 400 → 530 (#134, 2026-06-30): "snappier is better" — see amendment below.** |
 | `BackTurnSlowFactor` | 0.35 | The back-turn is ~3× slower than a micro-correction. Chosen so the pivot is legibly slow without being so slow it feels broken. Designer-tuneable via Inspector export. |
 
 ## Consequences
@@ -129,3 +129,28 @@ backTurnSlowFactor, |diff|/π)`. Default values:
   `Heading` to the broadcast value before the reconciliation replay — so any
   cross-arch drift in client prediction is corrected within the
   unacknowledged-input window and never affects an authoritative outcome.
+
+## Amendments
+
+### 2026-06-30 — `MaxTurnRateDeg` default ratified at 530 °/s (#134)
+
+The original Decision table specified `MaxTurnRateDeg = 400 °/s` (≈ 0.75 s
+back-turn). The shipped export had drifted to **530 °/s** (≈ 0.55 s back-turn),
+and `HeadingMathTests` hardcoded the stale 400 figure — so the ADR's documented
+pivot timing, the test's explanatory math, and the running game disagreed (#134).
+
+**Decision:** ratify **530 °/s** as the default. The human design call was
+explicit — *"snappier is better"*. 530 keeps the back-turn a readable commitment
+(it is still ~3× slower than a micro-correction via the unchanged
+`BackTurnSlowFactor = 0.35`), so the ADR-0003 legibility requirement is preserved;
+the faster nominal rate only makes neutral micro-aim feel more responsive.
+
+**Rejected alternative:** revert the export to 400 °/s to match the original
+table. Rejected — the 530 value is the one that has been playtested in-feel and is
+preferred; the table and test were the stale artifacts, not the code. The fix is
+to bring the documentation and test constant up to the shipped value, not to slow
+the game back down.
+
+This amendment is a tuning-default change, not a structural reversal: the
+server-authoritative, non-linear, integrated-in-`Move()` heading model decided
+above is unchanged. Status remains **Accepted**.
