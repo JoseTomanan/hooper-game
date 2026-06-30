@@ -411,4 +411,64 @@ public class FloorBounceTests
         Assert.Equal(pos.X, resultPos.X, Epsilon);
         Assert.Equal(pos.Z, resultPos.Z, Epsilon);
     }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // NBA rebound-height grounding (#79) — FloorRestitution is data-grounded
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // The NBA inflation spec is the "real half-court ball" reference (ADR-0014,
+    // top-ranked): a ball dropped to the floor from 6 ft (72 in, measured to the
+    // BOTTOM of the ball) must rebound to between 49 in and 54 in (measured to
+    // the TOP of the ball). Because rebound height scales as e² (e = coefficient
+    // of restitution), that spec pins e ∈ [0.741, 0.787] — see the arithmetic in
+    // RegulationDrop_ReboundTop_LandsInNbaLegalBand below. This is the
+    // floor-bounce analogue of ShotMakeCurveTests: it grounds the magnitude of a
+    // tunable against a measurable real-ball number rather than feel.
+    //
+    // FloorRestitutionDefault MUST mirror BallController.FloorRestitution. If
+    // that export is retuned, update this constant — the test will then re-prove
+    // the new value is still NBA-legal (or fail loudly if it left the band).
+
+    private const float FloorRestitutionDefault = 0.76f;
+
+    [Fact]
+    public void RegulationDrop_ReboundTop_LandsInNbaLegalBand()
+    {
+        // Drop the ball from regulation height and bounce it through the REAL
+        // FloorBounce model, then check where the top of the ball peaks.
+        //
+        //   drop (to bottom of ball) ...... 72 in = 1.8288 m
+        //   legal rebound (to top of ball) . 49–54 in = 1.2446–1.3716 m
+        //
+        // The ball's centre of mass falls the full 72 in (its bottom travels
+        // 72 in → 0), so the impact speed is v_in = √(2·g·1.8288). FloorBounce
+        // reflects it to v_out = e·v_in (settle threshold set low so it always
+        // bounces). The centre then coasts up by v_out²/(2g) above its resting
+        // height of BallRadius, and the TOP of the ball peaks one more radius
+        // above that:  reboundTop = 2·BallRadius + v_out²/(2g).
+        const float Gravity      = 9.8f;             // matches ShotArc default
+        const float DropToBottom = 1.8288f;          // 72 in
+        const float LegalMin     = 1.2446f;          // 49 in (top of ball)
+        const float LegalMax     = 1.3716f;          // 54 in (top of ball)
+
+        float vIn  = MathF.Sqrt(2f * Gravity * DropToBottom);
+
+        // Bounce through the real resolver. Ball centre is at the resting contact
+        // plane (Y = BallRadius); settleSpeed tiny so a regulation-speed drop
+        // always rebounds rather than settling.
+        var (_, outVel) = FloorBounce.Resolve(
+            new Vector3(0f, BallRadius, 0f),
+            new Vector3(0f, -vIn, 0f),
+            BallRadius, FloorRestitutionDefault,
+            horizontalDecay: 1.0f, settleSpeed: 0.001f);
+
+        float reboundCom = (outVel.Y * outVel.Y) / (2f * Gravity);
+        float reboundTop = 2f * BallRadius + reboundCom;
+
+        Assert.True(reboundTop >= LegalMin && reboundTop <= LegalMax,
+            $"Regulation drop rebound top was {reboundTop:0.000} m " +
+            $"({reboundTop / 0.0254f:0.0} in), outside the NBA-legal band " +
+            $"[{LegalMin:0.000}, {LegalMax:0.000}] m (49–54 in). " +
+            $"FloorRestitution = {FloorRestitutionDefault} is not data-grounded.");
+    }
 }

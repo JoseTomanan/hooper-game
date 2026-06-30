@@ -71,7 +71,9 @@ public static class FloorBounce
     /// <param name="floorRestitution">
     ///     Coefficient of restitution for floor contact [0..1].
     ///     1 = perfectly elastic (no energy loss), 0 = dead-stop.
-    ///     A regulation basketball on hardwood is roughly 0.55.
+    ///     A regulation basketball on hardwood is ~0.76 (NBA rebound spec; see
+    ///     BallController.FloorRestitution for the derivation). 0.55 would be a
+    ///     dead, under-inflated ball.
     /// </param>
     /// <param name="horizontalDecay">
     ///     Fraction of horizontal speed retained after each floor contact [0..1].
