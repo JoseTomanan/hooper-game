@@ -130,6 +130,37 @@ public static class OobResolution
     /// A <see cref="Result"/> describing the action TickLoose must take.
     /// See <see cref="Action"/> for the per-case semantics.
     /// </returns>
+    /// <summary>
+    /// Resolves WHO a dead loose ball is awarded to, from the last player to
+    /// have TOUCHED (possessed) the ball — the streetball "last-toucher-out →
+    /// other ball" rule (ADR-0008 §Amendment 2026-06-30, issue #118 part 1).
+    ///
+    /// The caller maintains <paramref name="lastToucherPeerId"/> across EVERY
+    /// possession change (tipoff, rebound, catch, make-it-take-it, turnover) —
+    /// not just on a shot — so a ball fumbled OOB after a rebound is awarded
+    /// opposite the REBOUNDER, never handed back to the player who knocked it
+    /// out. (Before #118 the recipient was keyed off the last SHOOTER, which a
+    /// rebound never updated, so a rebounder's fumble could return the ball to
+    /// them — the bug this rule fixes.)
+    ///
+    /// Pre-touch short-circuit (issue #118 part 2): when nobody has touched the
+    /// ball yet (<paramref name="lastToucherPeerId"/> == 0, the pre-tipoff
+    /// window), there is no possession history to award opposite of, so return
+    /// 0. <see cref="Resolve"/> maps recipient 0 to <see cref="Action.ClampFallback"/>:
+    /// the ball stays in play rather than teleporting to a spawn-order-arbitrary
+    /// player. A loose ball with no possession history is nobody's turnover.
+    /// </summary>
+    /// <param name="lastToucherPeerId">
+    /// Peer id of the last player to possess the ball, or 0 if none yet.
+    /// </param>
+    /// <param name="opponentOfToucher">
+    /// The peer id opposite the toucher — the caller's
+    /// OtherPlayerPeerId(lastToucherPeerId) result. Ignored when the toucher is
+    /// 0 (pre-touch short-circuit), so the caller may pass any value there.
+    /// </param>
+    public static int ResolveRecipient(int lastToucherPeerId, int opponentOfToucher)
+        => lastToucherPeerId == 0 ? 0 : opponentOfToucher;
+
     public static Result Resolve(bool isOutOfBounds, bool isServer, int resolvedRecipient)
     {
         // In-bounds: nothing to do; caller continues normal TickLoose processing.

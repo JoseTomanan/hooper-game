@@ -498,6 +498,27 @@ public partial class BallController : Node3D
 	/// </summary>
 	private int _lastShooterPeerId;
 
+	/// <summary>
+	/// The peer id of the last player to POSSESS (touch) the ball — updated on
+	/// EVERY possession change: the tipoff (TryAssignTipoffHolder) and every
+	/// AwardPossession (rebound, make-it-take-it, OOB award, carry turnover).
+	/// Distinct from <see cref="_lastShooterPeerId"/>, which moves only on a shot.
+	///
+	/// Drives the loose-ball OOB turnover (TickLoose → OobResolution.ResolveRecipient,
+	/// issue #118, ADR-0008 §Amendment 2026-06-30): the streetball "last-toucher-out
+	/// → other ball" rule. Keying the award off the toucher (not the shooter) stops
+	/// a rebounder who fumbles the ball OOB from being handed it straight back —
+	/// the last-shooter field never updated on a rebound, so it would.
+	///
+	/// Server-authoritative in effect: only the server issues an OOB Award
+	/// (OobResolution gates Award on isServer), so only the server's value drives
+	/// a real turnover. It needs no broadcast — like _lastShooterPeerId, the
+	/// RESULT (a possession change) is what ReceiveState carries. 0 until the
+	/// first possession (pre-tipoff), which ResolveRecipient treats as "no
+	/// turnover basis" (clamp, not an arbitrary award).
+	/// </summary>
+	private int _lastToucherPeerId;
+
 	// ── Shot scatter RNG (issue #62, ADR-0009) ─────────────────────────────
 
 	/// <summary>
@@ -839,6 +860,12 @@ public partial class BallController : Node3D
 			if (int.TryParse(child.Name, out int peerId) && peerId != 0)
 			{
 				StateMachine.ForceState(State, peerId);
+
+				// First touch of the match: the tipoff holder is now the last
+				// toucher, so a loose ball that goes OOB before any shot is
+				// awarded opposite them (#118, last-toucher-out rule) rather
+				// than clamped for lack of possession history.
+				_lastToucherPeerId = peerId;
 
 				// The opening possession is pre-cleared (ADR-0008): the
 				// take-it-back rule applies "on every change of possession and
@@ -1263,19 +1290,24 @@ public partial class BallController : Node3D
 		// line is not also rebounded the same tick.  An Award returns immediately,
 		// skipping the rebound step.  ClampFallback falls through to the clamp below.
 		{
-			// (#118.2) Pre-shot OOB: before any shot has been fired this match,
-			// _lastShooterPeerId is still its default 0 — and OtherPlayerPeerId(0)
-			// returns the FIRST player in spawn order (its int.TryParse loop just
-			// skips id 0), i.e. an arbitrary award with no game context. There is no
-			// "last shooter" to award opposite of, so short-circuit to recipient 0,
-			// which OobResolution maps to ClampFallback: the ball clamps and stays
-			// in play instead of teleporting possession to a spawn-order-arbitrary
-			// player. (Real-ball: a loose ball with no possession history is nobody's
-			// turnover.) Short-circuit also skips the wasted lookup. Forward-
-			// compatible with #118.1 — a future last-TOUCHER id is likewise 0 before
-			// anyone has touched the ball, so the same guard holds.
-			int resolvedRecipient =
-				_lastShooterPeerId == 0 ? 0 : OtherPlayerPeerId(_lastShooterPeerId);
+			// OOB turnover recipient = opposite the last TOUCHER (#118 part 1,
+			// ADR-0008 §Amendment 2026-06-30): the streetball "last-toucher-out →
+			// other ball" rule. _lastToucherPeerId advances on every possession
+			// change (tipoff, rebound, catch, make-it-take-it, carry turnover), so
+			// a rebounder who fumbles OOB is awarded AGAINST — not handed the ball
+			// back, which the old last-SHOOTER key did (it never moved on a rebound).
+			//
+			// Pre-touch short-circuit (#118 part 2) lives entirely in
+			// ResolveRecipient: when _lastToucherPeerId is still 0 (pre-tipoff,
+			// nobody has touched the ball) it returns 0 regardless of the opponent
+			// arg, and OobResolution maps recipient 0 to ClampFallback — the ball
+			// clamps and stays in play instead of teleporting to a spawn-order-
+			// arbitrary player. OtherPlayerPeerId(0) is a harmless read (it would
+			// return the first player, but ResolveRecipient discards it), so no
+			// call-site guard is needed; the helper is the single owner of the rule.
+			int resolvedRecipient = OobResolution.ResolveRecipient(
+				_lastToucherPeerId,
+				OtherPlayerPeerId(_lastToucherPeerId));
 
 			OobResolution.Result oob = OobResolution.Resolve(
 				CourtBounds.IsOutOfBounds(_arc.Position, CourtMin, CourtMax),
@@ -1418,6 +1450,14 @@ public partial class BallController : Node3D
 			GD.PrintErr($"[BallController] AwardPossession({peerId}) rejected in state {State}; possession unchanged.");
 			return;
 		}
+
+		// Possession changed hands → this player is now the last toucher (#118).
+		// Set on every peer (AwardPossession runs as prediction on clients too),
+		// but only the server's value drives the OOB award (OobResolution gates
+		// Award on isServer). Updating here — not only on a shot — is the whole
+		// fix: a rebounder who later fumbles the ball OOB is no longer handed it
+		// straight back, because the toucher has advanced to them.
+		_lastToucherPeerId = peerId;
 
 		// StartDribble is legal from Held (the state Catch just transitioned to).
 		// Guard the return value so a future internal-state divergence (e.g. a

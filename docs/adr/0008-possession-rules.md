@@ -338,11 +338,11 @@ player. Real-ball: a loose ball with no possession history is nobody's turnover.
 **Code:** `BallController.TickLoose` (`_lastShooterPeerId == 0 ? 0 : OtherPlayerPeerId(...)`
 short-circuit). Pinned headless in `LooseBallOobRecipientTests`.
 
-> **Note — issue #118 part 1 (last-shooter vs last-toucher) is NOT resolved here.**
-> Switching the award key from last-*shooter* to last-*toucher* would reverse the
-> deliberate 2026-06-28 amendment, so per ADR-0014 it is left as a design call for
-> the human rather than self-resolved. This part-2 guard is forward-compatible
-> with either outcome (a last-toucher id is likewise 0 before anyone has touched).
+> **Note — issue #118 part 1 (last-shooter vs last-toucher) is now resolved by
+> Amendment 2026-06-30 below.** The award key moved from last-*shooter* to
+> last-*toucher*; this part-2 guard carried over unchanged (a last-toucher id is
+> likewise `0` before anyone has touched the ball), now keyed off
+> `_lastToucherPeerId` instead of `_lastShooterPeerId`.
 
 ## Amendment — 2026-06-29d (issue #135: clear = a genuine take-back, not a static position)
 
@@ -385,3 +385,49 @@ real-ball + *Undisputed 3* authority).
 hasBeenInside, …)` (crossing logic, `ClearLineTests`); `BallController` holds a
 server-only `_holderHasBeenInsideClearLine` latch reset in `AwardPossession` and
 advanced in `UpdateClearStatus`.
+
+## Amendment — 2026-06-30 (issue #118 part 1: last-toucher, not last-shooter)
+
+**Status remains Accepted.** Corrects *who* the loose-ball OOB turnover is awarded
+to (the 2026-06-28 rule). The when (a loose ball crossing the play line is a dead
+ball), the server-gating, and the clamp fallbacks are all unchanged.
+
+**The fidelity gap.** The 2026-06-28 amendment awarded the ball **opposite the last
+shooter** (`OtherPlayerPeerId(_lastShooterPeerId)`). `_lastShooterPeerId` moves
+**only on a shot** — never on a rebound, catch, or any other possession change. So
+after a rebound the rebounder becomes the holder while `_lastShooterPeerId` still
+names the original shooter; if the rebounder then fumbles the ball OOB,
+`OtherPlayerPeerId(lastShooter)` awards it **back to the rebounder who knocked it
+out** — the inverse of the real streetball "last-toucher-out → other ball" rule.
+
+**Rule — award opposite the last TOUCHER.** The recipient is now
+`OtherPlayerPeerId(_lastToucherPeerId)`, where `_lastToucherPeerId` is the peer id
+of the player who most recently **possessed** the ball, updated on **every**
+possession change — the tipoff and every `AwardPossession` (rebound, make-it-take-it,
+OOB award, carry turnover) — not just on a shot. A player who last touched the ball
+and puts it out loses it, exactly as on a real half-court (ADR-0014 real-ball
+authority, which the original prose already invoked with the words "last-toucher-out").
+
+**Why this is the right reference call.** The 2026-06-28 amendment's own text named
+the rule "last-toucher-out" while the code implemented the simpler last-*shooter*
+proxy; the spec was internally inconsistent. Resolving toward last-*toucher* makes
+code and prose agree and matches the top-ranked reference (real half-court ball).
+Confirmed with the human before landing (issue #118 was filed as a design call).
+
+**Authority / netcode — unchanged.** `_lastToucherPeerId` needs no broadcast: only
+the server issues an OOB `Award` (`OobResolution` gates `Award` on `isServer`), so
+only the server's value drives a real turnover, and the *result* (a possession
+change) is what `ReceiveState` already carries — identical to how `_lastShooterPeerId`
+is used for scoring. `_lastShooterPeerId` is retained for its own, correctly
+last-*shooter* uses (scorer attribution, make-it-take-it, the uncleared-make
+turnover, shot-scatter contest).
+
+**Pre-touch (part 2) carries over unchanged.** Before the tipoff `_lastToucherPeerId`
+is `0`; `OobResolution.ResolveRecipient` short-circuits a `0` toucher to recipient
+`0` → `ClampFallback`, so a loose ball with no possession history still clamps rather
+than awarding arbitrarily (Amendment 2026-06-29c, now keyed off the toucher).
+
+**Code:** the recipient source is the pure, headless-tested
+`OobResolution.ResolveRecipient(lastToucher, opponentOfToucher)` (`LooseBallOobRecipientTests`);
+`BallController` writes `_lastToucherPeerId` in `TryAssignTipoffHolder` and
+`AwardPossession`, and `TickLoose` feeds it through `ResolveRecipient`.
