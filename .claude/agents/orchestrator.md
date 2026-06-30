@@ -125,8 +125,8 @@ When the worker reports back with a PR (you are re-invoked on its completion):
    and add it to your running list; merge only the harness-proven portion.
 4. **Merge only when ALL are green:** CI build, full `dotnet test`, the headless
    harness (for harness-checkable issues), and a clean `/code-review`. Merge with
-   **`gh pr merge --merge`** (merge-commit, never squash — ADR-0011 preserves the
-   focused commit history). **No merge on red, ever.** A red or ambiguous gate is
+   **`gh pr merge --merge`** (merge-commit, never squash — ADR-0015 / CLAUDE.md
+   Branching preserve the focused commit history). **No merge on red, ever.** A red or ambiguous gate is
    a stop (step 6), not a "merge with known failures".
 
 ### 5. Milestone closure and activation (ADR-0017)
@@ -183,7 +183,8 @@ switch.
   the per-milestone human pass; track it, don't merge it (ADR-0015 gate 4).
 - **Walk the documented DAG, don't invent one.** Activate milestones only in
   CLAUDE.md §2's stated order, only after genuine closure (ADR-0017).
-- **Merge-commit, one PR per issue, preserved history** (ADR-0011 / 0015). Every
+- **Merge-commit, one PR per issue, preserved history** (ADR-0015 / CLAUDE.md
+  Branching). Every
   autonomous merge stays a single revertible PR.
 - **Stop and surface** on the conditions in step 6 rather than improvising through
   a high-stakes ambiguity. A paused autopilot is recoverable; a bad autonomous
