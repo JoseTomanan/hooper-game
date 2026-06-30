@@ -143,15 +143,19 @@ public partial class BallController : Node3D
 
 	/// <summary>
 	/// Coefficient of restitution for floor contact [0..1].
-	/// Grounded in measured data: a regulation NBA ball inflated to spec rebounds
-	/// to ~1.22 m when dropped from 1.8 m on hardwood, i.e. COR = √(1.22/1.8) ≈
-	/// 0.82.  The simulation harness (docs/handoffs note / scratchpad) confirms
-	/// 0.82 produces a realistic decay — first rebound ~125 cm from a 1.8 m drop,
-	/// settling over ~15 ever-smaller bounces — rather than the dead single-thud
-	/// a lower value gives.  Higher than RimRestitution (0.65) because a properly
-	/// inflated ball returns more energy off the floor than off the rigid rim edge.
+	/// Grounded in the NBA inflation spec (issue #79, ADR-0014 top reference): a
+	/// ball dropped from 72 in (measured to the BOTTOM of the ball) must rebound
+	/// to 49–54 in (measured to the TOP of the ball).  Because rebound height
+	/// scales as COR², that band pins COR ∈ [0.741, 0.787] — the diameter offset
+	/// between the two measurement points is ~9.4 in and must NOT be ignored (the
+	/// earlier √(1.22/1.8) ≈ 0.82 derivation did, landing the ball above legal at
+	/// ~58 in).  0.76 sits mid-band (rebound top ≈ 51 in) and matches the widely
+	/// cited empirical basketball-on-hardwood COR (~0.75–0.78).  Proven by
+	/// FloorBounceTests.RegulationDrop_ReboundTop_LandsInNbaLegalBand.  Still higher
+	/// than RimRestitution (0.65) because an inflated ball returns more energy off
+	/// the floor than off the rigid rim edge.
 	/// </summary>
-	[Export] public float FloorRestitution { get; set; } = 0.82f;
+	[Export] public float FloorRestitution { get; set; } = 0.76f;
 
 	/// <summary>
 	/// Fraction of horizontal (XZ) speed retained after each floor contact [0..1].
