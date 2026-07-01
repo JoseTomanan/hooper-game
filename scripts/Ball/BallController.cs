@@ -565,6 +565,17 @@ public partial class BallController : Node3D
 	/// </summary>
 	private int _lastToucherPeerId;
 
+	/// <summary>
+	/// Test-only: exposes <see cref="_lastToucherPeerId"/> for the headless
+	/// integration harness (ADR-0016). The field itself must stay private —
+	/// production code never reads it from outside this class — but the steal
+	/// turnover harness (issue #96 remediation) needs to prove the defender,
+	/// not the offensive holder, is charged as the last toucher after a steal,
+	/// since that value is otherwise only observable indirectly (an actual OOB
+	/// roll, which the harness does not simulate).
+	/// </summary>
+	internal int LastToucherPeerIdForHarness => _lastToucherPeerId;
+
 	// ── Shot scatter RNG (issue #62, ADR-0009) ─────────────────────────────
 
 	/// <summary>
@@ -1159,6 +1170,18 @@ public partial class BallController : Node3D
 					knockDir.X * StealKnockSpeed,
 					StealKnockRiseSpeed,
 					knockDir.Z * StealKnockSpeed);
+
+				// The defender is now the last toucher (#118 rule, mirrors the
+				// comment in AwardPossession): this steal bypasses AwardPossession
+				// entirely (GoLoose keeps the ball in a live loose-ball contest,
+				// not a discrete Catch/Turnover edge), so without this line
+				// _lastToucherPeerId stays pinned to the offensive holder. A
+				// knocked ball that sails OOB before the scramble recovers it
+				// would then charge the OOB turnover to the offense again
+				// instead of the defender who just touched it — backwards from
+				// the "last-toucher-out" rule this steal itself just triggered.
+				if (int.TryParse(defender.Name, out int defenderPeerId))
+					_lastToucherPeerId = defenderPeerId;
 
 				// End the defender's Active phase NOW instead of letting it ride
 				// out the remaining ActiveFrames (issue #96 multi-fire bug):

@@ -54,6 +54,7 @@ public partial class StealTurnoverTest : Node
     private int _verdictFrame;
     private bool _stealBegun;
     private bool _everLoose;   // latched: true once the ball is ever observed Loose after begin
+    private int _toucherAtSteal = -1; // latched: last-toucher the FIRST tick the ball is Loose
     private double _elapsed;
     private bool _finished;
 
@@ -168,7 +169,17 @@ public partial class StealTurnoverTest : Node
         // Latch the turnover: catch the Loose state even if the loose-ball
         // scramble re-awards possession a frame or two later.
         if (_stealBegun && _ball.State == BallState.Loose)
+        {
+            // Capture last-toucher on the FIRST Loose tick only: the scramble's
+            // eventual AwardPossession (whichever player recovers it) legitimately
+            // overwrites this field afterward, which would mask the bug this
+            // assertion targets — a knocked ball that goes OOB BEFORE recovery
+            // must be attributed to the defender, not whoever the scramble later
+            // hands the ball back to.
+            if (!_everLoose)
+                _toucherAtSteal = _ball.LastToucherPeerIdForHarness;
             _everLoose = true;
+        }
 
         if (_frame >= _verdictFrame)
         {
@@ -200,18 +211,33 @@ public partial class StealTurnoverTest : Node
         // scramble room to settle) makes that crash an explicit FAIL instead of
         // a silent PASS.
         bool turnoverCompleted = _ball.State == BallState.Dribbling && _ball.StateMachine.HolderPeerId != 0;
-        bool pass = _scenario == "whiff" ? !_everLoose && turnoverCompleted : _everLoose && turnoverCompleted;
+
+        // On a real steal, the defender (peer "2") must become the last
+        // toucher (#118 rule) THE INSTANT the ball goes Loose — otherwise a
+        // knocked ball that sails OOB before the scramble recovers it would
+        // charge the turnover back to the offense instead of the defender who
+        // just touched it. Checked against _toucherAtSteal (latched on the
+        // first Loose tick), not the current value: the scramble's own later
+        // AwardPossession legitimately overwrites _lastToucherPeerId once
+        // someone recovers the ball, which would otherwise mask this bug.
+        // Only checked for "success": "whiff" never touches the ball, so
+        // _toucherAtSteal is never latched (stays -1, the sentinel).
+        bool toucherCorrect = _scenario == "whiff" ? _toucherAtSteal == -1 : _toucherAtSteal == 2;
+
+        bool pass = (_scenario == "whiff" ? !_everLoose : _everLoose) && turnoverCompleted && toucherCorrect;
 
         if (pass)
         {
             GD.Print($"[steal-turnover] PASS — scenario={_scenario}, everLoose={_everLoose}, " +
-                     $"finalState={_ball.State}, holder={_ball.StateMachine.HolderPeerId}.");
+                     $"finalState={_ball.State}, holder={_ball.StateMachine.HolderPeerId}, " +
+                     $"toucherAtSteal={_toucherAtSteal}.");
         }
         else
         {
-            Fail($"scenario={_scenario} expected everLoose={(_scenario != "whiff")} and a completed " +
-                 $"turnover, but got everLoose={_everLoose}, finalState={_ball.State}, " +
-                 $"holder={_ball.StateMachine.HolderPeerId}.");
+            Fail($"scenario={_scenario} expected everLoose={(_scenario != "whiff")}, a completed " +
+                 $"turnover, and toucherAtSteal={(_scenario == "whiff" ? -1 : 2)}, but got " +
+                 $"everLoose={_everLoose}, finalState={_ball.State}, holder={_ball.StateMachine.HolderPeerId}, " +
+                 $"toucherAtSteal={_toucherAtSteal}.");
         }
         Finish(pass ? 0 : 1);
     }
