@@ -368,6 +368,29 @@ public partial class BallController : Node3D
 	/// </summary>
 	[Export] public float ReconcileSnapThreshold { get; set; } = 0.001f;
 
+	// ── Steal tunables (M10, issue #96, ADR-0018 §2) ─────────────────────
+
+	/// <summary>
+	/// Low bound of the dribble phase considered "exposed" for a steal attempt
+	/// [0, 1). The ball is stealable while
+	/// <see cref="DribbleCycle.Phase"/> ∈ [StealLoExposed, StealHiExposed],
+	/// straddling phase ≈ 0.5 (floor contact — the ball is lowest and furthest
+	/// from the handler's hand, the natural steal window, ADR-0018 §2).
+	///
+	/// Default 0.35 = ball enters the window ~30 % through the downward arc.
+	/// Tuning deferred to #104 + the per-milestone feel pass (ADR-0015).
+	/// </summary>
+	[Export] public float StealLoExposed { get; set; } = 0.35f;
+
+	/// <summary>
+	/// High bound of the dribble phase considered "exposed" for a steal
+	/// attempt [0, 1). Symmetric with <see cref="StealLoExposed"/> around 0.5.
+	///
+	/// Default 0.65 = window closes when the ball has risen ~15 % past the
+	/// floor contact point on the upward arc. Tuning deferred to #104.
+	/// </summary>
+	[Export] public float StealHiExposed { get; set; } = 0.65f;
+
 	// ── Composed pure logic ───────────────────────────────────────────────
 
 	/// <summary>The state machine that tracks which ball moment we're in.</summary>
@@ -755,6 +778,13 @@ public partial class BallController : Node3D
 		if (IsServer)
 			ResolvePlayerOutOfBounds();
 
+		// Server-only: resolve defensive steal attempts (M10, issue #96, ADR-0018).
+		// Runs after the main state-switch so the dribble phase is already advanced
+		// this tick. A successful steal transitions Dribbling→Loose; the existing
+		// TickLoose scramble awards possession next tick (ADR-0008 §Amendment 2026-06-30).
+		if (IsServer)
+			ResolveStealAttempts();
+
 		// Server-only: clear the possession once the handler carries the ball
 		// back behind the clear line (#50). Server-authoritative; clients
 		// receive the flag in the broadcast below, never compute it.
@@ -1002,6 +1032,72 @@ public partial class BallController : Node3D
 
 		if (oob.Action == OobResolution.Action.Award)
 			AwardPossession(oob.RecipientPeerId); // uncleared turnover
+	}
+
+	/// <summary>
+	/// Server-only: resolve any steal attempts by defenders this physics tick.
+	///
+	/// Called after the main state-switch (so the dribble phase is already
+	/// advanced for this tick), before the OOB and clear checks.
+	///
+	/// A steal succeeds iff the defender's committed-move machine just entered
+	/// Active on a StealMove (single-tick JustEnteredActive flag) AND both
+	/// steal axes pass (ADR-0018 §2):
+	///   Axis 1 — dribble phase in the exposed band [StealLoExposed, StealHiExposed]
+	///   Axis 2 — defender's TargetHand matches the holder's authoritative
+	///             HandSide (ADR-0012 — read from PlayerController, never from
+	///             the cosmetic FacingResolver)
+	///
+	/// On success: GoLoose() once — the ball transitions Dribbling → Loose.
+	/// The existing TickLoose proximity scramble then awards possession to
+	/// whichever player reaches the ball first (ADR-0008 §Decision-2, §Amendment
+	/// 2026-06-30: steal is a defense-induced Dribbling→Loose turnover; the
+	/// new holder is chosen by the scramble, not awarded immediately).
+	///
+	/// On a whiff: no action. The defender's CommittedMoveMachine continues
+	/// through Recovery naturally — the punish window is implicit, not wired here.
+	/// </summary>
+	private void ResolveStealAttempts()
+	{
+		if (StateMachine.Current != BallState.Dribbling) return;
+		if (Players == null) return;
+
+		var holder = Players.GetNodeOrNull(StateMachine.HolderPeerId.ToString()) as PlayerController;
+		if (holder == null) return;
+
+		foreach (Node child in Players.GetChildren())
+		{
+			if (child is not PlayerController defender) continue;
+			if (defender == holder) continue; // can't steal from yourself
+
+			// JustEnteredStealActive returns the targeted hand side only on the
+			// single tick the defender's machine transitions to Active for a
+			// StealMove; null on all other ticks (fast path — no allocation).
+			HandSide? targetHand = defender.JustEnteredStealActive;
+			if (targetHand == null) continue;
+
+			// Two-axis steal check (ADR-0018 §2, issue #96):
+			// DefensiveResolution.StealSucceeds checks side first (fast exit if
+			// wrong hand), then phase band. Pure method, no engine calls — same
+			// result on server AND any predicting client (ADR-0004).
+			bool success = DefensiveResolution.StealSucceeds(
+				_dribble.Phase,
+				StealLoExposed, StealHiExposed,
+				targetHand.Value, holder.HandSide);
+
+			if (success)
+			{
+				// GoLoose exactly once — the ball is now a live loose-ball contest.
+				// Dribbling → Loose routes into the existing TickLoose scramble
+				// (ADR-0008 §Amendment 2026-06-30). The new holder is awarded by
+				// the scramble's proximity check next tick, not here.
+				StateMachine.GoLoose();
+				GD.Print($"[BallController] Steal success: defender {defender.Name}, " +
+				         $"phase {_dribble.Phase:F2}, hand {holder.HandSide}");
+				return; // only one steal resolves per tick
+			}
+			// Whiff: Recovery is the natural punishment; nothing to do here.
+		}
 	}
 
 	// ── Per-state behaviour ───────────────────────────────────────────────
