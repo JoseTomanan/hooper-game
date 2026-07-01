@@ -467,25 +467,53 @@ public partial class PlayerController : CharacterBody3D
 		JumpShotReleaseResolver.ShouldRelease(_machine.JustEnteredActive, _machine.CurrentMove);
 
 	/// <summary>
-	/// If this player's committed-move machine just entered Active on a StealMove
-	/// this tick, returns the targeted hand side; null otherwise.
+	/// While this player's committed-move machine is in the Active phase of a
+	/// StealMove, returns the targeted hand side; null on every other tick.
 	///
 	/// BallController.ResolveStealAttempts reads this every physics tick (server-
-	/// only) to resolve steal attempts (ADR-0018 §1, issue #96). The null return
+	/// only) to resolve steal attempts (ADR-0018 §1–2, issue #96). The null return
 	/// is the fast path — most ticks nobody is stealing — so the caller can do a
 	/// simple null-guard with zero overhead on inactive defenders.
 	///
-	/// Pattern mirrors JustReleasedJumpShot: thin node glue forwarding the pure
-	/// machine state; no logic here, no engine calls, trivially readable.
+	/// Why the WHOLE Active phase, not just its entry tick (JustEnteredActive):
+	/// ADR-0018 defines a steal's success as its Active window OVERLAPPING the
+	/// exposed dribble band — an interval relationship. Sampling only the single
+	/// entry tick collapses that interval to a point and makes the Active window's
+	/// width inert, so a defender who enters Active a tick early (band not yet
+	/// open) but whose window fully covers the band would wrongly whiff. Reporting
+	/// the hand on every Active tick lets ResolveStealAttempts re-check the live
+	/// dribble phase each tick and succeed on the first in-band tick — the
+	/// interval model, evaluated against ground-truth phase with no projection.
+	/// (Note: IsActive is the WRONG check — it is true for Startup/Recovery too.)
 	/// </summary>
-	public HandSide? JustEnteredStealActive
+	public HandSide? ActiveStealTargetHand
 	{
 		get
 		{
-			if (!_machine.JustEnteredActive) return null;
+			if (_machine.Phase != MovePhase.Active) return null;
 			return _machine.CurrentMove is StealMove steal ? steal.TargetHand : (HandSide?)null;
 		}
 	}
+
+	/// <summary>
+	/// Server-only: ends this defender's StealMove Active phase the instant
+	/// BallController.ResolveStealAttempts resolves it as a success, paying
+	/// Recovery immediately instead of riding out the remaining ActiveFrames.
+	///
+	/// Why this must exist (issue #96 remediation, multi-fire bug): a
+	/// resolved steal calls BallState.GoLoose(), and TickLoose's proximity
+	/// scramble (ResolveLooseBallRecovery) can re-award the ball to the SAME
+	/// still-in-place holder within the very next tick — but DribbleCycle.Phase
+	/// only advances in TickDribbling, so it is frozen in-band for as long as
+	/// the ball is Loose. Without this call, ActiveStealTargetHand keeps
+	/// returning this defender's TargetHand for every remaining Active tick,
+	/// and ResolveStealAttempts would see Dribbling + in-band + matching-hand
+	/// again and fire GoLoose() repeatedly — up to ActiveFrames times for one
+	/// committed move. Ending Active the moment it resolves means one
+	/// StealMove can produce at most one turnover, matching every other
+	/// committed move's "spent once, then Recovery" contract.
+	/// </summary>
+	public bool EndResolvedSteal() => _machine.EndActiveEarly();
 
 	// ── Role helpers ──────────────────────────────────────────────────────────
 

@@ -162,3 +162,38 @@ None. The model rides existing structures (`MoveFrameData`, `MovePhase`,
 `DefensiveResolution.Succeeds` helper is pure C# with no engine-facing calls;
 the per-move vulnerable-window bands are ordinary `[Export]` fields on the
 defensive moves.
+
+## Amendment 2026-07-01 — Steal implements the overlap by per-tick repetition, not a direct `Succeeds()` call
+
+The #96 remediation (a merged bug where `ResolveStealAttempts` sampled the
+dribble phase only on `JustEnteredActive`, collapsing the §1 interval-overlap
+rule to a single point) exposed that the steal's actual implementation does
+**not** call `DefensiveResolution.Succeeds(activeStart, activeEnd, vulnStart,
+vulnEnd)` at all — it never did, before or after the fix. `Succeeds` remains
+unused in `scripts/` today.
+
+Why: §1's `Succeeds` needs concrete tick bounds for the vulnerable window
+up front. Block's vulnerable window (§2) has one — `InFlight`'s start tick is
+a fact the moment the shot releases. The steal's vulnerable window is a
+**repeating** band of `DribbleCycle.Phase` (it opens and closes every dribble
+cycle for as long as the ball is Dribbling) with no fixed start/end tick to
+hand `Succeeds` in advance — computing one would mean projecting the dribble
+forward from the Active window's start, duplicating `DribbleCycle`'s own
+phase math in a second place purely to feed an interval into a predicate that
+does the same overlap check `DefensiveResolution.StealSucceeds` already does
+per-tick, just less directly.
+
+The fix instead re-evaluates `StealSucceeds` — a point-in-band test — against
+the **live** `DribbleCycle.Phase` on every tick `ActiveStealTargetHand` reports
+non-null (i.e. every tick the machine is in Active). The union of those
+in-band point tests, taken over the whole Active window, **is** the §1
+interval overlap — just derived by repetition against ground truth instead of
+by a single call against a precomputed interval. `Block` (#98), whose window
+has a real start tick, is expected to call `Succeeds` directly as originally
+specified; the steal's per-tick form is not a template for #98 to copy.
+
+This is recorded as an accepted per-move implementation detail, not a
+retraction of §1: the *rule* (Active must overlap the vulnerable window) is
+unchanged and still what both moves obey. Only the *mechanism* by which the
+steal proves that overlap differs from `Succeeds`'s direct interval-vs-interval
+form, because its vulnerable window cannot be expressed as one in advance.
