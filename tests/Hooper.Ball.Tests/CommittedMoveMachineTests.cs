@@ -301,6 +301,118 @@ public class CommittedMoveMachineTests
     }
 
     // ═════════════════════════════════════════════════════════════════════════
+    // EndActiveEarly — resolves Active before ActiveFrames elapse (issue #96
+    // single-fire guard: a steal that resolves mid-Active must not be able to
+    // fire a second time while the ball is still Loose and the dribble phase
+    // is frozen in-band)
+    // ═════════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void EndActiveEarly_WhenActive_ReturnsTrue()
+    {
+        var m = NewMachine();
+        m.Begin(TestMove());
+        TickN(m, StandardData.StartupFrames); // → Active
+        Assert.True(m.EndActiveEarly());
+    }
+
+    [Fact]
+    public void EndActiveEarly_WhenActive_TransitionsToRecovery()
+    {
+        var m = NewMachine();
+        m.Begin(TestMove());
+        TickN(m, StandardData.StartupFrames); // → Active
+        m.EndActiveEarly();
+        Assert.Equal(MovePhase.Recovery, m.Phase);
+    }
+
+    [Fact]
+    public void EndActiveEarly_WhenActive_FrameInPhaseResetsToZero()
+    {
+        var m = NewMachine();
+        m.Begin(TestMove());
+        TickN(m, StandardData.StartupFrames); // → Active
+        m.Tick();                              // FrameInPhase = 1, still well short of ActiveFrames
+        m.EndActiveEarly();
+        Assert.Equal(0, m.FrameInPhase);
+    }
+
+    [Fact]
+    public void EndActiveEarly_WhenActive_EndsBeforeActiveFramesWouldHaveElapsed()
+    {
+        // The whole point: Recovery is reached in FEWER ticks than a natural
+        // Active → Recovery transition would take.
+        var m = NewMachine();
+        m.Begin(TestMove());
+        TickN(m, StandardData.StartupFrames); // → Active, FrameInPhase = 0
+        m.EndActiveEarly();
+        // Only 1 tick has elapsed since Active would naturally need ActiveFrames (3).
+        Assert.True(1 < StandardData.ActiveFrames);
+        Assert.Equal(MovePhase.Recovery, m.Phase);
+    }
+
+    [Fact]
+    public void EndActiveEarly_ThenTicksToRecoveryFrames_TransitionsToInactive()
+    {
+        // A move ended early still pays the FULL RecoveryFrames cost — it is
+        // not a shortcut out of the move entirely, only out of the remainder
+        // of Active.
+        var m = NewMachine();
+        m.Begin(TestMove());
+        TickN(m, StandardData.StartupFrames); // → Active
+        m.EndActiveEarly();                    // → Recovery, FrameInPhase = 0
+        TickN(m, StandardData.RecoveryFrames - 1);
+        Assert.Equal(MovePhase.Recovery, m.Phase);
+        m.Tick();
+        Assert.Equal(MovePhase.Inactive, m.Phase);
+    }
+
+    [Fact]
+    public void EndActiveEarly_WhenStartup_ReturnsFalse()
+    {
+        var m = NewMachine();
+        m.Begin(TestMove()); // Startup
+        Assert.False(m.EndActiveEarly());
+    }
+
+    [Fact]
+    public void EndActiveEarly_WhenStartup_PhaseUnchanged()
+    {
+        var m = NewMachine();
+        m.Begin(TestMove());
+        m.EndActiveEarly(); // no-op
+        Assert.Equal(MovePhase.Startup, m.Phase);
+    }
+
+    [Fact]
+    public void EndActiveEarly_WhenRecovery_ReturnsFalse()
+    {
+        var m = NewMachine();
+        m.Begin(TestMove());
+        TickN(m, StandardData.StartupFrames + StandardData.ActiveFrames); // → Recovery
+        Assert.False(m.EndActiveEarly());
+    }
+
+    [Fact]
+    public void EndActiveEarly_WhenInactive_ReturnsFalse()
+    {
+        var m = NewMachine();
+        Assert.False(m.EndActiveEarly());
+    }
+
+    [Fact]
+    public void EndActiveEarly_CalledTwiceInActive_SecondCallReturnsFalse()
+    {
+        // Guards against a caller invoking it more than once per Active window —
+        // the first call already left Active, so a second call is a no-op.
+        var m = NewMachine();
+        m.Begin(TestMove());
+        TickN(m, StandardData.StartupFrames); // → Active
+        Assert.True(m.EndActiveEarly());
+        Assert.False(m.EndActiveEarly());
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
     // Feint — abort during startup window
     // ═════════════════════════════════════════════════════════════════════════
 

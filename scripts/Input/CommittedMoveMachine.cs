@@ -188,6 +188,31 @@ public sealed class CommittedMoveMachine
         return true;
     }
 
+    /// <summary>
+    /// Ends the Active phase early, transitioning straight to Recovery without
+    /// waiting for FrameInPhase to reach ActiveFrames. Legal only from Active;
+    /// a no-op returning false otherwise.
+    ///
+    /// Why this exists (issue #96 remediation): every OTHER phase transition in
+    /// this machine is driven purely by frame counts (Tick() above) because no
+    /// move previously had a side effect that could resolve before its Active
+    /// window naturally expired. The steal is the first — a successful steal
+    /// changes BallState (Dribbling → Loose) mid-Active, and the ball can come
+    /// straight back to the same holder while dribble phase is frozen (it only
+    /// advances in TickDribbling), which would let the SAME resolved StealMove
+    /// re-fire on every remaining Active tick. EndActiveEarly caps a committed
+    /// move's real-world effect at "resolves once, then pays Recovery like
+    /// normal" — the caller (PlayerController.EndResolvedSteal) invokes this
+    /// exactly when BallController.ResolveStealAttempts confirms a success.
+    /// </summary>
+    /// <returns>True if the phase advanced to Recovery; false if not in Active.</returns>
+    public bool EndActiveEarly()
+    {
+        if (Phase != MovePhase.Active) return false;
+        EnterPhase(MovePhase.Recovery);
+        return true;
+    }
+
     // ── Network reconciliation ───────────────────────────────────────────────
 
     /// <summary>
