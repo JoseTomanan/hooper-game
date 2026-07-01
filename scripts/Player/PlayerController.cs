@@ -487,6 +487,34 @@ public partial class PlayerController : CharacterBody3D
 		}
 	}
 
+	/// <summary>
+	/// When this player's committed-move machine is currently in Active phase on
+	/// a BlockMove, returns the FrameInPhase and ActiveFrames so BallController
+	/// can compute the defender's Active interval for the full-interval overlap
+	/// check (ADR-0018 §2, issue #98). Returns null on any other tick / move.
+	///
+	/// Unlike JustEnteredStealActive (which fires only on the single JustEnteredActive
+	/// tick), this property is checked EVERY TICK while the ball is InFlight:
+	///   • A defender who entered Active before the shot can still overlap its
+	///     vulnerable window if their remaining Active ticks extend into the flight.
+	///   • A defender who entered Active after the shot started can still overlap
+	///     if the grace window hasn't closed.
+	/// Both cases need continuous checking, not a single-tick snapshot.
+	///
+	/// BallController.ResolveBlockAttempts reads this before the per-state tick
+	/// switch so a successful block prevents TickInFlight from running (and thus
+	/// prevents RegisterBasket from being called on the same tick).
+	/// </summary>
+	public (int FrameInPhase, int ActiveFrames)? BlockMoveActiveInterval
+	{
+		get
+		{
+			if (_machine.Phase != MovePhase.Active) return null;
+			if (_machine.CurrentMove is not BlockMove) return null;
+			return (_machine.FrameInPhase, _machine.CurrentMove.FrameData.ActiveFrames);
+		}
+	}
+
 	// ── Role helpers ──────────────────────────────────────────────────────────
 
 	private bool IsServer      => Multiplayer.IsServer();
@@ -863,6 +891,12 @@ public partial class PlayerController : CharacterBody3D
 			// gets a silent no-op — Begin() returns false and nothing happens.
 			HandSide target = param > 0.5f ? HandSide.Right : HandSide.Left;
 			_machine.Begin(new StealMove(target));
+		}
+		else if (moveId == "block")
+		{
+			// param = 0f (block carries no payload — it is a one-axis timing read,
+			// no hand-side). Same phase guards apply: Begin() no-ops while mid-Recovery.
+			_machine.Begin(new BlockMove());
 		}
 		// Unrecognized moveId: silently ignored. A malformed/forged moveId
 		// from a tampered client simply does nothing.
@@ -1376,6 +1410,24 @@ public partial class PlayerController : CharacterBody3D
 				RpcId(1, MethodName.RequestBeginMove, "steal", (float)(int)target);
 		}
 
+		// Block: defensive committed move (M10, issue #98, ADR-0018 §2).
+		//
+		// Gated on NOT holding the ball — you cannot block your own shot.
+		// Unlike the steal (two-axis: when + which hand), the block is a
+		// ONE-AXIS read: only timing matters. The ball is airborne when it
+		// can be blocked, so there is no hand-side to target.
+		//
+		// The vulnerable window is [InFlight start, InFlight start + blockGraceTicks).
+		// BallController.ResolveBlockAttempts evaluates the full interval overlap
+		// (not a point-in-time check like steal) — a defender who entered Active
+		// before or after the release still blocks if their window overlaps the grace.
+		// param = 0f: block carries no payload.
+		if (Input.IsActionJustPressed("def_block") && !IsBallHolder)
+		{
+			if (_machine.Begin(new BlockMove()) && !isServer)
+				RpcId(1, MethodName.RequestBeginMove, "block", 0f);
+		}
+
 		// Feint modifier: abort during the startup window. Two input paths feed
 		// the SAME Feint() call (#139): the discrete "move_feint" key, and the
 		// right-stick quick-return gesture the recognizer reports as
@@ -1482,6 +1534,7 @@ public partial class PlayerController : CharacterBody3D
 	private static float MoveParamOf(CommittedMove move) =>
 		move is Crossover crossover ? crossover.BurstDirection :
 		move is StealMove steal    ? (float)(int)steal.TargetHand :
+		// BlockMove, JumpShot, Hesitation, and all future no-payload moves → 0f.
 		0f;
 
 	// ── Shared motion step ────────────────────────────────────────────────────
