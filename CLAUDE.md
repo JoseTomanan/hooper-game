@@ -107,7 +107,8 @@ the human.
 | **M6b — Possession loop** | **Active (current)** | #46 |
 | M7a — Static readability pass | Done | #53 |
 | **M7b — Rigged humanoid animation** | **Active (parallel presentation track)** | #54 |
-| **M8 — Realism & polish pass** | **Active** (umbrella; #62 shot-scatter done, #63 OOB rule build done PR #116; #70 crossover clip parked here) | #61 |
+| M8 — Realism & polish pass | Done (epic closed; leftover verify/feel/realism work continues under M8b) | #61 |
+| **M8b — Realism & polish pass, continued** | **Active** (umbrella; M8 leftovers — #119 OOB verify, #153 net/fence verify, #154 shot-scatter/floor-bounce feel sign-off, #170 realistic player rig) | #171 |
 | **M9 — Basketball-related controls (offense)** | **Active** (umbrella; crossover/hesi pass landed PR #88, verify #114) | #75 |
 | **M10 — Defense & the reactive read** | **Active** (umbrella; defensive committed reads — steal/block/contest; sub-issues #95–#104, foundation ADR #95 gates the mechanics) | #89 |
 | M11 — Stamina & resource economy | DEFERRED (planning epic) | #90 |
