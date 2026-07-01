@@ -391,6 +391,25 @@ public partial class BallController : Node3D
 	/// </summary>
 	[Export] public float StealHiExposed { get; set; } = 0.65f;
 
+	// ── Block tunables (M10, issue #98, ADR-0018 §2) ─────────────────────
+
+	/// <summary>
+	/// Number of ticks after the ball enters InFlight during which a block
+	/// attempt can still connect — the "grace" tail of the shot's vulnerable
+	/// window. The vulnerable interval is [InFlight start, InFlight start + BlockGraceTicks)
+	/// on the deterministic physics-tick clock (ADR-0018 §2).
+	///
+	/// Mechanically: after the ball leaves the hand it continues to rise near
+	/// the shooter. A defender jumping to block connects if their Active window
+	/// overlaps this window. Once the grace period expires the ball is past
+	/// the defender and the block opportunity is gone.
+	///
+	/// Default 10 ticks ≈ 0.17 s at 60 Hz — provisional; deferred to #104
+	/// and the per-milestone feel pass (ADR-0015). Must be ≥ BlockMove.ActiveFrames
+	/// (currently 8) per ADR-0018 §3 so a perfectly-timed block can always connect.
+	/// </summary>
+	[Export] public int BlockGraceTicks { get; set; } = 10;
+
 	// ── Composed pure logic ───────────────────────────────────────────────
 
 	/// <summary>The state machine that tracks which ball moment we're in.</summary>
@@ -459,6 +478,34 @@ public partial class BallController : Node3D
 	/// for the loose fall so a bounced ball keeps moving under gravity.
 	/// </summary>
 	private ShotArc _arc;
+
+	// ── Block tracking (M10, issue #98) ───────────────────────────────────
+
+	/// <summary>
+	/// Monotonically-increasing physics tick counter — incremented at the
+	/// start of every _PhysicsProcess call, server and client alike. Used by
+	/// ResolveBlockAttempts to compute absolute tick intervals for the full
+	/// interval overlap check (ADR-0018 §2).
+	///
+	/// Why: the block uses DefensiveResolution.Succeeds with two REAL intervals
+	/// (the defender's Active window and the shot's vulnerable window). The steal
+	/// reduces to a point-in-time test, so it doesn't need an absolute clock.
+	/// The block check runs every InFlight tick, so we need the defender's
+	/// entry tick (derived from FrameInPhase + currentTick) and the shot's
+	/// InFlight start tick. This counter supplies those values.
+	/// </summary>
+	private int _physicsTick;
+
+	/// <summary>
+	/// The physics tick on which the ball last transitioned to InFlight (a shot
+	/// was released). Set in CheckJumpShotRelease when StateMachine.Shoot() fires.
+	/// Reset to -1 whenever the ball leaves InFlight (GoLoose, reconcile to non-
+	/// InFlight). -1 means "no shot in flight" and causes ResolveBlockAttempts to
+	/// return immediately.
+	///
+	/// The block vulnerable window is [_inFlightStartTick, _inFlightStartTick + BlockGraceTicks).
+	/// </summary>
+	private int _inFlightStartTick = -1;
 
 	// ── Visual-correction mesh reference ───────────────────────────────────
 
@@ -750,9 +797,34 @@ public partial class BallController : Node3D
 			_hasNewState = false;
 		}
 
+		// Monotonic tick counter used by block resolution for absolute-tick
+		// interval arithmetic (ADR-0018 §2, issue #98). Incremented after reconcile
+		// so the server and the client's own-player prediction share the same clock
+		// (both increment each _PhysicsProcess regardless of role). Remote-player
+		// block evaluation is handled server-side only via ResolveBlockAttempts.
+		_physicsTick++;
+
 		// Fixed timestep — NOT the variable wall-clock delta — so the arc is
 		// deterministic and reproducible identically on server and every client.
 		float dt = 1.0f / Engine.PhysicsTicksPerSecond;
+
+		// Server-only: resolve block attempts BEFORE the per-state tick so that
+		// a successful block (GoLoose from InFlight) prevents TickInFlight from
+		// running on the same tick. This ordering is CRITICAL for the
+		// "blocked shot cannot score" correctness requirement (issue #98):
+		//
+		//   Without pre-switch block: TickInFlight runs first → rim contact can
+		//   trigger RegisterBasket → THEN block GoLoose → basket already counted.
+		//
+		//   With pre-switch block: if block succeeds, State transitions to Loose
+		//   BEFORE the switch → switch falls into TickLoose instead of TickInFlight
+		//   → RegisterBasket is never reached (ADR-0008 Amendment 2026-06-30).
+		//
+		// Contrast with steal (ResolveStealAttempts after the switch): steal targets
+		// Dribbling state which has no make-detection code, so ordering doesn't matter
+		// for steal. Block specifically interrupts InFlight's scoring path.
+		if (IsServer)
+			ResolveBlockAttempts();
 
 		switch (State)
 		{
@@ -1095,6 +1167,77 @@ public partial class BallController : Node3D
 				GD.Print($"[BallController] Steal success: defender {defender.Name}, " +
 				         $"phase {_dribble.Phase:F2}, hand {holder.HandSide}");
 				return; // only one steal resolves per tick
+			}
+			// Whiff: Recovery is the natural punishment; nothing to do here.
+		}
+	}
+
+	/// <summary>
+	/// Server-only: resolve block attempts by defenders every InFlight tick.
+	///
+	/// Called BEFORE the per-state switch in _PhysicsProcess so that a successful
+	/// block (GoLoose from InFlight) prevents TickInFlight from running this tick —
+	/// which is the only way to guarantee a blocked shot cannot score. If block
+	/// resolution ran AFTER TickInFlight, rim contact could trigger RegisterBasket
+	/// on the same tick the block connected. (ADR-0008 Amendment 2026-06-30.)
+	///
+	/// Success condition (ADR-0018 §2 — full interval form):
+	///   DefensiveResolution.Succeeds(blockActiveStart, blockActiveEnd,
+	///                                inFlightStartTick, inFlightStartTick + BlockGraceTicks)
+	///
+	/// where blockActiveStart = _physicsTick − FrameInPhase (the absolute tick the
+	/// defender entered Active) and blockActiveEnd = blockActiveStart + ActiveFrames.
+	///
+	/// This is the INTERVAL FORM (not the point-in-band form used by steal):
+	/// the defender's entire Active window is checked against the shot's vulnerable
+	/// window, so a defender who entered Active slightly before or after the release
+	/// can still block if their window overlaps the grace period.
+	///
+	/// On success: GoLoose() once — InFlight → Loose (ADR-0008 Amendment 2026-06-30).
+	/// The existing TickLoose proximity scramble then awards possession next tick.
+	///
+	/// On a whiff: no action. The defender pays Recovery naturally.
+	/// </summary>
+	private void ResolveBlockAttempts()
+	{
+		if (StateMachine.Current != BallState.InFlight) return;
+		if (_inFlightStartTick < 0) return; // defensive: no shot recorded yet
+		if (Players == null) return;
+
+		foreach (Node child in Players.GetChildren())
+		{
+			if (child is not PlayerController defender) continue;
+
+			// BlockMoveActiveInterval is non-null only when the defender is in
+			// Active phase on a BlockMove. Most ticks this is null (fast path).
+			var interval = defender.BlockMoveActiveInterval;
+			if (interval == null) continue;
+
+			var (frameInPhase, activeFrames) = interval.Value;
+
+			// Compute the defender's Active window as absolute physics ticks.
+			// frameInPhase = 0 means they JUST entered Active this very tick;
+			// frameInPhase = N means they entered Active N ticks ago.
+			int defActiveStart = _physicsTick - frameInPhase;
+			int defActiveEnd   = defActiveStart + activeFrames;
+
+			// Vulnerable window: [inFlightStart, inFlightStart + BlockGraceTicks).
+			// Full interval form of the shared predicate (ADR-0018 §2):
+			//   defActiveStart < vulnEnd  AND  vulnStart < defActiveEnd
+			bool success = DefensiveResolution.Succeeds(
+				defActiveStart, defActiveEnd,
+				_inFlightStartTick, _inFlightStartTick + BlockGraceTicks);
+
+			if (success)
+			{
+				// InFlight → Loose: the shot arc terminates mid-flight.
+				// (ADR-0008 Amendment 2026-06-30: block is a defense-induced
+				// InFlight→Loose turnover; the loose-ball scramble awards next tick.)
+				StateMachine.GoLoose();
+				GD.Print($"[BallController] Block success: defender {defender.Name}, " +
+				         $"defActive [{defActiveStart},{defActiveEnd}), " +
+				         $"vulnWindow [{_inFlightStartTick},{_inFlightStartTick + BlockGraceTicks})");
+				return; // only one block resolves per tick
 			}
 			// Whiff: Recovery is the natural punishment; nothing to do here.
 		}
@@ -1695,6 +1838,13 @@ public partial class BallController : Node3D
 
 		int holderAtShootTime = StateMachine.HolderPeerId;
 		if (!StateMachine.Shoot()) return false;
+
+		// Record the tick the ball entered InFlight so block resolution can
+		// compute the shot's vulnerable window [_inFlightStartTick, _inFlightStartTick +
+		// BlockGraceTicks) each tick while InFlight (ADR-0018 §2, issue #98).
+		// NOTE: _physicsTick was already incremented at the top of _PhysicsProcess
+		// for this tick, so this value is the CURRENT tick (the release tick itself).
+		_inFlightStartTick = _physicsTick;
 
 		_lastShooterPeerId = holderAtShootTime;
 
