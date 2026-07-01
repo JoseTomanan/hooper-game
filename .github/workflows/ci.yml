@@ -97,6 +97,20 @@ jobs:
       - name: Run InputMap defensive-actions assertion
         run: godot --headless --path . res://tests/integration/InputMapDefensiveActionsTest.tscn
 
+      # Steal TURNOVER mechanic, end to end (issue #96 remediation, ADR-0018).
+      # Boots a real BallController + two PlayerControllers headless, drives the
+      # deterministic tick clock, and asserts the server resolves a steal across
+      # the WHOLE Active window (not just its entry tick — the merged #96 bug).
+      # 'success' places the Active window so its entry tick is just below the
+      # exposed band and a later Active tick lands in it: entry-tick-only code
+      # whiffs (RED), per-Active-tick code steals→Loose (GREEN). 'whiff' places
+      # the window entirely above the band and asserts the ball stays Dribbling
+      # (guards against over-triggering). Each exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run steal-turnover mechanic harness
+        run: |
+          godot --headless --path . res://tests/integration/StealTurnoverTest.tscn -- --harness-scenario=success
+          godot --headless --path . res://tests/integration/StealTurnoverTest.tscn -- --harness-scenario=whiff
+
       # Dual-instance harness, increment 1: two headless Godot processes complete
       # a real ENet handshake over localhost. The orchestrator launches a server
       # and a client of the same scene and reads the client's exit code. This is
