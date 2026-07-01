@@ -50,6 +50,8 @@
     <Compile Include="..\..\scripts\Ball\ShotScatter.cs" />
     <Compile Include="..\..\scripts\Ball\ShotFacing.cs" />
     <Compile Include="..\..\scripts\Ball\FloorBounce.cs" />
+    <!-- M10 defensive resolution helper (issue #96, ADR-0018 §1) -->
+    <Compile Include="..\..\scripts\Ball\DefensiveResolution.cs" />
   </ItemGroup>
 
   <!--
@@ -69,6 +71,8 @@
     <Compile Include="..\..\scripts\Input\RightStickGestureRecognizer.cs" />
     <Compile Include="..\..\scripts\Input\JumpShot.cs" />
     <Compile Include="..\..\scripts\Input\JumpShotReleaseResolver.cs" />
+    <!-- M10 steal committed move (issue #96, ADR-0018) -->
+    <Compile Include="..\..\scripts\Input\StealMove.cs" />
   </ItemGroup>
 
   <!--

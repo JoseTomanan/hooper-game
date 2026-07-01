@@ -466,6 +466,27 @@ public partial class PlayerController : CharacterBody3D
 	public bool JustReleasedJumpShot =>
 		JumpShotReleaseResolver.ShouldRelease(_machine.JustEnteredActive, _machine.CurrentMove);
 
+	/// <summary>
+	/// If this player's committed-move machine just entered Active on a StealMove
+	/// this tick, returns the targeted hand side; null otherwise.
+	///
+	/// BallController.ResolveStealAttempts reads this every physics tick (server-
+	/// only) to resolve steal attempts (ADR-0018 §1, issue #96). The null return
+	/// is the fast path — most ticks nobody is stealing — so the caller can do a
+	/// simple null-guard with zero overhead on inactive defenders.
+	///
+	/// Pattern mirrors JustReleasedJumpShot: thin node glue forwarding the pure
+	/// machine state; no logic here, no engine calls, trivially readable.
+	/// </summary>
+	public HandSide? JustEnteredStealActive
+	{
+		get
+		{
+			if (!_machine.JustEnteredActive) return null;
+			return _machine.CurrentMove is StealMove steal ? steal.TargetHand : (HandSide?)null;
+		}
+	}
+
 	// ── Role helpers ──────────────────────────────────────────────────────────
 
 	private bool IsServer      => Multiplayer.IsServer();
@@ -832,6 +853,16 @@ public partial class PlayerController : CharacterBody3D
 			// movement scatter penalty (#137) — see ShotInitiationSpeed.
 			if (_machine.Begin(new JumpShot()))
 				CaptureShotInitiationSpeed();
+		}
+		else if (moveId == "steal")
+		{
+			// param = (float)(int)HandSide: 0 → Left, 1 → Right (written by
+			// SampleMoveInput; see comment there for rationale).
+			// The CommittedMoveMachine enforces the usual phase guards (Inactive-
+			// only Begin), so a client that sends "steal" while still in Recovery
+			// gets a silent no-op — Begin() returns false and nothing happens.
+			HandSide target = param > 0.5f ? HandSide.Right : HandSide.Left;
+			_machine.Begin(new StealMove(target));
 		}
 		// Unrecognized moveId: silently ignored. A malformed/forged moveId
 		// from a tampered client simply does nothing.
@@ -1324,6 +1355,27 @@ public partial class PlayerController : CharacterBody3D
 				RpcId(1, MethodName.RequestBeginMove, "jumpshot", 0f);
 		}
 
+		// Steal: defensive committed move (M10, issue #96, ADR-0018).
+		//
+		// Gated on NOT holding the ball — you cannot steal from yourself.
+		// The "side" axis of the two-axis steal read (ADR-0018 §2) is chosen here
+		// from the AIM stick X component: right aim (aimX > 0) → HandSide.Right,
+		// left/neutral → HandSide.Left.  This reads the AIM direction, NOT the
+		// movement stick, so the defender can separately move and aim their reach.
+		//
+		// ADR-0014 / real-ball rationale: in half-court 1v1 the most common steal
+		// attempt is a swipe at the dribble hand; the AIM axis lets the defender
+		// commit the read explicitly rather than guessing a default.
+		// Wire param = (float)(int)HandSide so RequestBeginMove can reconstruct
+		// the TargetHand without widening the RPC signature (HandSide.Left=0,
+		// HandSide.Right=1 — safe as float across the wire).
+		if (Input.IsActionJustPressed("def_steal") && !IsBallHolder)
+		{
+			HandSide target = aim.X > 0f ? HandSide.Right : HandSide.Left;
+			if (_machine.Begin(new StealMove(target)) && !isServer)
+				RpcId(1, MethodName.RequestBeginMove, "steal", (float)(int)target);
+		}
+
 		// Feint modifier: abort during the startup window. Two input paths feed
 		// the SAME Feint() call (#139): the discrete "move_feint" key, and the
 		// right-stick quick-return gesture the recognizer reports as
@@ -1428,7 +1480,9 @@ public partial class PlayerController : CharacterBody3D
 	/// agree a move is active, but disagree on WHICH one" a reachable case.
 	/// </summary>
 	private static float MoveParamOf(CommittedMove move) =>
-		move is Crossover crossover ? crossover.BurstDirection : 0f;
+		move is Crossover crossover ? crossover.BurstDirection :
+		move is StealMove steal    ? (float)(int)steal.TargetHand :
+		0f;
 
 	// ── Shared motion step ────────────────────────────────────────────────────
 
