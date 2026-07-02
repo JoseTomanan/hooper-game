@@ -576,6 +576,17 @@ public partial class BallController : Node3D
 	/// </summary>
 	internal int LastToucherPeerIdForHarness => _lastToucherPeerId;
 
+	/// <summary>
+	/// Test-only: exposes <see cref="_dribble"/>'s current Phase for the
+	/// headless integration harness (ADR-0016, issue #176). Proves the live
+	/// engine — not just the pure DribbleCycle unit tests — actually resets
+	/// the phase at the moment AwardPossession fires after a scramble
+	/// recovery, which is the exact mechanism that closes the #176 re-steal
+	/// exploit (a frozen in-band phase resuming from where it froze instead
+	/// of restarting at 0).
+	/// </summary>
+	internal float DribblePhaseForHarness => _dribble.Phase;
+
 	// ── Shot scatter RNG (issue #62, ADR-0009) ─────────────────────────────
 
 	/// <summary>

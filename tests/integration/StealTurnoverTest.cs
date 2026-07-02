@@ -35,6 +35,17 @@ namespace HOOPERGAME.Tests.Integration;
 // whiff: the Active window sits entirely ABOVE the band — no Active tick is ever
 //   in band, so the ball must stay Dribbling under both old and new code. Guards
 //   against a fix that over-triggers (steals when it should not).
+// recovery-reset: issue #176 regression. Runs the SAME steal as "success" through
+//   to a completed scramble recovery, then proves the exact defect the issue
+//   described no longer holds: the instant the ball lands back in Dribbling,
+//   DribbleCycle.Phase must have been reset to 0 (not frozen at the in-band value
+//   it held when the ball went Loose) AND the defender's own committed-move
+//   Recovery (still running from the first steal) structurally refuses an
+//   immediate second Begin(). Together these close the exploit at its root: even
+//   once the defender's Recovery elapses and a genuine re-attempt becomes legal,
+//   it starts reading a phase that begins at 0, not one already sitting inside
+//   the steal-exposed band with no timing skill spent to get there.
+
 public partial class StealTurnoverTest : Node
 {
     private const double TimeoutSeconds = 15.0;
@@ -57,6 +68,11 @@ public partial class StealTurnoverTest : Node
     private int _toucherAtSteal = -1; // latched: last-toucher the FIRST tick the ball is Loose
     private double _elapsed;
     private bool _finished;
+
+    // ── "recovery-reset" scenario state (issue #176) ────────────────────────
+    private bool _recoveryChecked;
+    private float _recoveryPhaseAtCheck = -1f;
+    private bool _reattemptBeganAtRecovery;
 
     public override void _Ready()
     {
@@ -181,6 +197,47 @@ public partial class StealTurnoverTest : Node
             _everLoose = true;
         }
 
+        // "recovery-reset" does not run to a fixed verdict frame — the ball's
+        // scramble-recovery timing depends on the steal's knockback physics,
+        // not a closed-form tick count, so this waits for the actual recovery
+        // event (ADR-0016: assert real engine state, not a guessed frame) and
+        // renders its verdict the instant that event is observed.
+        if (_scenario == "recovery-reset")
+        {
+            if (_everLoose && !_recoveryChecked
+                && _ball.State == BallState.Dribbling
+                && _ball.StateMachine.HolderPeerId != 0)
+            {
+                _recoveryChecked = true;
+                // The moment the ball lands back in Dribbling is the exact tick
+                // AwardPossession runs — if DribbleCycle.Reset() were missing
+                // (the #176 bug), Phase would still read whatever in-band value
+                // it froze at when the ball went Loose, not 0.
+                _recoveryPhaseAtCheck = _ball.DribblePhaseForHarness;
+
+                // The defender's OWN committed-move machine is still paying
+                // Recovery from the first steal (StealMove.DefaultFrameData:
+                // 20 recovery ticks, far longer than the few ticks the ball
+                // takes to settle back into pickup range) — so the earliest
+                // possible re-attempt is structurally refused here, before the
+                // phase-reset fix even has to matter for THIS particular
+                // instant. The phase-reset assertion above is what protects
+                // the moment Recovery DOES elapse and a genuine re-attempt
+                // becomes legal.
+                _reattemptBeganAtRecovery = _defender.BeginStealForHarness(HandSide.Left);
+
+                Verdict();
+                return;
+            }
+
+            if (_elapsed > TimeoutSeconds)
+            {
+                Fail($"timed out at frame {_frame} waiting for the scramble to recover the ball.");
+                Finish();
+            }
+            return;
+        }
+
         if (_frame >= _verdictFrame)
         {
             Verdict();
@@ -196,6 +253,12 @@ public partial class StealTurnoverTest : Node
 
     private void Verdict()
     {
+        if (_scenario == "recovery-reset")
+        {
+            VerdictRecoveryReset();
+            return;
+        }
+
         // "success" requires the FULL turnover to complete, not merely that the
         // ball was ever observed Loose. This is the anti-hollow-green fix: an
         // earlier version of this harness only checked _everLoose, which the
@@ -238,6 +301,41 @@ public partial class StealTurnoverTest : Node
                  $"turnover, and toucherAtSteal={(_scenario == "whiff" ? -1 : 2)}, but got " +
                  $"everLoose={_everLoose}, finalState={_ball.State}, holder={_ball.StateMachine.HolderPeerId}, " +
                  $"toucherAtSteal={_toucherAtSteal}.");
+        }
+        Finish(pass ? 0 : 1);
+    }
+
+    // Issue #176 regression verdict: the ball must have gone Loose (a real
+    // steal happened), the phase must have been reset to (approximately) 0 the
+    // instant the scramble recovery re-caught it, that 0 must sit outside the
+    // steal-exposed band, and the defender's structurally-still-Recovering
+    // machine must refuse an immediate second Begin(). PhaseEpsilon is wider
+    // than the unit tests' Epsilon because a few physics ticks may elapse
+    // between AwardPossession and this check observing it (TickDribbling
+    // advances Phase every tick the ball is Dribbling).
+    private const float PhaseEpsilon = 0.05f;
+
+    private void VerdictRecoveryReset()
+    {
+        bool phaseWasReset = _recoveryChecked && _recoveryPhaseAtCheck >= 0f
+            && _recoveryPhaseAtCheck < PhaseEpsilon;
+        bool phaseOutsideBand = _recoveryChecked
+            && (_recoveryPhaseAtCheck < _ball.StealLoExposed || _recoveryPhaseAtCheck > _ball.StealHiExposed);
+        bool reattemptRefused = !_reattemptBeganAtRecovery;
+
+        bool pass = _everLoose && _recoveryChecked && phaseWasReset && phaseOutsideBand && reattemptRefused;
+
+        if (pass)
+        {
+            GD.Print($"[steal-turnover] PASS — scenario={_scenario}, " +
+                     $"phaseAtRecovery={_recoveryPhaseAtCheck:F3}, reattemptBegan={_reattemptBeganAtRecovery}.");
+        }
+        else
+        {
+            Fail($"scenario={_scenario} expected everLoose=true, a recovery observed with phase reset " +
+                 $"near 0 (outside [{_ball.StealLoExposed:F2},{_ball.StealHiExposed:F2}]), and an immediate " +
+                 $"reattempt refused, but got everLoose={_everLoose}, recoveryChecked={_recoveryChecked}, " +
+                 $"phaseAtRecovery={_recoveryPhaseAtCheck:F3}, reattemptBegan={_reattemptBeganAtRecovery}.");
         }
         Finish(pass ? 0 : 1);
     }
