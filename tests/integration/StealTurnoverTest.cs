@@ -74,6 +74,28 @@ public partial class StealTurnoverTest : Node
     private float _recoveryPhaseAtCheck = -1f;
     private bool _reattemptBeganAtRecovery;
 
+    // ── #175 reconciliation proof ────────────────────────────────────────────
+    // This single offline instance has no separate client process to receive a
+    // ReceiveState broadcast and reconcile against (see the class doc's "single
+    // offline instance is the server"), so this harness cannot directly boot a
+    // second peer. Instead it builds a SHADOW CommittedMoveMachine that begins
+    // the identical StealMove at the identical frame the real defender does —
+    // exactly mirroring what a real client's local prediction would prevail as
+    // — and, at the moment the REAL server-side machine resolves the steal
+    // early (BallController.ResolveStealAttempts → PlayerController.
+    // EndResolvedSteal, the exact code path #175 is about), feeds the shadow
+    // the REAL broadcast values (via the ForHarness accessors) through the
+    // actual CommittedMoveMachine.ShouldForceRecovery + ForceState production
+    // logic. This proves the full server→signal→client-reconciliation chain
+    // using real engine state end to end, without needing a second Godot
+    // process — the one piece of the wire itself (RPC marshaling of the new
+    // bool parameter) is covered separately by the build succeeding with the
+    // [Rpc]-attributed signature change.
+    private CommittedMoveMachine _shadowClient = new();
+    private bool _shadowReconciled;
+    private int _shadowRecoveryFrame = -1; // first frame shadow.Phase == Recovery
+    private int _shadowInactiveFrame = -1; // first frame shadow.Phase == Inactive
+
     public override void _Ready()
     {
         string[] args = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).ToArray();
@@ -180,6 +202,12 @@ public partial class StealTurnoverTest : Node
                 return;
             }
             GD.Print($"[steal-turnover] frame {_frame}: steal begun (target Left)");
+
+            // (#175) Shadow client: begins the IDENTICAL StealMove the same
+            // frame, mirroring what a real client's local prediction would be
+            // running right now — see the field doc above for the full rationale.
+            if (_scenario == "success")
+                _shadowClient.Begin(new StealMove(HandSide.Left));
         }
 
         // Latch the turnover: catch the Loose state even if the loose-ball
@@ -195,6 +223,35 @@ public partial class StealTurnoverTest : Node
             if (!_everLoose)
                 _toucherAtSteal = _ball.LastToucherPeerIdForHarness;
             _everLoose = true;
+        }
+
+        // (#175) Drive the shadow client one tick, mirroring TickClientOwnPlayer's
+        // real order: reconcile against the latest "broadcast" (here, the REAL
+        // defender's live values, read directly since there's no wire) BEFORE
+        // advancing the shadow's own Tick(). Only runs after Begin() and only
+        // for "success" — "whiff" never resolves early, so WasRecoveryEnteredEarly
+        // never goes true and this block is inert (ShouldForceRecovery gates on it).
+        // Scenario-exclusive with "recovery-reset" below (only one of the two
+        // conditions can ever be true in a given run), so ordering between them
+        // does not matter.
+        if (_scenario == "success" && _stealBegun && _shadowClient.IsActive)
+        {
+            if (!_shadowReconciled && CommittedMoveMachine.ShouldForceRecovery(
+                    _shadowClient.Phase, _defender.PhaseForHarness, _defender.WasRecoveryEnteredEarlyForHarness,
+                    _shadowClient.CurrentMove?.Id, _defender.CurrentMoveIdForHarness))
+            {
+                _shadowClient.ForceState(MovePhase.Recovery, frameInPhase: 0, _shadowClient.CurrentMove, recoveryWasEarly: true);
+                _shadowReconciled  = true;
+                _shadowRecoveryFrame = _frame;
+                GD.Print($"[steal-turnover] frame {_frame}: shadow client reconciled Active→Recovery (#175 fix engaged)");
+            }
+
+            _shadowClient.Tick();
+
+            if (_shadowClient.Phase == MovePhase.Recovery && _shadowRecoveryFrame < 0)
+                _shadowRecoveryFrame = _frame;
+            if (_shadowClient.Phase == MovePhase.Inactive && _shadowInactiveFrame < 0)
+                _shadowInactiveFrame = _frame;
         }
 
         // "recovery-reset" does not run to a fixed verdict frame — the ball's
@@ -287,20 +344,57 @@ public partial class StealTurnoverTest : Node
         // _toucherAtSteal is never latched (stays -1, the sentinel).
         bool toucherCorrect = _scenario == "whiff" ? _toucherAtSteal == -1 : _toucherAtSteal == 2;
 
-        bool pass = (_scenario == "whiff" ? !_everLoose : _everLoose) && turnoverCompleted && toucherCorrect;
+        // (#175) The reconciliation fix, proven only on "success" (the only
+        // scenario where EndActiveEarly ever fires):
+        //   1. The shadow client must actually have been reconciled — a
+        //      regression here means ShouldForceRecovery/the broadcast wiring
+        //      silently stopped firing and the bug is back.
+        //   2. Reconciliation must land the shadow's local Recovery entry
+        //      within a couple of frames of the REAL server's early Recovery
+        //      entry (bounded skew is expected/accepted — see
+        //      ShouldForceRecovery's doc — but it must not be the FULL
+        //      unshortened Active window the bug left it stuck predicting).
+        //   3. The shadow must reach Inactive well before the "buggy" baseline
+        //      timeline (begin + full Startup + full un-shortened ActiveFrames
+        //      + full RecoveryFrames) it would have followed with no fix.
+        bool reconciliationOk = true;
+        string reconciliationDetail = "n/a (whiff)";
+        if (_scenario == "success")
+        {
+            int buggyBaselineInactiveFrame = _beginFrame
+                + StealMove.DefaultFrameData.StartupFrames
+                + StealMove.DefaultFrameData.ActiveFrames
+                + StealMove.DefaultFrameData.RecoveryFrames;
+            const int MaxAcceptableRecoverySkewFrames = 3;
+
+            bool shadowWasReconciled  = _shadowReconciled && _shadowRecoveryFrame >= 0;
+            bool shadowRecoveredFast  = shadowWasReconciled
+                && (_shadowRecoveryFrame - (_beginFrame + StealMove.DefaultFrameData.StartupFrames))
+                    < StealMove.DefaultFrameData.ActiveFrames - 1;
+            bool shadowFinishedEarly  = _shadowInactiveFrame >= 0
+                && _shadowInactiveFrame < buggyBaselineInactiveFrame;
+
+            reconciliationOk = shadowWasReconciled && shadowRecoveredFast && shadowFinishedEarly;
+            reconciliationDetail = $"reconciled={_shadowReconciled}, shadowRecoveryFrame={_shadowRecoveryFrame}, " +
+                $"shadowInactiveFrame={_shadowInactiveFrame}, buggyBaselineInactiveFrame={buggyBaselineInactiveFrame}, " +
+                $"skewBudget={MaxAcceptableRecoverySkewFrames}";
+        }
+
+        bool pass = (_scenario == "whiff" ? !_everLoose : _everLoose) && turnoverCompleted && toucherCorrect
+            && reconciliationOk;
 
         if (pass)
         {
             GD.Print($"[steal-turnover] PASS — scenario={_scenario}, everLoose={_everLoose}, " +
                      $"finalState={_ball.State}, holder={_ball.StateMachine.HolderPeerId}, " +
-                     $"toucherAtSteal={_toucherAtSteal}.");
+                     $"toucherAtSteal={_toucherAtSteal}, {reconciliationDetail}.");
         }
         else
         {
             Fail($"scenario={_scenario} expected everLoose={(_scenario != "whiff")}, a completed " +
-                 $"turnover, and toucherAtSteal={(_scenario == "whiff" ? -1 : 2)}, but got " +
+                 $"turnover, toucherAtSteal={(_scenario == "whiff" ? -1 : 2)}, and reconciliationOk=True, but got " +
                  $"everLoose={_everLoose}, finalState={_ball.State}, holder={_ball.StateMachine.HolderPeerId}, " +
-                 $"toucherAtSteal={_toucherAtSteal}.");
+                 $"toucherAtSteal={_toucherAtSteal}, reconciliationOk={reconciliationOk} ({reconciliationDetail}).");
         }
         Finish(pass ? 0 : 1);
     }
