@@ -32,7 +32,13 @@ namespace HOOPERGAME.Tests.Integration;
 //                    before returning — the same settle-to-Dribbling every
 //                    other AwardPossession caller, e.g. a rebound, reaches),
 //                    and the new possession starts UNCLEARED (IsCleared ==
-//                    false) — issue #119 criterion 2.
+//                    false) — issue #119 criterion 2. Per the PR #174 lesson
+//                    ("assert the full turnover completes, not a snapshot"),
+//                    this does not point-sample the verdict once: after the
+//                    initial settle it keeps observing for StabilityFrames
+//                    ticks and fails the instant the awarded state regresses
+//                    (a flip-back, a re-fire, or IsCleared flickering true) —
+//                    the same durability bar defender-exempt and both-oob hold.
 // defender-exempt:  the player WITHOUT the ball is walked past the line while
 //                    the holder stays put. Asserts no turnover fires — #119 criterion 3.
 // both-oob:         BOTH players cross the line. This is audit #177's named
@@ -91,6 +97,10 @@ public partial class OobTurnoverTest : Node
     private int _otherPeerId;
     private int _verdictFrame;
     private bool _strobed;
+
+    // held-turnover: once the initial settle checkpoint is reached, this is the
+    // LAST frame of the stability-hold window still to observe (inclusive).
+    private int _holdUntilFrame;
 
     public override void _Ready()
     {
@@ -182,17 +192,48 @@ public partial class OobTurnoverTest : Node
 
         if (_frame < _verdictFrame) return;
 
-        bool flipped = _ball.StateMachine.HolderPeerId == _otherPeerId;
-        bool settledDribbling = _ball.State == BallState.Dribbling;
-        bool uncleared = !_ball.IsCleared;
-        bool pass = flipped && settledDribbling && uncleared;
+        // First check at the settle checkpoint: the turnover must have already
+        // completed (same assertion the old point-sample made). A failure here
+        // is the turnover never firing at all — fail fast with that diagnosis.
+        if (_holdUntilFrame == 0)
+        {
+            bool flipped = _ball.StateMachine.HolderPeerId == _otherPeerId;
+            bool settledDribbling = _ball.State == BallState.Dribbling;
+            bool uncleared = !_ball.IsCleared;
 
-        if (pass)
-            GD.Print($"[oob-turnover] PASS held-turnover — holder flipped {_originalHolderId}->{_ball.StateMachine.HolderPeerId}, state={_ball.State}, cleared={_ball.IsCleared}.");
-        else
-            Fail($"held-turnover expected holder={_otherPeerId}, state=Dribbling, cleared=false; got holder={_ball.StateMachine.HolderPeerId}, state={_ball.State}, cleared={_ball.IsCleared}.");
+            if (!(flipped && settledDribbling && uncleared))
+            {
+                Fail($"held-turnover expected holder={_otherPeerId}, state=Dribbling, cleared=false at the settle checkpoint (frame {_frame}); got holder={_ball.StateMachine.HolderPeerId}, state={_ball.State}, cleared={_ball.IsCleared}.");
+                Finish();
+                return;
+            }
 
-        Finish(pass ? 0 : 1);
+            _holdUntilFrame = _frame + StabilityFrames;
+            GD.Print($"[oob-turnover] held-turnover settled at frame {_frame} (holder={_ball.StateMachine.HolderPeerId}); holding for {StabilityFrames} more ticks to confirm it does not regress.");
+        }
+
+        // Stability hold: the awarded state (new holder, Dribbling, uncleared)
+        // must not regress on ANY subsequent tick — no flip-back to the old
+        // holder, no re-fire of another turnover, no IsCleared oscillation.
+        // Fails on the FIRST bad frame rather than only at the end, so the
+        // diagnosis names exactly when the regression happened (PR #174 lesson:
+        // a single end-of-window snapshot can miss a transient that self-heals
+        // before the last sample).
+        bool stillFlipped = _ball.StateMachine.HolderPeerId == _otherPeerId;
+        bool stillDribbling = _ball.State == BallState.Dribbling;
+        bool stillUncleared = !_ball.IsCleared;
+
+        if (!(stillFlipped && stillDribbling && stillUncleared))
+        {
+            Fail($"held-turnover regressed at frame {_frame} (holdWindow ends {_holdUntilFrame}): expected holder={_otherPeerId}, state=Dribbling, cleared=false; got holder={_ball.StateMachine.HolderPeerId}, state={_ball.State}, cleared={_ball.IsCleared}.");
+            Finish();
+            return;
+        }
+
+        if (_frame < _holdUntilFrame) return;
+
+        GD.Print($"[oob-turnover] PASS held-turnover — holder held {_otherPeerId}, state=Dribbling, cleared=false across {StabilityFrames} ticks with no regression.");
+        Finish(0);
     }
 
     // ── Scenario: defender crossing the line is a no-op (#119 criterion 3) ─
