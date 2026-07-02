@@ -767,6 +767,225 @@ public class CommittedMoveMachineTests
         Assert.False(result);
     }
 
+    // ═════════════════════════════════════════════════════════════════════
+    // WasRecoveryEnteredEarly — level-triggered early-end signal (#175)
+    // ═════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void WasRecoveryEnteredEarly_BeforeAnyMove_ReturnsFalse()
+    {
+        var m = NewMachine();
+        Assert.False(m.WasRecoveryEnteredEarly);
+    }
+
+    [Fact]
+    public void WasRecoveryEnteredEarly_NaturalActiveToRecoveryExpiry_ReturnsFalse()
+    {
+        // The whole point of the flag: an ORDINARY Tick()-driven Active→Recovery
+        // boundary crossing must never look like an early end.
+        var m = NewMachine();
+        m.Begin(TestMove());
+        TickN(m, StandardData.StartupFrames + StandardData.ActiveFrames); // → Recovery, on schedule
+
+        Assert.False(m.WasRecoveryEnteredEarly);
+    }
+
+    [Fact]
+    public void WasRecoveryEnteredEarly_ImmediatelyAfterEndActiveEarly_ReturnsTrue()
+    {
+        var m = NewMachine();
+        m.Begin(TestMove());
+        TickN(m, StandardData.StartupFrames); // → Active
+        m.EndActiveEarly();
+
+        Assert.True(m.WasRecoveryEnteredEarly);
+    }
+
+    [Fact]
+    public void WasRecoveryEnteredEarly_StaysTrueThroughoutRecoveryAfterEarlyEnd()
+    {
+        // Level-triggered, not a one-shot edge: every tick spent in the early
+        // Recovery must keep reporting true — this is what makes the network
+        // broadcast carrying it robust to a single dropped packet (#175).
+        var m = NewMachine();
+        m.Begin(TestMove());
+        TickN(m, StandardData.StartupFrames); // → Active
+        m.EndActiveEarly();                    // → Recovery, early
+
+        for (int i = 0; i < StandardData.RecoveryFrames - 1; i++)
+        {
+            Assert.True(m.WasRecoveryEnteredEarly, $"expected true on Recovery tick {i}");
+            m.Tick();
+        }
+    }
+
+    [Fact]
+    public void WasRecoveryEnteredEarly_FalseOnceRecoveryNaturallyExpiresToInactive()
+    {
+        var m = NewMachine();
+        m.Begin(TestMove());
+        TickN(m, StandardData.StartupFrames); // → Active
+        m.EndActiveEarly();                    // → Recovery, early
+        TickN(m, StandardData.RecoveryFrames); // → Inactive
+
+        Assert.False(m.WasRecoveryEnteredEarly);
+    }
+
+    [Fact]
+    public void WasRecoveryEnteredEarly_NewMoveAfterEarlyEndDoesNotInheritFlag()
+    {
+        // Begin() defensively resets the backing field so a brand new move's
+        // OWN lifecycle can never start out "already early" (#175 doubt cycle).
+        var m = NewMachine();
+        m.Begin(TestMove());
+        TickN(m, StandardData.StartupFrames);
+        m.EndActiveEarly();
+        TickN(m, StandardData.RecoveryFrames); // → Inactive
+
+        m.Begin(TestMove());
+        Assert.False(m.WasRecoveryEnteredEarly);
+    }
+
+    // ═════════════════════════════════════════════════════════════════════
+    // EndActiveEarly — JustEnteredActive must never leak into Recovery (#177
+    // audit finding R3: a steal resolving on Active's entry tick must not
+    // leave JustEnteredActive true while Phase has already moved to Recovery)
+    // ═════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void EndActiveEarly_OnActiveEntryTick_ClearsJustEnteredActive()
+    {
+        var m = NewMachine();
+        m.Begin(TestMove());
+        TickN(m, StandardData.StartupFrames); // → Active, JustEnteredActive = true this tick
+        Assert.True(m.JustEnteredActive, "sanity check: entry tick sets it true first");
+
+        m.EndActiveEarly(); // resolves on the very tick Active was entered
+
+        Assert.False(m.JustEnteredActive);
+    }
+
+    [Fact]
+    public void EndActiveEarly_LaterInActive_JustEnteredActiveStaysFalse()
+    {
+        var m = NewMachine();
+        m.Begin(TestMove());
+        TickN(m, StandardData.StartupFrames + 1); // → Active, then one more tick clears the flag
+        Assert.False(m.JustEnteredActive);
+
+        m.EndActiveEarly();
+
+        Assert.False(m.JustEnteredActive);
+    }
+
+    // ═════════════════════════════════════════════════════════════════════
+    // ForceState — recoveryWasEarly parameter (#175)
+    // ═════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void ForceState_DefaultRecoveryWasEarly_IsFalse()
+    {
+        var m = NewMachine();
+        m.ForceState(MovePhase.Recovery, frameInPhase: 0, TestMove());
+
+        Assert.False(m.WasRecoveryEnteredEarly);
+    }
+
+    [Fact]
+    public void ForceState_RecoveryWasEarlyTrue_ReportsTrueWhileInRecovery()
+    {
+        var m = NewMachine();
+        m.ForceState(MovePhase.Recovery, frameInPhase: 0, TestMove(), recoveryWasEarly: true);
+
+        Assert.True(m.WasRecoveryEnteredEarly);
+    }
+
+    [Fact]
+    public void ForceState_RecoveryWasEarlyTrue_OverwritesPriorFalseValue()
+    {
+        // ForceState must be a full unconditional overwrite of every field it
+        // owns, including this one — a stale leftover would be a silent
+        // partial-overwrite bug (#175 doubt cycle finding).
+        var m = NewMachine();
+        m.Begin(TestMove());
+        TickN(m, StandardData.StartupFrames + StandardData.ActiveFrames); // → Recovery, on schedule (flag false)
+        Assert.False(m.WasRecoveryEnteredEarly);
+
+        m.ForceState(MovePhase.Recovery, frameInPhase: 0, TestMove(), recoveryWasEarly: true);
+
+        Assert.True(m.WasRecoveryEnteredEarly);
+    }
+
+    [Fact]
+    public void ForceState_ToInactive_RecoveryWasEarlyReadsFalseRegardless()
+    {
+        // WasRecoveryEnteredEarly is gated on Phase == Recovery, so forcing to
+        // Inactive must read false even if the (unused) parameter were true.
+        var m = NewMachine();
+        m.ForceState(MovePhase.Inactive, frameInPhase: 0, move: null, recoveryWasEarly: true);
+
+        Assert.False(m.WasRecoveryEnteredEarly);
+    }
+
+    // ═════════════════════════════════════════════════════════════════════
+    // ShouldForceRecovery — reconciliation gate (issue #175)
+    // ═════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void ShouldForceRecovery_LocalActiveServerRecoveryEarlyMatchingMove_ReturnsTrue()
+    {
+        bool result = CommittedMoveMachine.ShouldForceRecovery(
+            localPhase: MovePhase.Active, serverPhase: MovePhase.Recovery, serverRecoveryWasEarly: true,
+            localMoveId: "steal", serverMoveId: "steal");
+
+        Assert.True(result);
+    }
+
+    [Fact]
+    public void ShouldForceRecovery_ServerRecoveryNotEarly_ReturnsFalse()
+    {
+        // The exact failure mode the issue mandates NOT reintroducing: an
+        // ordinary Active→Recovery crossing under jitter must never force.
+        bool result = CommittedMoveMachine.ShouldForceRecovery(
+            localPhase: MovePhase.Active, serverPhase: MovePhase.Recovery, serverRecoveryWasEarly: false,
+            localMoveId: "steal", serverMoveId: "steal");
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void ShouldForceRecovery_LocalNotActive_ReturnsFalse()
+    {
+        bool result = CommittedMoveMachine.ShouldForceRecovery(
+            localPhase: MovePhase.Startup, serverPhase: MovePhase.Recovery, serverRecoveryWasEarly: true,
+            localMoveId: "steal", serverMoveId: "steal");
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void ShouldForceRecovery_ServerPhaseNotRecovery_ReturnsFalse()
+    {
+        bool result = CommittedMoveMachine.ShouldForceRecovery(
+            localPhase: MovePhase.Active, serverPhase: MovePhase.Active, serverRecoveryWasEarly: true,
+            localMoveId: "steal", serverMoveId: "steal");
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void ShouldForceRecovery_MoveIdMismatch_ReturnsFalse()
+    {
+        // Doubt-cycle finding: without this guard, a stale broadcast reporting
+        // move A's early end could wrongly truncate a locally different move
+        // B's legitimate Active phase.
+        bool result = CommittedMoveMachine.ShouldForceRecovery(
+            localPhase: MovePhase.Active, serverPhase: MovePhase.Recovery, serverRecoveryWasEarly: true,
+            localMoveId: "crossover", serverMoveId: "steal");
+
+        Assert.False(result);
+    }
+
     // ═════════════════════════════════════════════════════════════════════════
     // Feint with FeintRecoveryFrames == 0 — regression guard (existing behavior)
     // ═════════════════════════════════════════════════════════════════════════
