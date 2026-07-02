@@ -96,6 +96,15 @@ public partial class StealTurnoverTest : Node
     private int _shadowRecoveryFrame = -1; // first frame shadow.Phase == Recovery
     private int _shadowInactiveFrame = -1; // first frame shadow.Phase == Inactive
 
+    // (#175, doubt cycle post-CI-failure) The REAL server-side machine's own
+    // early-Recovery entry frame, tracked independently of the shadow so the
+    // "skew budget" claimed in Verdict()'s comments is an ACTUAL assertion,
+    // not just print-string decoration. Reading _defender.PhaseForHarness
+    // every tick (not only inside the reconciliation branch) means this is
+    // captured even on a tick where the shadow's own reconciliation happens
+    // to be delayed relative to the server.
+    private int _realRecoveryFrame = -1; // first frame _defender.PhaseForHarness == Recovery
+
     public override void _Ready()
     {
         string[] args = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).ToArray();
@@ -136,6 +145,26 @@ public partial class StealTurnoverTest : Node
             + StealMove.DefaultFrameData.StartupFrames
             + StealMove.DefaultFrameData.ActiveFrames
             + VerdictMarginFrames;
+
+        // (#175, doubt cycle post-CI-failure) "success" ALSO needs the shadow
+        // client to reach Inactive before Verdict() can assert reconciliationOk
+        // (specifically shadowFinishedEarly) — but the shadow only starts its
+        // Recovery countdown once the REAL server resolves the steal (as early
+        // as one tick into Active) and then still owes the FULL RecoveryFrames
+        // from there (EndActiveEarly shortens Active, never Recovery — see
+        // CommittedMoveMachine.EndActiveEarly's doc). The base _verdictFrame
+        // above was sized ONLY for the pre-#175 assertions (turnover completed,
+        // correct toucher), which resolve within a few ticks of GoLoose() and
+        // never needed to wait out a full Recovery. Extend it to the shadow's
+        // worst-case finish: recovery entered no later than the natural
+        // Active->Recovery boundary (StartupFrames + ActiveFrames), then a full
+        // RecoveryFrames, then the existing margin. This was the actual root
+        // cause of the CI failure this comment responds to: the harness was
+        // rendering shadowInactiveFrame's verdict 9 frames before the shadow
+        // could possibly reach Inactive (verdict fired at frame 25; the shadow
+        // in that run could not reach Inactive before frame 34).
+        if (_scenario == "success")
+            _verdictFrame += StealMove.DefaultFrameData.RecoveryFrames;
 
         GD.Print($"[steal-turnover] beginFrame={_beginFrame} verdictFrame={_verdictFrame} " +
                  $"band=[{_ball.StealLoExposed:F2},{_ball.StealHiExposed:F2}]");
@@ -223,6 +252,17 @@ public partial class StealTurnoverTest : Node
             if (!_everLoose)
                 _toucherAtSteal = _ball.LastToucherPeerIdForHarness;
             _everLoose = true;
+        }
+
+        // (#175, doubt cycle post-CI-failure) Latch the REAL server-side
+        // machine's own early-Recovery entry frame — independent of whether
+        // the shadow has reconciled yet, so the skew check below compares
+        // against ground truth, not against the shadow's own (possibly
+        // delayed) read of it.
+        if (_scenario == "success" && _stealBegun && _realRecoveryFrame < 0
+            && _defender.PhaseForHarness == MovePhase.Recovery)
+        {
+            _realRecoveryFrame = _frame;
         }
 
         // (#175) Drive the shadow client one tick, mirroring TickClientOwnPlayer's
@@ -368,16 +408,24 @@ public partial class StealTurnoverTest : Node
             const int MaxAcceptableRecoverySkewFrames = 3;
 
             bool shadowWasReconciled  = _shadowReconciled && _shadowRecoveryFrame >= 0;
-            bool shadowRecoveredFast  = shadowWasReconciled
-                && (_shadowRecoveryFrame - (_beginFrame + StealMove.DefaultFrameData.StartupFrames))
-                    < StealMove.DefaultFrameData.ActiveFrames - 1;
+            // (#175, doubt cycle post-CI-failure) This used to compare only
+            // against ActiveFrames - 1 — a coarse "not the full unshortened
+            // window" bound that never actually consumed
+            // MaxAcceptableRecoverySkewFrames despite the constant and this
+            // comment block claiming a "couple of frames" bound. Real finding:
+            // the skew budget was decorative. Now compares the shadow's
+            // reconciled Recovery frame against the REAL server's own
+            // early-Recovery frame (_realRecoveryFrame, latched independently
+            // above), which is the actual claim this test makes.
+            bool shadowRecoveredOnTime = shadowWasReconciled && _realRecoveryFrame >= 0
+                && System.Math.Abs(_shadowRecoveryFrame - _realRecoveryFrame) <= MaxAcceptableRecoverySkewFrames;
             bool shadowFinishedEarly  = _shadowInactiveFrame >= 0
                 && _shadowInactiveFrame < buggyBaselineInactiveFrame;
 
-            reconciliationOk = shadowWasReconciled && shadowRecoveredFast && shadowFinishedEarly;
-            reconciliationDetail = $"reconciled={_shadowReconciled}, shadowRecoveryFrame={_shadowRecoveryFrame}, " +
-                $"shadowInactiveFrame={_shadowInactiveFrame}, buggyBaselineInactiveFrame={buggyBaselineInactiveFrame}, " +
-                $"skewBudget={MaxAcceptableRecoverySkewFrames}";
+            reconciliationOk = shadowWasReconciled && shadowRecoveredOnTime && shadowFinishedEarly;
+            reconciliationDetail = $"reconciled={_shadowReconciled}, realRecoveryFrame={_realRecoveryFrame}, " +
+                $"shadowRecoveryFrame={_shadowRecoveryFrame}, shadowInactiveFrame={_shadowInactiveFrame}, " +
+                $"buggyBaselineInactiveFrame={buggyBaselineInactiveFrame}, skewBudget={MaxAcceptableRecoverySkewFrames}";
         }
 
         bool pass = (_scenario == "whiff" ? !_everLoose : _everLoose) && turnoverCompleted && toucherCorrect
