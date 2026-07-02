@@ -288,3 +288,25 @@ verified the hard way, gotchas, and remaining `hitl` editor steps. See
 - Godot C# API churn + GDScript-centric examples: use the **Context7 MCP
   server** to fetch live Godot docs before writing unfamiliar engine-facing
   calls. Don't copy GDScript patterns without translating.
+
+---
+
+## Agent skills
+
+Per-repo configuration for the engineering skills (`triage`, `to-issues`,
+`to-prd`, `qa`, `diagnose`, `tdd`, `improve-codebase-architecture`, …).
+
+### Issue tracker
+
+GitHub Issues on `JoseTomanan/hooper-game`, via the `gh` CLI (the sole task
+tracker). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Five canonical roles; `ready-for-agent`/`ready-for-human` reuse this repo's
+existing `afk`/`hitl` labels (ADR-0013). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context (`CONTEXT.md` + `docs/adr/` at the repo root). See
+`docs/agents/domain.md`.
