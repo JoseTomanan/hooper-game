@@ -385,6 +385,18 @@ public partial class PlayerController : CharacterBody3D
 	private string _serverMoveId = "";
 	private float _serverMoveParam;
 
+	/// <summary>
+	/// (#175) Authoritative CommittedMoveMachine.WasRecoveryEnteredEarly from
+	/// the latest broadcast — level-triggered (true for the server's WHOLE
+	/// Recovery duration when it resulted from an EndActiveEarly() early end,
+	/// e.g. a resolved steal), not a single-tick edge, so a dropped
+	/// UnreliableOrdered broadcast doesn't lose the signal for the remainder of
+	/// that Recovery window. Feeds ReconcileFromServer's Step 0.5
+	/// (ShouldForceRecovery) — the fix for the OWN client's Active prediction
+	/// otherwise never learning the server ended its move early.
+	/// </summary>
+	private bool _serverEndedActiveEarly;
+
 	/// <summary>True once ReceiveState has arrived since the last _PhysicsProcess.</summary>
 	private bool _hasNewState;
 
@@ -652,9 +664,13 @@ public partial class PlayerController : CharacterBody3D
 		// Heading is piggybacked on this existing broadcast — same staleness
 		// and redundancy properties as pos/vel; no separate channel needed.
 		// Source: Rpc(MethodName.X) broadcasts to all peers.
+		// (#175) WasRecoveryEnteredEarly appended LAST, after handSide — kept
+		// as its own trailing bool (not packed into an existing int slot) so a
+		// future positional edit to this already enum-as-int-heavy signature
+		// can't silently transpose it with handSide (see ReceiveState's doc).
 		Rpc(MethodName.ReceiveState, 0, GlobalPosition, Velocity,
 			(int)_machine.Phase, _machine.FrameInPhase, MoveIdOf(_machine.CurrentMove), MoveParamOf(_machine.CurrentMove),
-			Heading, (int)HandSide);
+			Heading, (int)HandSide, _machine.WasRecoveryEnteredEarly);
 	}
 
 	/// <summary>
@@ -680,10 +696,11 @@ public partial class PlayerController : CharacterBody3D
 
 		// Echo _serverAckedSeq so the client prunes its pending buffer, plus
 		// the committed-move state and heading piggybacked on the same broadcast
-		// (see ReceiveState below for the payload rationale).
+		// (see ReceiveState below for the payload rationale). (#175) Same
+		// trailing WasRecoveryEnteredEarly bool as TickServerOwnPlayer's broadcast.
 		Rpc(MethodName.ReceiveState, _serverAckedSeq, GlobalPosition, Velocity,
 			(int)_machine.Phase, _machine.FrameInPhase, MoveIdOf(_machine.CurrentMove), MoveParamOf(_machine.CurrentMove),
-			Heading, (int)HandSide);
+			Heading, (int)HandSide, _machine.WasRecoveryEnteredEarly);
 	}
 
 	/// <summary>
@@ -980,12 +997,21 @@ public partial class PlayerController : CharacterBody3D
 	/// burst-lean direction (ApplyCosmetics), since the client's copy of the
 	/// opponent has no live local CurrentMove to read BurstDirection from. This is
 	/// a display-only read; reconciliation is unchanged.
+	///
+	/// (#175) endedActiveEarly is CommittedMoveMachine.WasRecoveryEnteredEarly
+	/// from the server's copy of THIS player's machine — appended last, as a
+	/// plain bool (Godot's [Rpc] Variant marshaling handles bool natively, so
+	/// unlike movePhase there is no enum-boxing reason to send it as an int).
+	/// It feeds ReconcileFromServer's Step 0.5 (ShouldForceRecovery): the fix
+	/// for the OWN client's Active prediction never learning that the server
+	/// resolved this move's Active phase early (e.g. a successful steal).
 	/// </summary>
 	[Rpc(MultiplayerApi.RpcMode.Authority,
 		 CallLocal = false,
 		 TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
 	private void ReceiveState(int ackSeq, Vector3 pos, Vector3 vel,
-		int movePhase, int frameInPhase, string moveId, float moveParam, float heading, int handSide)
+		int movePhase, int frameInPhase, string moveId, float moveParam, float heading, int handSide,
+		bool endedActiveEarly)
 	{
 		_serverPos       = pos;
 		_serverVel       = vel;
@@ -1003,6 +1029,10 @@ public partial class PlayerController : CharacterBody3D
 		// as pos/vel — fine, since the replay loop catches the own player up
 		// and the remote player displays the latest received value.
 		_serverHeading   = heading;
+		// (#175) See _serverEndedActiveEarly's field doc — level-triggered,
+		// so overwriting every broadcast (even a redundant "still true") is
+		// correct and required for the packet-loss robustness that field relies on.
+		_serverEndedActiveEarly = endedActiveEarly;
 		_hasNewState     = true;
 	}
 
@@ -1104,6 +1134,39 @@ public partial class PlayerController : CharacterBody3D
 			// identical in spirit to the phantom-second-move artifact documented
 			// in Step 0 above.
 			HandSide = _serverHandSide;
+		}
+		// Step 0.5 (#175): the OWN client keeps predicting Active for the rest
+		// of a move's window even after the server ends that move's Active
+		// phase EARLY (EndActiveEarly() — today only a resolved steal). Unlike
+		// Step 0 above, this is NOT "the server disagrees a move ran at all" —
+		// it is "the server agrees a move ran, but it's further along than the
+		// client's local prediction" — so it is deliberately a SEPARATE gate
+		// (ShouldForceRecovery), not a broadened Step 0. Folding a
+		// `serverPhase == Recovery` case into ShouldForceInactive's contract
+		// would misfire on every ORDINARY Active→Recovery boundary a move
+		// crosses under jitter, which is exactly the failure mode this issue's
+		// remediation must not reintroduce (see ShouldForceRecovery's doc for
+		// how the level-triggered WasRecoveryEnteredEarly bit — not serverPhase
+		// alone — is what distinguishes "early" from "on schedule", and why a
+		// moveId identity check bounds this to the same accepted staleness
+		// trade-off Step 0 above already documents, rather than a wider one).
+		//
+		// Only reachable when Step 0 above did NOT already force Inactive
+		// (mutually exclusive: Step 0 fires on serverSaysInactive, this one
+		// requires serverPhase == Recovery).
+		else if (CommittedMoveMachine.ShouldForceRecovery(
+			_machine.Phase, _serverMovePhase, _serverEndedActiveEarly,
+			MoveIdOf(_machine.CurrentMove), _serverMoveId))
+		{
+			// frameInPhase forced to 0, not the server's (possibly further-
+			// advanced, ~1-RTT-stale) FrameInPhase — a discrete identity
+			// correction (Phase), never a stale continuous value snap, per
+			// this file's standing reconciliation law (see Step 0's comment).
+			// recoveryWasEarly: true so a future consumer of
+			// WasRecoveryEnteredEarly on THIS client sees the same truth the
+			// server does (ForceState's own doc explains why leaving this
+			// un-set would be a silent partial-overwrite bug).
+			_machine.ForceState(MovePhase.Recovery, frameInPhase: 0, move: _machine.CurrentMove, recoveryWasEarly: true);
 		}
 
 		// Step 1: prune confirmed inputs.

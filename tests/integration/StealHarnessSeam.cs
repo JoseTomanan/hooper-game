@@ -33,4 +33,26 @@ public partial class PlayerController
     /// </summary>
     internal bool BeginStealForHarness(HandSide targetHand) =>
         _machine.Begin(new StealMove(targetHand));
+
+    /// <summary>
+    /// Test-only (issue #175): exposes the defender's real committed-move Phase
+    /// so the harness can observe the SERVER-side EndActiveEarly() transition
+    /// this issue's reconciliation fix depends on, without a client process to
+    /// read a ReceiveState broadcast from.
+    /// </summary>
+    internal MovePhase PhaseForHarness => _machine.Phase;
+
+    /// <summary>
+    /// Test-only (issue #175): exposes CommittedMoveMachine.WasRecoveryEnteredEarly
+    /// — the level-triggered signal that gets piggybacked on ReceiveState and
+    /// drives ShouldForceRecovery client-side. Proving THIS flag flips true at
+    /// the real moment BallController.ResolveStealAttempts calls EndResolvedSteal
+    /// is the server-side half of the #175 fix; StealTurnoverTest's shadow-client
+    /// block proves the client-side half (ShouldForceRecovery + ForceState)
+    /// against these real values.
+    /// </summary>
+    internal bool WasRecoveryEnteredEarlyForHarness => _machine.WasRecoveryEnteredEarly;
+
+    /// <summary>Test-only (issue #175): the real machine's CurrentMove.Id, or "" if none.</summary>
+    internal string CurrentMoveIdForHarness => _machine.CurrentMove?.Id ?? "";
 }
