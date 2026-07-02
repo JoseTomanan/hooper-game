@@ -275,6 +275,42 @@ public class DribbleCycleTests
     }
 
     // ═════════════════════════════════════════════════════════════════════
+    // Reset — issue #176: a possession change must start a fresh dribble
+    //
+    // Per real half-court 1v1 rules (ADR-0014 ranked references, resolved on
+    // #176), a change of possession — rebound, steal recovery, tipoff,
+    // make-it-take-it — always begins a brand-new dribble; there is no such
+    // thing as a "continued" dribble surviving a loose-ball scramble. Reset()
+    // is the pure mechanism BallController.AwardPossession calls so a frozen
+    // mid-cycle Phase can never leak across a possession change (the #176
+    // re-steal exploit: a frozen Phase inside the steal-exposed band let a
+    // defender re-steal a scramble recovery with no genuine timing read).
+    // ═════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void Reset_AfterAdvancing_PhaseReturnsToZero()
+    {
+        var cycle = NewCycle(period: 1.0f);
+        cycle.Advance(dt: 0.5f); // Phase is now 0.5 — inside the steal-exposed band.
+
+        cycle.Reset();
+
+        Assert.Equal(0.0f, cycle.Phase, Epsilon);
+    }
+
+    [Fact]
+    public void Reset_TunablesUnaffected()
+    {
+        var cycle = NewCycle(handHeight: 1.2f, period: 0.8f);
+        cycle.Advance(dt: 0.4f);
+
+        cycle.Reset();
+
+        Assert.Equal(1.2f, cycle.HandHeight, precision: 4);
+        Assert.Equal(0.8f, cycle.Period, precision: 4);
+    }
+
+    // ═════════════════════════════════════════════════════════════════════
     // Period tunable affects cycle speed
     // ═════════════════════════════════════════════════════════════════════
 
