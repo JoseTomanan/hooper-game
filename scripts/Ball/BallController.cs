@@ -1204,7 +1204,12 @@ public partial class BallController : Node3D
 				// would then charge the OOB turnover to the offense again
 				// instead of the defender who just touched it — backwards from
 				// the "last-toucher-out" rule this steal itself just triggered.
-				if (int.TryParse(defender.Name, out int defenderPeerId))
+				// (#177 audit R4) `&& defenderPeerId != 0` matches every other
+				// name-parse site in this class (peer 0 is the "no possession
+				// history" sentinel ResolveRecipient clamps on) — unreachable in
+				// practice since NetworkManager.SpawnPlayer can never name a node
+				// "0", but this site was the one inconsistent outlier of four.
+				if (int.TryParse(defender.Name, out int defenderPeerId) && defenderPeerId != 0)
 					_lastToucherPeerId = defenderPeerId;
 
 				// End the defender's Active phase NOW instead of letting it ride
