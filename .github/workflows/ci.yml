@@ -111,6 +111,24 @@ jobs:
           godot --headless --path . res://tests/integration/StealTurnoverTest.tscn -- --harness-scenario=success
           godot --headless --path . res://tests/integration/StealTurnoverTest.tscn -- --harness-scenario=whiff
 
+      # Held-ball out-of-bounds turnover (issue #179, adjudicating hitl #119).
+      # Boots a real BallController + two PlayerControllers headless and walks a
+      # player past the court line, asserting BallController.ResolvePlayerOutOfBounds
+      # (the surface unit tests cannot reach — it reads live player world
+      # position). 'held-turnover' proves the holder crossing the line flips
+      # possession; 'defender-exempt' proves the non-holder crossing it is a
+      # no-op; 'both-oob' proves no 60Hz strobe when both players are OOB AND
+      # pins the actual (intentional, documented) both-OOB no-op named in the
+      # audit as the suspected "still broken" repro; 'wall-placement' parses
+      # the live scenes/Main.tscn to assert the four Walls/WallCollision*
+      # shapes sit outside CourtMin/CourtMax. Each exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run OOB turnover harness
+        run: |
+          godot --headless --path . res://tests/integration/OobTurnoverTest.tscn -- --harness-scenario=held-turnover
+          godot --headless --path . res://tests/integration/OobTurnoverTest.tscn -- --harness-scenario=defender-exempt
+          godot --headless --path . res://tests/integration/OobTurnoverTest.tscn -- --harness-scenario=both-oob
+          godot --headless --path . res://tests/integration/OobTurnoverTest.tscn -- --harness-scenario=wall-placement
+
       # Dual-instance harness, increment 1: two headless Godot processes complete
       # a real ENet handshake over localhost. The orchestrator launches a server
       # and a client of the same scene and reads the client's exit code. This is
