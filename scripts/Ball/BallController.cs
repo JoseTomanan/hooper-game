@@ -562,6 +562,19 @@ public partial class BallController : Node3D
 	/// RESULT (a possession change) is what ReceiveState carries. 0 until the
 	/// first possession (pre-tipoff), which ResolveRecipient treats as "no
 	/// turnover basis" (clamp, not an arbitrary award).
+	///
+	/// (#177 audit R1, amended) NOT set on every peer: the steal-turnover write
+	/// in ResolveStealAttempts (below) is a server-ONLY path into this field —
+	/// GoLoose() bypasses AwardPossession entirely (a live loose-ball scramble,
+	/// not a discrete Catch/Turnover edge), so the write happens once, on the
+	/// server's own copy, with no client-prediction counterpart. This is
+	/// currently safe DESPITE the exception: the sole consumer,
+	/// OobResolution.Award, is itself gated on isServer, and TickLoose's
+	/// client-side read of BallState never branches on this field. It would
+	/// stop being safe the day a client-side consumer is added — that consumer
+	/// would need its own reconciliation, not an assumption that this field is
+	/// already in sync (do NOT add a broadcast preemptively; the two known
+	/// current writers already have all the server-authority guarantees they need).
 	/// </summary>
 	private int _lastToucherPeerId;
 
@@ -1669,11 +1682,16 @@ public partial class BallController : Node3D
 		}
 
 		// Possession changed hands → this player is now the last toucher (#118).
-		// Set on every peer (AwardPossession runs as prediction on clients too),
-		// but only the server's value drives the OOB award (OobResolution gates
-		// Award on isServer). Updating here — not only on a shot — is the whole
-		// fix: a rebounder who later fumbles the ball OOB is no longer handed it
-		// straight back, because the toucher has advanced to them.
+		// Set on every peer that calls AwardPossession itself (this path runs as
+		// prediction on clients too), but only the server's value drives the OOB
+		// award (OobResolution gates Award on isServer). Updating here — not only
+		// on a shot — is the whole fix: a rebounder who later fumbles the ball OOB
+		// is no longer handed it straight back, because the toucher has advanced
+		// to them. (#177 audit R1) This is the general AwardPossession path — the
+		// steal-turnover write in ResolveStealAttempts is the one EXCEPTION that
+		// bypasses AwardPossession and this per-peer symmetry; see
+		// _lastToucherPeerId's field doc for why that server-only write is
+		// currently safe.
 		_lastToucherPeerId = peerId;
 
 		// StartDribble is legal from Held (the state Catch just transitioned to).
