@@ -93,6 +93,37 @@ public sealed class DribbleCycle
         Phase = (Phase + dt / Period) % 1.0f;
     }
 
+    /// <summary>
+    /// Restarts the dribble cycle at Phase 0 (ball at hand height) — the same
+    /// state a brand-new <see cref="DribbleCycle"/> begins in.
+    ///
+    /// ── Why this exists (issue #176) ─────────────────────────────────────
+    /// Per real half-court 1v1 rules, EVERY change of possession — tipoff, a
+    /// live rebound, a made-basket award, or a defensive steal/block recovery
+    /// — starts a fresh dribble; a dribble legally ends the instant the ball
+    /// leaves the previous holder's control. Before this method existed,
+    /// <c>BallController</c> constructed one <c>DribbleCycle</c> in
+    /// <c>_Ready()</c> and never reset it, so <see cref="Phase"/> stayed
+    /// frozen at whatever value existed when the ball last went Loose. That
+    /// let a defender who forced a scramble, then recovered the loose ball,
+    /// re-attempt a steal against their OWN frozen phase — if it happened to
+    /// still sit inside the steal-exposed band, the re-steal could resolve
+    /// with no genuine timing read (ADR-0014 call recorded on #176).
+    ///
+    /// <c>BallController.AwardPossession</c> calls this on every award path
+    /// (rebound, steal/block recovery, OOB turnover, make-it-take-it), so no
+    /// possession change can ever inherit a stale phase from the previous
+    /// holder's cycle. Resetting to exactly 0 — not merely "outside the
+    /// band" — mirrors the constructor default: a new dribble always starts
+    /// at the top, ball in hand, matching real-ball rules rather than
+    /// introducing a new tunable magnitude (that would be #104's tuning
+    /// surface, not this correctness fix's).
+    /// </summary>
+    public void Reset()
+    {
+        Phase = 0.0f;
+    }
+
     // ── Spatial output ────────────────────────────────────────────────────
 
     /// <summary>

@@ -576,6 +576,17 @@ public partial class BallController : Node3D
 	/// </summary>
 	internal int LastToucherPeerIdForHarness => _lastToucherPeerId;
 
+	/// <summary>
+	/// Test-only: exposes <see cref="_dribble"/>'s current Phase for the
+	/// headless integration harness (ADR-0016, issue #176). Proves the live
+	/// engine — not just the pure DribbleCycle unit tests — actually resets
+	/// the phase at the moment AwardPossession fires after a scramble
+	/// recovery, which is the exact mechanism that closes the #176 re-steal
+	/// exploit (a frozen in-band phase resuming from where it froze instead
+	/// of restarting at 0).
+	/// </summary>
+	internal float DribblePhaseForHarness => _dribble.Phase;
+
 	// ── Shot scatter RNG (issue #62, ADR-0009) ─────────────────────────────
 
 	/// <summary>
@@ -1673,6 +1684,22 @@ public partial class BallController : Node3D
 		{
 			GD.PrintErr($"[BallController] AwardPossession({peerId}): StartDribble rejected after Catch in state {State}; possession partially awarded, ball may behave unexpectedly.");
 		}
+
+		// Every possession change starts a fresh dribble (#176, ADR-0014 call
+		// recorded on the issue): real half-court 1v1 rules end a dribble the
+		// instant the ball leaves the previous holder's control, so a rebound,
+		// steal/block recovery, OOB turnover, and make-it-take-it award all
+		// restart _dribble.Phase at 0 — the same value a brand-new DribbleCycle
+		// starts at. Without this, Phase stayed frozen at whatever value existed
+		// when the ball last went Loose (DribbleCycle.Phase only advances in
+		// TickDribbling), which let a defender who forced a scramble and then
+		// recovered the SAME ball re-attempt a steal against a phase that could
+		// already sit inside the steal-exposed band — no genuine timing read
+		// required. Called unconditionally for every AwardPossession path
+		// (there is no "live-recovery only" special case) because the same
+		// stale-phase hazard is reachable from every one of them, not just the
+		// steal path that first exposed it.
+		_dribble.Reset();
 
 		// `cleared` is false for rebounds/turnovers (every peer sets this
 		// deterministically; clients predict it immediately for HUD responsiveness),

@@ -105,11 +105,17 @@ jobs:
       # exposed band and a later Active tick lands in it: entry-tick-only code
       # whiffs (RED), per-Active-tick code steals→Loose (GREEN). 'whiff' places
       # the window entirely above the band and asserts the ball stays Dribbling
-      # (guards against over-triggering). Each exits 0=PASS/1=FAIL (ADR-0016).
+      # (guards against over-triggering). 'recovery-reset' (issue #176) runs the
+      # same steal through to a completed scramble recovery and asserts the
+      # dribble phase resets to 0 the instant the ball is re-caught, instead of
+      # staying frozen at its in-band value — the fix that closes the
+      # near-instant re-steal exploit a frozen phase enabled. Each exits
+      # 0=PASS/1=FAIL (ADR-0016).
       - name: Run steal-turnover mechanic harness
         run: |
           godot --headless --path . res://tests/integration/StealTurnoverTest.tscn -- --harness-scenario=success
           godot --headless --path . res://tests/integration/StealTurnoverTest.tscn -- --harness-scenario=whiff
+          godot --headless --path . res://tests/integration/StealTurnoverTest.tscn -- --harness-scenario=recovery-reset
 
       # Held-ball out-of-bounds turnover (issue #179, adjudicating hitl #119).
       # Boots a real BallController + two PlayerControllers headless and walks a
