@@ -135,6 +135,29 @@ jobs:
           godot --headless --path . res://tests/integration/OobTurnoverTest.tscn -- --harness-scenario=both-oob
           godot --headless --path . res://tests/integration/OobTurnoverTest.tscn -- --harness-scenario=wall-placement
 
+      # In-place pivot plant (issue #172, ADR-0010 amendment). Unit tests
+      # (HeadingMathTests) already pin the pure HeadingMath.Step state machine;
+      # this drives a REAL PlayerController through the REAL Input singleton and
+      # the unmodified TickServerOwnPlayer -> SampleMoveInput -> Move() path,
+      # proving the plant/pivot gate actually withholds MoveAndSlide()
+      # displacement and that the >90° threshold, ~0.35s 180° completion time,
+      # and the #172-retuned exports are all live in the shipped wiring, not
+      # just correct in isolation. 'exports' checks BackTurnSlowFactor/
+      # MaxTurnRateDeg/PivotThresholdDeg; 'flick-180' proves a released flick
+      # keeps pivoting to completion with zero displacement and a ~0.35s
+      # timing band; 'held-135' proves a sustained >90° hold stays planted
+      # until reached, then resumes moving; 'no-plant-boundary' proves an
+      # exactly-90° turn never plants; 'committed-cancel' proves starting a
+      # committed move (def_steal) cancels an in-progress pivot immediately.
+      # Each exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run pivot-plant harness
+        run: |
+          godot --headless --path . res://tests/integration/PivotPlantTest.tscn -- --harness-scenario=exports
+          godot --headless --path . res://tests/integration/PivotPlantTest.tscn -- --harness-scenario=flick-180
+          godot --headless --path . res://tests/integration/PivotPlantTest.tscn -- --harness-scenario=held-135
+          godot --headless --path . res://tests/integration/PivotPlantTest.tscn -- --harness-scenario=no-plant-boundary
+          godot --headless --path . res://tests/integration/PivotPlantTest.tscn -- --harness-scenario=committed-cancel
+
       # Dual-instance harness, increment 1: two headless Godot processes complete
       # a real ENet handshake over localhost. The orchestrator launches a server
       # and a client of the same scene and reads the client's exit code. This is
