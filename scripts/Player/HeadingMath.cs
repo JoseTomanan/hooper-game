@@ -74,7 +74,14 @@ public static class HeadingMath
     /// effective rate is lerped between maxTurnRateDeg (at diff=0) and
     /// maxTurnRateDeg × backTurnSlowFactor (at diff=π), so the slowdown
     /// ramps continuously — no sudden gear-change. 0 = completely frozen at
-    /// 180°; 1 = linear (no slowdown). Default 0.35.
+    /// 180°; 1 = linear (no slowdown). Default 0.35 (pre-#172); issue #172
+    /// retunes callers toward ≈0.90, which — combined with the flick-to-latch
+    /// pivot in <see cref="Step"/> — brings a full 180° reversal down to
+    /// ≈0.35 s (up from the old ≈0.55 s figure): the old value doubled as
+    /// both "how committed does a back-turn feel" and "how slow is the
+    /// rate," and #172 splits those concerns — the pivot-in-place gate in
+    /// <see cref="Step"/> now carries the commitment read, so the raw rate
+    /// no longer needs to be as punishing.
     /// </param>
     /// <returns>
     /// The new heading in radians, in the range [-π, π].
@@ -98,14 +105,151 @@ public static class HeadingMath
         // points the mesh toward +Z; this formula rotates it to face wishDir.
         float desiredYaw = MathF.Atan2(wishDir.X, wishDir.Y);
 
+        return RotateTowardYaw(currentYaw, desiredYaw, delta, maxTurnRateDeg, backTurnSlowFactor);
+    }
+
+    /// <summary>
+    /// Persistent per-player in-place pivot state for <see cref="Step"/> —
+    /// predicted locally and reconciled by the caller exactly like Heading
+    /// itself (ADR-0002). <c>HasLatch</c> tracks whether a facing target is
+    /// currently "owed": the player has committed to turning to face it
+    /// before movement resumes, and hasn't reached it yet.
+    /// </summary>
+    public readonly record struct PivotState(bool HasLatch, float LatchedYaw)
+    {
+        /// <summary>No pivot owed — the default/idle state.</summary>
+        public static PivotState None => new(false, 0f);
+    }
+
+    /// <summary>Result of one <see cref="Step"/> tick.</summary>
+    /// <param name="NewYaw">The new heading in radians, normalized to [-π, π].</param>
+    /// <param name="Pivot">The pivot state to persist and pass into the next tick.</param>
+    /// <param name="IsPivotingInPlace">
+    /// True while the player is committed to turning-in-place and must not
+    /// move yet (a large flick or a >threshold held turn); false once facing
+    /// is close enough (or was never far enough) that movement may proceed.
+    /// </param>
+    public readonly record struct HeadingStep(float NewYaw, PivotState Pivot, bool IsPivotingInPlace);
+
+    /// <summary>
+    /// Issue #172: a large facing change (a "flick," or simply pointing the
+    /// stick well behind you) now demands the player plant and pivot in
+    /// place before they can move — a committed read, not a free instant
+    /// snap-turn (ADR-0003's anti-goal is exactly this kind of arcade
+    /// decoupling of facing from movement). Below <paramref name="pivotThresholdDeg"/>
+    /// the turn is "forward-ish": <see cref="RotateToward"/>'s ordinary
+    /// same-tick rotation still applies and movement is never gated.
+    ///
+    /// This is pure angle-and-state math — no timers, no elapsed-time
+    /// gating — so it replays identically bit-for-bit across server tick,
+    /// client prediction, and reconciliation (same determinism requirement
+    /// as <see cref="RotateToward"/>).
+    /// </summary>
+    /// <param name="currentYaw">Current heading in radians (Y-rotation, Godot convention).</param>
+    /// <param name="pivot">The pivot state carried over from the previous tick.</param>
+    /// <param name="wishDir">2D intent vector from the left stick / WASD.</param>
+    /// <param name="delta">Physics step duration in seconds.</param>
+    /// <param name="maxTurnRateDeg">Same meaning as in <see cref="RotateToward"/>.</param>
+    /// <param name="backTurnSlowFactor">Same meaning as in <see cref="RotateToward"/>.</param>
+    /// <param name="pivotThresholdDeg">
+    /// Facing difference, in degrees, above which the turn demands an
+    /// in-place pivot rather than resolving as an ordinary same-tick
+    /// rotation. Exactly this value counts as "forward-ish" (no plant) —
+    /// the comparison against the threshold is strict-greater-than.
+    /// </param>
+    /// <returns>The new yaw, the pivot state to persist, and whether movement is currently gated.</returns>
+    public static HeadingStep Step(
+        float currentYaw,
+        PivotState pivot,
+        Vector2 wishDir,
+        double delta,
+        float maxTurnRateDeg,
+        float backTurnSlowFactor,
+        float pivotThresholdDeg)
+    {
+        // Stick released. With no fresh intent to re-aim toward, we can only
+        // keep resolving whatever pivot is already owed (or do nothing).
+        if (wishDir.Length() < WishDirEpsilon)
+        {
+            if (!pivot.HasLatch)
+                return new HeadingStep(currentYaw, pivot, false);
+
+            float rotated = RotateTowardYaw(currentYaw, pivot.LatchedYaw, delta, maxTurnRateDeg, backTurnSlowFactor);
+            bool reached  = MathF.Abs(AngleDiff(rotated, pivot.LatchedYaw)) < AngleEpsilon;
+
+            // Reaching the latched facing on this tick both clears the debt
+            // and immediately un-gates movement — no extra settle tick.
+            return reached
+                ? new HeadingStep(rotated, PivotState.None, false)
+                : new HeadingStep(rotated, pivot, true);
+        }
+
+        // Stick held — derive the desired facing exactly as RotateToward does.
+        float desiredYaw = MathF.Atan2(wishDir.X, wishDir.Y);
+        float diff        = AngleDiff(currentYaw, desiredYaw);
+
+        float thresholdRad = pivotThresholdDeg * MathF.PI / 180f;
+
+        if (!(MathF.Abs(diff) > thresholdRad))
+        {
+            // Forward-ish turn: resolves exactly like RotateToward, and any
+            // pivot debt from a moment ago is forgiven — the stick has moved
+            // back onto a facing the player didn't need to plant for.
+            float rotated = RotateTowardYaw(currentYaw, desiredYaw, delta, maxTurnRateDeg, backTurnSlowFactor);
+            return new HeadingStep(rotated, PivotState.None, false);
+        }
+        else
+        {
+            // Beyond the threshold: re-latch onto the current desiredYaw
+            // every tick the stick is held there, so a moving stick keeps
+            // dragging the pivot target with it rather than freezing on the
+            // first frame's aim.
+            float rotated = RotateTowardYaw(currentYaw, desiredYaw, delta, maxTurnRateDeg, backTurnSlowFactor);
+            bool reached  = MathF.Abs(AngleDiff(rotated, desiredYaw)) < AngleEpsilon;
+
+            return reached
+                ? new HeadingStep(rotated, PivotState.None, false)
+                : new HeadingStep(rotated, new PivotState(true, desiredYaw), true);
+        }
+    }
+
+    /// <summary>
+    /// The unit world-space forward direction (XZ plane) for a given heading —
+    /// the inverse of the Atan2(x, z) convention <see cref="RotateToward"/> uses
+    /// to derive heading from intent. Heading h ⇒ forward (sin h, cos h), so
+    /// MathF.Atan2(Forward(h).X, Forward(h).Y) == h. Yaw 0 faces +Z, matching
+    /// PlayerController.ApplyCosmetics (_mesh.Rotation.Y = Heading): anything
+    /// positioned along this vector sits in front of the player's authoritative —
+    /// and rendered — facing, not their (possibly zero) velocity direction.
+    /// </summary>
+    /// <param name="heading">Heading in radians, Y-rotation, Godot convention.</param>
+    /// <returns>Unit (worldX, worldZ) forward direction.</returns>
+    public static Vector2 Forward(float heading) =>
+        new(MathF.Sin(heading), MathF.Cos(heading));
+
+    // ── Internal helpers ──────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Shared non-linear rotation step toward an arbitrary <paramref name="targetYaw"/> —
+    /// factored out of <see cref="RotateToward"/> so that it and <see cref="Step"/>
+    /// (which rotates toward either the live desiredYaw or a latched pivot
+    /// target) can never drift apart onto two different rate schedules.
+    /// </summary>
+    private static float RotateTowardYaw(
+        float currentYaw,
+        float targetYaw,
+        double delta,
+        float maxTurnRateDeg,
+        float backTurnSlowFactor)
+    {
         // Shortest angular path in [-π, π].
         // Wrapping is important: without it a turn from +π to −π would travel
         // a full 2π arc the wrong way instead of a zero-cost crossing.
-        float diff = AngleDiff(currentYaw, desiredYaw);
+        float diff = AngleDiff(currentYaw, targetYaw);
 
         // Already within epsilon — no movement needed.
         if (MathF.Abs(diff) < AngleEpsilon)
-            return desiredYaw;
+            return targetYaw;
 
         // Non-linear scaling: at diff ≈ 0 the full rate applies; at diff ≈ π
         // only backTurnSlowFactor × maxTurnRateDeg applies. The lerp is driven
@@ -125,22 +269,6 @@ public static class HeadingMath
         // and callers can compare it against Atan2 outputs directly.
         return NormalizeAngle(newYaw);
     }
-
-    /// <summary>
-    /// The unit world-space forward direction (XZ plane) for a given heading —
-    /// the inverse of the Atan2(x, z) convention <see cref="RotateToward"/> uses
-    /// to derive heading from intent. Heading h ⇒ forward (sin h, cos h), so
-    /// MathF.Atan2(Forward(h).X, Forward(h).Y) == h. Yaw 0 faces +Z, matching
-    /// PlayerController.ApplyCosmetics (_mesh.Rotation.Y = Heading): anything
-    /// positioned along this vector sits in front of the player's authoritative —
-    /// and rendered — facing, not their (possibly zero) velocity direction.
-    /// </summary>
-    /// <param name="heading">Heading in radians, Y-rotation, Godot convention.</param>
-    /// <returns>Unit (worldX, worldZ) forward direction.</returns>
-    public static Vector2 Forward(float heading) =>
-        new(MathF.Sin(heading), MathF.Cos(heading));
-
-    // ── Internal helpers ──────────────────────────────────────────────────────
 
     /// <summary>
     /// Signed angular difference from <paramref name="from"/> to

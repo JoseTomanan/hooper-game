@@ -311,4 +311,274 @@ public class HeadingMathTests
         Assert.True(MathF.Abs(len - 1f) < Tol,
             $"Expected unit length for h={heading}, got {len}");
     }
+
+    // ── HeadingMath.Step — flick-to-latch in-place pivot (issue #172) ─────────
+    //
+    // These tests use the #172 retuned backTurnSlowFactor (0.90) rather than
+    // the pre-#172 default (0.35) baked into the RotateToward tests above —
+    // see the updated XML doc on RotateToward's backTurnSlowFactor param.
+
+    private const float StepMaxTurnDeg   = 530f;
+    private const float StepBackTurnSlow = 0.90f;
+    private const float PivotThresholdDeg = 90f;
+    private const double Tick             = 1.0 / 60.0;
+
+    private static Vector2 WishFromYaw(float yaw) => new(MathF.Sin(yaw), MathF.Cos(yaw));
+
+    [Fact]
+    public void Step_FlickThenRelease180_LatchesAndCompletesInAboutOneThirdSecond()
+    {
+        // A single held tick aimed 180° behind, then the stick is released.
+        // The latch must persist through the release and keep driving the
+        // yaw to completion — the flick "sticks" even though input stopped.
+        float currentYaw = 0f;
+        var pivot        = HeadingMath.PivotState.None;
+        Vector2 flickWish = new(0f, -1f); // desiredYaw = π
+
+        // Tick 1: the flick itself (stick held).
+        var step = HeadingMath.Step(currentYaw, pivot, flickWish, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+        Assert.True(step.Pivot.HasLatch);
+        Assert.True(step.IsPivotingInPlace);
+        currentYaw = step.NewYaw;
+        pivot      = step.Pivot;
+
+        double elapsed = Tick;
+        int guardTicks = 0;
+        // Release the stick and keep ticking until the pivot completes.
+        while (pivot.HasLatch && guardTicks < 200)
+        {
+            step = HeadingMath.Step(currentYaw, pivot, Vector2.Zero, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+            currentYaw = step.NewYaw;
+            pivot      = step.Pivot;
+            elapsed   += Tick;
+            guardTicks++;
+
+            if (pivot.HasLatch)
+                Assert.True(step.IsPivotingInPlace);
+        }
+
+        Assert.False(pivot.HasLatch); // completed, not just gave up
+        Assert.False(step.IsPivotingInPlace);
+        Assert.InRange(elapsed, 0.30, 0.42);
+    }
+
+    [Fact]
+    public void Step_FlickReleaseAtExactly90Degrees_DoesNotLatch()
+    {
+        // Exactly at the threshold: forward-ish, no plant. Released stick on
+        // the very next tick freezes the heading where RotateToward would
+        // have left it — today's behavior, unchanged.
+        float currentYaw   = 0f;
+        Vector2 flickWish  = WishFromYaw(90f * MathF.PI / 180f);
+
+        var step = HeadingMath.Step(currentYaw, HeadingMath.PivotState.None, flickWish, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+
+        Assert.False(step.Pivot.HasLatch);
+        Assert.False(step.IsPivotingInPlace);
+
+        var released = HeadingMath.Step(step.NewYaw, step.Pivot, Vector2.Zero, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+        Assert.Equal(step.NewYaw, released.NewYaw);
+        Assert.False(released.IsPivotingInPlace);
+    }
+
+    [Fact]
+    public void Step_FlickReleaseBelow90Degrees_DoesNotLatch()
+    {
+        float currentYaw  = 0f;
+        Vector2 flickWish = WishFromYaw(45f * MathF.PI / 180f);
+
+        var step = HeadingMath.Step(currentYaw, HeadingMath.PivotState.None, flickWish, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+
+        Assert.False(step.Pivot.HasLatch);
+        Assert.False(step.IsPivotingInPlace);
+    }
+
+    [Fact]
+    public void Step_HeldInputAbove90Degrees_PivotsInPlaceUntilFacingReachedThenStops()
+    {
+        // Note: as the pivot progresses, the REMAINING diff to desiredYaw
+        // shrinks — once it drops to ≤ pivotThresholdDeg, IsPivotingInPlace
+        // correctly flips false (movement may begin) even though the yaw
+        // hasn't fully converged yet (per spec: the ≤threshold branch is a
+        // per-tick angle check, not a "did we ever finish" check). So this
+        // test ticks a fixed budget and asserts (a) IsPivotingInPlace was
+        // true at least once while far from target, (b) it eventually
+        // becomes false and stays false, and (c) the yaw fully converges.
+        float currentYaw  = 0f;
+        var pivot         = HeadingMath.PivotState.None;
+        Vector2 wish      = WishFromYaw(170f * MathF.PI / 180f);
+        float desiredYaw  = MathF.Atan2(wish.X, wish.Y);
+
+        bool wasPivoting = false;
+        bool sawUngate   = false;
+        for (int i = 0; i < 200; i++)
+        {
+            var step = HeadingMath.Step(currentYaw, pivot, wish, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+            currentYaw = step.NewYaw;
+            pivot      = step.Pivot;
+
+            if (step.IsPivotingInPlace)
+            {
+                wasPivoting = true;
+                Assert.False(sawUngate, "IsPivotingInPlace re-latched after ungating — should be monotonic for a constant held target");
+            }
+            else
+            {
+                sawUngate = true;
+            }
+        }
+
+        Assert.True(wasPivoting, "Expected IsPivotingInPlace to be true at least once for a 170° held turn");
+        Assert.True(sawUngate, "Expected IsPivotingInPlace to become false before convergence completes");
+        Assert.False(pivot.HasLatch);
+        Assert.Equal(desiredYaw, currentYaw, precision: 4);
+    }
+
+    [Fact]
+    public void Step_HeldInputAtOrBelow90Degrees_NeverPivotsAndMatchesRotateToward()
+    {
+        float stepYaw          = 0f;
+        float rotateTowardYaw  = 0f;
+        var pivot              = HeadingMath.PivotState.None;
+        Vector2 wish           = WishFromYaw(60f * MathF.PI / 180f);
+
+        for (int i = 0; i < 10; i++)
+        {
+            var step = HeadingMath.Step(stepYaw, pivot, wish, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+            Assert.False(step.IsPivotingInPlace);
+            Assert.False(step.Pivot.HasLatch);
+            stepYaw = step.NewYaw;
+            pivot   = step.Pivot;
+
+            rotateTowardYaw = HeadingMath.RotateToward(rotateTowardYaw, wish, Tick, StepMaxTurnDeg, StepBackTurnSlow);
+
+            Assert.Equal(rotateTowardYaw, stepYaw, precision: 6);
+        }
+    }
+
+    [Fact]
+    public void Step_AngleProportionality_LargerPivotsTakeMaterialyMoreTime()
+    {
+        static double TicksToComplete(float diffDeg)
+        {
+            float currentYaw = 0f;
+            var pivot        = HeadingMath.PivotState.None;
+            Vector2 wish     = WishFromYaw(diffDeg * MathF.PI / 180f);
+            int ticks        = 0;
+
+            HeadingMath.HeadingStep step;
+            do
+            {
+                step = HeadingMath.Step(currentYaw, pivot, wish, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+                currentYaw = step.NewYaw;
+                pivot      = step.Pivot;
+                ticks++;
+            } while (pivot.HasLatch && ticks < 300);
+
+            return ticks;
+        }
+
+        double ticks90001 = TicksToComplete(90.0001f);
+        double ticks135    = TicksToComplete(135f);
+        double ticks180    = TicksToComplete(180f);
+
+        // Non-linear schedule — assert monotonicity, not exact ratios.
+        Assert.True(ticks90001 < ticks135, $"{ticks90001} !< {ticks135}");
+        Assert.True(ticks135 < ticks180, $"{ticks135} !< {ticks180}");
+    }
+
+    [Fact]
+    public void Step_ReLatchTracking_ChangingHeldWishDirReaimsLatch()
+    {
+        // Held at 170° for one tick establishes a latch aimed at that yaw;
+        // switching the held wishDir to -170° on the next tick (still beyond
+        // the threshold) must re-aim the latch to the new target, not keep
+        // chasing the stale one.
+        float currentYaw = 0f;
+        Vector2 firstWish = WishFromYaw(170f * MathF.PI / 180f);
+        var step = HeadingMath.Step(currentYaw, HeadingMath.PivotState.None, firstWish, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+        float firstLatch = step.Pivot.LatchedYaw;
+        Assert.True(step.Pivot.HasLatch);
+
+        Vector2 secondWish = WishFromYaw(-170f * MathF.PI / 180f);
+        var step2 = HeadingMath.Step(step.NewYaw, step.Pivot, secondWish, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+        float secondDesired = MathF.Atan2(secondWish.X, secondWish.Y);
+
+        Assert.True(step2.Pivot.HasLatch);
+        Assert.NotEqual(firstLatch, step2.Pivot.LatchedYaw);
+        Assert.Equal(secondDesired, step2.Pivot.LatchedYaw, precision: 4);
+    }
+
+    [Fact]
+    public void Step_MidPivotNewInputAt90OrBelow_CancelsLatchAndResumesNormalRotation()
+    {
+        float currentYaw = 0f;
+        Vector2 flickWish = WishFromYaw(170f * MathF.PI / 180f);
+        var step = HeadingMath.Step(currentYaw, HeadingMath.PivotState.None, flickWish, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+        Assert.True(step.Pivot.HasLatch);
+
+        // Player re-aims to within 90° of the CURRENT (post-tick) heading.
+        Vector2 cancelWish = WishFromYaw(step.NewYaw + 10f * MathF.PI / 180f);
+        var step2 = HeadingMath.Step(step.NewYaw, step.Pivot, cancelWish, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+
+        Assert.False(step2.Pivot.HasLatch);
+        Assert.False(step2.IsPivotingInPlace);
+    }
+
+    [Fact]
+    public void Step_AcrossPiBoundaryDuringPivot_StaysOnShortestPathAndNormalized()
+    {
+        float currentYaw = 0.9f * MathF.PI;
+        var pivot        = HeadingMath.PivotState.None;
+        Vector2 wish     = WishFromYaw(-0.9f * MathF.PI); // just past the ±π seam
+
+        for (int i = 0; i < 60; i++)
+        {
+            var step = HeadingMath.Step(currentYaw, pivot, wish, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+            Assert.InRange(step.NewYaw, -MathF.PI, MathF.PI);
+            currentYaw = step.NewYaw;
+            pivot      = step.Pivot;
+            if (!pivot.HasLatch) break;
+        }
+
+        Assert.False(pivot.HasLatch);
+    }
+
+    [Fact]
+    public void Step_IdenticalTickSequences_ProduceBitIdenticalResults()
+    {
+        static (float yaw, bool hasLatch, float latchedYaw, bool pivoting) RunSequence()
+        {
+            float currentYaw = 0f;
+            var pivot        = HeadingMath.PivotState.None;
+            HeadingMath.HeadingStep step = default;
+
+            float[] sequenceDegs = { 170f, 170f, -170f, 45f, 170f };
+            foreach (float deg in sequenceDegs)
+            {
+                Vector2 wish = WishFromYaw(deg * MathF.PI / 180f);
+                step = HeadingMath.Step(currentYaw, pivot, wish, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+                currentYaw = step.NewYaw;
+                pivot      = step.Pivot;
+            }
+
+            return (currentYaw, pivot.HasLatch, pivot.LatchedYaw, step.IsPivotingInPlace);
+        }
+
+        var a = RunSequence();
+        var b = RunSequence();
+
+        Assert.Equal(a, b);
+    }
+
+    [Fact]
+    public void Step_NoLatchAndZeroWishDir_ReturnsYawUnchanged()
+    {
+        float currentYaw = 1.5f;
+        var step = HeadingMath.Step(currentYaw, HeadingMath.PivotState.None, Vector2.Zero, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+
+        Assert.Equal(currentYaw, step.NewYaw);
+        Assert.False(step.Pivot.HasLatch);
+        Assert.False(step.IsPivotingInPlace);
+    }
 }
