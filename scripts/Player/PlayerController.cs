@@ -214,7 +214,7 @@ public partial class PlayerController : CharacterBody3D
 	/// Applied for the full ActiveFrames duration. Intentionally higher than
 	/// MoveSpeed to create visible separation — that is the point of the move.
 	/// </summary>
-	[Export] public float BurstSpeed { get; set; } = 12.0f;
+	[Export] public float BurstSpeed { get; set; } = 9.0f;
 
 	// ── Authoritative heading (issue #80) ────────────────────────────────────
 
