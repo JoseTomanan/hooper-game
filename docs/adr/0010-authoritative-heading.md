@@ -154,3 +154,68 @@ the game back down.
 This amendment is a tuning-default change, not a structural reversal: the
 server-authoritative, non-linear, integrated-in-`Move()` heading model decided
 above is unchanged. Status remains **Accepted**.
+
+### 2026-07-03 — Flick-to-latch in-place pivot + `BackTurnSlowFactor` re-split (#172)
+
+Issue #172 revisited the 180° back-turn feel again, this time from the human's
+NBA-2K reference rather than a raw-rate complaint: a snap-turn that resolves in
+place, plants the feet, and commits the player for a beat reads more like the
+2K pivot than a uniformly slow turn does. Two changes landed together, both
+extending — not reversing — the model this ADR decided:
+
+1. **A new predicted+reconciled `PivotState`** (`HeadingMath.PivotState` /
+   `HeadingMath.Step`, `scripts/Player/HeadingMath.cs`). A facing change past
+   `PivotThresholdDeg` (new export, default 90°) now *latches*: the player is
+   planted (`IsPivotingInPlace`) every tick from the moment the latch is
+   created until the latched facing is actually reached, re-latching onto a
+   held stick every tick so a moving target keeps dragging the pivot with it.
+   Releasing the stick mid-pivot (a "flick") does not cancel the pivot — it
+   keeps resolving to completion, which is what makes a quick flick-and-release
+   read as a real committed pivot rather than a canceled gesture. `_pivot` is
+   carried on `PlayerController` with **exactly the same treatment `Heading`
+   already has**: advanced inside `Move()`, broadcast on `ReceiveState`
+   alongside `pos/vel/Heading`, and snapped to the authoritative value before
+   the reconciliation replay loop (see `ReconcileFromServer`'s pivot-snap
+   comment, immediately following its `Heading` snap). This is a structural
+   *extension* of the pattern this ADR established, not a new one — no new
+   ADR is warranted for "one more piece of state gets the Heading treatment."
+   Below the threshold, movement is never gated — a turn continues to resolve
+   exactly as `RotateToward` always has.
+
+2. **`BackTurnSlowFactor` re-split 0.35 → 0.90.** Before this issue, a single
+   knob (`BackTurnSlowFactor`) had to carry two jobs at once: "how much slower
+   is a back-turn than a micro-correction" *and* "how legible/committed does
+   a back-turn feel." The new plant-then-pivot gate above now carries the
+   *commitment* read on its own — a planted body that cannot move is
+   unmistakably legible regardless of how fast the yaw itself turns — so the
+   raw rate no longer needs to be as punishing. Raising `BackTurnSlowFactor`
+   to 0.90 (near-linear: a 180° back-turn is now only mildly slower than a
+   micro-correction) combined with the pivot gate brings a full 180° reversal
+   down to **≈0.35 s**, from the pre-#172 figure of ≈0.55 s (itself the 530°/s
+   `MaxTurnRateDeg` amendment above). The net feel is *faster resolution, but
+   now with an honest plant* — arcadeness allowed (per the human's explicit
+   #172 framing, "arcadeness allowed, competitiveness deferred" — see the
+   ADR-0003 amendment below for the full design-authority note), not a return
+   to the pre-ADR-0010 instant-pivot the Alternatives section above rejected:
+   the plant still costs real position (`Velocity` forced to
+   `Vector3.Zero` while `IsPivotingInPlace`), so the back-turn remains a real,
+   observable commitment — the cost just moved from "slow yaw" to "frozen
+   feet," which is the more legible signal of the two.
+
+**Re-proposed and re-rejected alternative: visual-only heading (this ADR's
+Alternative #2).** In #172 triage the human re-raised making heading
+cosmetic-only again — the same alternative rejected above in 2026-06-27 — on
+the theory that a purely client-local pivot animation might be enough now that
+the plant is the primary legibility signal. **Rejected again, for the same
+reasons that stood the first time and one new one:** issue #81's shot-accuracy
+read and #96/#175's steal-timing resolution both still need the server's
+opinion of where the player is actually pointing (Forces #3 above), and #172's
+own pivot-cancel rule (`BeginCommittedMove` clears `_pivot` the instant a
+committed move begins, so a defender cannot exploit a stale pivot latch to
+freeze through a punish window) is itself only enforceable because the pivot
+latch is server state, not a client-local animation flag a tampered client
+could ignore. Heading (and now `_pivot` with it) stays authoritative.
+
+This amendment adds a new predicted+reconciled field and re-tunes a default;
+it does not reverse the Decision or any Alternative rejection above. Status
+remains **Accepted**.
