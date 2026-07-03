@@ -18,9 +18,10 @@ namespace Hooper.Ball.Tests;
 /// </summary>
 public class FlightTerminationTests
 {
-    // Representative court matching BallController's default exports.
-    private static readonly Vector2 Min = new(-4.88f, -1f);
-    private static readonly Vector2 Max = new(4.88f, 11.88f);
+    // Representative court matching BallController's default exports, both of
+    // which derive from CourtBounds.Default{Min,Max} (single source of truth).
+    private static readonly Vector2 Min = CourtBounds.DefaultMin;
+    private static readonly Vector2 Max = CourtBounds.DefaultMax;
     private const float BallRadius = 0.12f;
 
     [Fact]

@@ -66,7 +66,7 @@ public partial class NetworkManager : Node
 	/// (Rim sits at (0, 3.05, 0.3) in Main.tscn) and further out than
 	/// ClientSpawn: the host starts as the offense/ballhandler in the
 	/// half-court 1v1 stack (ADR-0008). Y = 0 matches the floor.
-	/// Tune in the Inspector — court bounds are X ∈ [-4.88, 4.88], Z ∈ [-1.0, 11.88]
+	/// Tune in the Inspector — court bounds are X ∈ [-7.62, 7.62], Z ∈ [-1.0, 11.88]
 	/// (BallController.CourtMin/CourtMax).
 	/// </summary>
 	[Export] public Vector3 HostSpawn { get; set; } = new(0f, 0f, 6f);

@@ -74,11 +74,12 @@ public partial class OobTurnoverTest : Node
     // same-tick ResolvePlayerOutOfBounds call has definitely run.
     private const int VerdictMarginFrames = 3;
 
-    // Beyond CourtMax.X/CourtMin.X (default ±4.88) but well inside the far-
-    // backstop walls (±10) — a realistic "stepped past the sideline" position,
-    // not an extreme deep in the parking lot.
-    private static readonly Vector3 OobPositiveX = new(6.5f, 0f, 5f);
-    private static readonly Vector3 OobNegativeX = new(-6.5f, 0f, 5f);
+    // Beyond CourtMax.X/CourtMin.X (default ±7.62, regulation half-court width
+    // — widened from ±4.88, M8b) but well inside the far-backstop walls
+    // (±10) — a realistic "stepped past the sideline" position, not an
+    // extreme deep in the parking lot.
+    private static readonly Vector3 OobPositiveX = new(9.0f, 0f, 5f);
+    private static readonly Vector3 OobNegativeX = new(-9.0f, 0f, 5f);
 
     private string _scenario = "held-turnover";
 

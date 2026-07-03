@@ -30,9 +30,10 @@ public class FlightTerminationIntegrationTests
     private static readonly Vector3 BoardCenter = new(0, 3.5f, 0.3f);
     private static readonly Vector3 BoardNormal = new(0, 0, -1);
 
-    // Court matching BallController's default exports.
-    private static readonly Vector2 CourtMin = new(-4.88f, -1f);
-    private static readonly Vector2 CourtMax = new(4.88f, 11.88f);
+    // Court matching BallController's default exports, both of which derive
+    // from CourtBounds.Default{Min,Max} (single source of truth).
+    private static readonly Vector2 CourtMin = CourtBounds.DefaultMin;
+    private static readonly Vector2 CourtMax = CourtBounds.DefaultMax;
 
     private static RimBackboard MakeRim() => new(
         RimCenter, RimRadius, BallRadius, 0.65f,
