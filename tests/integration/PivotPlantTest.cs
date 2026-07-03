@@ -151,8 +151,8 @@ public partial class PivotPlantTest : Node
         // OobTurnoverTest's wall-placement check uses for BallController).
         var p = new PlayerController();
 
-        bool backTurnOk = Mathf.IsEqualApprox(p.BackTurnSlowFactor, 0.90f);
-        bool maxTurnOk = Mathf.IsEqualApprox(p.MaxTurnRateDeg, 530f);
+        bool backTurnOk = Mathf.IsEqualApprox(p.BackTurnSlowFactor, 0.95f);
+        bool maxTurnOk = Mathf.IsEqualApprox(p.MaxTurnRateDeg, 900f);
         bool thresholdOk = Mathf.IsEqualApprox(p.PivotThresholdDeg, 90f);
         bool accelOk = Mathf.IsEqualApprox(p.Accel, 45f);
         bool decelOk = Mathf.IsEqualApprox(p.Decel, 70f);
@@ -160,13 +160,13 @@ public partial class PivotPlantTest : Node
 
         if (pass)
         {
-            GD.Print("[pivot-plant] PASS exports — BackTurnSlowFactor=0.90, MaxTurnRateDeg=530, " +
+            GD.Print("[pivot-plant] PASS exports — BackTurnSlowFactor=0.95, MaxTurnRateDeg=900, " +
                      "PivotThresholdDeg=90, Accel=45, Decel=70.");
         }
         else
         {
-            Fail($"exports mismatch: BackTurnSlowFactor={p.BackTurnSlowFactor} (want 0.90), " +
-                 $"MaxTurnRateDeg={p.MaxTurnRateDeg} (want 530), PivotThresholdDeg={p.PivotThresholdDeg} (want 90), " +
+            Fail($"exports mismatch: BackTurnSlowFactor={p.BackTurnSlowFactor} (want 0.95), " +
+                 $"MaxTurnRateDeg={p.MaxTurnRateDeg} (want 900), PivotThresholdDeg={p.PivotThresholdDeg} (want 90), " +
                  $"Accel={p.Accel} (want 45), Decel={p.Decel} (want 70).");
         }
         Finish(pass ? 0 : 1);
@@ -225,10 +225,11 @@ public partial class PivotPlantTest : Node
         // handling needed since the target itself (π) is already normalized.
         bool headingReached = Mathf.Abs(_player.Heading - Mathf.Pi) < HeadingEpsilon;
         bool stayedPlanted = _pivotSeenActive && _maxDeviationDuringPivot < StillEpsilon;
-        // Generous band (0.25 - 0.50 s) per issue #172's acceptance criterion —
-        // engine tick jitter and the non-linear rate's integration make an
-        // exact 0.35s assertion too tight for CI.
-        bool withinBand = secondsToComplete >= 0.25 && secondsToComplete <= 0.50;
+        // Generous band (0.15 - 0.30 s) per issue #172's acceptance criterion,
+        // as retuned by a #172 follow-up to the ≈0.20 s target (MaxTurnRateDeg 900,
+        // BackTurnSlowFactor 0.95) — engine tick jitter and the non-linear
+        // rate's integration make an exact 0.20 s assertion too tight for CI.
+        bool withinBand = secondsToComplete >= 0.15 && secondsToComplete <= 0.30;
 
         bool pass = headingReached && stayedPlanted && withinBand;
 
@@ -239,7 +240,7 @@ public partial class PivotPlantTest : Node
         }
         else
         {
-            Fail($"flick-180 expected heading≈π, maxDeviation<{StillEpsilon}, time in [0.25,0.50]s; got " +
+            Fail($"flick-180 expected heading≈π, maxDeviation<{StillEpsilon}, time in [0.15,0.30]s; got " +
                  $"heading={_player.Heading:F4}, maxDeviation={_maxDeviationDuringPivot:F5}, " +
                  $"ticks={ticksToComplete} ({secondsToComplete:F3}s), headingReached={headingReached}, " +
                  $"stayedPlanted={stayedPlanted}, withinBand={withinBand}.");
@@ -375,7 +376,7 @@ public partial class PivotPlantTest : Node
         }
 
         // Once the pivot is confirmed underway (a few ticks in, well before
-        // its ~0.35s natural completion), fire a real "def_steal" press — the
+        // its ~0.20s natural completion), fire a real "def_steal" press — the
         // same production input SampleMoveInput reads — while NOT holding the
         // ball (no "ball" group node exists, so IsBallHolder is false).
         if (!_stealPressed && _frame == _flickStartFrame + 4)
@@ -424,7 +425,7 @@ public partial class PivotPlantTest : Node
         //
         // +2 is asserted here as the earliest correct frame, not padded further,
         // so the test stays a meaningful proof that the cancel is near-immediate
-        // (nowhere close to the ~21-tick natural pivot completion).
+        // (nowhere close to the ~12-tick natural pivot completion).
         if (_stealPressed && _frame == _stealPressFrame + 2)
         {
             bool cancelled = !_player.IsPivotingInPlace;

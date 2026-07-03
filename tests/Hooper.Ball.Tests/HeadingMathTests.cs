@@ -314,9 +314,14 @@ public class HeadingMathTests
 
     // ── HeadingMath.Step — flick-to-latch in-place pivot (issue #172) ─────────
     //
-    // These tests use the #172 retuned backTurnSlowFactor (0.90) rather than
-    // the pre-#172 default (0.35) baked into the RotateToward tests above —
-    // see the updated XML doc on RotateToward's backTurnSlowFactor param.
+    // These tests exercise the pure Step state machine with representative
+    // constants (MaxTurnDeg 530, backTurnSlowFactor 0.90) — chosen to probe
+    // the latch/plant LOGIC, NOT to mirror the current production exports,
+    // which a #172 follow-up feel pass moved on to 900 / 0.95 for a ≈0.20 s
+    // 180° reversal. The shipped export values (and the resulting timing) are
+    // pinned separately by tests/integration/PivotPlantTest.cs; these
+    // function-level assertions hold for any factor in (0, 1] and any
+    // positive rate, so they stay valid regardless of that tuning.
 
     private const float StepBackTurnSlow = 0.90f;
     private const float PivotThresholdDeg = 90f;
