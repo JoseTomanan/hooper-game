@@ -100,7 +100,7 @@ namespace Hooper.Player;
 /// </summary>
 public partial class PlayerController : CharacterBody3D
 {
-	// ── Movement tuning (unchanged from M1a) ─────────────────────────────────
+	// ── Movement tuning (issue #183 retune of the M1a values) ────────────────
 
 	/// <summary>Top ground speed in metres/second.</summary>
 	[Export] public float MoveSpeed { get; set; } = 6.0f;
@@ -112,15 +112,16 @@ public partial class PlayerController : CharacterBody3D
 	/// differences (micro-corrections). Scaled down toward BackTurnSlowFactor
 	/// as the angle widens to 180° (see HeadingMath.RotateToward).
 	///
-	/// Default 530 °/s: a full 180° back-turn takes ≈ 0.55 s — this is the
-	/// integrated time of the non-linear rate schedule (rate accelerates as the
-	/// diff closes), NOT the constant-rate 180/(rate×f) estimate, which
-	/// overestimates the time. A 20° micro-correction takes ≈ 0.05 s —
-	/// effectively instant to the player. Raising this scales EVERY turn
-	/// proportionally and keeps the reversal ~3× slower than a micro-turn, so
-	/// the back-turn stays a readable commitment (ADR-0003); it is the knob to
-	/// reach for when "turning feels too slow". (To instead flatten that
-	/// commitment — speed up only the reversal — raise BackTurnSlowFactor.)
+	/// Default 530 °/s at the shipped BackTurnSlowFactor of 0.90: a full 180°
+	/// back-turn takes ≈ 0.35 s — this is the integrated time of the non-linear
+	/// rate schedule (rate accelerates as the diff closes), NOT the constant-rate
+	/// 180/(rate×f) estimate, which overestimates the time. A 20° micro-correction
+	/// takes ≈ 0.05 s — effectively instant to the player, so the reversal is now
+	/// only mildly slower than a micro-turn (the plant-then-pivot gate at
+	/// <see cref="PivotThresholdDeg"/> carries the "commitment" read instead — see
+	/// HeadingMath.Step's doc). Raising this scales EVERY turn proportionally; it
+	/// is the knob to reach for when "turning feels too slow" overall. (To instead
+	/// change only the reversal's relative slowdown, adjust BackTurnSlowFactor.)
 	/// </summary>
 	[Export] public float MaxTurnRateDeg { get; set; } = 530f;
 
@@ -129,21 +130,43 @@ public partial class PlayerController : CharacterBody3D
 	/// The effective rate lerps continuously from MaxTurnRateDeg at diff=0°
 	/// to MaxTurnRateDeg × BackTurnSlowFactor at diff=180° — no sharp gear-change.
 	///
-	/// 0.35: a back-turn is about 3× slower than a small correction, making
-	/// a reverse-pivot a real readable commitment (ADR-0003) while micro-aim
-	/// still feels near-instant. Values closer to 1.0 approach linear (no
-	/// slowdown); values closer to 0 approach a frozen back-turn.
+	/// 0.90 (issue #172 retune, up from the pre-#172 default of 0.35): a
+	/// back-turn is now only mildly slower than a small correction — the raw
+	/// rate no longer has to carry the "back-turn is a commitment" read on
+	/// its own, because <see cref="PivotThresholdDeg"/>'s plant-then-pivot
+	/// gate now carries that commitment instead (see HeadingMath.Step's doc).
+	/// Combined, a full 180° reversal comes down to ≈0.35 s (from ≈0.55 s).
+	/// Values closer to 1.0 approach linear (no slowdown); values closer to
+	/// 0 approach a frozen back-turn.
 	/// </summary>
-	[Export] public float BackTurnSlowFactor { get; set; } = 0.35f;
+	[Export] public float BackTurnSlowFactor { get; set; } = 0.90f;
 
-	/// <summary>Ground acceleration in m/s².</summary>
-	[Export] public float Accel { get; set; } = 30.0f;
+	/// <summary>
+	/// Facing difference, in degrees, above which a turn demands the player
+	/// plant their feet and pivot in place before moving, rather than
+	/// resolving as an ordinary same-tick rotation (issue #172,
+	/// HeadingMath.Step). 90° default: anything up to a quarter-turn is
+	/// "forward-ish" and never gates movement; a flick past that — including
+	/// a full reverse — is a committed read the opponent can see and punish
+	/// (ADR-0003), not a free instant snap-turn.
+	/// </summary>
+	[Export] public float PivotThresholdDeg { get; set; } = 90f;
+
+	/// <summary>
+	/// Ground acceleration in m/s². 45 (issue #183 retune, up from the M1a
+	/// default of 30): 0 → top speed in ≈ 0.13 s instead of 0.20 s — the
+	/// NBA-2K-style snappier start the human picked for the arcade-relaxed
+	/// feel pass (same relaxation as #172). Human feel sign-off pending.
+	/// </summary>
+	[Export] public float Accel { get; set; } = 45.0f;
 
 	/// <summary>
 	/// Ground deceleration in m/s². Higher than Accel intentionally —
-	/// that asymmetry is where "change of pace" lives (ADR-0003).
+	/// that asymmetry is where "change of pace" lives (ADR-0003) and the
+	/// #183 retune (45 → 70; full stop in ≈ 0.086 s) deliberately preserves
+	/// the ratio so a sudden stop still reads as a change of pace.
 	/// </summary>
-	[Export] public float Decel { get; set; } = 45.0f;
+	[Export] public float Decel { get; set; } = 70.0f;
 
 	// ── Reconciliation tuning ─────────────────────────────────────────────────
 
@@ -196,7 +219,8 @@ public partial class PlayerController : CharacterBody3D
 
 	/// <summary>
 	/// Server-authoritative heading in radians (Y-rotation, Godot convention).
-	/// Updated every tick inside Move() via HeadingMath.RotateToward —
+	/// Updated every tick inside Move() via HeadingMath.Step (issue #172's
+	/// flick-to-latch pivot wrapper around the RotateToward rate schedule) —
 	/// the same shared step used for prediction, server authority, and
 	/// reconciliation replay (ADR-0002). Broadcast in ReceiveState alongside
 	/// pos/vel; the client replays it during reconciliation exactly as pos/vel.
@@ -208,6 +232,36 @@ public partial class PlayerController : CharacterBody3D
 	/// is actually pointing when the shot releases.
 	/// </summary>
 	public float Heading { get; private set; }
+
+	/// <summary>
+	/// Server-authoritative in-place-pivot latch (issue #172), predicted +
+	/// reconciled with EXACTLY the same treatment as <see cref="Heading"/>:
+	/// updated every tick inside Move() via HeadingMath.Step, broadcast on
+	/// ReceiveState, and snapped to the authoritative value before the
+	/// reconciliation replay loop so the replay re-evolves it forward
+	/// deterministically rather than force-matching a stale broadcast every
+	/// tick (see ReconcileFromServer, and the NETCODE LAW note there).
+	/// </summary>
+	private HeadingMath.PivotState _pivot = HeadingMath.PivotState.None;
+
+	/// <summary>
+	/// True while the player is planted mid-pivot and Move() must not advance
+	/// position (a flick or held turn past <see cref="PivotThresholdDeg"/>
+	/// that hasn't yet reached its latched facing). Exposed read-only for the
+	/// deferred animation layer (#184) to drive a plant/pivot pose; movement
+	/// and netcode do not read it back — <see cref="_pivot"/> alone is what
+	/// Move() consults.
+	///
+	/// Deliberately a COMPUTED property, not its own stored+set field: per
+	/// HeadingMath.Step's contract every one of its return branches sets
+	/// IsPivotingInPlace exactly equal to Pivot.HasLatch, so deriving it here
+	/// keeps the two impossible to desync — a separate stored bool would need
+	/// to be re-set by hand at every place _pivot is snapped from the network
+	/// (ReconcileFromServer's pre-replay snap, TickClientRemotePlayer's
+	/// display adoption), and missing one of those would leave a stale value
+	/// exactly on the tick that matters most (an empty-replay reconcile).
+	/// </summary>
+	public bool IsPivotingInPlace => _pivot.HasLatch;
 
 	// ── Authoritative ball-hand (M9, issue #83, ADR-0012) ─────────────────────
 
@@ -360,6 +414,15 @@ public partial class PlayerController : CharacterBody3D
 	/// treatment to _serverPos/_serverVel (ADR-0002).
 	/// </summary>
 	private float _serverHeading;
+
+	/// <summary>
+	/// Authoritative pivot-latch state from the latest server broadcast
+	/// (issue #172) — the exact same staging role _serverHeading plays.
+	/// Consumed by ReconcileFromServer's pre-replay snap (own player) and by
+	/// TickClientRemotePlayer's display adoption (remote copy).
+	/// </summary>
+	private bool _serverPivotHasLatch;
+	private float _serverPivotLatchedYaw;
 
 	/// <summary>
 	/// Authoritative committed-move phase received from the server, staged for
@@ -668,9 +731,16 @@ public partial class PlayerController : CharacterBody3D
 		// as its own trailing bool (not packed into an existing int slot) so a
 		// future positional edit to this already enum-as-int-heavy signature
 		// can't silently transpose it with handSide (see ReceiveState's doc).
+		// (#172) pivotHasLatch/pivotLatchedYaw appended AFTER that, as their
+		// own distinct bool+float pair (not reusing handSide's int slot or
+		// heading's float slot) for the same transposition-safety reason —
+		// two same-typed trailing params next to unrelated ones is exactly
+		// the positional-arg fragility this file's ReceiveState doc already
+		// warns about; keeping them last and together limits the blast radius
+		// of a future edit to one contiguous pair.
 		Rpc(MethodName.ReceiveState, 0, GlobalPosition, Velocity,
 			(int)_machine.Phase, _machine.FrameInPhase, MoveIdOf(_machine.CurrentMove), MoveParamOf(_machine.CurrentMove),
-			Heading, (int)HandSide, _machine.WasRecoveryEnteredEarly);
+			Heading, (int)HandSide, _machine.WasRecoveryEnteredEarly, _pivot.HasLatch, _pivot.LatchedYaw);
 	}
 
 	/// <summary>
@@ -698,9 +768,10 @@ public partial class PlayerController : CharacterBody3D
 		// the committed-move state and heading piggybacked on the same broadcast
 		// (see ReceiveState below for the payload rationale). (#175) Same
 		// trailing WasRecoveryEnteredEarly bool as TickServerOwnPlayer's broadcast.
+		// (#172) Same trailing pivotHasLatch/pivotLatchedYaw pair too.
 		Rpc(MethodName.ReceiveState, _serverAckedSeq, GlobalPosition, Velocity,
 			(int)_machine.Phase, _machine.FrameInPhase, MoveIdOf(_machine.CurrentMove), MoveParamOf(_machine.CurrentMove),
-			Heading, (int)HandSide, _machine.WasRecoveryEnteredEarly);
+			Heading, (int)HandSide, _machine.WasRecoveryEnteredEarly, _pivot.HasLatch, _pivot.LatchedYaw);
 	}
 
 	/// <summary>
@@ -774,6 +845,11 @@ public partial class PlayerController : CharacterBody3D
 		// Setting it here ensures ApplyCosmetics displays the correct
 		// authoritative facing on the opponent's model.
 		Heading = _serverHeading;
+		// Same for the pivot latch (#172): the remote copy never runs Move(),
+		// so it has no local HeadingMath.Step to derive it from — adopting the
+		// broadcast value directly is what lets IsPivotingInPlace (computed
+		// from _pivot) drive a future opponent-plant animation (#184).
+		_pivot = new HeadingMath.PivotState(_serverPivotHasLatch, _serverPivotLatchedYaw);
 		// Same for the ball-hand (M9, #83): the remote copy never simulates the
 		// swap, so it adopts the broadcast value — this is how the opponent's
 		// crossover hand-switch renders on your screen (BallController.HandSign
@@ -821,6 +897,40 @@ public partial class PlayerController : CharacterBody3D
 
 		_serverAckedSeq = seq;
 		_pendingInput   = new Vector2(inputX, inputY);
+	}
+
+	/// <summary>
+	/// Starts a committed move on <see cref="_machine"/> and — only if it
+	/// actually started — cancels any in-progress in-place pivot (issue #172).
+	///
+	/// This is the ONE shared code path every _machine.Begin(...) call site in
+	/// this file must go through instead of calling Begin() directly, so the
+	/// pivot-cancel rule is enforced identically regardless of which role is
+	/// starting the move: the server's own player and the owning client's
+	/// local prediction both reach it via SampleMoveInput; the server's copy
+	/// of a remote player reaches it via RequestBeginMove. Because it's the
+	/// same code running on both server and client — not a value carried over
+	/// the network — server and client agree on "a pivot was cancelled" on
+	/// the same tick the move begins, with no RTT needed to converge.
+	///
+	/// Gated on Begin()'s return value (not called unconditionally before it)
+	/// because Begin() silently no-ops when the move is illegal in the current
+	/// phase (e.g. still mid-Recovery) — an illegal attempt must not cancel a
+	/// legitimately in-progress pivot.
+	///
+	/// A committed move plants and freezes Heading for its whole duration
+	/// (TickCommittedMoveBehavior skips Move() entirely), so there is nothing
+	/// left for a stale pivot latch to resolve against once the move starts;
+	/// clearing it here rather than leaving it to silently resume after
+	/// Recovery is what makes the burst fire from the CURRENT Heading, not an
+	/// unrelated facing debt inherited from before the move (HandStateResolver.
+	/// BurstWorldDir already reads Heading directly — no change needed there).
+	/// </summary>
+	private bool BeginCommittedMove(CommittedMove move)
+	{
+		if (!_machine.Begin(move)) return false;
+		_pivot = HeadingMath.PivotState.None;
+		return true;
 	}
 
 	/// <summary>
@@ -889,14 +999,14 @@ public partial class PlayerController : CharacterBody3D
 		if (moveId == "crossover")
 			// param is the body-relative flick sign (M9, #85) — the world burst
 			// direction is derived from Heading when the move reaches Active.
-			_machine.Begin(new Crossover(burstDirection: param));
+			BeginCommittedMove(new Crossover(burstDirection: param));
 		else if (moveId == "hesitation")
-			_machine.Begin(new Hesitation());
+			BeginCommittedMove(new Hesitation());
 		else if (moveId == "jumpshot")
 		{
 			// Capture the server-authoritative pre-plant speed at begin for the
 			// movement scatter penalty (#137) — see ShotInitiationSpeed.
-			if (_machine.Begin(new JumpShot()))
+			if (BeginCommittedMove(new JumpShot()))
 				CaptureShotInitiationSpeed();
 		}
 		else if (moveId == "steal")
@@ -907,7 +1017,7 @@ public partial class PlayerController : CharacterBody3D
 			// only Begin), so a client that sends "steal" while still in Recovery
 			// gets a silent no-op — Begin() returns false and nothing happens.
 			HandSide target = param > 0.5f ? HandSide.Right : HandSide.Left;
-			_machine.Begin(new StealMove(target));
+			BeginCommittedMove(new StealMove(target));
 		}
 		// Unrecognized moveId: silently ignored. A malformed/forged moveId
 		// from a tampered client simply does nothing.
@@ -1005,13 +1115,21 @@ public partial class PlayerController : CharacterBody3D
 	/// It feeds ReconcileFromServer's Step 0.5 (ShouldForceRecovery): the fix
 	/// for the OWN client's Active prediction never learning that the server
 	/// resolved this move's Active phase early (e.g. a successful steal).
+	///
+	/// (#172) pivotHasLatch/pivotLatchedYaw are the authoritative in-place-
+	/// pivot latch, same UnreliableOrdered snapshot properties as heading:
+	/// staged here, then snapped into _pivot pre-replay in ReconcileFromServer
+	/// (own player) or adopted directly for display in TickClientRemotePlayer
+	/// (remote copy) — never force-matched every tick, per this file's
+	/// standing snap-then-replay reconciliation law (see that method's
+	/// Heading-snap comment).
 	/// </summary>
 	[Rpc(MultiplayerApi.RpcMode.Authority,
 		 CallLocal = false,
 		 TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
 	private void ReceiveState(int ackSeq, Vector3 pos, Vector3 vel,
 		int movePhase, int frameInPhase, string moveId, float moveParam, float heading, int handSide,
-		bool endedActiveEarly)
+		bool endedActiveEarly, bool pivotHasLatch, float pivotLatchedYaw)
 	{
 		_serverPos       = pos;
 		_serverVel       = vel;
@@ -1029,6 +1147,9 @@ public partial class PlayerController : CharacterBody3D
 		// as pos/vel — fine, since the replay loop catches the own player up
 		// and the remote player displays the latest received value.
 		_serverHeading   = heading;
+		// (#172) See _serverPivotHasLatch/_serverPivotLatchedYaw's field doc.
+		_serverPivotHasLatch   = pivotHasLatch;
+		_serverPivotLatchedYaw = pivotLatchedYaw;
 		// (#175) See _serverEndedActiveEarly's field doc — level-triggered,
 		// so overwriting every broadcast (even a redundant "still true") is
 		// correct and required for the packet-loss robustness that field relies on.
@@ -1187,6 +1308,23 @@ public partial class PlayerController : CharacterBody3D
 		// (e.g. after a large turn where the non-linear rate produces
 		// per-tick differences that accumulate over unacknowledged ticks).
 		Heading = authHeading;
+
+		// (#172) Same pre-replay snap for the pivot latch as Heading immediately
+		// above — IsPivotingInPlace is a computed readout of _pivot.HasLatch
+		// (see its doc), so this single assignment also makes it correct for
+		// this same tick even when the replay buffer below is EMPTY (i.e. every
+		// input has already been acked): with no snap here, an idle/ack'd-up
+		// client would otherwise keep IsPivotingInPlace pinned to whatever its
+		// last locally-predicted Move() call left it at, silently drifting from
+		// the server's opinion. Note this rides the same accepted trade-off
+		// Heading already carries into the replay loop below: a buffered input
+		// whose real-time tick had a committed move Active would have skipped
+		// Move() entirely (TickCommittedMoveBehavior instead) but is replayed
+		// through Move() here regardless (see TickClientOwnPlayer's "Step 3 of
+		// ReconcileFromServer replays ... through Move() only" comment) — a
+		// pre-existing, _smoothOffset-covered positional trade-off that _pivot
+		// now inherits rather than introduces.
+		_pivot = new HeadingMath.PivotState(_serverPivotHasLatch, _serverPivotLatchedYaw);
 
 		// Step 3: replay unacknowledged inputs using the fixed physics timestep.
 		// The server simulated each of these at the same fixed rate, so using
@@ -1416,10 +1554,10 @@ public partial class PlayerController : CharacterBody3D
 				// (TickCommittedMoveBehavior), so the burst follows the body's
 				// facing rather than a fixed screen axis. The wire param is the
 				// same single float RequestBeginMove already speaks.
-				if (_machine.Begin(new Crossover(flickSign)) && !isServer)
+				if (BeginCommittedMove(new Crossover(flickSign)) && !isServer)
 					RpcId(1, MethodName.RequestBeginMove, "crossover", flickSign);
 			}
-			else if (_machine.Begin(new Hesitation()) && !isServer)
+			else if (BeginCommittedMove(new Hesitation()) && !isServer)
 			{
 				RpcId(1, MethodName.RequestBeginMove, "hesitation", 0f);
 			}
@@ -1436,7 +1574,7 @@ public partial class PlayerController : CharacterBody3D
 		// BallController.CheckJumpShotRelease reads via JustReleasedJumpShot.
 		BallController ball = GetBall();
 		if (ball != null && Input.IsActionJustPressed(ball.ShootAction) && IsBallHolder
-			&& _machine.Begin(new JumpShot()))
+			&& BeginCommittedMove(new JumpShot()))
 		{
 			// Capture the pre-plant locomotion speed NOW — Startup zeroes Velocity,
 			// so the movement scatter penalty must read speed at shot initiation,
@@ -1463,7 +1601,7 @@ public partial class PlayerController : CharacterBody3D
 		if (Input.IsActionJustPressed("def_steal") && !IsBallHolder)
 		{
 			HandSide target = aim.X > 0f ? HandSide.Right : HandSide.Left;
-			if (_machine.Begin(new StealMove(target)) && !isServer)
+			if (BeginCommittedMove(new StealMove(target)) && !isServer)
 				RpcId(1, MethodName.RequestBeginMove, "steal", (float)(int)target);
 		}
 
@@ -1590,24 +1728,43 @@ public partial class PlayerController : CharacterBody3D
 	/// </summary>
 	public void Move(Vector2 inputDir, double delta)
 	{
-		// Map 2D intent onto the ground plane. -Z is "forward" in Godot.
-		// World-space, not camera-relative — so the server can replay it
-		// without knowing each client's camera orientation (ADR-0002).
-		Vector3 wishDir = new Vector3(inputDir.X, 0.0f, inputDir.Y);
-		// The Accel/Decel asymmetry ("change of pace", ADR-0003) lives in
-		// MovementMath now (issue #37) so it's unit-testable without a
-		// running Godot instance — this call is behavior-identical to the
-		// inline ComputeVelocity it replaced.
-		Velocity = MovementMath.ComputeVelocity(Velocity, wishDir, delta, MoveSpeed, Accel, Decel);
+		// Advance the authoritative heading — and the in-place-pivot latch it
+		// now carries (issue #172) — toward inputDir at a bounded non-linear
+		// rate BEFORE velocity, because velocity below depends on whether this
+		// step says the player is currently planted. HeadingMath.Step is pure,
+		// so this introduces no role-checks or network calls in violation of
+		// the "keep Move() pure" contract, and — placed here inside the shared
+		// motion step — it replays identically on the server, the client
+		// prediction, and the reconciliation replay loop without any extra
+		// code paths.
+		HeadingMath.HeadingStep step = HeadingMath.Step(
+			Heading, _pivot, inputDir, delta, MaxTurnRateDeg, BackTurnSlowFactor, PivotThresholdDeg);
+		Heading = step.NewYaw;
+		_pivot  = step.Pivot;
 
-		// Advance the authoritative heading toward wishDir at a bounded
-		// non-linear rate (issue #80, ADR-0010). Placed here — inside the
-		// shared motion step — so it is replayed identically on the server,
-		// the client prediction, and the reconciliation replay loop without
-		// any extra code paths. HeadingMath.RotateToward is pure, so this
-		// introduces no role-checks or network calls in violation of the
-		// "keep Move() pure" contract.
-		Heading = HeadingMath.RotateToward(Heading, inputDir, delta, MaxTurnRateDeg, BackTurnSlowFactor);
+		if (step.IsPivotingInPlace)
+		{
+			// Feet planted mid-pivot: zero displacement is the acceptance
+			// criterion (issue #172) — a committed plant-and-turn must cost
+			// real position, not just a facing delay. MovementMath.ComputeVelocity
+			// is intentionally NOT called on this branch (it must not change).
+			// Zeroing the whole Vector3 (not just X/Z) is safe here: this
+			// controller applies no gravity and never sets Velocity.Y anywhere
+			// (a top-down half-court capsule, not a jumping character).
+			Velocity = Vector3.Zero;
+		}
+		else
+		{
+			// Map 2D intent onto the ground plane. -Z is "forward" in Godot.
+			// World-space, not camera-relative — so the server can replay it
+			// without knowing each client's camera orientation (ADR-0002).
+			Vector3 wishDir = new Vector3(inputDir.X, 0.0f, inputDir.Y);
+			// The Accel/Decel asymmetry ("change of pace", ADR-0003) lives in
+			// MovementMath now (issue #37) so it's unit-testable without a
+			// running Godot instance — this call is behavior-identical to the
+			// inline ComputeVelocity it replaced.
+			Velocity = MovementMath.ComputeVelocity(Velocity, wishDir, delta, MoveSpeed, Accel, Decel);
+		}
 
 		MoveAndSlide();
 	}

@@ -9,6 +9,11 @@
   (the right stick is a binary L/R trigger, not an analog aim) and the design note
   that *combat-sport feints do not apply to dribbling*. See *Right-stick is a
   binary trigger* and *Feints vs. hesitation* below.
+- **Refined:** 2026-07-03 (#172) — human-authorized, bounded relaxation of the
+  back-turn legibility requirement for the movement-stick pivot specifically:
+  the commitment read moved from raw turn-rate cost into the plant-then-pivot
+  gate itself. See *Back-turn legibility relaxed for the movement-stick pivot*
+  below; cross-linked with the ADR-0010 amendment of the same date.
 - **Superseded-by:** —
 
 ---
@@ -126,6 +131,42 @@ exit with the left stick), *not* a `Feint()` of a crossover.
 `Feint()` is **kept for now** (it is wired and harmless) but is flagged here as
 **non-realistic and slated for reconsideration** — do not build new dribble
 mechanics on top of the recall model.
+
+### Back-turn legibility relaxed for the movement-stick pivot (#172)
+
+The *Frame legibility is a competitive requirement* section above ties
+legibility directly to raw commitment cost — historically, "slow" was the only
+knob the back-turn had, via ADR-0010's non-linear turn rate. Issue #172 (human
+design call, exercised under ADR-0014's design authority) re-examined that
+back-turn against the *NBA 2K* pivot rather than a pure-realism or pure-esport
+reference, and made a bounded, explicit trade: **arcadeness allowed,
+competitiveness deferred**, scoped narrowly to the movement-stick reverse-pivot.
+
+What changed and what didn't:
+
+- `BackTurnSlowFactor` moved from 0.35 → 0.90 (near-linear), so the raw yaw
+  rate itself is no longer the primary legibility carrier for a back-turn.
+- In its place, `HeadingMath.Step`'s new flick-to-latch **plant-then-pivot
+  gate** (ADR-0010's #172 amendment) now carries the commitment read: a facing
+  change past `PivotThresholdDeg` (90°) plants the feet — zero displacement,
+  `Velocity` forced to `Vector3.Zero` — for the pivot's whole duration, and a
+  committed move (e.g. a defender's steal) cancels an in-progress pivot rather
+  than letting it silently coexist with a punish window.
+- The result is a **faster-resolving but still honestly committed** pivot
+  (≈0.35 s full 180°, down from ≈0.55 s) — not the pre-ADR-0010 *instant*
+  pivot this ADR's Context section names as the original arcade-decoupling
+  problem. The plant is still a real, server-authoritative, observable cost;
+  only *which mechanism* carries that cost changed (frozen feet, not slow yaw).
+
+This is deliberately scoped to the **movement-stick reverse-pivot only**. It
+does not touch the right-stick binary-trigger model, the no-flow-cancel rule
+for committed "break" moves, or the Startup/Active/Recovery frame-data
+contract for crossovers, hesitations, jump shots, or defensive reads — those
+retain their full, un-relaxed legibility requirement. A request to extend this
+relaxation to any other committed move contradicts this note's scope; it does
+not refine it. See the ADR-0010 amendment of the same date for the mechanical
+detail (`PivotState`, the plant gate, and the re-rejection of visual-only
+heading) this note's design-authority record complements.
 
 ## Consequences
 
