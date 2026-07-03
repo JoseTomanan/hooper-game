@@ -1613,9 +1613,20 @@ public partial class PlayerController : CharacterBody3D
 		// flick is exactly one GestureKind, so this never double-fires with the
 		// crossover branch above. The machine enforces the feint-window guard;
 		// false return is silent.
-		bool feintInput = Input.IsActionJustPressed("move_feint")
-			|| gesture.Kind == GestureKind.Feint;
-		if (feintInput && _machine.Feint() && !isServer)
+		//
+		// Routed through FeintGateResolver (bug fix, /diagnose 2026-07-03): the
+		// gesture-sourced Feint is ambiguous — it fires from ANY quick aim-stick
+		// flick-and-return, unrelated to which move is running. For Crossover/
+		// Hesitation that free abort is harmless, but a JumpShot's feint is a
+		// pump-fake that SILENTLY consumes the ball release (Feint() never sets
+		// JustEnteredActive), while the windup animation plays regardless
+		// (MoveAnimResolver reads Phase alone) — so an incidental stick flick
+		// while shooting read as "I pressed shoot and nothing happened." The
+		// gate withholds the gesture (but never the explicit key) from an
+		// in-progress JumpShot; see FeintGateResolver's doc for the full reasoning.
+		bool shouldFeint = FeintGateResolver.ShouldFeint(
+			Input.IsActionJustPressed("move_feint"), gesture.Kind, _machine.CurrentMove);
+		if (shouldFeint && _machine.Feint() && !isServer)
 			RpcId(1, MethodName.RequestFeint);
 
 		_machine.Tick(); // advance one frame — always called, including Inactive (no-op)
