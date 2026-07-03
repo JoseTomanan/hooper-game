@@ -77,7 +77,9 @@ public class OobShotReleaseTests
     public void OobRelease_Server_WithEligibleOpponent_VoidsShotAndAwardsTurnover()
     {
         // Holder past the sideline (X > CourtMax.X) at release: dead ball.
-        var (voided, turnover) = DecideRelease(new Vector3(6f, 1f, 5f), isServer: true, recipientEligible: true);
+        // Expressed relative to CourtMax.X (not a literal) so this stays OOB
+        // regardless of how wide the court rectangle is configured.
+        var (voided, turnover) = DecideRelease(new Vector3(CourtMax.X + 1f, 1f, 5f), isServer: true, recipientEligible: true);
 
         Assert.True(voided);                                    // shot does not count
         Assert.Equal(OobResolution.Action.Award, turnover.Action);
@@ -104,8 +106,9 @@ public class OobShotReleaseTests
         // dead ball regardless of who can receive it. This matches the carry-OOB
         // path, which likewise issues no award (and no clamp for a held ball)
         // when no recipient is eligible; the holder simply keeps the dead ball
-        // until the next resolution tick.
-        var (voided, turnover) = DecideRelease(new Vector3(6f, 1f, 5f), isServer: true, recipientEligible: false);
+        // until the next resolution tick. Relative to CourtMax.X — see the
+        // "eligible opponent" test above for why this isn't a literal.
+        var (voided, turnover) = DecideRelease(new Vector3(CourtMax.X + 1f, 1f, 5f), isServer: true, recipientEligible: false);
 
         Assert.True(voided);
         Assert.Equal(OobResolution.Action.ClampFallback, turnover.Action);
@@ -117,8 +120,9 @@ public class OobShotReleaseTests
         // A non-server peer never computes possession (server-authoritative): the
         // predicting client shoots locally and is corrected by the next
         // ReceiveState broadcast. So the guard does NOT fire on a client even when
-        // its own holder view is out of bounds.
-        var (voided, turnover) = DecideRelease(new Vector3(6f, 1f, 5f), isServer: false, recipientEligible: true);
+        // its own holder view is out of bounds. Relative to CourtMax.X — see
+        // the "eligible opponent" test above for why this isn't a literal.
+        var (voided, turnover) = DecideRelease(new Vector3(CourtMax.X + 1f, 1f, 5f), isServer: false, recipientEligible: true);
 
         Assert.False(voided);
         Assert.Equal(OobResolution.Action.ClampFallback, turnover.Action); // non-server → no award

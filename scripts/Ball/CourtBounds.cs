@@ -42,11 +42,20 @@ public static class CourtBounds
     ///
     /// X = left/right sideline, Y (used as the Z axis — see class doc "Why XZ
     /// only") = near/far baseline.
+    ///
+    /// Sideline half-width is 7.62 m (25 ft — regulation NBA half-court width
+    /// is 50 ft / 15.24 m). Widened from an earlier ±4.88 m (M8b, human design
+    /// call 2026-07-03): the narrower value read as visibly cramped next to the
+    /// baseline gap to the back wall, and regulation width is the more
+    /// realistic reference per ADR-0014. Baseline bounds (Z, unchanged) leave a
+    /// ~1 m gap to the back wall (Z ≈ -2.0); the physical side walls sit at
+    /// X ≈ ±10.0, so widening to ±7.62 still leaves a ~2.4 m buffer — plenty of
+    /// backstop room before the walls come into play.
     /// </summary>
-    public static readonly Vector2 DefaultMin = new(-4.88f, -1.0f);
+    public static readonly Vector2 DefaultMin = new(-7.62f, -1.0f);
 
     /// <summary>Upper bound of the play rectangle. See <see cref="DefaultMin"/>.</summary>
-    public static readonly Vector2 DefaultMax = new(4.88f, 11.88f);
+    public static readonly Vector2 DefaultMax = new(7.62f, 11.88f);
 
     /// <summary>
     /// Returns <paramref name="position"/> with its X and Z components clamped
