@@ -190,20 +190,30 @@ public static class HeadingMath
 
         float thresholdRad = pivotThresholdDeg * MathF.PI / 180f;
 
-        if (!(MathF.Abs(diff) > thresholdRad))
+        // The >threshold check gates LATCH CREATION only. Once a latch
+        // exists, the player stays planted until the latched facing is
+        // actually reached — issue #172's acceptance criterion is "a held
+        // input > 90° produces zero displacement until Heading reaches
+        // target, then movement begins," so the shrinking mid-pivot diff
+        // must NOT be re-classified as "forward-ish" and ungate early.
+        if (!pivot.HasLatch && !(MathF.Abs(diff) > thresholdRad))
         {
-            // Forward-ish turn: resolves exactly like RotateToward, and any
-            // pivot debt from a moment ago is forgiven — the stick has moved
-            // back onto a facing the player didn't need to plant for.
+            // Forward-ish turn with no pivot debt: resolves exactly like
+            // RotateToward, no plant, movement is never gated.
             float rotated = RotateTowardYaw(currentYaw, desiredYaw, delta, maxTurnRateDeg, backTurnSlowFactor);
             return new HeadingStep(rotated, PivotState.None, false);
         }
         else
         {
-            // Beyond the threshold: re-latch onto the current desiredYaw
-            // every tick the stick is held there, so a moving stick keeps
-            // dragging the pivot target with it rather than freezing on the
-            // first frame's aim.
+            // Latch mode: the diff just exceeded the threshold, or a latch
+            // is already owed. Re-latch onto the current desiredYaw every
+            // held tick, so a moving stick keeps dragging the pivot target
+            // with it — including a mid-pivot direction change ≤threshold
+            // from the current heading, which re-aims the latch (a small
+            // remaining arc that completes and ungates within a tick or two
+            // at the nominal rate). Planted until the (possibly re-aimed)
+            // latch is reached within AngleEpsilon; the completion tick
+            // clears the latch and ungates on that same tick.
             float rotated = RotateTowardYaw(currentYaw, desiredYaw, delta, maxTurnRateDeg, backTurnSlowFactor);
             bool reached  = MathF.Abs(AngleDiff(rotated, desiredYaw)) < AngleEpsilon;
 

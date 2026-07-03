@@ -394,43 +394,43 @@ public class HeadingMathTests
     }
 
     [Fact]
-    public void Step_HeldInputAbove90Degrees_PivotsInPlaceUntilFacingReachedThenStops()
+    public void Step_HeldInputAbove90Degrees_StaysPlantedEveryTickUntilFacingReachedThenUngates()
     {
-        // Note: as the pivot progresses, the REMAINING diff to desiredYaw
-        // shrinks — once it drops to ≤ pivotThresholdDeg, IsPivotingInPlace
-        // correctly flips false (movement may begin) even though the yaw
-        // hasn't fully converged yet (per spec: the ≤threshold branch is a
-        // per-tick angle check, not a "did we ever finish" check). So this
-        // test ticks a fixed budget and asserts (a) IsPivotingInPlace was
-        // true at least once while far from target, (b) it eventually
-        // becomes false and stays false, and (c) the yaw fully converges.
+        // Issue #172 acceptance criterion: "a held input > 90° produces zero
+        // displacement until Heading reaches target, then movement begins."
+        // The >threshold check gates LATCH CREATION only — once latched, the
+        // player stays planted (IsPivotingInPlace true) on EVERY tick until
+        // |yaw − LatchedYaw| < AngleEpsilon, with zero ungated ticks as the
+        // remaining diff shrinks below the threshold mid-pivot.
         float currentYaw  = 0f;
         var pivot         = HeadingMath.PivotState.None;
         Vector2 wish      = WishFromYaw(170f * MathF.PI / 180f);
         float desiredYaw  = MathF.Atan2(wish.X, wish.Y);
 
-        bool wasPivoting = false;
-        bool sawUngate   = false;
-        for (int i = 0; i < 200; i++)
+        int ticks = 0;
+        HeadingMath.HeadingStep step;
+        do
         {
-            var step = HeadingMath.Step(currentYaw, pivot, wish, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+            step = HeadingMath.Step(currentYaw, pivot, wish, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
             currentYaw = step.NewYaw;
             pivot      = step.Pivot;
+            ticks++;
 
-            if (step.IsPivotingInPlace)
+            // Zero-ungate-before-convergence: any non-final tick must be
+            // planted, latched, and still short of the target.
+            if (pivot.HasLatch)
             {
-                wasPivoting = true;
-                Assert.False(sawUngate, "IsPivotingInPlace re-latched after ungating — should be monotonic for a constant held target");
+                Assert.True(step.IsPivotingInPlace,
+                    $"Tick {ticks}: latch still held but movement ungated — early ungate violates #172");
+                Assert.True(MathF.Abs(currentYaw - desiredYaw) > 1e-5f,
+                    $"Tick {ticks}: yaw reached target but latch not cleared");
             }
-            else
-            {
-                sawUngate = true;
-            }
-        }
+        } while (step.IsPivotingInPlace && ticks < 200);
 
-        Assert.True(wasPivoting, "Expected IsPivotingInPlace to be true at least once for a 170° held turn");
-        Assert.True(sawUngate, "Expected IsPivotingInPlace to become false before convergence completes");
+        // Completion tick: latch cleared, ungated, yaw exactly on target.
+        Assert.True(ticks > 1, "A 170° pivot must take more than one tick");
         Assert.False(pivot.HasLatch);
+        Assert.False(step.IsPivotingInPlace);
         Assert.Equal(desiredYaw, currentYaw, precision: 4);
     }
 
@@ -510,19 +510,46 @@ public class HeadingMathTests
     }
 
     [Fact]
-    public void Step_MidPivotNewInputAt90OrBelow_CancelsLatchAndResumesNormalRotation()
+    public void Step_MidPivotNewInputAt90OrBelow_ReaimsLatchThenCompletesAndUngatesWithinAFewTicks()
     {
+        // Once a latch exists, the ≤threshold classification is NOT
+        // re-evaluated (that would ungate mid-pivot and violate #172's
+        // "planted until Heading reaches target"). Instead, a mid-pivot
+        // direction change ≤90° from the current heading RE-AIMS the latch;
+        // being a small remaining arc it completes (and ungates) within a
+        // tick or two at 530 °/s — functionally near-identical to a cancel,
+        // but deterministic and criterion-compliant.
         float currentYaw = 0f;
         Vector2 flickWish = WishFromYaw(170f * MathF.PI / 180f);
         var step = HeadingMath.Step(currentYaw, HeadingMath.PivotState.None, flickWish, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
         Assert.True(step.Pivot.HasLatch);
 
         // Player re-aims to within 90° of the CURRENT (post-tick) heading.
-        Vector2 cancelWish = WishFromYaw(step.NewYaw + 10f * MathF.PI / 180f);
-        var step2 = HeadingMath.Step(step.NewYaw, step.Pivot, cancelWish, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+        float newTargetYaw = step.NewYaw + 10f * MathF.PI / 180f;
+        Vector2 reAimWish  = WishFromYaw(newTargetYaw);
 
-        Assert.False(step2.Pivot.HasLatch);
-        Assert.False(step2.IsPivotingInPlace);
+        var step2 = HeadingMath.Step(step.NewYaw, step.Pivot, reAimWish, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+        // Still planted, but the latch now tracks the NEW target, not the
+        // stale 170° one.
+        if (step2.Pivot.HasLatch)
+            Assert.Equal(newTargetYaw, step2.Pivot.LatchedYaw, precision: 4);
+
+        // The small re-aimed arc must complete and ungate within a few ticks.
+        float yaw = step2.NewYaw;
+        var pivot = step2.Pivot;
+        var last  = step2;
+        int extraTicks = 0;
+        while (last.IsPivotingInPlace && extraTicks < 5)
+        {
+            last  = HeadingMath.Step(yaw, pivot, reAimWish, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+            yaw   = last.NewYaw;
+            pivot = last.Pivot;
+            extraTicks++;
+        }
+
+        Assert.False(last.IsPivotingInPlace);
+        Assert.False(pivot.HasLatch);
+        Assert.Equal(newTargetYaw, yaw, precision: 4);
     }
 
     [Fact]
