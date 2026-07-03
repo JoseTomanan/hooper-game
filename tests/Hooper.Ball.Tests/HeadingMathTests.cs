@@ -318,12 +318,8 @@ public class HeadingMathTests
     // the pre-#172 default (0.35) baked into the RotateToward tests above —
     // see the updated XML doc on RotateToward's backTurnSlowFactor param.
 
-    private const float StepMaxTurnDeg   = 530f;
     private const float StepBackTurnSlow = 0.90f;
     private const float PivotThresholdDeg = 90f;
-    private const double Tick             = 1.0 / 60.0;
-
-    private static Vector2 WishFromYaw(float yaw) => new(MathF.Sin(yaw), MathF.Cos(yaw));
 
     [Fact]
     public void Step_FlickThenRelease180_LatchesAndCompletesInAboutOneThirdSecond()
@@ -336,21 +332,21 @@ public class HeadingMathTests
         Vector2 flickWish = new(0f, -1f); // desiredYaw = π
 
         // Tick 1: the flick itself (stick held).
-        var step = HeadingMath.Step(currentYaw, pivot, flickWish, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+        var step = HeadingMath.Step(currentYaw, pivot, flickWish, BigDelta, MaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
         Assert.True(step.Pivot.HasLatch);
         Assert.True(step.IsPivotingInPlace);
         currentYaw = step.NewYaw;
         pivot      = step.Pivot;
 
-        double elapsed = Tick;
+        double elapsed = BigDelta;
         int guardTicks = 0;
         // Release the stick and keep ticking until the pivot completes.
         while (pivot.HasLatch && guardTicks < 200)
         {
-            step = HeadingMath.Step(currentYaw, pivot, Vector2.Zero, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+            step = HeadingMath.Step(currentYaw, pivot, Vector2.Zero, BigDelta, MaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
             currentYaw = step.NewYaw;
             pivot      = step.Pivot;
-            elapsed   += Tick;
+            elapsed   += BigDelta;
             guardTicks++;
 
             if (pivot.HasLatch)
@@ -368,15 +364,24 @@ public class HeadingMathTests
         // Exactly at the threshold: forward-ish, no plant. Released stick on
         // the very next tick freezes the heading where RotateToward would
         // have left it — today's behavior, unchanged.
+        //
+        // The input is built via HeadingMath.Forward(90°) rather than a
+        // separately-hand-rolled Sin/Cos pair, so the comparison against
+        // Step's internal `pivotThresholdDeg * MathF.PI / 180f` shares the
+        // same derivation on both sides and isn't exposed to a one-ulp
+        // rounding mismatch between two differently-computed 90°-in-radians
+        // values. The 85°/95° tests below pin the boundary's intent (no-latch
+        // just under, latch just over) with a safety margin that survives any
+        // such ulp shift even if this exact-90° case ever needed loosening.
         float currentYaw   = 0f;
-        Vector2 flickWish  = WishFromYaw(90f * MathF.PI / 180f);
+        Vector2 flickWish  = HeadingMath.Forward(90f * MathF.PI / 180f);
 
-        var step = HeadingMath.Step(currentYaw, HeadingMath.PivotState.None, flickWish, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+        var step = HeadingMath.Step(currentYaw, HeadingMath.PivotState.None, flickWish, BigDelta, MaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
 
         Assert.False(step.Pivot.HasLatch);
         Assert.False(step.IsPivotingInPlace);
 
-        var released = HeadingMath.Step(step.NewYaw, step.Pivot, Vector2.Zero, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+        var released = HeadingMath.Step(step.NewYaw, step.Pivot, Vector2.Zero, BigDelta, MaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
         Assert.Equal(step.NewYaw, released.NewYaw);
         Assert.False(released.IsPivotingInPlace);
     }
@@ -385,12 +390,41 @@ public class HeadingMathTests
     public void Step_FlickReleaseBelow90Degrees_DoesNotLatch()
     {
         float currentYaw  = 0f;
-        Vector2 flickWish = WishFromYaw(45f * MathF.PI / 180f);
+        Vector2 flickWish = HeadingMath.Forward(45f * MathF.PI / 180f);
 
-        var step = HeadingMath.Step(currentYaw, HeadingMath.PivotState.None, flickWish, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+        var step = HeadingMath.Step(currentYaw, HeadingMath.PivotState.None, flickWish, BigDelta, MaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
 
         Assert.False(step.Pivot.HasLatch);
         Assert.False(step.IsPivotingInPlace);
+    }
+
+    [Fact]
+    public void Step_FlickReleaseAt85Degrees_DoesNotLatch()
+    {
+        // Safety-margin case well clear of the 90° boundary — no dependence
+        // on ulp-exact rounding, unlike the exactly-90° test above.
+        float currentYaw  = 0f;
+        Vector2 flickWish = HeadingMath.Forward(85f * MathF.PI / 180f);
+
+        var step = HeadingMath.Step(currentYaw, HeadingMath.PivotState.None, flickWish, BigDelta, MaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+
+        Assert.False(step.Pivot.HasLatch);
+        Assert.False(step.IsPivotingInPlace);
+    }
+
+    [Fact]
+    public void Step_FlickAt95Degrees_Latches()
+    {
+        // Safety-margin case just past the boundary — pins that a diff
+        // clearly over threshold DOES latch, without relying on the
+        // exact-90° knife-edge.
+        float currentYaw  = 0f;
+        Vector2 flickWish = HeadingMath.Forward(95f * MathF.PI / 180f);
+
+        var step = HeadingMath.Step(currentYaw, HeadingMath.PivotState.None, flickWish, BigDelta, MaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+
+        Assert.True(step.Pivot.HasLatch);
+        Assert.True(step.IsPivotingInPlace);
     }
 
     [Fact]
@@ -404,14 +438,14 @@ public class HeadingMathTests
         // remaining diff shrinks below the threshold mid-pivot.
         float currentYaw  = 0f;
         var pivot         = HeadingMath.PivotState.None;
-        Vector2 wish      = WishFromYaw(170f * MathF.PI / 180f);
+        Vector2 wish      = HeadingMath.Forward(170f * MathF.PI / 180f);
         float desiredYaw  = MathF.Atan2(wish.X, wish.Y);
 
         int ticks = 0;
         HeadingMath.HeadingStep step;
         do
         {
-            step = HeadingMath.Step(currentYaw, pivot, wish, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+            step = HeadingMath.Step(currentYaw, pivot, wish, BigDelta, MaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
             currentYaw = step.NewYaw;
             pivot      = step.Pivot;
             ticks++;
@@ -440,17 +474,17 @@ public class HeadingMathTests
         float stepYaw          = 0f;
         float rotateTowardYaw  = 0f;
         var pivot              = HeadingMath.PivotState.None;
-        Vector2 wish           = WishFromYaw(60f * MathF.PI / 180f);
+        Vector2 wish           = HeadingMath.Forward(60f * MathF.PI / 180f);
 
         for (int i = 0; i < 10; i++)
         {
-            var step = HeadingMath.Step(stepYaw, pivot, wish, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+            var step = HeadingMath.Step(stepYaw, pivot, wish, BigDelta, MaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
             Assert.False(step.IsPivotingInPlace);
             Assert.False(step.Pivot.HasLatch);
             stepYaw = step.NewYaw;
             pivot   = step.Pivot;
 
-            rotateTowardYaw = HeadingMath.RotateToward(rotateTowardYaw, wish, Tick, StepMaxTurnDeg, StepBackTurnSlow);
+            rotateTowardYaw = HeadingMath.RotateToward(rotateTowardYaw, wish, BigDelta, MaxTurnDeg, StepBackTurnSlow);
 
             Assert.Equal(rotateTowardYaw, stepYaw, precision: 6);
         }
@@ -463,13 +497,13 @@ public class HeadingMathTests
         {
             float currentYaw = 0f;
             var pivot        = HeadingMath.PivotState.None;
-            Vector2 wish     = WishFromYaw(diffDeg * MathF.PI / 180f);
+            Vector2 wish     = HeadingMath.Forward(diffDeg * MathF.PI / 180f);
             int ticks        = 0;
 
             HeadingMath.HeadingStep step;
             do
             {
-                step = HeadingMath.Step(currentYaw, pivot, wish, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+                step = HeadingMath.Step(currentYaw, pivot, wish, BigDelta, MaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
                 currentYaw = step.NewYaw;
                 pivot      = step.Pivot;
                 ticks++;
@@ -495,13 +529,13 @@ public class HeadingMathTests
         // the threshold) must re-aim the latch to the new target, not keep
         // chasing the stale one.
         float currentYaw = 0f;
-        Vector2 firstWish = WishFromYaw(170f * MathF.PI / 180f);
-        var step = HeadingMath.Step(currentYaw, HeadingMath.PivotState.None, firstWish, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+        Vector2 firstWish = HeadingMath.Forward(170f * MathF.PI / 180f);
+        var step = HeadingMath.Step(currentYaw, HeadingMath.PivotState.None, firstWish, BigDelta, MaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
         float firstLatch = step.Pivot.LatchedYaw;
         Assert.True(step.Pivot.HasLatch);
 
-        Vector2 secondWish = WishFromYaw(-170f * MathF.PI / 180f);
-        var step2 = HeadingMath.Step(step.NewYaw, step.Pivot, secondWish, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+        Vector2 secondWish = HeadingMath.Forward(-170f * MathF.PI / 180f);
+        var step2 = HeadingMath.Step(step.NewYaw, step.Pivot, secondWish, BigDelta, MaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
         float secondDesired = MathF.Atan2(secondWish.X, secondWish.Y);
 
         Assert.True(step2.Pivot.HasLatch);
@@ -520,15 +554,15 @@ public class HeadingMathTests
         // tick or two at 530 °/s — functionally near-identical to a cancel,
         // but deterministic and criterion-compliant.
         float currentYaw = 0f;
-        Vector2 flickWish = WishFromYaw(170f * MathF.PI / 180f);
-        var step = HeadingMath.Step(currentYaw, HeadingMath.PivotState.None, flickWish, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+        Vector2 flickWish = HeadingMath.Forward(170f * MathF.PI / 180f);
+        var step = HeadingMath.Step(currentYaw, HeadingMath.PivotState.None, flickWish, BigDelta, MaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
         Assert.True(step.Pivot.HasLatch);
 
         // Player re-aims to within 90° of the CURRENT (post-tick) heading.
         float newTargetYaw = step.NewYaw + 10f * MathF.PI / 180f;
-        Vector2 reAimWish  = WishFromYaw(newTargetYaw);
+        Vector2 reAimWish  = HeadingMath.Forward(newTargetYaw);
 
-        var step2 = HeadingMath.Step(step.NewYaw, step.Pivot, reAimWish, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+        var step2 = HeadingMath.Step(step.NewYaw, step.Pivot, reAimWish, BigDelta, MaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
         // Still planted, but the latch now tracks the NEW target, not the
         // stale 170° one.
         if (step2.Pivot.HasLatch)
@@ -541,7 +575,7 @@ public class HeadingMathTests
         int extraTicks = 0;
         while (last.IsPivotingInPlace && extraTicks < 5)
         {
-            last  = HeadingMath.Step(yaw, pivot, reAimWish, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+            last  = HeadingMath.Step(yaw, pivot, reAimWish, BigDelta, MaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
             yaw   = last.NewYaw;
             pivot = last.Pivot;
             extraTicks++;
@@ -557,11 +591,11 @@ public class HeadingMathTests
     {
         float currentYaw = 0.9f * MathF.PI;
         var pivot        = HeadingMath.PivotState.None;
-        Vector2 wish     = WishFromYaw(-0.9f * MathF.PI); // just past the ±π seam
+        Vector2 wish     = HeadingMath.Forward(-0.9f * MathF.PI); // just past the ±π seam
 
         for (int i = 0; i < 60; i++)
         {
-            var step = HeadingMath.Step(currentYaw, pivot, wish, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+            var step = HeadingMath.Step(currentYaw, pivot, wish, BigDelta, MaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
             Assert.InRange(step.NewYaw, -MathF.PI, MathF.PI);
             currentYaw = step.NewYaw;
             pivot      = step.Pivot;
@@ -583,8 +617,8 @@ public class HeadingMathTests
             float[] sequenceDegs = { 170f, 170f, -170f, 45f, 170f };
             foreach (float deg in sequenceDegs)
             {
-                Vector2 wish = WishFromYaw(deg * MathF.PI / 180f);
-                step = HeadingMath.Step(currentYaw, pivot, wish, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+                Vector2 wish = HeadingMath.Forward(deg * MathF.PI / 180f);
+                step = HeadingMath.Step(currentYaw, pivot, wish, BigDelta, MaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
                 currentYaw = step.NewYaw;
                 pivot      = step.Pivot;
             }
@@ -602,7 +636,7 @@ public class HeadingMathTests
     public void Step_NoLatchAndZeroWishDir_ReturnsYawUnchanged()
     {
         float currentYaw = 1.5f;
-        var step = HeadingMath.Step(currentYaw, HeadingMath.PivotState.None, Vector2.Zero, Tick, StepMaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
+        var step = HeadingMath.Step(currentYaw, HeadingMath.PivotState.None, Vector2.Zero, BigDelta, MaxTurnDeg, StepBackTurnSlow, PivotThresholdDeg);
 
         Assert.Equal(currentYaw, step.NewYaw);
         Assert.False(step.Pivot.HasLatch);

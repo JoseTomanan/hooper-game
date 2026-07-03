@@ -154,16 +154,20 @@ public partial class PivotPlantTest : Node
         bool backTurnOk = Mathf.IsEqualApprox(p.BackTurnSlowFactor, 0.90f);
         bool maxTurnOk = Mathf.IsEqualApprox(p.MaxTurnRateDeg, 530f);
         bool thresholdOk = Mathf.IsEqualApprox(p.PivotThresholdDeg, 90f);
-        bool pass = backTurnOk && maxTurnOk && thresholdOk;
+        bool accelOk = Mathf.IsEqualApprox(p.Accel, 45f);
+        bool decelOk = Mathf.IsEqualApprox(p.Decel, 70f);
+        bool pass = backTurnOk && maxTurnOk && thresholdOk && accelOk && decelOk;
 
         if (pass)
         {
-            GD.Print("[pivot-plant] PASS exports — BackTurnSlowFactor=0.90, MaxTurnRateDeg=530, PivotThresholdDeg=90.");
+            GD.Print("[pivot-plant] PASS exports — BackTurnSlowFactor=0.90, MaxTurnRateDeg=530, " +
+                     "PivotThresholdDeg=90, Accel=45, Decel=70.");
         }
         else
         {
             Fail($"exports mismatch: BackTurnSlowFactor={p.BackTurnSlowFactor} (want 0.90), " +
-                 $"MaxTurnRateDeg={p.MaxTurnRateDeg} (want 530), PivotThresholdDeg={p.PivotThresholdDeg} (want 90).");
+                 $"MaxTurnRateDeg={p.MaxTurnRateDeg} (want 530), PivotThresholdDeg={p.PivotThresholdDeg} (want 90), " +
+                 $"Accel={p.Accel} (want 45), Decel={p.Decel} (want 70).");
         }
         Finish(pass ? 0 : 1);
     }
@@ -183,9 +187,9 @@ public partial class PivotPlantTest : Node
             GD.Print($"[pivot-plant] frame {_frame}: pressed move_forward (~180° flick) at pos {_flickStartPos}");
         }
 
-        // Release after 2 held ticks — the "flick" (StepPress then release,
-        // pivot keeps resolving to completion per HeadingMath.Step's
-        // stick-released branch).
+        // Release on the tick after the press (_flickStartFrame + 1) — the
+        // "flick" (one tick held, then released); the pivot keeps resolving
+        // to completion per HeadingMath.Step's stick-released branch.
         if (_frame == _flickStartFrame + 1)
         {
             Input.ActionRelease("move_forward");
@@ -301,24 +305,38 @@ public partial class PivotPlantTest : Node
         Finish(pass ? 0 : 1);
     }
 
-    // ── Scenario: exactly-90° input never plants; movement is immediate ────
-    // Pure move_left from Heading==0 gives a diff of EXACTLY 90°, the
-    // documented boundary ("exactly this value counts as forward-ish — no
-    // plant"; HeadingMath.Step's gate is strict-greater-than).
+    // ── Scenario: ~85° input never plants; movement is immediate ───────────
+    // A pure diagonal-ish input well clear of the 90° threshold (forward-ish,
+    // strictly below it), so the assertion doesn't depend on the same-ulp
+    // rounding an exactly-90° probe would need between this harness's input
+    // construction and HeadingMath.Step's internal threshold-in-radians
+    // conversion. The exact-90° knife-edge itself (strict > threshold gates
+    // the latch) is pinned precisely by HeadingMathTests' unit tests, which
+    // can share the exact same derivation on both sides of the comparison —
+    // this harness only needs to prove the wiring doesn't plant for an
+    // unambiguously forward-ish turn.
     private void TickNoPlantBoundary()
     {
         if (_flickStartFrame < 0)
         {
             _flickStartFrame = _frame;
             _flickStartPos = _player.GlobalPosition;
-            Input.ActionPress("move_left", 1.0f);
-            GD.Print($"[pivot-plant] frame {_frame}: pressed move_left (exactly 90°, the no-plant boundary) at pos {_flickStartPos}");
+            // move_left alone gives Atan2(-1, 0) = -90° exactly (the old
+            // boundary probe). Blending in a small move_backward component
+            // (backward - forward on the y-axis) pulls the resulting desired
+            // yaw to ≈ -85° — the same "turning left-ish" direction, just
+            // safely short of the 90° threshold. Input.GetVector's deadzone
+            // rescaling only ever changes the vector's LENGTH, never its
+            // direction, so the angle these two strengths produce is exact.
+            Input.ActionPress("move_left", 0.9962f);     // sin(85°)
+            Input.ActionPress("move_backward", 0.08716f); // cos(85°)
+            GD.Print($"[pivot-plant] frame {_frame}: pressed move_left+move_backward (~85°, safely below the no-plant boundary) at pos {_flickStartPos}");
         }
 
         if (_player.IsPivotingInPlace)
         {
-            Fail($"no-plant-boundary: IsPivotingInPlace became true at frame {_frame} for a diff of exactly " +
-                 "90°, which HeadingMath.Step documents as forward-ish (strict > threshold gates the latch).");
+            Fail($"no-plant-boundary: IsPivotingInPlace became true at frame {_frame} for a diff of ~85°, " +
+                 "well below the 90° threshold HeadingMath.Step documents as forward-ish (no plant).");
             Finish();
             return;
         }
