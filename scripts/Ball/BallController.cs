@@ -213,14 +213,22 @@ public partial class BallController : Node3D
 	/// (EDITOR_TASKS.md — court-bound step, issue #46). Inset from the raw
 	/// floor geometry by ~BallRadius to prevent the ball from resting half-
 	/// outside the floor mesh.
+	///
+	/// Defaults to <see cref="CourtBounds.DefaultMin"/> — the single source of
+	/// truth every test fixture also derives from, so this export, the white
+	/// outline CourtVisuals draws from it, and the test suite can never drift
+	/// apart on what "the court rectangle" is. Change the width/depth THERE,
+	/// not here, unless you're deliberately overriding a specific instance in
+	/// the Inspector.
 	/// </summary>
-	[Export] public Vector2 CourtMin { get; set; } = new(-4.88f, -1.0f);
+	[Export] public Vector2 CourtMin { get; set; } = CourtBounds.DefaultMin;
 
 	/// <summary>
 	/// Floor-plane (XZ) upper bound of the playable court rectangle: X = right
-	/// edge, Y = far edge (largest Z). See CourtMin for layout notes.
+	/// edge, Y = far edge (largest Z). See CourtMin for layout notes and the
+	/// <see cref="CourtBounds.DefaultMax"/> single-source-of-truth rationale.
 	/// </summary>
-	[Export] public Vector2 CourtMax { get; set; } = new(4.88f, 11.88f);
+	[Export] public Vector2 CourtMax { get; set; } = CourtBounds.DefaultMax;
 
 	// ── Shot scatter tunables (issue #62, ADR-0009) ──────────────────────
 

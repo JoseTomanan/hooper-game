@@ -28,9 +28,10 @@ namespace Hooper.Ball.Tests;
 public class OobShotReleaseTests
 {
     // Court rectangle matching BallController's default exports (and the values
-    // FlightTerminationIntegrationTests pins).
-    private static readonly Vector2 CourtMin = new(-4.88f, -1f);
-    private static readonly Vector2 CourtMax = new(4.88f, 11.88f);
+    // FlightTerminationIntegrationTests pins) — both derive from
+    // CourtBounds.Default{Min,Max} (single source of truth).
+    private static readonly Vector2 CourtMin = CourtBounds.DefaultMin;
+    private static readonly Vector2 CourtMax = CourtBounds.DefaultMax;
 
     private const int Shooter  = 1;
     private const int Opponent = 2;

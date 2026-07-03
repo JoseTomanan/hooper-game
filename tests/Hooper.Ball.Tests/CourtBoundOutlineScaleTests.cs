@@ -1,4 +1,5 @@
 using Godot;
+using Hooper.Ball;
 
 namespace Hooper.Ball.Tests;
 
@@ -35,9 +36,12 @@ namespace Hooper.Ball.Tests;
 /// </summary>
 public class CourtBoundOutlineScaleTests
 {
-    // Matches BallController's default CourtMin/CourtMax exports.
-    private static readonly Vector2 CourtMin = new(-4.88f, -1.0f);
-    private static readonly Vector2 CourtMax = new(4.88f, 11.88f);
+    // Matches BallController's default CourtMin/CourtMax exports — both derive
+    // from CourtBounds.Default{Min,Max}, the single source of truth (see that
+    // field's doc comment), so this fixture can never silently drift from
+    // production.
+    private static readonly Vector2 CourtMin = CourtBounds.DefaultMin;
+    private static readonly Vector2 CourtMax = CourtBounds.DefaultMax;
     private const float ScaleX = 1.8f;
 
     private readonly struct LocalX

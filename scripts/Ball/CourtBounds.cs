@@ -27,6 +27,28 @@ namespace Hooper.Ball;
 public static class CourtBounds
 {
     /// <summary>
+    /// The single source of truth for the half-court play rectangle. Every
+    /// consumer of the court boundary — the <see cref="BallController.CourtMin"/>/
+    /// <see cref="BallController.CourtMax"/> export defaults, <c>CourtVisuals</c>'
+    /// white outline (which reads those exports live), and every test fixture
+    /// that needs "the court rectangle" — must derive from these two fields
+    /// instead of re-typing the numbers. Before this existed, five separate
+    /// test files hardcoded the same literals independently of production; a
+    /// future boundary change (like the M8b sideline widening this was
+    /// introduced for) had no way to prove the visual line and the rule
+    /// boundary hadn't silently drifted apart, short of grepping for magic
+    /// numbers. Centralizing here means changing the court's width or depth is
+    /// a one-line edit that every consumer — code and test — picks up for free.
+    ///
+    /// X = left/right sideline, Y (used as the Z axis — see class doc "Why XZ
+    /// only") = near/far baseline.
+    /// </summary>
+    public static readonly Vector2 DefaultMin = new(-4.88f, -1.0f);
+
+    /// <summary>Upper bound of the play rectangle. See <see cref="DefaultMin"/>.</summary>
+    public static readonly Vector2 DefaultMax = new(4.88f, 11.88f);
+
+    /// <summary>
     /// Returns <paramref name="position"/> with its X and Z components clamped
     /// to the rectangle [<paramref name="min"/>.X … <paramref name="max"/>.X] ×
     /// [<paramref name="min"/>.Y … <paramref name="max"/>.Y].  Y is preserved
