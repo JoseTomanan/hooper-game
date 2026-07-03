@@ -144,8 +144,9 @@ competitiveness deferred**, scoped narrowly to the movement-stick reverse-pivot.
 
 What changed and what didn't:
 
-- `BackTurnSlowFactor` moved from 0.35 → 0.90 (near-linear), so the raw yaw
-  rate itself is no longer the primary legibility carrier for a back-turn.
+- `BackTurnSlowFactor` moved from 0.35 → 0.90 (#172), then → 0.95 with
+  `MaxTurnRateDeg` 530 → 900 (a #172 follow-up feel pass), so the raw yaw rate
+  itself is no longer the primary legibility carrier for a back-turn.
 - In its place, `HeadingMath.Step`'s new flick-to-latch **plant-then-pivot
   gate** (ADR-0010's #172 amendment) now carries the commitment read: a facing
   change past `PivotThresholdDeg` (90°) plants the feet — zero displacement,
@@ -153,7 +154,8 @@ What changed and what didn't:
   committed move (e.g. a defender's steal) cancels an in-progress pivot rather
   than letting it silently coexist with a punish window.
 - The result is a **faster-resolving but still honestly committed** pivot
-  (≈0.35 s full 180°, down from ≈0.55 s) — not the pre-ADR-0010 *instant*
+  (≈0.20 s full 180° after a #172 follow-up feel pass, down from the pre-#172
+  ≈0.55 s) — not the pre-ADR-0010 *instant*
   pivot this ADR's Context section names as the original arcade-decoupling
   problem. The plant is still a real, server-authoritative, observable cost;
   only *which mechanism* carries that cost changed (frozen feet, not slow yaw).

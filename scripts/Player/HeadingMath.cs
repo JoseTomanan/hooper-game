@@ -64,10 +64,11 @@ public static class HeadingMath
     /// <param name="maxTurnRateDeg">
     /// Nominal maximum turn speed in degrees/second, applied at small
     /// angular differences. Scaled down by the non-linear factor for large
-    /// differences. Default 530 °/s. A 180° back-turn at backTurnSlowFactor
-    /// 0.35 takes ≈ 0.55 s — this is the integrated time of the non-linear
-    /// schedule, not the constant-rate 180/(rate×f) figure (which overestimates
-    /// because the rate accelerates as the diff closes).
+    /// differences. Callers currently pass 900 °/s (issue #172). A 180°
+    /// back-turn at backTurnSlowFactor 0.95 takes ≈ 0.20 s — this is the
+    /// integrated time of the non-linear schedule, not the constant-rate
+    /// 180/(rate×f) figure (which overestimates because the rate accelerates
+    /// as the diff closes).
     /// </param>
     /// <param name="backTurnSlowFactor">
     /// [0, 1] fraction of maxTurnRateDeg applied at exactly 180°. The
@@ -75,9 +76,10 @@ public static class HeadingMath
     /// maxTurnRateDeg × backTurnSlowFactor (at diff=π), so the slowdown
     /// ramps continuously — no sudden gear-change. 0 = completely frozen at
     /// 180°; 1 = linear (no slowdown). Default 0.35 (pre-#172); issue #172
-    /// retunes callers toward ≈0.90, which — combined with the flick-to-latch
-    /// pivot in <see cref="Step"/> — brings a full 180° reversal down to
-    /// ≈0.35 s (up from the old ≈0.55 s figure): the old value doubled as
+    /// retuned callers to ≈0.90 and a #172 follow-up to ≈0.95, which —
+    /// combined with the flick-to-latch pivot in <see cref="Step"/> and
+    /// MaxTurnRateDeg 900 — brings a full 180° reversal down to
+    /// ≈0.20 s (from the pre-#172 ≈0.55 s figure): the old value doubled as
     /// both "how committed does a back-turn feel" and "how slow is the
     /// rate," and #172 splits those concerns — the pivot-in-place gate in
     /// <see cref="Step"/> now carries the commitment read, so the raw rate

@@ -112,34 +112,35 @@ public partial class PlayerController : CharacterBody3D
 	/// differences (micro-corrections). Scaled down toward BackTurnSlowFactor
 	/// as the angle widens to 180° (see HeadingMath.RotateToward).
 	///
-	/// Default 530 °/s at the shipped BackTurnSlowFactor of 0.90: a full 180°
-	/// back-turn takes ≈ 0.35 s — this is the integrated time of the non-linear
-	/// rate schedule (rate accelerates as the diff closes), NOT the constant-rate
-	/// 180/(rate×f) estimate, which overestimates the time. A 20° micro-correction
-	/// takes ≈ 0.05 s — effectively instant to the player, so the reversal is now
+	/// 900 °/s at the shipped BackTurnSlowFactor of 0.95 (issue #172 follow-up
+	/// feel pass): a full 180° back-turn takes ≈ 0.20 s — this is the integrated
+	/// time of the non-linear rate schedule (rate accelerates as the diff closes),
+	/// NOT the constant-rate 180/(rate×f) estimate, which overestimates the time.
+	/// A 20° micro-correction takes ≈ 0.02 s — effectively instant to the player, so the reversal is now
 	/// only mildly slower than a micro-turn (the plant-then-pivot gate at
 	/// <see cref="PivotThresholdDeg"/> carries the "commitment" read instead — see
 	/// HeadingMath.Step's doc). Raising this scales EVERY turn proportionally; it
 	/// is the knob to reach for when "turning feels too slow" overall. (To instead
 	/// change only the reversal's relative slowdown, adjust BackTurnSlowFactor.)
 	/// </summary>
-	[Export] public float MaxTurnRateDeg { get; set; } = 530f;
+	[Export] public float MaxTurnRateDeg { get; set; } = 900f;
 
 	/// <summary>
 	/// Fraction of MaxTurnRateDeg applied at exactly 180° (back-turn).
 	/// The effective rate lerps continuously from MaxTurnRateDeg at diff=0°
 	/// to MaxTurnRateDeg × BackTurnSlowFactor at diff=180° — no sharp gear-change.
 	///
-	/// 0.90 (issue #172 retune, up from the pre-#172 default of 0.35): a
+	/// 0.95 (issue #172 retune 0.35 → 0.90, then a #172 follow-up 0.90 → 0.95): a
 	/// back-turn is now only mildly slower than a small correction — the raw
 	/// rate no longer has to carry the "back-turn is a commitment" read on
 	/// its own, because <see cref="PivotThresholdDeg"/>'s plant-then-pivot
 	/// gate now carries that commitment instead (see HeadingMath.Step's doc).
-	/// Combined, a full 180° reversal comes down to ≈0.35 s (from ≈0.55 s).
+	/// Combined with MaxTurnRateDeg 900, a full 180° reversal comes down to
+	/// ≈0.20 s (from the pre-#172 ≈0.55 s).
 	/// Values closer to 1.0 approach linear (no slowdown); values closer to
 	/// 0 approach a frozen back-turn.
 	/// </summary>
-	[Export] public float BackTurnSlowFactor { get; set; } = 0.90f;
+	[Export] public float BackTurnSlowFactor { get; set; } = 0.95f;
 
 	/// <summary>
 	/// Facing difference, in degrees, above which a turn demands the player
@@ -213,7 +214,7 @@ public partial class PlayerController : CharacterBody3D
 	/// Applied for the full ActiveFrames duration. Intentionally higher than
 	/// MoveSpeed to create visible separation — that is the point of the move.
 	/// </summary>
-	[Export] public float BurstSpeed { get; set; } = 12.0f;
+	[Export] public float BurstSpeed { get; set; } = 9.0f;
 
 	// ── Authoritative heading (issue #80) ────────────────────────────────────
 

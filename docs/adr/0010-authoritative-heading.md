@@ -219,3 +219,30 @@ could ignore. Heading (and now `_pivot` with it) stays authoritative.
 This amendment adds a new predicted+reconciled field and re-tunes a default;
 it does not reverse the Decision or any Alternative rejection above. Status
 remains **Accepted**.
+
+### 2026-07-03 — `MaxTurnRateDeg` 530 → 900, `BackTurnSlowFactor` 0.90 → 0.95 (#172 follow-up feel pass)
+
+The #172 retune above brought the 180° reversal to ≈0.35 s; on feeling it in
+motion the human judged that still too slow against the NBA-2K reference and
+asked for ≈0.20 s (same ADR-0014 design authority, same "arcadeness allowed"
+framing as #172). Two knobs moved together to hit it, purely a re-tune of
+existing exports — no new state, no behavioural change:
+
+- **`MaxTurnRateDeg` 530 → 900 °/s.** This is the dominant lever: it scales
+  *every* turn proportionally, so a 180° reversal drops from ≈0.35 s toward
+  ≈0.20 s while a micro-correction stays effectively instant (≈0.02 s). It is
+  the knob to reach for when "turning feels too slow" *overall*, as distinct
+  from the back-turn's *relative* slowdown.
+- **`BackTurnSlowFactor` 0.90 → 0.95.** A near-linear finishing touch — with
+  the plant-then-pivot gate already carrying the commitment read, the residual
+  back-turn tax is now almost negligible. Integrated 180° time at 900/0.95 is
+  `(180/900)·ln(1/0.95)/(1−0.95) ≈ 0.205 s`.
+
+The plant-then-pivot commitment gate (frozen feet, `Velocity = 0`,
+committed-move cancel) is untouched, so the legibility argument the #172
+amendment made still holds in full — only the yaw *speed* changed. The shipped
+values and the resulting ≈0.20 s reversal are pinned in CI by
+`tests/integration/PivotPlantTest.cs` (the `exports` and `flick-180`
+scenarios). Human in-motion feel sign-off on the 900/0.95 pair is still
+pending (a #172 follow-up feel pass, to be batched with the other pending
+feel judgments per ADR-0015). Status remains **Accepted**.
