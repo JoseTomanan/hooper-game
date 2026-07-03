@@ -112,15 +112,16 @@ public partial class PlayerController : CharacterBody3D
 	/// differences (micro-corrections). Scaled down toward BackTurnSlowFactor
 	/// as the angle widens to 180° (see HeadingMath.RotateToward).
 	///
-	/// Default 530 °/s: a full 180° back-turn takes ≈ 0.55 s — this is the
-	/// integrated time of the non-linear rate schedule (rate accelerates as the
-	/// diff closes), NOT the constant-rate 180/(rate×f) estimate, which
-	/// overestimates the time. A 20° micro-correction takes ≈ 0.05 s —
-	/// effectively instant to the player. Raising this scales EVERY turn
-	/// proportionally and keeps the reversal ~3× slower than a micro-turn, so
-	/// the back-turn stays a readable commitment (ADR-0003); it is the knob to
-	/// reach for when "turning feels too slow". (To instead flatten that
-	/// commitment — speed up only the reversal — raise BackTurnSlowFactor.)
+	/// Default 530 °/s at the shipped BackTurnSlowFactor of 0.90: a full 180°
+	/// back-turn takes ≈ 0.35 s — this is the integrated time of the non-linear
+	/// rate schedule (rate accelerates as the diff closes), NOT the constant-rate
+	/// 180/(rate×f) estimate, which overestimates the time. A 20° micro-correction
+	/// takes ≈ 0.05 s — effectively instant to the player, so the reversal is now
+	/// only mildly slower than a micro-turn (the plant-then-pivot gate at
+	/// <see cref="PivotThresholdDeg"/> carries the "commitment" read instead — see
+	/// HeadingMath.Step's doc). Raising this scales EVERY turn proportionally; it
+	/// is the knob to reach for when "turning feels too slow" overall. (To instead
+	/// change only the reversal's relative slowdown, adjust BackTurnSlowFactor.)
 	/// </summary>
 	[Export] public float MaxTurnRateDeg { get; set; } = 530f;
 
@@ -218,7 +219,8 @@ public partial class PlayerController : CharacterBody3D
 
 	/// <summary>
 	/// Server-authoritative heading in radians (Y-rotation, Godot convention).
-	/// Updated every tick inside Move() via HeadingMath.RotateToward —
+	/// Updated every tick inside Move() via HeadingMath.Step (issue #172's
+	/// flick-to-latch pivot wrapper around the RotateToward rate schedule) —
 	/// the same shared step used for prediction, server authority, and
 	/// reconciliation replay (ADR-0002). Broadcast in ReceiveState alongside
 	/// pos/vel; the client replays it during reconciliation exactly as pos/vel.
