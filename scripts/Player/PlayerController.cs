@@ -100,7 +100,7 @@ namespace Hooper.Player;
 /// </summary>
 public partial class PlayerController : CharacterBody3D
 {
-	// ── Movement tuning (unchanged from M1a) ─────────────────────────────────
+	// ── Movement tuning (issue #183 retune of the M1a values) ────────────────
 
 	/// <summary>Top ground speed in metres/second.</summary>
 	[Export] public float MoveSpeed { get; set; } = 6.0f;
@@ -151,14 +151,21 @@ public partial class PlayerController : CharacterBody3D
 	/// </summary>
 	[Export] public float PivotThresholdDeg { get; set; } = 90f;
 
-	/// <summary>Ground acceleration in m/s².</summary>
-	[Export] public float Accel { get; set; } = 30.0f;
+	/// <summary>
+	/// Ground acceleration in m/s². 45 (issue #183 retune, up from the M1a
+	/// default of 30): 0 → top speed in ≈ 0.13 s instead of 0.20 s — the
+	/// NBA-2K-style snappier start the human picked for the arcade-relaxed
+	/// feel pass (same relaxation as #172). Human feel sign-off pending.
+	/// </summary>
+	[Export] public float Accel { get; set; } = 45.0f;
 
 	/// <summary>
 	/// Ground deceleration in m/s². Higher than Accel intentionally —
-	/// that asymmetry is where "change of pace" lives (ADR-0003).
+	/// that asymmetry is where "change of pace" lives (ADR-0003) and the
+	/// #183 retune (45 → 70; full stop in ≈ 0.086 s) deliberately preserves
+	/// the ratio so a sudden stop still reads as a change of pace.
 	/// </summary>
-	[Export] public float Decel { get; set; } = 45.0f;
+	[Export] public float Decel { get; set; } = 70.0f;
 
 	// ── Reconciliation tuning ─────────────────────────────────────────────────
 
