@@ -213,7 +213,7 @@ including its premise that "the holder is already wall-bounded … so no holder-
 case can currently occur."
 
 **Walls are a far backstop, not the play boundary.** The scene's `StaticBody3D`
-walls sit well outside the court rectangle (≈ X ±10 vs the court's X ±4.88), and
+walls sit well outside the court rectangle (≈ X ±10 vs the court's X ±7.62), and
 the deterministic mini-physics ball never consults them anyway (ADR-0004). The
 *court line* (`CourtMin`/`CourtMax`) is the real boundary for both ball and player;
 the walls only stop a player from running to infinity.

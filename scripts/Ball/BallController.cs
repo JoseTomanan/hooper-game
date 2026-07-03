@@ -1036,7 +1036,7 @@ public partial class BallController : Node3D
 	/// score — ADR-0008 §Amendment 2026-06-21).
 	///
 	/// ── Why the court line and not the walls ──────────────────────────────
-	/// The scene walls sit well OUTSIDE this line (≈ X ±10 vs the court's X ±4.88),
+	/// The scene walls sit well OUTSIDE this line (≈ X ±10 vs the court's X ±7.62),
 	/// so they act only as a far backstop; the turnover fires at the court line
 	/// long before a player could reach a wall. The deterministic ball ignores the
 	/// walls entirely (ADR-0004) — this rule, not a collider, is what makes leaving

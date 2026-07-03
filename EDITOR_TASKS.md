@@ -749,8 +749,9 @@ engine — that is the only part that cannot be automated.
 ### Step 1 — Confirm wall placement (one-time)
 
 Open `Main.tscn`. The four `Walls/WallCollision*` shapes should sit **outside**
-the `CourtMin (-4.88, -1.0)` / `CourtMax (4.88, 11.88)` rectangle (the scene
-ships them at ≈ X ±10, Z ≈ −2.1 / 12.1). If any wall is *on* the court line,
+the `CourtMin (-7.62, -1.0)` / `CourtMax (7.62, 11.88)` rectangle — regulation
+half-court width, widened from an earlier ±4.88 (M8b) — (the scene ships them
+at ≈ X ±10, Z ≈ −2.1 / 12.1). If any wall is *on* the court line,
 move it out by a metre or two. Do **not** put a wall on the court line.
 
 ### Step 2 — Verify (two instances, host + join)
