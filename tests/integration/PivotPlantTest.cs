@@ -394,14 +394,39 @@ public partial class PivotPlantTest : Node
             return;
         }
 
+        // Release one tick after the press (harmless either way — the move
+        // already latched on the press edge and does not need the input held).
         if (_stealPressed && _frame == _stealPressFrame + 1)
         {
             Input.ActionRelease("def_steal");
+        }
 
-            // BeginCommittedMove clears _pivot the SAME tick Begin() succeeds
-            // (PlayerController.cs) — so by the very next physics tick after
-            // the press, the pivot must already be cancelled, well short of
-            // the ~21-tick natural completion a 180° flick would otherwise take.
+        // ── Frame-stamp semantics discovered empirically (issue #172 CI repro) ──
+        // Input.ActionPress() sets IsActionPressed() true immediately, but its
+        // "just pressed" EDGE (what IsActionJustPressed reads) is only visible
+        // starting the NEXT physics frame — confirmed by instrumenting
+        // SampleMoveInput: pressing at frame N still reads
+        // IsActionJustPressed()==false when PlayerController (this test's CHILD
+        // node) samples input later in that SAME frame N, and only reads true
+        // when it samples again on frame N+1. So BeginCommittedMove (and the
+        // pivot-clear inside it) actually runs during the CHILD's frame-N+1
+        // processing, not frame N.
+        //
+        // On top of that one-frame input-edge delay, this harness is the PARENT
+        // of the PlayerController it drives, and Godot processes a parent's
+        // _PhysicsProcess before its children's within the same frame. So the
+        // earliest frame on which the PARENT (this Fail/Pass check) can OBSERVE
+        // a change the CHILD made is one frame after the child made it — i.e.
+        // frame (stealPressFrame + 1) [input edge lands] + 1 [parent sees it
+        // next frame] = stealPressFrame + 2. Checking at +1, as an earlier
+        // version of this test did, always read the pivot one tick too early
+        // (still latched) and failed on every run, including in CI.
+        //
+        // +2 is asserted here as the earliest correct frame, not padded further,
+        // so the test stays a meaningful proof that the cancel is near-immediate
+        // (nowhere close to the ~21-tick natural pivot completion).
+        if (_stealPressed && _frame == _stealPressFrame + 2)
+        {
             bool cancelled = !_player.IsPivotingInPlace;
             if (cancelled)
             {
@@ -411,7 +436,9 @@ public partial class PivotPlantTest : Node
             else
             {
                 Fail($"committed-cancel expected IsPivotingInPlace==false by frame {_frame} " +
-                     $"(one tick after def_steal was pressed at frame {_stealPressFrame}); pivot is still latched. " +
+                     $"(two ticks after def_steal was pressed at frame {_stealPressFrame} — one tick for the " +
+                     "input-just-pressed edge to become visible, one more for this parent node to observe the " +
+                     "child PlayerController's same-tick pivot-clear); pivot is still latched. " +
                      "Either the steal did not Begin() (no ball group present should make IsBallHolder false — " +
                      "check that gate) or BeginCommittedMove's pivot-clear did not run.");
             }
