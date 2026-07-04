@@ -138,7 +138,20 @@ public partial class StealTurnoverTest : Node
         _ball = new BallController { Name = "Ball", Players = players };
 
         AddChild(players);    // matches scenes/Main.tscn: Players before Ball
-        AddChild(_ball);
+        AddChild(_ball);       // _ball._Ready() has now run, constructing StateMachine (Held)
+
+        // #193 changed the tipoff to start Held-not-Dribbling (the triple-
+        // threat rule). This harness tests STEAL mechanics, which are keyed on
+        // an in-progress DRIBBLE (ResolveStealAttempts is a no-op unless the
+        // ball is Dribbling) — and ComputeBeginFrame's phase math assumes
+        // DribbleCycle.Phase has been advancing every tick since frame 1. Force
+        // Dribbling here, once, before the first physics tick: TryAssignTipoffHolder's
+        // ForceState(State, peerId) preserves whatever State already is, so this
+        // survives the tipoff unchanged, reproducing the ball's pre-#193
+        // "always dribbling" baseline this test's frame arithmetic was built on.
+        // Unrelated to the dead-dribble rule itself, which this harness does not
+        // exercise.
+        _ball.StateMachine.StartDribble();
 
         _beginFrame = ComputeBeginFrame(_scenario);
         _verdictFrame = _beginFrame
@@ -301,12 +314,17 @@ public partial class StealTurnoverTest : Node
         // renders its verdict the instant that event is observed.
         if (_scenario == "recovery-reset")
         {
+            // #193: AwardPossession no longer auto-chains into Dribbling — the
+            // scramble recovery now lands the ball in a fresh, live Held
+            // possession, so "the ball came back" is BallState.Held here, not
+            // Dribbling (this harness never drives the auto-dribble input, so
+            // the ball has no reason to leave Held after the recovery).
             if (_everLoose && !_recoveryChecked
-                && _ball.State == BallState.Dribbling
+                && _ball.State == BallState.Held
                 && _ball.StateMachine.HolderPeerId != 0)
             {
                 _recoveryChecked = true;
-                // The moment the ball lands back in Dribbling is the exact tick
+                // The moment the ball lands back in Held is the exact tick
                 // AwardPossession runs — if DribbleCycle.Reset() were missing
                 // (the #176 bug), Phase would still read whatever in-band value
                 // it froze at when the ball went Loose, not 0.
@@ -366,11 +384,24 @@ public partial class StealTurnoverTest : Node
         // stuck in BallState.Loose forever (TickLoose never runs to completion,
         // so ResolveLooseBallRecovery/AwardPossession never fire) — which
         // _everLoose alone cannot distinguish from a healthy scramble that
-        // resolves a frame later. Requiring the ball to land back in Dribbling
-        // with a real holder by verdict time (VerdictMarginFrames gives the
-        // scramble room to settle) makes that crash an explicit FAIL instead of
-        // a silent PASS.
-        bool turnoverCompleted = _ball.State == BallState.Dribbling && _ball.StateMachine.HolderPeerId != 0;
+        // resolves a frame later. Requiring the ball to land back in a live
+        // Held possession with a real holder by verdict time (VerdictMarginFrames
+        // gives the scramble room to settle) makes that crash an explicit FAIL
+        // instead of a silent PASS.
+        //
+        // Expected state is scenario-dependent since #193 (AwardPossession no
+        // longer auto-chains into a dribble):
+        //   - "success": the scramble recovery routes through AwardPossession,
+        //     which now settles a fresh, live Held possession, not Dribbling.
+        //   - "whiff": no possession change ever happens (the steal never
+        //     connects), so the ball never leaves the Dribbling state THIS
+        //     HARNESS forced it into at setup (see the StartDribble() call in
+        //     _Ready — #193 also changed the tipoff to start Held, and this
+        //     harness's frame arithmetic needs a live dribble from frame 1).
+        bool ballStateSane = _scenario == "whiff"
+            ? _ball.State == BallState.Dribbling
+            : _ball.State == BallState.Held;
+        bool turnoverCompleted = ballStateSane && _ball.StateMachine.HolderPeerId != 0;
 
         // On a real steal, the defender (peer "2") must become the last
         // toucher (#118 rule) THE INSTANT the ball goes Loose — otherwise a
