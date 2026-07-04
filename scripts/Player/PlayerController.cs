@@ -298,9 +298,8 @@ public partial class PlayerController : CharacterBody3D
 	/// BallController on a possession change (the new holder has no carried-over
 	/// hand state). Runs on every simulating role — server authoritative, client
 	/// predicted — so all machines agree; the client's remote copy instead adopts
-	/// the broadcast value. Left is the historical default (issue #73): with the
-	/// keyboard crossover hardcoded to a right flick, starting Left makes the
-	/// first crossover of a possession visibly switch Left→Right.
+	/// the broadcast value. Left is simply *a* deterministic default every peer
+	/// agrees on (issue #73); nothing downstream depends on which side it is.
 	/// </summary>
 	public void ResetHandSide() => HandSide = HandSide.Left;
 
@@ -1510,9 +1509,10 @@ public partial class PlayerController : CharacterBody3D
 	/// move machine one tick. Called at the top of every local-player tick so
 	/// JustEnteredActive is correct when TickCommittedMoveBehavior reads it.
 	///
-	/// Right-stick gestures (gamepad): routed through RightStickGestureRecognizer.
-	/// Keyboard fallback (Q): triggers a crossover (right burst) directly,
-	/// bypassing the recognizer — simpler timing without a gamepad.
+	/// Right-stick gestures: routed through RightStickGestureRecognizer. Both
+	/// input devices feed it via the aim_* actions — gamepad right stick, or
+	/// the IJKL keys (#191); the recognizer is hardware-agnostic, so keyboard
+	/// gets the same crossover/hesitation/feint semantics as the stick.
 	/// Feint modifier (E key / L1): aborts a crossover during its startup window.
 	///
 	/// Note: Input.GetVector / IsActionJustPressed read the local machine's hardware.
@@ -1532,22 +1532,18 @@ public partial class PlayerController : CharacterBody3D
 		Vector2 aim = Input.GetVector("aim_left", "aim_right", "aim_up", "aim_down");
 		GestureResult gesture = _recognizer.Sample(aim);
 
-		// One right-stick flick (or keyboard Q), disambiguated by which hand holds
-		// the ball (M9, ADR-0012): a flick TOWARD the empty hand is a crossover
-		// (ball swaps to that hand + a lateral burst that way); a flick TOWARD the
-		// ball hand is a hesitation (freeze/bait — no swap, no scripted burst; the
-		// player drives the exit with the left stick after the move resolves).
-		// Keyboard Q takes precedence over the recognizer so the two paths don't
-		// double-Begin; it flicks toward the player's right (+1).
-		float flick = float.NaN;
-		if (Input.IsActionJustPressed("move_crossover"))
-			flick = +1f;
-		else if (gesture.Kind == GestureKind.Crossover)
-			flick = gesture.Direction;
-
-		if (!float.IsNaN(flick))
+		// One right-stick flick, disambiguated by which hand holds the ball
+		// (M9, ADR-0012): a flick TOWARD the empty hand is a crossover (ball
+		// swaps to that hand + a lateral burst that way); a flick TOWARD the
+		// ball hand is a hesitation (freeze/bait — no swap, no scripted burst;
+		// the player drives the exit with the left stick after the move
+		// resolves). Keyboard reaches this through the same recognizer via the
+		// IJKL bindings on the aim_* actions (#191) — there is no separate
+		// keyboard path, so the flick sign is always real and signed and
+		// IsCrossover alternates correctly on either input device.
+		if (gesture.Kind == GestureKind.Crossover)
 		{
-			int flickSign = System.Math.Sign(flick);
+			int flickSign = System.Math.Sign(gesture.Direction);
 			if (HandStateResolver.IsCrossover(HandSide, flickSign))
 			{
 				// Crossover carries the BODY-RELATIVE flick sign (M9, #85): the
