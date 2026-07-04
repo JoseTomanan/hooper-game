@@ -974,9 +974,13 @@ public partial class PlayerController : CharacterBody3D
 
 		_serverAckedSeq  = seq;
 		_pendingInput    = new Vector2(inputX, inputY);
-		// Updated unconditionally, same eviction-free "freshest wins" semantics
-		// as _pendingInput above — NOT gated by seq ordering relative to a
-		// committed move, since this field is never read for Move() at all.
+		// Same "freshest wins" semantics as _pendingInput above (both are
+		// behind the same stale-seq guard on this method). The distinction
+		// from _pendingInput is NOT about seq ordering — it's that the SENDER
+		// (TickClientOwnPlayer) never blanks rawStickX/Y to zero while a
+		// committed move IsActive the way it blanks moveInput.X/Y, so this
+		// field always reflects the true stick, not a role/move-state gate
+		// applied on this end.
 		_pendingRawStick = new Vector2(rawStickX, rawStickY);
 	}
 
@@ -1746,7 +1750,18 @@ public partial class PlayerController : CharacterBody3D
 		switch (_machine.Phase)
 		{
 			case MovePhase.Startup:
-				Velocity = Velocity.MoveToward(Vector3.Zero, GatherDecel * (float)delta);
+				// #198's hybrid gather is scoped to the CROSSOVER's plant only
+				// (ADR-0003 amendment) — every other committed move (Hesitation,
+				// StealMove, JumpShot, …) keeps the original instant-zero plant.
+				// A blanket bleed here would have silently let a driving player
+				// slide through a Hesitation's "stand still and sell the fake"
+				// or a defender's StealMove Active window on residual momentum
+				// GatherDecel's budget doesn't fully cover for their (shorter)
+				// Startup lengths — exactly the un-bounded relaxation the ADR
+				// amendment explicitly rules out.
+				Velocity = _machine.CurrentMove is Crossover
+					? Velocity.MoveToward(Vector3.Zero, GatherDecel * (float)delta)
+					: Vector3.Zero;
 				MoveAndSlide();
 				break;
 

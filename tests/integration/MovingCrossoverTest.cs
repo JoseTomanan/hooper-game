@@ -106,6 +106,7 @@ public partial class MovingCrossoverTest : Node
         {
             case "retains-speed": TickRetainsSpeed(); break;
             case "stationary-forward-exit": TickStationaryForwardExit(); break;
+            case "hesitation-still-hard-zeroes": TickHesitationStillHardZeroes(); break;
             default:
                 Fail($"unknown scenario '{_scenario}'.");
                 Finish();
@@ -269,6 +270,64 @@ public partial class MovingCrossoverTest : Node
                  $"{_maxForwardDuringActive:F3} (sawStartup={_sawStartup}, sawActive={_sawActive}).");
         }
         Finish(pass ? 0 : 1);
+    }
+
+    // ── Scenario: driving forward into a HESITATION (not a crossover) —
+    // Startup's hybrid gather is scoped to Crossover ONLY (ADR-0003
+    // amendment); every other committed move must keep the original
+    // instant-zero plant. This is the regression guard for that scoping —
+    // a blanket (ungated) bleed would let a driving player slide through a
+    // hesitation's "stand still and sell the fake" instead of planting dead.
+    private void TickHesitationStillHardZeroes()
+    {
+        if (_frame == 1)
+        {
+            Input.ActionPress("move_forward", 1.0f);
+            GD.Print($"[moving-crossover] frame {_frame}: pressed move_forward to build speed");
+        }
+
+        if (_frame == DriveTicks && !_flickStarted)
+        {
+            _flickStarted = true;
+            _flickStartFrame = _frame;
+            // aim_left (flickSign -1) flicks TOWARD the ball hand (default
+            // HandSide.Left), which HandStateResolver.IsCrossover classifies
+            // as a Hesitation, not a Crossover — see that class's truth table.
+            Input.ActionPress("aim_left", 1.0f);
+            GD.Print($"[moving-crossover] frame {_frame}: speed={_player.Velocity.Length():F2} m/s, pressed aim_left (hesitation)");
+        }
+
+        if (_flickStarted && _frame == _flickStartFrame + FlickHoldTicks)
+        {
+            Input.ActionRelease("aim_left");
+            GD.Print($"[moving-crossover] frame {_frame}: released aim_left (hesitation should have committed)");
+        }
+
+        var (phase, _) = _player.DisplayMove();
+        if (phase == MovePhase.Startup)
+        {
+            _sawStartup = true;
+            // Hard-zero must still hold EVERY Startup tick for a non-Crossover
+            // move — unlike TrackMinSpeed's "never hits zero" proof for the
+            // crossover, here we require Velocity to actually BE zero.
+            if (_player.Velocity.LengthSquared() > 0.0001f)
+            {
+                Fail($"hesitation Startup expected Velocity == 0 (unchanged pre-#198 hard-zero plant); " +
+                     $"got {_player.Velocity} at frame {_frame} — the gather-bleed leaked into a non-Crossover move.");
+                Finish();
+                return;
+            }
+        }
+        else if (phase == MovePhase.Active)
+        {
+            _sawActive = true;
+        }
+
+        if (_sawStartup && _sawActive && phase == MovePhase.Recovery)
+        {
+            GD.Print("[moving-crossover] PASS hesitation-still-hard-zeroes — Velocity stayed exactly 0 through Startup.");
+            Finish(0);
+        }
     }
 
     // ── Shared bookkeeping ───────────────────────────────────────────────

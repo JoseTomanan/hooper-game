@@ -173,10 +173,15 @@ jobs:
       # Active-entry, and asserts the burst gains a forward component —
       # impossible under the pre-#198 pure-lateral-only burst. Each exits
       # 0=PASS/1=FAIL (ADR-0016).
+      # 'hesitation-still-hard-zeroes' is the regression guard for the ADR-0003
+      # amendment's own scoping claim ("bounded... to the moving crossover
+      # only") — a driving player who throws a Hesitation (not a Crossover)
+      # must still plant to a hard instant zero, not gain GatherDecel's bleed.
       - name: Run moving-crossover harness
         run: |
           godot --headless --path . res://tests/integration/MovingCrossoverTest.tscn -- --harness-scenario=retains-speed
           godot --headless --path . res://tests/integration/MovingCrossoverTest.tscn -- --harness-scenario=stationary-forward-exit
+          godot --headless --path . res://tests/integration/MovingCrossoverTest.tscn -- --harness-scenario=hesitation-still-hard-zeroes
 
       # Dual-instance harness, increment 1: two headless Godot processes complete
       # a real ENet handshake over localhost. The orchestrator launches a server
