@@ -720,6 +720,7 @@ public partial class PlayerController : CharacterBody3D
 		{
 			Vector2 input = ReadInput();
 			Move(input, delta);
+			CheckAutoStartDribble(input);
 		}
 
 		// Broadcast authoritative state to all clients.
@@ -762,7 +763,10 @@ public partial class PlayerController : CharacterBody3D
 		if (_machine.IsActive)
 			TickCommittedMoveBehavior(delta);
 		else
+		{
 			Move(_pendingInput, delta);
+			CheckAutoStartDribble(_pendingInput);
+		}
 
 		// Echo _serverAckedSeq so the client prunes its pending buffer, plus
 		// the committed-move state and heading piggybacked on the same broadcast
@@ -814,7 +818,10 @@ public partial class PlayerController : CharacterBody3D
 		if (_machine.IsActive)
 			TickCommittedMoveBehavior(delta);
 		else
+		{
 			Move(moveInput, delta);
+			CheckAutoStartDribble(moveInput);
+		}
 
 		// Send input to server. UnreliableOrdered: dropped packets are gone,
 		// but arriving packets are always in seq order (no regress to stale input).
@@ -930,6 +937,22 @@ public partial class PlayerController : CharacterBody3D
 	{
 		if (!_machine.Begin(move)) return false;
 		_pivot = HeadingMath.PivotState.None;
+
+		// #193 (triple threat / dead-dribble rule): a JumpShot's gather is
+		// inherent to the shooting motion, not a separate input — so cradling
+		// a live dribble is a SIDE EFFECT of the shot's Startup beginning,
+		// fired right here at the ONE choke point every Begin(JumpShot) call
+		// already funnels through. This also covers the pump-fake: a feint is
+		// a Startup-phase ABORT of this SAME move (CommittedMoveMachine.
+		// Feint()), not a second Begin(), so there is no separate hook needed
+		// for it — a canceled pump-fake still leaves HasDribbled set, which is
+		// the intentional "you can't un-pick-up your dribble by faking a shot"
+		// cost the issue calls for. BallController.CradleForShotStartup no-ops
+		// on its own if the ball isn't Dribbling for this exact peer, so this
+		// call is safe to fire unconditionally whenever a JumpShot begins.
+		if (move is JumpShot && int.TryParse(Name, out int shooterPeerId))
+			GetBall()?.CradleForShotStartup(shooterPeerId);
+
 		return true;
 	}
 
@@ -1500,6 +1523,38 @@ public partial class PlayerController : CharacterBody3D
 	private static Vector2 ReadInput()
 	{
 		return Input.GetVector("move_left", "move_right", "move_forward", "move_backward");
+	}
+
+	/// <summary>
+	/// Drives the ball out of a live Held possession the instant the holder
+	/// pushes the stick past deadzone (#193, ADR-0008's dead-dribble rule): a
+	/// fresh possession now starts Held-not-Dribbling (BallController.
+	/// AwardPossession no longer auto-chains into a dribble), so ordinary
+	/// movement intent is what resumes it — the "drive" read out of a triple-
+	/// threat stance.
+	///
+	/// Called only where <paramref name="input"/> is REAL ground-truth for
+	/// THIS player this tick — own-player local hardware on the server or a
+	/// client (TickServerOwnPlayer/TickClientOwnPlayer), or a remote player's
+	/// latest submitted input on the server (TickServerRemotePlayer) — never
+	/// from TickClientRemotePlayer, which has no local input to read. This is
+	/// exactly the authority set every other ball-state write in this file
+	/// already restricts to (see BallController.CradleForShotStartup's doc).
+	///
+	/// Godot's Input.GetVector already clamps anything inside an action's
+	/// configured deadzone down to an exact Vector2.Zero (project.godot's
+	/// move_* actions carry a 0.2 deadzone), so a nonzero vector here already
+	/// means "past deadzone" — no separate threshold constant needed.
+	///
+	/// BallController.TryStartDribble owns every actual gameplay guard (must
+	/// be this player's ball, must be Held, dead-dribble refusal) — this call
+	/// site only supplies "did this player show movement intent this tick."
+	/// </summary>
+	private void CheckAutoStartDribble(Vector2 input)
+	{
+		if (input == Vector2.Zero) return;
+		if (!int.TryParse(Name, out int peerId)) return;
+		GetBall()?.TryStartDribble(peerId);
 	}
 
 	// ── Committed-move input and behavior (M3 local-only → M4 networked) ─────

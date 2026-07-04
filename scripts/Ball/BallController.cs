@@ -446,6 +446,31 @@ public partial class BallController : Node3D
 	public bool IsCleared { get; private set; }
 
 	/// <summary>
+	/// Per-possession dead-dribble flag (#193, ADR-0008 dead-dribble amendment).
+	/// False means the current possession's dribble is still LIVE; true means
+	/// it has been cradled (a JumpShot/pump-fake Startup — see
+	/// CradleForShotStartup) and StartDribble() is refused for the rest of
+	/// this possession (DeadDribbleRule).
+	///
+	/// Reset to false on every possession change (AwardPossession) and on the
+	/// tipoff (TryAssignTipoffHolder) — never independently on "score", because
+	/// a make-it-take-it reset IS a possession change and already routes
+	/// through AwardPossession.
+	///
+	/// Not broadcast: unlike IsCleared, no peer ever needs to read another
+	/// peer's copy of this flag. It only gates TWO call sites in this class
+	/// (CradleForShotStartup's set, TryStartDribble's read), and both only
+	/// ever run for a player whose input/committed-move machine THIS peer
+	/// actually advances (its own player, or — on the server — every player)
+	/// — see those methods' docs for the authority reasoning. A remote
+	/// client's view of the OTHER player never calls either, so it never
+	/// needs an accurate copy of that player's flag; the ball's actual
+	/// BallState (Held vs Dribbling) is what a remote viewer needs, and that
+	/// already travels via the normal ReceiveState/ReconcileFromServer path.
+	/// </summary>
+	public bool HasDribbled { get; private set; }
+
+	/// <summary>
 	/// Server-only: has the current holder been INSIDE the clear line at some point
 	/// during this possession? Crossing-detection for the take-it-back rule (#135):
 	/// a possession clears only on a genuine take-back (inside → behind), not by
@@ -680,12 +705,14 @@ public partial class BallController : Node3D
 		// node, it is the first connecting client. Hardcoding peer 1 here parked
 		// the ball at the world origin forever on a dedicated host.
 		//
-		// StartDribble still runs so the ball begins Dribbling; with holder 0 it
-		// tracks the world origin until the server assigns a holder (a <=1-tick
-		// window once a player exists). This is the SAME pre-holder behaviour the
-		// listen-server already had between scene load and the Host button press.
+		// The state machine's own constructor already starts Held (#193: every
+		// possession — the tipoff included — now starts Held-not-Dribbling, so
+		// there is no separate "begin dribbling" step to run here). With
+		// holder 0 TickHeld tracks the world origin until the server assigns a
+		// holder (a <=1-tick window once a player exists) — the SAME pre-holder
+		// behaviour the listen-server already had between scene load and the
+		// Host button press.
 		StateMachine = new BallStateMachine(initialHolderPeerId: 0);
-		StateMachine.StartDribble();
 
 		// Seed the shot-scatter RNG from the editor-tunable ShotScatterSeed.
 		// Constructed on every peer (client + server) because _Ready runs
@@ -968,6 +995,13 @@ public partial class BallController : Node3D
 				// after every made basket" — the tipoff is neither, so the
 				// first basket must be allowed to count without a take-back.
 				IsCleared = true;
+
+				// The tipoff is also a fresh possession start (#193): its
+				// dribble is live. ForceState above kept whatever State this
+				// ball already was — Held by the state machine's own
+				// constructor default — so this only needs to reset the flag,
+				// not the discrete ball state.
+				HasDribbled = false;
 
 				GD.Print("[BallController] Tipoff holder assigned to peer ", peerId);
 				return;
@@ -1641,13 +1675,15 @@ public partial class BallController : Node3D
 	}
 
 	/// <summary>
-	/// Awards possession of a loose / in-flight ball to a player and resumes a
-	/// live dribble — the shared handoff path used by a live rebound (#48) and
-	/// the make-it-take-it reset (#49). Mirrors the tipoff sequence
-	/// (Catch → StartDribble): Catch is legal only from InFlight/Loose (it
-	/// returns false otherwise, leaving state untouched), and StartDribble then
-	/// puts the new holder into the same dribbling state the game opens in, so
-	/// they can immediately dribble and shoot.
+	/// Awards possession of a loose / in-flight ball to a player — the shared
+	/// handoff path used by a live rebound (#48), the make-it-take-it reset
+	/// (#49), and every OOB/steal/block turnover. Lands the new holder in a
+	/// fresh, LIVE Held possession (#193, ADR-0008): unlike the pre-#193
+	/// behaviour, this no longer auto-chains into Dribbling — the new holder
+	/// gets the "triple threat" beat (they may shoot immediately, or drive by
+	/// pushing the stick past deadzone, see PlayerController.
+	/// CheckAutoStartDribble) rather than being dropped straight into a
+	/// dribble they never asked to start.
 	///
 	/// <paramref name="cleared"/> controls the clear state of the new possession
 	/// (ADR-0008 §Decision-3, amended 2026-06-21):
@@ -1707,14 +1743,13 @@ public partial class BallController : Node3D
 		// currently safe.
 		_lastToucherPeerId = peerId;
 
-		// StartDribble is legal from Held (the state Catch just transitioned to).
-		// Guard the return value so a future internal-state divergence (e.g. a
-		// ForceState landing between Catch and StartDribble) fails loudly rather
-		// than leaving the ball Held with no dribble cycle.
-		if (!StateMachine.StartDribble())
-		{
-			GD.PrintErr($"[BallController] AwardPossession({peerId}): StartDribble rejected after Catch in state {State}; possession partially awarded, ball may behave unexpectedly.");
-		}
+		// #193: this possession's dribble is LIVE — reset the dead-dribble flag
+		// unconditionally. This is the ONE reset point for every possession
+		// change (rebound, turnover, make-it-take-it); the tipoff resets it
+		// separately in TryAssignTipoffHolder, which never calls AwardPossession.
+		// No StartDribble() call follows here any more (pre-#193 behaviour):
+		// the new holder starts Held, not Dribbling — see this method's doc.
+		HasDribbled = false;
 
 		// Every possession change starts a fresh dribble (#176, ADR-0014 call
 		// recorded on the issue): real half-court 1v1 rules end a dribble the
@@ -1747,6 +1782,67 @@ public partial class BallController : Node3D
 		// early-returns on IsCleared — but resetting unconditionally keeps the
 		// invariant simple: every possession begins with the take-back not yet done.
 		_holderHasBeenInsideClearLine = false;
+	}
+
+	// ── Triple threat: dead-dribble rule (#193, ADR-0008 amendment) ─────────
+
+	/// <summary>
+	/// Cradles a live dribble as the side effect of the holder BEGINNING a
+	/// JumpShot — covers the pump-fake too, since a feint is a Startup-phase
+	/// abort of the SAME Begin(), not a separate one (#193's spec). Ends the
+	/// dribble (StopDribble → Held) and marks <see cref="HasDribbled"/>
+	/// immediately, even though the shot itself may still be feinted away:
+	/// you can't un-pick-up your dribble by faking a shot. Matches real ball
+	/// / 2K — the gather is inherent to the shooting motion, not a separate
+	/// discrete action or CommittedMove.
+	///
+	/// Called from PlayerController.BeginCommittedMove — the ONE shared choke
+	/// point every Begin(JumpShot) call already funnels through (the server,
+	/// for every player node it runs authoritatively; a client, only for its
+	/// own predicted player) — so this runs under exactly the same authority
+	/// set CheckJumpShotRelease already restricts ball-state writes to, with
+	/// no separate IsServer/IsLocalHolder guard needed here.
+	///
+	/// No-ops if the ball isn't currently Dribbling, or if the caller isn't
+	/// the ball's holder — so a stray/mistimed call can never desync ball
+	/// state. In particular, shooting straight out of a fresh live Held
+	/// possession never touches StopDribble at all: there is no dribble to
+	/// end, and HasDribbled is already false for that possession.
+	/// </summary>
+	public void CradleForShotStartup(int peerId)
+	{
+		if (StateMachine.Current != BallState.Dribbling) return;
+		if (StateMachine.HolderPeerId != peerId) return;
+
+		if (StateMachine.StopDribble())
+			HasDribbled = true;
+	}
+
+	/// <summary>
+	/// Attempts to resume a live dribble out of a fresh Held possession — the
+	/// "drive" exit from the triple-threat stance (#193): the holder pushing
+	/// the left stick past deadzone. Refused once <see cref="HasDribbled"/> is
+	/// set for this possession (DeadDribbleRule.CanStartDribble) — the dead-
+	/// dribble rule means a feinted pump-fake strands the holder in dead Held
+	/// until the next possession change; they can still walk (Move() is
+	/// unaffected), they just can't resume bouncing the ball.
+	///
+	/// Called from PlayerController.CheckAutoStartDribble wherever a tick's
+	/// REAL movement input is available for this player — see that method's
+	/// doc for exactly which roles that is (the same authority set every
+	/// other ball-state write in this class already restricts to).
+	///
+	/// No-ops if the ball isn't Held, or if the caller isn't the ball's
+	/// holder — so an off-ball player's own stick input can never touch
+	/// someone else's possession.
+	/// </summary>
+	public void TryStartDribble(int peerId)
+	{
+		if (StateMachine.Current != BallState.Held) return;
+		if (StateMachine.HolderPeerId != peerId) return;
+		if (!DeadDribbleRule.CanStartDribble(HasDribbled)) return;
+
+		StateMachine.StartDribble();
 	}
 
 	// ── Shot trigger / input authority (M4 → M7b #74) ───────────────────────
