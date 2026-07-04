@@ -457,16 +457,20 @@ public partial class BallController : Node3D
 	/// a make-it-take-it reset IS a possession change and already routes
 	/// through AwardPossession.
 	///
-	/// Not broadcast: unlike IsCleared, no peer ever needs to read another
-	/// peer's copy of this flag. It only gates TWO call sites in this class
-	/// (CradleForShotStartup's set, TryStartDribble's read), and both only
-	/// ever run for a player whose input/committed-move machine THIS peer
-	/// actually advances (its own player, or — on the server — every player)
-	/// — see those methods' docs for the authority reasoning. A remote
-	/// client's view of the OTHER player never calls either, so it never
-	/// needs an accurate copy of that player's flag; the ball's actual
-	/// BallState (Held vs Dribbling) is what a remote viewer needs, and that
-	/// already travels via the normal ReceiveState/ReconcileFromServer path.
+	/// Broadcast alongside IsCleared (same ReceiveState payload, same
+	/// unconditional force-correct in ReconcileFromServer) — NOT the
+	/// "predicted-everywhere, never corrected" treatment an earlier draft of
+	/// this issue tried. Reasoning (doubt-driven review, #193): every OTHER
+	/// discrete identity write in this class (StateMachine.Current/HolderPeerId)
+	/// gets force-corrected on a client/server disagreement via ForceState —
+	/// but that correction can re-point HolderPeerId at a DIFFERENT peer (e.g.
+	/// the client mispredicted which player won a loose-ball scramble) while
+	/// leaving THIS flag holding whatever value it last had for a completely
+	/// different possession. Unlike IsCleared's already-accepted <=1-RTT
+	/// cosmetic window, an uncorrected stale HasDribbled=true would wrongly
+	/// refuse a legitimate drive attempt for the REST of that possession, not
+	/// just a sub-frame — broadcasting it closes that gap the same way
+	/// IsCleared already closes its own.
 	/// </summary>
 	public bool HasDribbled { get; private set; }
 
@@ -560,6 +564,7 @@ public partial class BallController : Node3D
 	private Vector3 _serverVel;
 	private int _serverHolderPeerId;
 	private bool _serverCleared;
+	private bool _serverHasDribbled;
 
 	/// <summary>True once ReceiveState has arrived since the last _PhysicsProcess.</summary>
 	private bool _hasNewState;
@@ -888,7 +893,7 @@ public partial class BallController : Node3D
 			// as the holder it belongs to — continuously resent, so a dropped
 			// packet self-heals on the next tick.
 			Rpc(MethodName.ReceiveState,
-				(int)StateMachine.Current, GlobalPosition, CurrentVelocity(), StateMachine.HolderPeerId, IsCleared);
+				(int)StateMachine.Current, GlobalPosition, CurrentVelocity(), StateMachine.HolderPeerId, IsCleared, HasDribbled);
 		}
 
 		ApplySmoothCorrection();
@@ -2069,16 +2074,23 @@ public partial class BallController : Node3D
 	/// a state/holder pair here. This is the same trust boundary
 	/// PlayerController.ReceiveState already relies on for its own payload.
 	/// </summary>
+	/// hasDribbled appended LAST, after cleared (#193, doubt-driven review):
+	/// kept as its own trailing bool rather than reusing an existing slot, the
+	/// same transposition-safety convention PlayerController.ReceiveState uses
+	/// for WasRecoveryEnteredEarly — two same-typed trailing params next to
+	/// unrelated ones is exactly the positional-arg fragility this doc already
+	/// warns about elsewhere in this file.
 	[Rpc(MultiplayerApi.RpcMode.Authority,
 		 CallLocal = false,
 		 TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
-	private void ReceiveState(int state, Vector3 pos, Vector3 vel, int holderPeerId, bool cleared)
+	private void ReceiveState(int state, Vector3 pos, Vector3 vel, int holderPeerId, bool cleared, bool hasDribbled)
 	{
 		_serverState         = (BallState)state;
 		_serverPos           = pos;
 		_serverVel           = vel;
 		_serverHolderPeerId  = holderPeerId;
 		_serverCleared       = cleared;
+		_serverHasDribbled   = hasDribbled;
 		_hasNewState         = true;
 	}
 
@@ -2115,6 +2127,19 @@ public partial class BallController : Node3D
 		// the broadcast value verbatim (#50). This corrects the <=1-RTT window
 		// after a client-predicted rebound where the local flag was left stale.
 		IsCleared = _serverCleared;
+
+		// HasDribbled (#193, doubt-driven review): same unconditional force-
+		// correct as IsCleared, for the same reason. Without this, a client
+		// whose local rebound/turnover prediction disagreed with the server's
+		// actual recipient (ForceState above just repointed HolderPeerId at a
+		// DIFFERENT peer than the client predicted) would keep whatever stale
+		// HasDribbled value it last held — potentially TRUE for what the
+		// corrected identity is really a brand-new possession — wrongly
+		// refusing that player's next legitimate drive attempt until some
+		// LATER real possession change happened to reset it. Unlike IsCleared's
+		// already-accepted <=1-RTT cosmetic window, that staleness had no
+		// natural expiry, so it needed the same broadcast treatment.
+		HasDribbled = _serverHasDribbled;
 
 		Vector3 renderedPos = GlobalPosition;
 		GlobalPosition = _serverPos;

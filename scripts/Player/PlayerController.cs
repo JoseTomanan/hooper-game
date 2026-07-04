@@ -950,7 +950,7 @@ public partial class PlayerController : CharacterBody3D
 		// cost the issue calls for. BallController.CradleForShotStartup no-ops
 		// on its own if the ball isn't Dribbling for this exact peer, so this
 		// call is safe to fire unconditionally whenever a JumpShot begins.
-		if (move is JumpShot && int.TryParse(Name, out int shooterPeerId))
+		if (move is JumpShot && int.TryParse(Name, out int shooterPeerId) && shooterPeerId != 0)
 			GetBall()?.CradleForShotStartup(shooterPeerId);
 
 		return true;
@@ -1553,7 +1553,7 @@ public partial class PlayerController : CharacterBody3D
 	private void CheckAutoStartDribble(Vector2 input)
 	{
 		if (input == Vector2.Zero) return;
-		if (!int.TryParse(Name, out int peerId)) return;
+		if (!int.TryParse(Name, out int peerId) || peerId == 0) return;
 		GetBall()?.TryStartDribble(peerId);
 	}
 
