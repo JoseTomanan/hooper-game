@@ -1234,7 +1234,7 @@ public partial class BallController : Node3D
 				defender.EndResolvedSteal();
 
 				GD.Print($"[BallController] Steal success: defender {defender.Name}, " +
-				         $"phase {_dribble.Phase:F2}, hand {holder.HandSide}");
+						 $"phase {_dribble.Phase:F2}, hand {holder.HandSide}");
 				return; // only one steal resolves per tick
 			}
 			// Whiff this tick: keep checking subsequent Active ticks (the loop
