@@ -86,12 +86,13 @@ public class CrossoverHesiSequenceTests
     }
 
     [Theory]
-    // Facing heading 0 (faces +Z): the crossover burst goes toward the world
-    // side the flick points to. The sign is hitl visual sign-off; here we pin
-    // the INTERNAL consistency — a crossover always bursts toward the empty
-    // hand it swaps into.
-    [InlineData(+1)] // ball Left, flick right → burst world +X
-    [InlineData(-1)] // ball Right, flick left → burst world -X
+    // Facing heading 0 (faces +Z): the crossover bursts toward the SAME side
+    // the ball swaps to. The world-space sign was hitl-signed-off inverted on
+    // 2026-07-04 (#191): body-right at heading 0 is world -X — the identical
+    // cross(forward, up) convention BallController.HandRight uses to render
+    // the ball in-hand, so burst and ball-swap read as one motion.
+    [InlineData(+1)] // ball Left, flick right → burst body-right = world -X
+    [InlineData(-1)] // ball Right, flick left → burst body-left  = world +X
     public void CrossoverBurst_AtHeadingZero_PointsTowardFlickSide(int flickSign)
     {
         HandSide hand = flickSign > 0 ? HandSide.Left : HandSide.Right;
@@ -99,7 +100,7 @@ public class CrossoverHesiSequenceTests
 
         Vector2 burst = HandStateResolver.BurstWorldDir(0f, flickSign);
 
-        Assert.Equal(flickSign, MathF.Sign(burst.X));
+        Assert.Equal(-flickSign, MathF.Sign(burst.X));
         Assert.True(MathF.Abs(burst.Y) < 1e-5f); // purely lateral at heading 0
     }
 }

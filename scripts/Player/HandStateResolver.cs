@@ -91,22 +91,25 @@ public static class HandStateResolver
     /// to a unit world-space burst direction on the XZ plane.
     ///
     /// The player's right-hand direction in world space at heading <c>h</c> is
-    /// <c>(cos h, −sin h)</c> (XZ components). A +1 flick (body-relative right)
+    /// <c>(−cos h, sin h)</c> (XZ components). A +1 flick (body-relative right)
     /// therefore bursts along that vector; a −1 flick bursts along its negation.
-    /// Formula: <c>flickSign * (cos h, −sin h)</c>.
+    /// Formula: <c>flickSign * (−cos h, sin h)</c>.
     ///
     /// Rationale: the player's forward at heading h is <c>(sin h, cos h)</c>
     /// on XZ (Atan2(x,z) convention, yaw 0 faces +Z — the same convention as
-    /// HeadingMath and FacingResolver). The right vector is the 90°-clockwise
-    /// orthogonal: <c>(cos h, −sin h)</c>. Multiplying by the flick sign means
-    /// the burst follows the body as it turns — left and right are always
-    /// body-relative, not screen-relative (ADR-0003 no-free-aim).
+    /// HeadingMath and FacingResolver). Body-right in Godot's right-handed
+    /// coordinates is <c>cross(forward, up)</c> = <c>(−cos h, sin h)</c> — the
+    /// SAME convention BallController.HandRight uses to render the ball in the
+    /// holder's hand, so the burst and the ball-swap always travel the same
+    /// way. Multiplying by the flick sign means the burst follows the body as
+    /// it turns — left and right are always body-relative, not screen-relative
+    /// (ADR-0003 no-free-aim).
     ///
-    /// NOTE: the exact sign of the world-space output is hitl visual sign-off —
-    /// the human must verify in-editor that a +1 flick (right stick pushed to
-    /// the player's right) produces a burst that reads as "rightward" given the
-    /// game camera angle. The formula is internally consistent; the axis
-    /// orientation is a tuning judgment.
+    /// Sign hitl-verified in-editor 2026-07-04 (#191): the original
+    /// <c>(cos h, −sin h)</c> — cross(up, forward), the body's LEFT — was
+    /// mirrored, so the ball swapped into one hand while the body burst toward
+    /// the other. BurstWorldDir_FlickRight_MatchesBallRenderRightVector pins
+    /// the two conventions together against regression.
     /// </summary>
     /// <param name="heading">
     /// Player's authoritative heading in radians, Y-rotation, Godot convention.
@@ -122,5 +125,5 @@ public static class HandStateResolver
     /// <paramref name="flickSign"/> is 0.
     /// </returns>
     public static Vector2 BurstWorldDir(float heading, int flickSign) =>
-        flickSign * new Vector2(MathF.Cos(heading), -MathF.Sin(heading));
+        flickSign * new Vector2(-MathF.Cos(heading), MathF.Sin(heading));
 }
