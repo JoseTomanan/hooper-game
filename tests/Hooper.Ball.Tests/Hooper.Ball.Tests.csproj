@@ -54,6 +54,8 @@
     <Compile Include="..\..\scripts\Ball\DefensiveResolution.cs" />
     <!-- Triple-threat dead-dribble rule (issue #193, ADR-0008 amendment) -->
     <Compile Include="..\..\scripts\Ball\DeadDribbleRule.cs" />
+    <!-- Crossover ball sweep curve (issue #195) -->
+    <Compile Include="..\..\scripts\Ball\CrossoverBallSweep.cs" />
   </ItemGroup>
 
   <!--
