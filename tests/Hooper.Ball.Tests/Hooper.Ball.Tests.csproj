@@ -52,6 +52,8 @@
     <Compile Include="..\..\scripts\Ball\FloorBounce.cs" />
     <!-- M10 defensive resolution helper (issue #96, ADR-0018 §1) -->
     <Compile Include="..\..\scripts\Ball\DefensiveResolution.cs" />
+    <!-- Triple-threat dead-dribble rule (issue #193, ADR-0008 amendment) -->
+    <Compile Include="..\..\scripts\Ball\DeadDribbleRule.cs" />
   </ItemGroup>
 
   <!--
