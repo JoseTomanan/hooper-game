@@ -159,6 +159,26 @@ jobs:
           godot --headless --path . res://tests/integration/TripleThreatTest.tscn -- --harness-scenario=dead-dribble
           godot --headless --path . res://tests/integration/TripleThreatTest.tscn -- --harness-scenario=production-drive
 
+      # Crossover authoritative ball transit — no teleport (issue #195).
+      # Boots a real BallController + two PlayerControllers headless and
+      # drives an actual Crossover through the real BeginCommittedMove path
+      # (the same harness seam #193 added), waiting for the REAL
+      # PlayerController.HandSide flip a Crossover's Active-entry produces.
+      # 'crossover-sweep' samples the ball's authoritative lateral XZ offset
+      # every tick from the flip onward and asserts it dips well below the
+      # full HandOffset magnitude at some point (proves a real mid-body
+      # transit, not a one-tick HandSign snap) before settling on the
+      # opposite side. 'possession-change-no-sweep' walks the holder out of
+      # bounds (the already-proven OOB turnover) and asserts the fresh
+      # possession's hand reset NEVER activates a sweep
+      # (BallController.SweepActiveForHarness stays false every tick) —
+      # rule 2, a possession change snaps, it does not sweep. Each exits
+      # 0=PASS/1=FAIL (ADR-0016).
+      - name: Run crossover ball-sweep harness
+        run: |
+          godot --headless --path . res://tests/integration/CrossoverSweepTest.tscn -- --harness-scenario=crossover-sweep
+          godot --headless --path . res://tests/integration/CrossoverSweepTest.tscn -- --harness-scenario=possession-change-no-sweep
+
       # In-place pivot plant (issue #172, ADR-0010 amendment). Unit tests
       # (HeadingMathTests) already pin the pure HeadingMath.Step state machine;
       # this drives a REAL PlayerController through the REAL Input singleton and

@@ -691,6 +691,16 @@ public partial class BallController : Node3D
 	/// </summary>
 	internal float DribblePhaseForHarness => _dribble.Phase;
 
+	/// <summary>
+	/// Test-only: exposes whether a crossover ball sweep (#195) is currently
+	/// interpolating. The harness needs this as a direct proof that a
+	/// possession-change hand reset produces NO sweep (rule 2) — position
+	/// alone can't distinguish "reset straight to the default hand" from "a
+	/// sweep that happens to already be at its endpoint", since both look
+	/// identical from outside once settled.
+	/// </summary>
+	internal bool SweepActiveForHarness => _sweepActive;
+
 	// ── Shot scatter RNG (issue #62, ADR-0009) ─────────────────────────────
 
 	/// <summary>
