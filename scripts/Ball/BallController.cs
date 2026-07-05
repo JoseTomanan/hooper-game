@@ -446,6 +446,35 @@ public partial class BallController : Node3D
 	public bool IsCleared { get; private set; }
 
 	/// <summary>
+	/// Per-possession dead-dribble flag (#193, ADR-0008 dead-dribble amendment).
+	/// False means the current possession's dribble is still LIVE; true means
+	/// it has been cradled (a JumpShot/pump-fake Startup — see
+	/// CradleForShotStartup) and StartDribble() is refused for the rest of
+	/// this possession (DeadDribbleRule).
+	///
+	/// Reset to false on every possession change (AwardPossession) and on the
+	/// tipoff (TryAssignTipoffHolder) — never independently on "score", because
+	/// a make-it-take-it reset IS a possession change and already routes
+	/// through AwardPossession.
+	///
+	/// Broadcast alongside IsCleared (same ReceiveState payload, same
+	/// unconditional force-correct in ReconcileFromServer) — NOT the
+	/// "predicted-everywhere, never corrected" treatment an earlier draft of
+	/// this issue tried. Reasoning (doubt-driven review, #193): every OTHER
+	/// discrete identity write in this class (StateMachine.Current/HolderPeerId)
+	/// gets force-corrected on a client/server disagreement via ForceState —
+	/// but that correction can re-point HolderPeerId at a DIFFERENT peer (e.g.
+	/// the client mispredicted which player won a loose-ball scramble) while
+	/// leaving THIS flag holding whatever value it last had for a completely
+	/// different possession. Unlike IsCleared's already-accepted <=1-RTT
+	/// cosmetic window, an uncorrected stale HasDribbled=true would wrongly
+	/// refuse a legitimate drive attempt for the REST of that possession, not
+	/// just a sub-frame — broadcasting it closes that gap the same way
+	/// IsCleared already closes its own.
+	/// </summary>
+	public bool HasDribbled { get; private set; }
+
+	/// <summary>
 	/// Server-only: has the current holder been INSIDE the clear line at some point
 	/// during this possession? Crossing-detection for the take-it-back rule (#135):
 	/// a possession clears only on a genuine take-back (inside → behind), not by
@@ -535,6 +564,7 @@ public partial class BallController : Node3D
 	private Vector3 _serverVel;
 	private int _serverHolderPeerId;
 	private bool _serverCleared;
+	private bool _serverHasDribbled;
 
 	/// <summary>True once ReceiveState has arrived since the last _PhysicsProcess.</summary>
 	private bool _hasNewState;
@@ -680,12 +710,14 @@ public partial class BallController : Node3D
 		// node, it is the first connecting client. Hardcoding peer 1 here parked
 		// the ball at the world origin forever on a dedicated host.
 		//
-		// StartDribble still runs so the ball begins Dribbling; with holder 0 it
-		// tracks the world origin until the server assigns a holder (a <=1-tick
-		// window once a player exists). This is the SAME pre-holder behaviour the
-		// listen-server already had between scene load and the Host button press.
+		// The state machine's own constructor already starts Held (#193: every
+		// possession — the tipoff included — now starts Held-not-Dribbling, so
+		// there is no separate "begin dribbling" step to run here). With
+		// holder 0 TickHeld tracks the world origin until the server assigns a
+		// holder (a <=1-tick window once a player exists) — the SAME pre-holder
+		// behaviour the listen-server already had between scene load and the
+		// Host button press.
 		StateMachine = new BallStateMachine(initialHolderPeerId: 0);
-		StateMachine.StartDribble();
 
 		// Seed the shot-scatter RNG from the editor-tunable ShotScatterSeed.
 		// Constructed on every peer (client + server) because _Ready runs
@@ -861,7 +893,7 @@ public partial class BallController : Node3D
 			// as the holder it belongs to — continuously resent, so a dropped
 			// packet self-heals on the next tick.
 			Rpc(MethodName.ReceiveState,
-				(int)StateMachine.Current, GlobalPosition, CurrentVelocity(), StateMachine.HolderPeerId, IsCleared);
+				(int)StateMachine.Current, GlobalPosition, CurrentVelocity(), StateMachine.HolderPeerId, IsCleared, HasDribbled);
 		}
 
 		ApplySmoothCorrection();
@@ -968,6 +1000,13 @@ public partial class BallController : Node3D
 				// after every made basket" — the tipoff is neither, so the
 				// first basket must be allowed to count without a take-back.
 				IsCleared = true;
+
+				// The tipoff is also a fresh possession start (#193): its
+				// dribble is live. ForceState above kept whatever State this
+				// ball already was — Held by the state machine's own
+				// constructor default — so this only needs to reset the flag,
+				// not the discrete ball state.
+				HasDribbled = false;
 
 				GD.Print("[BallController] Tipoff holder assigned to peer ", peerId);
 				return;
@@ -1641,13 +1680,15 @@ public partial class BallController : Node3D
 	}
 
 	/// <summary>
-	/// Awards possession of a loose / in-flight ball to a player and resumes a
-	/// live dribble — the shared handoff path used by a live rebound (#48) and
-	/// the make-it-take-it reset (#49). Mirrors the tipoff sequence
-	/// (Catch → StartDribble): Catch is legal only from InFlight/Loose (it
-	/// returns false otherwise, leaving state untouched), and StartDribble then
-	/// puts the new holder into the same dribbling state the game opens in, so
-	/// they can immediately dribble and shoot.
+	/// Awards possession of a loose / in-flight ball to a player — the shared
+	/// handoff path used by a live rebound (#48), the make-it-take-it reset
+	/// (#49), and every OOB/steal/block turnover. Lands the new holder in a
+	/// fresh, LIVE Held possession (#193, ADR-0008): unlike the pre-#193
+	/// behaviour, this no longer auto-chains into Dribbling — the new holder
+	/// gets the "triple threat" beat (they may shoot immediately, or drive by
+	/// pushing the stick past deadzone, see PlayerController.
+	/// CheckAutoStartDribble) rather than being dropped straight into a
+	/// dribble they never asked to start.
 	///
 	/// <paramref name="cleared"/> controls the clear state of the new possession
 	/// (ADR-0008 §Decision-3, amended 2026-06-21):
@@ -1707,14 +1748,13 @@ public partial class BallController : Node3D
 		// currently safe.
 		_lastToucherPeerId = peerId;
 
-		// StartDribble is legal from Held (the state Catch just transitioned to).
-		// Guard the return value so a future internal-state divergence (e.g. a
-		// ForceState landing between Catch and StartDribble) fails loudly rather
-		// than leaving the ball Held with no dribble cycle.
-		if (!StateMachine.StartDribble())
-		{
-			GD.PrintErr($"[BallController] AwardPossession({peerId}): StartDribble rejected after Catch in state {State}; possession partially awarded, ball may behave unexpectedly.");
-		}
+		// #193: this possession's dribble is LIVE — reset the dead-dribble flag
+		// unconditionally. This is the ONE reset point for every possession
+		// change (rebound, turnover, make-it-take-it); the tipoff resets it
+		// separately in TryAssignTipoffHolder, which never calls AwardPossession.
+		// No StartDribble() call follows here any more (pre-#193 behaviour):
+		// the new holder starts Held, not Dribbling — see this method's doc.
+		HasDribbled = false;
 
 		// Every possession change starts a fresh dribble (#176, ADR-0014 call
 		// recorded on the issue): real half-court 1v1 rules end a dribble the
@@ -1747,6 +1787,82 @@ public partial class BallController : Node3D
 		// early-returns on IsCleared — but resetting unconditionally keeps the
 		// invariant simple: every possession begins with the take-back not yet done.
 		_holderHasBeenInsideClearLine = false;
+	}
+
+	// ── Triple threat: dead-dribble rule (#193, ADR-0008 amendment) ─────────
+
+	/// <summary>
+	/// Cradles a live dribble as the side effect of the holder BEGINNING a
+	/// JumpShot — covers the pump-fake too, since a feint is a Startup-phase
+	/// abort of the SAME Begin(), not a separate one (#193's spec). Ends the
+	/// dribble (StopDribble → Held) and marks <see cref="HasDribbled"/>
+	/// immediately, even though the shot itself may still be feinted away:
+	/// you can't un-pick-up your dribble by faking a shot. Matches real ball
+	/// / 2K — the gather is inherent to the shooting motion, not a separate
+	/// discrete action or CommittedMove.
+	///
+	/// Called from PlayerController.BeginCommittedMove — the ONE shared choke
+	/// point every Begin(JumpShot) call already funnels through (the server,
+	/// for every player node it runs authoritatively; a client, only for its
+	/// own predicted player) — so this runs under exactly the same authority
+	/// set CheckJumpShotRelease already restricts ball-state writes to, with
+	/// no separate IsServer/IsLocalHolder guard needed here.
+	///
+	/// No-ops if the ball isn't currently Dribbling, or if the caller isn't
+	/// the ball's holder — so a stray/mistimed call can never desync ball
+	/// state. In particular, shooting straight out of a fresh live Held
+	/// possession never touches StopDribble at all: there is no dribble to
+	/// end, and HasDribbled is already false for that possession.
+	/// </summary>
+	public void CradleForShotStartup(int peerId)
+	{
+		// KNOWN ACCEPTED RACE (code review on PR #204, ~1-tick window, NOT
+		// fixed here): PlayerController.RequestBeginMove travels Reliable
+		// while SubmitInput (the channel that carries the drive input
+		// CheckAutoStartDribble reads) travels UnreliableOrdered — separate
+		// channels with no cross-ordering guarantee. A client that drives and
+		// then pump-fakes within roughly one tick can have the SERVER process
+		// Begin(JumpShot) BEFORE that drive's SubmitInput arrives: the server
+		// still sees Held here (this guard no-ops), so HasDribbled stays
+		// false server-side while the client's own prediction already set it
+		// true — the client is then force-corrected back to false by the next
+		// ReceiveState broadcast (HasDribbled IS broadcast; see the
+		// ReconcileFromServer doc), a silent, narrow dead-dribble bypass. A
+		// robust fix is cross-channel input/RPC ordering, which is a separate
+		// piece of work, not a #193 fix — see the cradle-race follow-up issue
+		// linked from PR #204's conversation.
+		if (StateMachine.Current != BallState.Dribbling) return;
+		if (StateMachine.HolderPeerId != peerId) return;
+
+		if (StateMachine.StopDribble())
+			HasDribbled = true;
+	}
+
+	/// <summary>
+	/// Attempts to resume a live dribble out of a fresh Held possession — the
+	/// "drive" exit from the triple-threat stance (#193): the holder pushing
+	/// the left stick past deadzone. Refused once <see cref="HasDribbled"/> is
+	/// set for this possession (DeadDribbleRule.CanStartDribble) — the dead-
+	/// dribble rule means a feinted pump-fake strands the holder in dead Held
+	/// until the next possession change; they can still walk (Move() is
+	/// unaffected), they just can't resume bouncing the ball.
+	///
+	/// Called from PlayerController.CheckAutoStartDribble wherever a tick's
+	/// REAL movement input is available for this player — see that method's
+	/// doc for exactly which roles that is (the same authority set every
+	/// other ball-state write in this class already restricts to).
+	///
+	/// No-ops if the ball isn't Held, or if the caller isn't the ball's
+	/// holder — so an off-ball player's own stick input can never touch
+	/// someone else's possession.
+	/// </summary>
+	public void TryStartDribble(int peerId)
+	{
+		if (StateMachine.Current != BallState.Held) return;
+		if (StateMachine.HolderPeerId != peerId) return;
+		if (!DeadDribbleRule.CanStartDribble(HasDribbled)) return;
+
+		StateMachine.StartDribble();
 	}
 
 	// ── Shot trigger / input authority (M4 → M7b #74) ───────────────────────
@@ -1973,16 +2089,23 @@ public partial class BallController : Node3D
 	/// a state/holder pair here. This is the same trust boundary
 	/// PlayerController.ReceiveState already relies on for its own payload.
 	/// </summary>
+	/// hasDribbled appended LAST, after cleared (#193, doubt-driven review):
+	/// kept as its own trailing bool rather than reusing an existing slot, the
+	/// same transposition-safety convention PlayerController.ReceiveState uses
+	/// for WasRecoveryEnteredEarly — two same-typed trailing params next to
+	/// unrelated ones is exactly the positional-arg fragility this doc already
+	/// warns about elsewhere in this file.
 	[Rpc(MultiplayerApi.RpcMode.Authority,
 		 CallLocal = false,
 		 TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
-	private void ReceiveState(int state, Vector3 pos, Vector3 vel, int holderPeerId, bool cleared)
+	private void ReceiveState(int state, Vector3 pos, Vector3 vel, int holderPeerId, bool cleared, bool hasDribbled)
 	{
 		_serverState         = (BallState)state;
 		_serverPos           = pos;
 		_serverVel           = vel;
 		_serverHolderPeerId  = holderPeerId;
 		_serverCleared       = cleared;
+		_serverHasDribbled   = hasDribbled;
 		_hasNewState         = true;
 	}
 
@@ -2019,6 +2142,19 @@ public partial class BallController : Node3D
 		// the broadcast value verbatim (#50). This corrects the <=1-RTT window
 		// after a client-predicted rebound where the local flag was left stale.
 		IsCleared = _serverCleared;
+
+		// HasDribbled (#193, doubt-driven review): same unconditional force-
+		// correct as IsCleared, for the same reason. Without this, a client
+		// whose local rebound/turnover prediction disagreed with the server's
+		// actual recipient (ForceState above just repointed HolderPeerId at a
+		// DIFFERENT peer than the client predicted) would keep whatever stale
+		// HasDribbled value it last held — potentially TRUE for what the
+		// corrected identity is really a brand-new possession — wrongly
+		// refusing that player's next legitimate drive attempt until some
+		// LATER real possession change happened to reset it. Unlike IsCleared's
+		// already-accepted <=1-RTT cosmetic window, that staleness had no
+		// natural expiry, so it needed the same broadcast treatment.
+		HasDribbled = _serverHasDribbled;
 
 		Vector3 renderedPos = GlobalPosition;
 		GlobalPosition = _serverPos;

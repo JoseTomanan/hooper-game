@@ -27,10 +27,11 @@ namespace HOOPERGAME.Tests.Integration;
 // ── The scenarios ──────────────────────────────────────────────────────────
 // held-turnover:    the ball's HOLDER is walked past the court line. Asserts
 //                    possession flips to the opponent, the ball settles in
-//                    BallState.Dribbling (AwardPossession's Turnover branch
-//                    lands on Held then unconditionally calls StartDribble()
-//                    before returning — the same settle-to-Dribbling every
-//                    other AwardPossession caller, e.g. a rebound, reaches),
+//                    BallState.Held (issue #193: AwardPossession's Turnover
+//                    branch lands the new holder in a fresh, live Held
+//                    possession and no longer auto-chains into Dribbling —
+//                    the same settle-to-Held every other AwardPossession
+//                    caller, e.g. a rebound, now reaches),
 //                    and the new possession starts UNCLEARED (IsCleared ==
 //                    false) — issue #119 criterion 2. Per the PR #174 lesson
 //                    ("assert the full turnover completes, not a snapshot"),
@@ -199,12 +200,12 @@ public partial class OobTurnoverTest : Node
         if (_holdUntilFrame == 0)
         {
             bool flipped = _ball.StateMachine.HolderPeerId == _otherPeerId;
-            bool settledDribbling = _ball.State == BallState.Dribbling;
+            bool settledHeld = _ball.State == BallState.Held;
             bool uncleared = !_ball.IsCleared;
 
-            if (!(flipped && settledDribbling && uncleared))
+            if (!(flipped && settledHeld && uncleared))
             {
-                Fail($"held-turnover expected holder={_otherPeerId}, state=Dribbling, cleared=false at the settle checkpoint (frame {_frame}); got holder={_ball.StateMachine.HolderPeerId}, state={_ball.State}, cleared={_ball.IsCleared}.");
+                Fail($"held-turnover expected holder={_otherPeerId}, state=Held, cleared=false at the settle checkpoint (frame {_frame}); got holder={_ball.StateMachine.HolderPeerId}, state={_ball.State}, cleared={_ball.IsCleared}.");
                 Finish();
                 return;
             }
@@ -213,27 +214,28 @@ public partial class OobTurnoverTest : Node
             GD.Print($"[oob-turnover] held-turnover settled at frame {_frame} (holder={_ball.StateMachine.HolderPeerId}); holding for {StabilityFrames} more ticks to confirm it does not regress.");
         }
 
-        // Stability hold: the awarded state (new holder, Dribbling, uncleared)
+        // Stability hold: the awarded state (new holder, Held, uncleared)
         // must not regress on ANY subsequent tick — no flip-back to the old
         // holder, no re-fire of another turnover, no IsCleared oscillation.
         // Fails on the FIRST bad frame rather than only at the end, so the
         // diagnosis names exactly when the regression happened (PR #174 lesson:
         // a single end-of-window snapshot can miss a transient that self-heals
-        // before the last sample).
+        // before the last sample). No player input drives this harness, so
+        // there is no auto-dribble drive (#193) to move the ball off Held.
         bool stillFlipped = _ball.StateMachine.HolderPeerId == _otherPeerId;
-        bool stillDribbling = _ball.State == BallState.Dribbling;
+        bool stillHeld = _ball.State == BallState.Held;
         bool stillUncleared = !_ball.IsCleared;
 
-        if (!(stillFlipped && stillDribbling && stillUncleared))
+        if (!(stillFlipped && stillHeld && stillUncleared))
         {
-            Fail($"held-turnover regressed at frame {_frame} (holdWindow ends {_holdUntilFrame}): expected holder={_otherPeerId}, state=Dribbling, cleared=false; got holder={_ball.StateMachine.HolderPeerId}, state={_ball.State}, cleared={_ball.IsCleared}.");
+            Fail($"held-turnover regressed at frame {_frame} (holdWindow ends {_holdUntilFrame}): expected holder={_otherPeerId}, state=Held, cleared=false; got holder={_ball.StateMachine.HolderPeerId}, state={_ball.State}, cleared={_ball.IsCleared}.");
             Finish();
             return;
         }
 
         if (_frame < _holdUntilFrame) return;
 
-        GD.Print($"[oob-turnover] PASS held-turnover — holder held {_otherPeerId}, state=Dribbling, cleared=false across {StabilityFrames} ticks with no regression.");
+        GD.Print($"[oob-turnover] PASS held-turnover — holder held {_otherPeerId}, state=Held, cleared=false across {StabilityFrames} ticks with no regression.");
         Finish(0);
     }
 

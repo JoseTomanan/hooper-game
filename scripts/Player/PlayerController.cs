@@ -574,7 +574,28 @@ public partial class PlayerController : CharacterBody3D
 		get
 		{
 			BallController ball = GetBall();
-			return ball != null && ball.StateMachine.HolderPeerId.ToString() == Name;
+			return ball != null && OwnPeerId != 0 && ball.StateMachine.HolderPeerId == OwnPeerId;
+		}
+	}
+
+	private int? _cachedOwnPeerId;
+
+	/// <summary>
+	/// This node's own peer id, parsed from Name once and cached (#204
+	/// code-review cleanup). Name is the peer-ID-as-node-name identity
+	/// contract every Name-parse site in this class already assumes
+	/// (NetworkManager.SpawnPlayer names nodes by peer id; it never changes
+	/// for the node's lifetime), so caching removes a redundant
+	/// int.TryParse from the 60Hz tick path. 0 (never a real peer id) is
+	/// returned if Name fails to parse, matching every other Name-parse
+	/// site's fail-safe default.
+	/// </summary>
+	private int OwnPeerId
+	{
+		get
+		{
+			_cachedOwnPeerId ??= int.TryParse(Name, out int id) ? id : 0;
+			return _cachedOwnPeerId.Value;
 		}
 	}
 
@@ -775,6 +796,7 @@ public partial class PlayerController : CharacterBody3D
 		{
 			Vector2 input = ReadInput();
 			Move(input, delta);
+			CheckAutoStartDribble(input);
 		}
 
 		// Broadcast authoritative state to all clients.
@@ -820,7 +842,10 @@ public partial class PlayerController : CharacterBody3D
 			// the one the client itself zeroes during a committed move (#198).
 			TickCommittedMoveBehavior(delta, _pendingRawStick);
 		else
+		{
 			Move(_pendingInput, delta);
+			CheckAutoStartDribble(_pendingInput);
+		}
 
 		// Echo _serverAckedSeq so the client prunes its pending buffer, plus
 		// the committed-move state and heading piggybacked on the same broadcast
@@ -877,7 +902,10 @@ public partial class PlayerController : CharacterBody3D
 			// TRUE stick, #198).
 			TickCommittedMoveBehavior(delta, rawStick);
 		else
+		{
 			Move(moveInput, delta);
+			CheckAutoStartDribble(moveInput);
+		}
 
 		// Send input to server. UnreliableOrdered: dropped packets are gone,
 		// but arriving packets are always in seq order (no regress to stale input).
@@ -1013,8 +1041,45 @@ public partial class PlayerController : CharacterBody3D
 	/// </summary>
 	private bool BeginCommittedMove(CommittedMove move)
 	{
+		// #193 code-review fix: a Crossover/Hesitation IS a dribble move in
+		// real ball — it cannot legally begin while this player HOLDS the
+		// ball in Held state, dead OR live. Without this gate, JumpShot was
+		// the only move #193 special-cased, so a dead-Held player (post-
+		// cradle, or post a canceled pump-fake) could still Begin a
+		// crossover: the burst fires and the JustEnteredActive HandSide flip
+		// (TickCommittedMoveBehavior) authoritatively teleports the HELD ball
+		// to the other hand, escaping the dead-dribble rule's whole point —
+		// #193's own "stranded in dead Held" cost became avoidable. From a
+		// LIVE Held possession the fix is the same: the player must push the
+		// stick to start dribbling first (CheckAutoStartDribble ->
+		// BallController.TryStartDribble), matching real ball's "you can't
+		// crossover a ball you haven't started bouncing yet."
+		//
+		// Gated on IsBallHolder specifically — a player WITHOUT the ball
+		// (defense) is never affected; their crossover/hesitation attempts
+		// are unrelated to possession state.
+		if ((move is Crossover || move is Hesitation) && IsBallHolder
+			&& GetBall()?.State == BallState.Held)
+			return false;
+
 		if (!_machine.Begin(move)) return false;
 		_pivot = HeadingMath.PivotState.None;
+
+		// #193 (triple threat / dead-dribble rule): a JumpShot's gather is
+		// inherent to the shooting motion, not a separate input — so cradling
+		// a live dribble is a SIDE EFFECT of the shot's Startup beginning,
+		// fired right here at the ONE choke point every Begin(JumpShot) call
+		// already funnels through. This also covers the pump-fake: a feint is
+		// a Startup-phase ABORT of this SAME move (CommittedMoveMachine.
+		// Feint()), not a second Begin(), so there is no separate hook needed
+		// for it — a canceled pump-fake still leaves HasDribbled set, which is
+		// the intentional "you can't un-pick-up your dribble by faking a shot"
+		// cost the issue calls for. BallController.CradleForShotStartup no-ops
+		// on its own if the ball isn't Dribbling for this exact peer, so this
+		// call is safe to fire unconditionally whenever a JumpShot begins.
+		if (move is JumpShot && OwnPeerId != 0)
+			GetBall()?.CradleForShotStartup(OwnPeerId);
+
 		return true;
 	}
 
@@ -1585,6 +1650,40 @@ public partial class PlayerController : CharacterBody3D
 	private static Vector2 ReadInput()
 	{
 		return Input.GetVector("move_left", "move_right", "move_forward", "move_backward");
+	}
+
+	/// <summary>
+	/// Drives the ball out of a live Held possession the instant the holder
+	/// pushes the stick past deadzone (#193, ADR-0008's dead-dribble rule): a
+	/// fresh possession now starts Held-not-Dribbling (BallController.
+	/// AwardPossession no longer auto-chains into a dribble), so ordinary
+	/// movement intent is what resumes it — the "drive" read out of a triple-
+	/// threat stance.
+	///
+	/// Called only where <paramref name="input"/> is REAL ground-truth for
+	/// THIS player this tick — own-player local hardware on the server or a
+	/// client (TickServerOwnPlayer/TickClientOwnPlayer), or a remote player's
+	/// latest submitted input on the server (TickServerRemotePlayer) — never
+	/// from TickClientRemotePlayer, which has no local input to read. This is
+	/// exactly the authority set every other ball-state write in this file
+	/// already restricts to (see BallController.CradleForShotStartup's doc).
+	///
+	/// Godot's Input.GetVector already clamps anything inside an action's
+	/// configured deadzone down to an exact Vector2.Zero (project.godot's
+	/// move_* actions carry a 0.2 deadzone), so a nonzero vector here already
+	/// means "past deadzone" — no separate threshold constant needed.
+	///
+	/// BallController.TryStartDribble owns every actual gameplay guard (must
+	/// be Held, dead-dribble refusal) — this call site pre-filters on
+	/// IsBallHolder (#204 code-review cleanup) so a non-holder's movement
+	/// input never even makes the cross-object call, which TryStartDribble's
+	/// own HolderPeerId check would have no-opped on anyway.
+	/// </summary>
+	private void CheckAutoStartDribble(Vector2 input)
+	{
+		if (input == Vector2.Zero) return;
+		if (!IsBallHolder) return;
+		GetBall()?.TryStartDribble(OwnPeerId);
 	}
 
 	// ── Committed-move input and behavior (M3 local-only → M4 networked) ─────

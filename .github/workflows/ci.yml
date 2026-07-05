@@ -135,6 +135,30 @@ jobs:
           godot --headless --path . res://tests/integration/OobTurnoverTest.tscn -- --harness-scenario=both-oob
           godot --headless --path . res://tests/integration/OobTurnoverTest.tscn -- --harness-scenario=wall-placement
 
+      # Triple threat stance — Held-start possessions + dead-dribble rule
+      # (issue #193, ADR-0008 amendment). Boots a real BallController + two
+      # PlayerControllers headless and drives the actual production code path
+      # end to end: asserts the tipoff lands in a fresh, LIVE Held possession
+      # (not auto-chained into Dribbling); that TryStartDribble legitimately
+      # resumes a dribble on stick intent; that beginning a JumpShot (the real
+      # BeginCommittedMove path) cradles the dribble synchronously and sets
+      # the dead-dribble flag; that a further TryStartDribble is then refused;
+      # that a canceled pump-fake still leaves the player in dead Held; that a
+      # dribble move (Crossover/Hesitation) is refused while holding a Held
+      # ball, dead or live (#204 code-review fix — no burst, no HandSide
+      # flip); and that an OOB turnover (ADR-0008, already proven by
+      # OobTurnoverTest) resets the flag and starts the new holder's
+      # possession live. 'production-drive' (#204 code-review fix) presses
+      # REAL movement input (Input.ActionPress) and asserts the Held ->
+      # Dribbling transition happens via the UNMODIFIED PlayerController.
+      # CheckAutoStartDribble -> BallController.TryStartDribble production
+      # path, not a direct test-only call into the ball. Each exits
+      # 0=PASS/1=FAIL (ADR-0016).
+      - name: Run triple-threat / dead-dribble harness
+        run: |
+          godot --headless --path . res://tests/integration/TripleThreatTest.tscn -- --harness-scenario=dead-dribble
+          godot --headless --path . res://tests/integration/TripleThreatTest.tscn -- --harness-scenario=production-drive
+
       # In-place pivot plant (issue #172, ADR-0010 amendment). Unit tests
       # (HeadingMathTests) already pin the pure HeadingMath.Step state machine;
       # this drives a REAL PlayerController through the REAL Input singleton and
