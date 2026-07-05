@@ -1,5 +1,6 @@
 using Godot;
 using Hooper.Ball;
+using Hooper.Moves;
 using Hooper.Player;
 
 namespace HOOPERGAME.Tests.Integration;
@@ -44,7 +45,17 @@ namespace HOOPERGAME.Tests.Integration;
 //                        TryStartDribble is still refused — "a feinted
 //                        pump-fake still leaves the player in dead Held" is
 //                        called out explicitly as intentional in the issue.
-//   6. reset-on-turnover: walking the holder out of bounds (the already-proven
+//   6. dead-Held-crossover-refused: (#193 code-review fix) once the machine
+//                        returns to Inactive (the feint's Recovery has fully
+//                        elapsed) but the ball is STILL dead Held, attempting
+//                        a Crossover through the real BeginCommittedMove path
+//                        must be refused — a dribble move cannot begin while
+//                        this player holds a Held ball, dead or live. Pins
+//                        that the refusal actually blocks BOTH the burst
+//                        (machine never leaves Inactive) and the HandSide
+//                        flip (HandSide is unchanged), not just that the
+//                        return value happens to be false.
+//   7. reset-on-turnover: walking the holder out of bounds (the already-proven
 //                        OOB turnover, ADR-0008) awards the ball to the
 //                        opponent as a fresh, live Held possession —
 //                        HasDribbled resets to false, and the NEW holder can
@@ -72,7 +83,8 @@ public partial class TripleThreatTest : Node
     {
         AwaitTipoff, FreshHeldChecked, DriveIssued, DriveChecked,
         CradleIssued, CradleChecked, DeadRefusalChecked,
-        FeintIssued, FeintChecked, OobIssued, Done
+        FeintIssued, FeintChecked, AwaitInactiveForCrossoverCheck,
+        OobIssued, Done
     }
 
     private Step _step = Step.AwaitTipoff;
@@ -219,7 +231,33 @@ public partial class TripleThreatTest : Node
                 }
                 GD.Print("[triple-threat] PASS feint-still-dead — a canceled pump-fake still leaves the player in dead Held.");
 
-                // Step 6: turn the ball over via the OOB rule (ADR-0008,
+                // Step 6: wait for the feint's Recovery to fully elapse (machine
+                // -> Inactive) before attempting the crossover-refusal check —
+                // otherwise a refusal would be indistinguishable from the
+                // ordinary "already in a move" Begin() guard, not the NEW
+                // Held-holder gate this step exists to pin.
+                _step = Step.AwaitInactiveForCrossoverCheck;
+                break;
+
+            case Step.AwaitInactiveForCrossoverCheck:
+                PlayerController holder3 = NodeForPeer(_holderId);
+                if (holder3.MachinePhaseForHarness != MovePhase.Inactive) break;
+
+                HandSide handSideBefore = holder3.HandSide;
+                bool crossoverBegan = holder3.BeginCrossoverForHarness(1f);
+                bool refused = !crossoverBegan
+                    && holder3.MachinePhaseForHarness == MovePhase.Inactive
+                    && holder3.HandSide == handSideBefore
+                    && _ball.State == BallState.Held;
+                if (!refused)
+                {
+                    Fail($"dead-Held-crossover-refused: expected a dribble move to be refused while holding a Held ball; began={crossoverBegan}, phase={holder3.MachinePhaseForHarness}, handSide {handSideBefore}->{holder3.HandSide}, ballState={_ball.State}.");
+                    Finish();
+                    return;
+                }
+                GD.Print("[triple-threat] PASS dead-Held-crossover-refused — Crossover Begin was refused (no burst, no HandSide flip) while holding a Held ball.");
+
+                // Step 7: turn the ball over via the OOB rule (ADR-0008,
                 // already proven by OobTurnoverTest) and confirm the fresh
                 // possession resets HasDribbled and starts live.
                 NodeForPeer(_holderId).GlobalPosition = OobPositiveX;

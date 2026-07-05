@@ -36,4 +36,17 @@ public partial class PlayerController
     /// to press that modifier with.
     /// </summary>
     internal bool FeintForHarness() => _machine.Feint();
+
+    /// <summary>
+    /// Test-only (#193 code-review fix): attempts a Crossover through the SAME
+    /// BeginCommittedMove path production code uses, so the harness can pin
+    /// the "a dribble move cannot begin while this player HOLDS the ball in
+    /// Held state" refusal added in response to code review. Returns
+    /// BeginCommittedMove's result — false if refused (either by the new
+    /// Held-holder gate or the ordinary Inactive-only Begin() guard).
+    /// </summary>
+    internal bool BeginCrossoverForHarness(float flickSign) => BeginCommittedMove(new Crossover(flickSign));
+
+    /// <summary>Test-only: this machine's current Phase, for asserting a refused Begin left it Inactive.</summary>
+    internal MovePhase MachinePhaseForHarness => _machine.Phase;
 }

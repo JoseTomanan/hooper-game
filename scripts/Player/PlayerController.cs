@@ -935,6 +935,27 @@ public partial class PlayerController : CharacterBody3D
 	/// </summary>
 	private bool BeginCommittedMove(CommittedMove move)
 	{
+		// #193 code-review fix: a Crossover/Hesitation IS a dribble move in
+		// real ball — it cannot legally begin while this player HOLDS the
+		// ball in Held state, dead OR live. Without this gate, JumpShot was
+		// the only move #193 special-cased, so a dead-Held player (post-
+		// cradle, or post a canceled pump-fake) could still Begin a
+		// crossover: the burst fires and the JustEnteredActive HandSide flip
+		// (TickCommittedMoveBehavior) authoritatively teleports the HELD ball
+		// to the other hand, escaping the dead-dribble rule's whole point —
+		// #193's own "stranded in dead Held" cost became avoidable. From a
+		// LIVE Held possession the fix is the same: the player must push the
+		// stick to start dribbling first (CheckAutoStartDribble ->
+		// BallController.TryStartDribble), matching real ball's "you can't
+		// crossover a ball you haven't started bouncing yet."
+		//
+		// Gated on IsBallHolder specifically — a player WITHOUT the ball
+		// (defense) is never affected; their crossover/hesitation attempts
+		// are unrelated to possession state.
+		if ((move is Crossover || move is Hesitation) && IsBallHolder
+			&& GetBall()?.State == BallState.Held)
+			return false;
+
 		if (!_machine.Begin(move)) return false;
 		_pivot = HeadingMath.PivotState.None;
 
