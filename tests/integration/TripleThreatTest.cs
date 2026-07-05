@@ -1,3 +1,4 @@
+using System.Linq;
 using Godot;
 using Hooper.Ball;
 using Hooper.Moves;
@@ -14,8 +15,10 @@ namespace HOOPERGAME.Tests.Integration;
 // BallController.TryStartDribble's refusal actually blocking a StartDribble
 // attempt end to end.
 //
-//   godot --headless --path . res://tests/integration/TripleThreatTest.tscn
+//   godot --headless --path . res://tests/integration/TripleThreatTest.tscn -- --harness-scenario=dead-dribble
+//   godot --headless --path . res://tests/integration/TripleThreatTest.tscn -- --harness-scenario=production-drive
 //   Exit: 0 = PASS, 1 = FAIL (via GetTree().Quit) — the ADR-0016 exit-code contract.
+//   Omitting --harness-scenario defaults to "dead-dribble" (unchanged CI invocation).
 //
 // ── Why a single offline instance is the server ───────────────────────────
 // Same reasoning as StealTurnoverTest/OobTurnoverTest: with no MultiplayerPeer
@@ -25,7 +28,7 @@ namespace HOOPERGAME.Tests.Integration;
 // physics frame via SampleMoveInput, the same free clock StealTurnoverTest
 // relies on for its defender.
 //
-// ── The single scenario, run as an ordered sequence of steps ──────────────
+// ── Scenario "dead-dribble": a single sequence of steps ────────────────────
 // This test does not need frame-precise phase math (unlike the steal timing
 // harness) — each step fires an action, waits a fixed small margin, and
 // asserts, failing fast with a labelled step name on the first violation:
@@ -60,6 +63,20 @@ namespace HOOPERGAME.Tests.Integration;
 //                        opponent as a fresh, live Held possession —
 //                        HasDribbled resets to false, and the NEW holder can
 //                        immediately dribble.
+//
+// ── Scenario "production-drive": the input path, not the ball's contract ──
+// (Code-review finding on #204.) "dead-dribble" above proves BallController's
+// TryStartDribble CONTRACT by calling it directly — it never actually drives
+// PlayerController.CheckAutoStartDribble, the production entry point real
+// gameplay input reaches. A regression there (GetBall() returning null, the
+// Name-parse guard rejecting a valid peer, or a tick path that stops calling
+// it) would ship green under "dead-dribble" alone. This scenario instead
+// presses REAL movement input (Input.ActionPress, the same Godot-supported
+// automated-input mechanism PivotPlantTest already uses) on a fresh Held
+// possession and asserts the Held -> Dribbling transition happens via the
+// UNMODIFIED TickServerOwnPlayer -> SampleMoveInput -> ReadInput ->
+// CheckAutoStartDribble -> BallController.TryStartDribble chain, with no
+// direct ball call from the test at all.
 public partial class TripleThreatTest : Node
 {
     private const double TimeoutSeconds = 10.0;
@@ -70,6 +87,8 @@ public partial class TripleThreatTest : Node
     // far-backstop walls) — reused rather than re-derived so this test's OOB
     // step exercises the identical, already-proven geometry.
     private static readonly Vector3 OobPositiveX = new(9.0f, 0f, 5f);
+
+    private string _scenario = "dead-dribble";
 
     private BallController _ball;
     private PlayerController _p1;
@@ -92,9 +111,17 @@ public partial class TripleThreatTest : Node
     private int _holderId;
     private int _otherId;
 
+    // ── "production-drive" scenario state ───────────────────────────────────
+    private enum DriveStep { AwaitTipoff, InputPressed, Verdict }
+    private DriveStep _driveStep = DriveStep.AwaitTipoff;
+    private int _driveHolderId;
+    private int _driveVerdictFrame;
+
     public override void _Ready()
     {
-        GD.Print("[triple-threat] booting headless…");
+        string[] args = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).ToArray();
+        _scenario = HarnessArgs.ReadArg(args, "--harness-scenario", "dead-dribble");
+        GD.Print($"[triple-threat] scenario={_scenario} booting headless…");
 
         // Same code-built-tree pattern as StealTurnoverTest/OobTurnoverTest —
         // avoids fragile .tscn ext_resource/uid wiring for a throwaway harness.
@@ -115,6 +142,17 @@ public partial class TripleThreatTest : Node
         if (_finished) return;
         _elapsed += delta;
         _frame++;
+
+        if (_scenario == "production-drive")
+        {
+            TickProductionDrive();
+            if (!_finished && _elapsed > TimeoutSeconds)
+            {
+                Fail($"timed out at frame {_frame}, driveStep {_driveStep}.");
+                Finish();
+            }
+            return;
+        }
 
         switch (_step)
         {
@@ -297,6 +335,82 @@ public partial class TripleThreatTest : Node
         {
             Fail($"timed out at frame {_frame}, step {_step}.");
             Finish();
+        }
+    }
+
+    // ── Scenario: "production-drive" (#204 code-review fix) ─────────────────
+    private void TickProductionDrive()
+    {
+        switch (_driveStep)
+        {
+            case DriveStep.AwaitTipoff:
+                if (_frame < ArmFrames) break;
+                if (_ball.StateMachine.HolderPeerId == 0)
+                {
+                    Fail("production-drive: tipoff never assigned a holder.");
+                    Finish();
+                    return;
+                }
+
+                // This offline harness only has real HARDWARE input on peer
+                // "1" (OfflineMultiplayerPeer's unique_id is 1, so "1" is both
+                // IsServer and IsLocalPlayer -> TickServerOwnPlayer reads
+                // Input.GetVector for real). The tipoff always awards peer "1"
+                // first in this code-built tree's child order (see
+                // BallController.TryAssignTipoffHolder), but assert it rather
+                // than assume it, so a future change to spawn order fails
+                // loudly here instead of silently testing nothing.
+                _driveHolderId = _ball.StateMachine.HolderPeerId;
+                if (_driveHolderId != 1)
+                {
+                    Fail($"production-drive: expected the tipoff to award peer 1 (the only peer with real hardware input in this harness), got {_driveHolderId}.");
+                    Finish();
+                    return;
+                }
+                if (_ball.State != BallState.Held || _ball.HasDribbled)
+                {
+                    Fail($"production-drive: expected a fresh live Held possession before pressing input; got state={_ball.State}, HasDribbled={_ball.HasDribbled}.");
+                    Finish();
+                    return;
+                }
+
+                // Press REAL movement input — Input.ActionPress is Godot's own
+                // supported mechanism for driving the Input singleton in
+                // automated tests (no display/window needed), the same
+                // mechanism PivotPlantTest already uses. This exercises the
+                // UNMODIFIED TickServerOwnPlayer -> SampleMoveInput ->
+                // ReadInput -> CheckAutoStartDribble -> BallController.
+                // TryStartDribble chain — no test-only seam for this step.
+                Input.ActionPress("move_left", 1.0f);
+                GD.Print($"[triple-threat] production-drive: frame {_frame}: pressed move_left for holder {_driveHolderId}");
+
+                // Frame-stamp gotcha (empirically pinned by PivotPlantTest's
+                // #172 CI repro, and reused verbatim here): ActionPress sets
+                // the pressed state immediately, but this test (the PARENT of
+                // the PlayerController it drives) ticks BEFORE its children
+                // each frame — so the earliest frame this Root can OBSERVE an
+                // effect the CHILD's SAME-frame _PhysicsProcess produced is
+                // one frame later. ActionMarginFrames (3 ticks) covers that
+                // with room to spare rather than relying on an exact off-by-one.
+                _driveStep = DriveStep.InputPressed;
+                _driveVerdictFrame = _frame + ActionMarginFrames;
+                break;
+
+            case DriveStep.InputPressed:
+                if (_frame < _driveVerdictFrame) break;
+                Input.ActionRelease("move_left"); // hygiene — not load-bearing in a one-shot headless process
+
+                if (_ball.State != BallState.Dribbling)
+                {
+                    Fail($"production-drive: expected real move_left input to drive Held -> Dribbling via CheckAutoStartDribble -> TryStartDribble; got state={_ball.State}.");
+                    Finish();
+                    return;
+                }
+
+                GD.Print("[triple-threat] PASS production-drive — real movement input drove Held -> Dribbling through the unmodified production input path.");
+                GD.Print("[triple-threat] RESULT: PASS (exit 0)");
+                Finish(0);
+                return;
         }
     }
 
