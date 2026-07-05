@@ -1816,6 +1816,21 @@ public partial class BallController : Node3D
 	/// </summary>
 	public void CradleForShotStartup(int peerId)
 	{
+		// KNOWN ACCEPTED RACE (code review on PR #204, ~1-tick window, NOT
+		// fixed here): PlayerController.RequestBeginMove travels Reliable
+		// while SubmitInput (the channel that carries the drive input
+		// CheckAutoStartDribble reads) travels UnreliableOrdered — separate
+		// channels with no cross-ordering guarantee. A client that drives and
+		// then pump-fakes within roughly one tick can have the SERVER process
+		// Begin(JumpShot) BEFORE that drive's SubmitInput arrives: the server
+		// still sees Held here (this guard no-ops), so HasDribbled stays
+		// false server-side while the client's own prediction already set it
+		// true — the client is then force-corrected back to false by the next
+		// ReceiveState broadcast (HasDribbled IS broadcast; see the
+		// ReconcileFromServer doc), a silent, narrow dead-dribble bypass. A
+		// robust fix is cross-channel input/RPC ordering, which is a separate
+		// piece of work, not a #193 fix — see the cradle-race follow-up issue
+		// linked from PR #204's conversation.
 		if (StateMachine.Current != BallState.Dribbling) return;
 		if (StateMachine.HolderPeerId != peerId) return;
 
