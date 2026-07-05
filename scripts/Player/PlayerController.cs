@@ -522,7 +522,28 @@ public partial class PlayerController : CharacterBody3D
 		get
 		{
 			BallController ball = GetBall();
-			return ball != null && ball.StateMachine.HolderPeerId.ToString() == Name;
+			return ball != null && OwnPeerId != 0 && ball.StateMachine.HolderPeerId == OwnPeerId;
+		}
+	}
+
+	private int? _cachedOwnPeerId;
+
+	/// <summary>
+	/// This node's own peer id, parsed from Name once and cached (#204
+	/// code-review cleanup). Name is the peer-ID-as-node-name identity
+	/// contract every Name-parse site in this class already assumes
+	/// (NetworkManager.SpawnPlayer names nodes by peer id; it never changes
+	/// for the node's lifetime), so caching removes a redundant
+	/// int.TryParse from the 60Hz tick path. 0 (never a real peer id) is
+	/// returned if Name fails to parse, matching every other Name-parse
+	/// site's fail-safe default.
+	/// </summary>
+	private int OwnPeerId
+	{
+		get
+		{
+			_cachedOwnPeerId ??= int.TryParse(Name, out int id) ? id : 0;
+			return _cachedOwnPeerId.Value;
 		}
 	}
 
@@ -971,8 +992,8 @@ public partial class PlayerController : CharacterBody3D
 		// cost the issue calls for. BallController.CradleForShotStartup no-ops
 		// on its own if the ball isn't Dribbling for this exact peer, so this
 		// call is safe to fire unconditionally whenever a JumpShot begins.
-		if (move is JumpShot && int.TryParse(Name, out int shooterPeerId) && shooterPeerId != 0)
-			GetBall()?.CradleForShotStartup(shooterPeerId);
+		if (move is JumpShot && OwnPeerId != 0)
+			GetBall()?.CradleForShotStartup(OwnPeerId);
 
 		return true;
 	}
@@ -1568,14 +1589,16 @@ public partial class PlayerController : CharacterBody3D
 	/// means "past deadzone" — no separate threshold constant needed.
 	///
 	/// BallController.TryStartDribble owns every actual gameplay guard (must
-	/// be this player's ball, must be Held, dead-dribble refusal) — this call
-	/// site only supplies "did this player show movement intent this tick."
+	/// be Held, dead-dribble refusal) — this call site pre-filters on
+	/// IsBallHolder (#204 code-review cleanup) so a non-holder's movement
+	/// input never even makes the cross-object call, which TryStartDribble's
+	/// own HolderPeerId check would have no-opped on anyway.
 	/// </summary>
 	private void CheckAutoStartDribble(Vector2 input)
 	{
 		if (input == Vector2.Zero) return;
-		if (!int.TryParse(Name, out int peerId) || peerId == 0) return;
-		GetBall()?.TryStartDribble(peerId);
+		if (!IsBallHolder) return;
+		GetBall()?.TryStartDribble(OwnPeerId);
 	}
 
 	// ── Committed-move input and behavior (M3 local-only → M4 networked) ─────
