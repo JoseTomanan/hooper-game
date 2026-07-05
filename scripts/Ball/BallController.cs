@@ -1441,6 +1441,30 @@ public partial class BallController : Node3D
 	/// network latency in HandSide's arrival, is the same acceptable
 	/// per-machine timing skew every other reconciled field already has —
 	/// not a new class of desync.)
+	///
+	/// ── Known, accepted residual gaps (doubt cycle, #195) ─────────────────
+	/// Two edge cases can make a peer's sweep count diverge from another's;
+	/// both are pre-existing properties of the underlying HandSide field
+	/// itself (unchanged by this method), not new netcode gaps this sweep
+	/// introduces, so they are documented rather than "fixed" with more
+	/// machinery:
+	///   1. A rare mispredicted Crossover: the predicting holder-client's
+	///      ReconcileFromServer can force HandSide back to _serverHandSide
+	///      when the server rejects the move — a SECOND HandSide change this
+	///      method cannot tell apart from a genuine flip, so it plays an
+	///      (extra, self-correcting) reverse sweep the server never plays.
+	///      This rides the exact same accepted "residual staleness" gap
+	///      ReconcileFromServer's own doc already calls out for the raw
+	///      HandSide snap (ADR-0012) — this method just makes that already-
+	///      accepted transient divergence visible as a cosmetic ripple.
+	///   2. Packet loss on the remote-opponent-client: HandSide there only
+	///      updates on ticks a fresh ReceiveState broadcast lands
+	///      (TickClientRemotePlayer's _hasNewState gate). A rapid re-cross
+	///      whose intermediate broadcast is dropped can vanish entirely on
+	///      that peer (no sweep at all), while the server/holder-client play
+	///      one — inherent to HandSide's existing "unreliable, latest-value-
+	///      wins" broadcast, not something reliable delivery would be worth
+	///      adding new netcode for here.
 	/// </summary>
 	private (float lateralFactor, float verticalDip) AdvanceHandSweep(PlayerController holder)
 	{
@@ -1453,6 +1477,14 @@ public partial class BallController : Node3D
 			return (HandSign(holder), 0f);
 		}
 
+		// (Doubt cycle, #195, finding #3) Only overwrite the cached baseline
+		// when we actually observed a real HandSide this tick. A transient
+		// null holder (e.g. a momentary NodePath lookup miss) must NOT
+		// clobber _lastObservedHandSide with null — doing so would silently
+		// drop the next tick's flip detection (comparing the real value
+		// against null instead of against the true last-known side) instead
+		// of merely skipping one tick's read, which is all a transient miss
+		// should cost.
 		HandSide? current = holder?.HandSide;
 		if (current.HasValue && _lastObservedHandSide.HasValue && current.Value != _lastObservedHandSide.Value)
 		{
@@ -1466,16 +1498,30 @@ public partial class BallController : Node3D
 			_sweepDurationTicks  = Mathf.Max(1, Mathf.RoundToInt(CrossoverSweepDuration * Engine.PhysicsTicksPerSecond));
 			_sweepActive         = true;
 		}
-		_lastObservedHandSide = current;
+		if (current.HasValue)
+			_lastObservedHandSide = current;
 
 		if (!_sweepActive)
 			return (HandSign(holder), 0f);
 
+		// (Doubt cycle, #195, finding #2) Sample t up to AND INCLUDING 1.0
+		// before deactivating — advancing _sweepTicks only when t hasn't yet
+		// reached the end — so the final active sample is the curve's true
+		// t=1 endpoint (lateral = toSign exactly, dip = 0 exactly) and the
+		// following tick's early-return fallback (HandSign = toSign, dip
+		// hardcoded 0) is a continuation of that same value, not a pop. The
+		// previous version advanced the tick counter first, so the sweep's
+		// LAST active sample landed at t=(duration-1)/duration — short of
+		// the endpoint — and the tick after that hard-snapped, producing a
+		// one-tick discontinuity in the dip (visible; the lateral discrepancy
+		// was small enough to be imperceptible, but the dip curve peaks
+		// nowhere near 0 at that point).
 		float t = CurrentSweepT();
 		(float lateral, float dip) = CrossoverBallSweep.Offset(t, _sweepFromLateral, _sweepToLateral);
-		_sweepTicks++;
-		if (_sweepTicks >= _sweepDurationTicks)
+		if (t >= 1f)
 			_sweepActive = false;
+		else
+			_sweepTicks++;
 
 		return (lateral, dip);
 	}
