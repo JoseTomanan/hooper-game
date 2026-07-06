@@ -1505,6 +1505,13 @@ public partial class BallController : Node3D
 		HandSide? current = holder?.HandSide;
 		if (current.HasValue && _lastObservedHandSide.HasValue && current.Value != _lastObservedHandSide.Value)
 		{
+			// Rule 3 (re-cross restart): live-but-dormant under default tuning —
+			// the sweep (~7 ticks at CrossoverSweepDuration=0.12s) completes long
+			// before Crossover's own Startup+Recovery lets a second crossover
+			// legally Begin (~tick 21), so _sweepActive is never still true when
+			// this runs today. It becomes reachable (and would then need real
+			// coverage, not just this unit-tested branch) if a future tuning pass
+			// shortens Recovery or lengthens CrossoverSweepDuration past ~15 ticks.
 			float fromLateral = _sweepActive
 				? CrossoverBallSweep.Offset(CurrentSweepT(), _sweepFromLateral, _sweepToLateral).LateralFactor
 				: SignOf(_lastObservedHandSide.Value);
