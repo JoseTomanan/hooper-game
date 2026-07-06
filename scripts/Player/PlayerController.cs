@@ -1426,9 +1426,16 @@ public partial class PlayerController : CharacterBody3D
 		//     pathological RTTs — consistent with the latency tolerance the
 		//     rest of this prediction system already assumes.
 		//
-		// Only one move type exists today, so a "different move Id while both
-		// sides are active" case is unreachable; revisit this gate when a
-		// second move type makes that distinguishable from this check.
+		// Multiple move types exist now (crossover, behindtheback, hesitation,
+		// jumpshot, steal, block, contest), but a "different move Id while
+		// both sides are active" case is still structurally unreachable: the
+		// server only ever moves out of Inactive by echoing back the EXACT
+		// moveId the client's own RPC requested (RequestBeginMove's Id
+		// parameter round-trips unchanged through the broadcast). There is no
+		// path where the server is Active/Startup/Recovery on a move whose Id
+		// differs from what this client itself asked to begin — so the two
+		// sides' move Ids can never disagree while both are non-Inactive,
+		// regardless of how many move types the game has.
 		//
 		// (#21 doubt cycle 2, finding #1) Known bounded gap: if the client begins
 		// a SECOND move right as its own local Recovery from a FIRST move
