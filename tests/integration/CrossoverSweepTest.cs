@@ -61,6 +61,7 @@ public partial class CrossoverSweepTest : Node
     private const int ArmFrames = 2;           // ticks for TryAssignTipoffHolder to run
     private const int ActionMarginFrames = 3;  // ticks to let an action's effect settle
     private const int SweepObservationWindow = 30; // generous vs. the ~7-tick default sweep
+    private const float FloorClipEpsilon = 0.001f; // float-math slack on the BallRadius floor
 
     // Same OOB point OobTurnoverTest/TripleThreatTest use (beyond CourtMax.X,
     // well inside the far-backstop walls).
@@ -180,6 +181,7 @@ public partial class CrossoverSweepTest : Node
                 break;
 
             case SweepStep.AwaitFlip:
+                if (!AssertAboveFloor()) return;
                 PlayerController holderForFlip = NodeForPeer(_holderId);
                 if (holderForFlip.HandSide == _handSideBefore) break; // still in Startup
 
@@ -191,6 +193,7 @@ public partial class CrossoverSweepTest : Node
                 break;
 
             case SweepStep.ObservingSweep:
+                if (!AssertAboveFloor()) return;
                 float offset = LateralOffset(_holderId);
                 _smallestAbsOffset = System.Math.Min(_smallestAbsOffset, System.MathF.Abs(offset));
                 _sawSweepActive |= _ball.SweepActiveForHarness;
@@ -304,6 +307,20 @@ public partial class CrossoverSweepTest : Node
     }
 
     private PlayerController NodeForPeer(int peerId) => peerId == 1 ? _p1 : _p2;
+
+    // Code-review fix (#195 PR #208): the dribble bounce's floor-contact phase
+    // and the sweep's mid-transit dip are uncorrelated timers, so they CAN
+    // coincide and drive the ball's center under the court. Assert the floor
+    // invariant every tick of the sweep, not just at the end, so a one-tick
+    // clip can't hide inside the observation window.
+    private bool AssertAboveFloor()
+    {
+        if (_ball.GlobalPosition.Y >= _ball.BallRadius - FloorClipEpsilon) return true;
+
+        Fail($"ball clipped under the floor mid-sweep at frame {_frame}: GlobalPosition.Y={_ball.GlobalPosition.Y:F4} < BallRadius={_ball.BallRadius:F4}.");
+        Finish();
+        return false;
+    }
 
     private void Fail(string message) => GD.PrintErr($"[crossover-sweep] FAIL: {message}");
 

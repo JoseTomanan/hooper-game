@@ -1387,6 +1387,13 @@ public partial class BallController : Node3D
 			holderPos.Z + forward.Z * DribbleForwardOffset + right.Z * HandOffset * lateralSign
 		));
 		GlobalPosition -= new Vector3(0f, verticalDip * CrossoverSweepDipDepth, 0f);
+		// GetBallPosition's Y is 0 at the bounce's floor-contact phase, and the
+		// dip above can subtract up to CrossoverSweepDipDepth more — uncorrelated
+		// with the dribble phase, so the two CAN coincide and drive the ball
+		// center under the floor. The dip is cosmetic transit flavor; it must
+		// never win over the "stay above the floor" invariant the rest of this
+		// class enforces (see the depenetration guard further down).
+		GlobalPosition = GlobalPosition with { Y = Mathf.Max(GlobalPosition.Y, BallRadius) };
 		CheckJumpShotRelease(holderBody);
 	}
 
