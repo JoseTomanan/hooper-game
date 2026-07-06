@@ -71,6 +71,8 @@
     <Compile Include="..\..\scripts\Input\CommittedMoveMachine.cs" />
     <Compile Include="..\..\scripts\Input\Crossover.cs" />
     <Compile Include="..\..\scripts\Input\Hesitation.cs" />
+    <!-- Behind-the-back committed move, own subclass (issue #194) -->
+    <Compile Include="..\..\scripts\Input\BehindTheBack.cs" />
     <Compile Include="..\..\scripts\Input\GestureResult.cs" />
     <Compile Include="..\..\scripts\Input\RightStickGestureRecognizer.cs" />
     <Compile Include="..\..\scripts\Input\JumpShot.cs" />
