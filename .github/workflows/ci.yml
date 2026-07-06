@@ -234,6 +234,30 @@ jobs:
           godot --headless --path . res://tests/integration/MovingCrossoverTest.tscn -- --harness-scenario=hesitation-still-hard-zeroes
           godot --headless --path . res://tests/integration/MovingCrossoverTest.tscn -- --harness-scenario=remote-pending-stick
 
+      # Behind-the-back (issue #194) — own CommittedMove subclass, shielded
+      # transit, narrower exit cone. CrossoverBurstMathExitConeTests/
+      # BehindTheBackTests (xUnit) already pin the pure cone-clamp math and
+      # the move's class/frame-data contract; this drives the LIVE glue.
+      # 'shielded-sweep' boots a real BallController + two PlayerControllers,
+      # begins a real BehindTheBack through BeginCommittedMove, and asserts
+      # the ball's forward offset goes NEGATIVE (genuinely behind the
+      # holder's centerline) during the sweep, with
+      # BallController.SweepIsBehindBodyForHarness true — the discriminator
+      # against Crossover's in-front sweep. 'narrower-exit-cone' drives the
+      # REAL SampleMoveInput -> RequestBeginMove("behindtheback") ->
+      # TickCommittedMoveBehavior path with a PURE LATERAL left-stick exit —
+      # exactly the input CrossoverBurstMathTests pins as producing zero
+      # forward burst for a plain Crossover — and asserts a real forward
+      # component appears, proving the move_size_up modifier + narrower cone
+      # are wired end-to-end. 'dead-dribble-gate' proves BehindTheBack
+      # respects the SAME Held-holder dead-dribble gate (#193) Crossover/
+      # Hesitation use. Each exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run behind-the-back harness
+        run: |
+          godot --headless --path . res://tests/integration/BehindTheBackTest.tscn -- --harness-scenario=shielded-sweep
+          godot --headless --path . res://tests/integration/BehindTheBackTest.tscn -- --harness-scenario=narrower-exit-cone
+          godot --headless --path . res://tests/integration/BehindTheBackTest.tscn -- --harness-scenario=dead-dribble-gate
+
       # Dual-instance harness, increment 1: two headless Godot processes complete
       # a real ENet handshake over localhost. The orchestrator launches a server
       # and a client of the same scene and reads the client's exit code. This is
