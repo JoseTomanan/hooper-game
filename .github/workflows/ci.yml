@@ -172,12 +172,17 @@ jobs:
       # bounds (the already-proven OOB turnover) and asserts the fresh
       # possession's hand reset NEVER activates a sweep
       # (BallController.SweepActiveForHarness stays false every tick) —
-      # rule 2, a possession change snaps, it does not sweep. Each exits
-      # 0=PASS/1=FAIL (ADR-0016).
+      # rule 2, a possession change snaps, it does not sweep.
+      # 'remote-handside-sweep' drives the HandSide flip through the
+      # broadcast-receive seam instead of the local Active-entry path —
+      # the remote-client display role (#195 review fix 4, PR #208) that
+      # the other two scenarios never reach. Each exits 0=PASS/1=FAIL
+      # (ADR-0016).
       - name: Run crossover ball-sweep harness
         run: |
           godot --headless --path . res://tests/integration/CrossoverSweepTest.tscn -- --harness-scenario=crossover-sweep
           godot --headless --path . res://tests/integration/CrossoverSweepTest.tscn -- --harness-scenario=possession-change-no-sweep
+          godot --headless --path . res://tests/integration/CrossoverSweepTest.tscn -- --harness-scenario=remote-handside-sweep
 
       # In-place pivot plant (issue #172, ADR-0010 amendment). Unit tests
       # (HeadingMathTests) already pin the pure HeadingMath.Step state machine;
