@@ -19,6 +19,11 @@
   Active may REDIRECT the survivor with a left-stick-driven exit rather than
   firing a fixed burst. Bounded and scoped to the moving crossover only — see
   *Bounded momentum retention through Startup's plant* below.
+- **Refined:** 2026-07-06 (M9, #194) — a burst-family move may narrow its
+  left-stick exit vector to a CONE tighter than the forward hemisphere the
+  #198 amendment already bounds it to, as its ONLY "fewer follow-ups" cost —
+  never a recovery-frame or chain/cooldown penalty. See *Exit-cone width as
+  the sole "fewer follow-ups" lever* below.
 - **Superseded-by:** —
 
 ---
@@ -236,6 +241,55 @@ A request to extend momentum retention to a move's PUNISH window (Recovery),
 or to let the exit vector be re-read continuously through Active (turning it
 into a steerable, flow-cancellable action), contradicts this amendment's
 scope; it does not refine it.
+
+### Exit-cone width as the sole "fewer follow-ups" lever (M9, #194)
+
+BehindTheBack (issue #194) is a deliberately SAFER sibling of the moving
+crossover: "a slightly safer crossover — less stealable, less explosive,
+fewer follow-up options" (human framing, `docs/handoffs/M9-move-taxonomy.md`).
+Three of those four properties are ordinary tunables (smaller burst speed,
+steeper Startup gather-bleed, a shielded ball-transit path) that need no ADR
+amendment — they are just different numbers on the same #198 model. The
+fourth, "fewer follow-ups," is the one that touches this ADR: it is modelled
+**exclusively** as a NARROWER exit cone — `CrossoverBurstMath.
+ComposeActiveVelocity`'s left-stick exit vector is clamped to within a tuned
+half-angle of the player's forward axis (`PlayerController.
+BehindTheBackExitConeDegrees`, 50° by default) before being decomposed into
+forward/lateral burst contributions, rather than the effectively-unclamped
+~180° cone the plain #198 amendment already left every OTHER burst-family
+move (Crossover) with.
+
+Two alternatives were explicitly considered and **rejected** by the human
+during the M9 taxonomy triage (2026-07-04), and are recorded here so a future
+session does not silently re-introduce either:
+
+- **Longer Recovery.** Rejected — contradicts "safer / lower-commitment": a
+  move that costs LESS to commit to (smaller burst, less stealable) should
+  not also cost MORE to recover from. BehindTheBack's Recovery is instead
+  tuned comparable-to-or-shorter-than Crossover's (10 ticks vs. 12).
+- **Chain/cooldown restrictions** (2K-style artificial combo lockout).
+  Rejected under ADR-0014's reference ranking — neither real half-court ball
+  nor *Undisputed 3* gate a dribble move by an artificial cooldown; that is a
+  2K-taxonomy pattern this project explicitly does not follow for this call.
+
+**Why a narrower cone is a legitimate "commitment" lever and not arcade
+decoupling:** the anti-goal this ADR polices is action decoupled from bodily
+commitment (an unplanted strike, a free-to-throw move). A narrower exit cone
+does not touch the plant, the Startup telegraph, or the burst's existence —
+it only bounds WHICH directions the player's own left-stick steering can
+redirect the already-committed burst into, once Active begins. The body still
+visibly plants, still visibly bursts; the player just has less choice over
+where. This is squarely within the "exit direction parameterizes, never
+cancels" bound the #198 amendment already established (model A) — narrowing
+the parameter's domain is not a new kind of relaxation.
+
+**Implementation note:** `ComposeActiveVelocity` gained an optional
+`maxExitAngleRadians` parameter for this (`scripts/Player/
+CrossoverBurstMath.cs`), defaulting to an unclamped 180° so every pre-#194
+Crossover call site is bit-for-bit unaffected — the cone is a parameter on
+the SAME shared pure function, not a forked copy of the math (composition
+over hierarchy, matching BehindTheBack's own "own CommittedMove subclass,
+not a Crossover flag" structure).
 
 ## Consequences
 
