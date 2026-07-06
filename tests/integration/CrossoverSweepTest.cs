@@ -16,6 +16,7 @@ namespace HOOPERGAME.Tests.Integration;
 //
 //   godot --headless --path . res://tests/integration/CrossoverSweepTest.tscn -- --harness-scenario=crossover-sweep
 //   godot --headless --path . res://tests/integration/CrossoverSweepTest.tscn -- --harness-scenario=possession-change-no-sweep
+//   godot --headless --path . res://tests/integration/CrossoverSweepTest.tscn -- --harness-scenario=remote-handside-sweep
 //   Exit: 0 = PASS, 1 = FAIL (via GetTree().Quit) — the ADR-0016 exit-code contract.
 //   Omitting --harness-scenario defaults to "crossover-sweep".
 //
@@ -47,6 +48,22 @@ namespace HOOPERGAME.Tests.Integration;
 // 5. Confirm the sweep actually finishes on the NEW side (opposite sign from
 //    step 2), not stuck mid-transit — proves the sweep terminates, not just
 //    starts.
+//
+// ── Scenario "remote-handside-sweep": the remote-client HandSide-flip path ──
+// (Code-review fix #4, PR #208.) The scenario above only exercises the
+// LOCALLY-driven flip (server/holder-client role, HandSide set inline by
+// TickCommittedMoveBehavior). The remote client's copy of the opponent only
+// updates HandSide when a ReceiveState broadcast lands
+// (TickClientRemotePlayer's _hasNewState gate) — exactly the class of gap
+// issue #195's own spec cites as motivation (the M7b #69 remote-display gap).
+// A true second client can't run inside this offline single-instance harness,
+// so this scenario drives PlayerController.ReceiveState/TickClientRemotePlayer
+// directly through a harness-only seam (tests/integration/
+// CrossoverSweepHarnessSeam.cs) with a hand-built broadcast payload whose
+// HandSide differs from the node's current value, then asserts
+// BallController's sweep triggers and transits exactly as the locally-driven
+// scenario's rule-1 assertions do (no Startup delay needed — the broadcast
+// flip is immediate, same as a real remote client adopting a fresh snapshot).
 //
 // ── Scenario "possession-change-no-sweep": rule 2 ─────────────────────────
 // Walks the holder out of bounds (the already-proven OOB turnover, ADR-0008)
@@ -91,6 +108,23 @@ public partial class CrossoverSweepTest : Node
     private float _smallestAbsOffset = float.PositiveInfinity;
     private bool _sawSweepActive;
 
+    // ── "remote-handside-sweep" scenario state (code-review fix #4, #195 PR #208) ──
+    // Exercises the OTHER role AdvanceHandSweep must handle identically to the
+    // locally-driven flip above: the remote client's copy of the opponent,
+    // where HandSide only updates when a ReceiveState broadcast lands
+    // (PlayerController.TickClientRemotePlayer). See
+    // tests/integration/CrossoverSweepHarnessSeam.cs for why a direct
+    // ReceiveState/TickClientRemotePlayer call is the seam (no second process
+    // to be a real remote client in this offline single-instance harness).
+    private enum RemoteSweepStep { AwaitTipoff, DriveChecked, BroadcastIssued, ObservingSweep, Done }
+    private RemoteSweepStep _remoteSweepStep = RemoteSweepStep.AwaitTipoff;
+    private int _remoteHolderId;
+    private float _remoteOffsetBefore;
+    private HandSide _remoteHandSideBefore;
+    private int _remoteObserveDeadlineFrame;
+    private float _remoteSmallestAbsOffset = float.PositiveInfinity;
+    private bool _remoteSawSweepActive;
+
     // ── "possession-change-no-sweep" scenario state ──────────────────────────
     private enum ResetStep { AwaitTipoff, OobIssued, Observing, Done }
     private ResetStep _resetStep = ResetStep.AwaitTipoff;
@@ -126,12 +160,14 @@ public partial class CrossoverSweepTest : Node
 
         if (_scenario == "possession-change-no-sweep")
             TickPossessionChangeNoSweep();
+        else if (_scenario == "remote-handside-sweep")
+            TickRemoteHandSideSweep();
         else
             TickCrossoverSweep();
 
         if (!_finished && _elapsed > TimeoutSeconds)
         {
-            Fail($"timed out at frame {_frame}, sweepStep={_sweepStep}, resetStep={_resetStep}.");
+            Fail($"timed out at frame {_frame}, sweepStep={_sweepStep}, remoteSweepStep={_remoteSweepStep}, resetStep={_resetStep}.");
             Finish();
         }
     }
@@ -227,6 +263,90 @@ public partial class CrossoverSweepTest : Node
                     return;
                 }
                 GD.Print($"[crossover-sweep] PASS sweep-completes — settled on {holderAfter.HandSide} at offset={offsetAfter:F4}.");
+                GD.Print("[crossover-sweep] RESULT: PASS (exit 0)");
+                Finish(0);
+                return;
+        }
+    }
+
+    // ── Scenario: "remote-handside-sweep" ────────────────────────────────────
+    private void TickRemoteHandSideSweep()
+    {
+        switch (_remoteSweepStep)
+        {
+            case RemoteSweepStep.AwaitTipoff:
+                if (_frame < ArmFrames) break;
+                if (_ball.StateMachine.HolderPeerId == 0)
+                {
+                    Fail("tipoff never assigned a holder.");
+                    Finish();
+                    return;
+                }
+                _remoteHolderId = _ball.StateMachine.HolderPeerId;
+
+                _ball.TryStartDribble(_remoteHolderId);
+                _remoteSweepStep = RemoteSweepStep.DriveChecked;
+                _remoteObserveDeadlineFrame = _frame + ActionMarginFrames;
+                break;
+
+            case RemoteSweepStep.DriveChecked:
+                if (_frame < _remoteObserveDeadlineFrame) break;
+                if (_ball.State != BallState.Dribbling)
+                {
+                    Fail($"expected TryStartDribble to reach Dribbling; got state={_ball.State}.");
+                    Finish();
+                    return;
+                }
+
+                PlayerController holderForBroadcast = NodeForPeer(_remoteHolderId);
+                _remoteHandSideBefore = holderForBroadcast.HandSide;
+                _remoteOffsetBefore = LateralOffset(_remoteHolderId);
+                GD.Print($"[crossover-sweep] (remote) before: hand={_remoteHandSideBefore}, lateralOffset={_remoteOffsetBefore:F4}");
+
+                // Drive the flip through the SAME production path a landed
+                // ReceiveState broadcast would on a real remote client — no
+                // Crossover move, no Startup delay, just the broadcast-applied
+                // HandSide change AdvanceHandSweep must react to identically.
+                HandSide opposite = _remoteHandSideBefore == HandSide.Left ? HandSide.Right : HandSide.Left;
+                holderForBroadcast.ReceiveStateForHarness(opposite);
+                holderForBroadcast.ApplyRemoteStateForHarness();
+
+                _remoteSweepStep = RemoteSweepStep.ObservingSweep;
+                _remoteObserveDeadlineFrame = _frame + SweepObservationWindow;
+                break;
+
+            case RemoteSweepStep.ObservingSweep:
+                float offset = LateralOffset(_remoteHolderId);
+                _remoteSmallestAbsOffset = System.Math.Min(_remoteSmallestAbsOffset, System.MathF.Abs(offset));
+                _remoteSawSweepActive |= _ball.SweepActiveForHarness;
+
+                if (_frame < _remoteObserveDeadlineFrame) break;
+
+                // Same rule-1 acceptance as the locally-driven scenario: a
+                // sweep must have run and the ball must have passed through
+                // the mid-body region rather than snapping in one tick.
+                float fullMagnitude = System.MathF.Abs(_remoteOffsetBefore);
+                bool noTeleport = _remoteSawSweepActive && _remoteSmallestAbsOffset < fullMagnitude * 0.5f;
+                if (!noTeleport)
+                {
+                    Fail($"expected the broadcast-driven flip to trigger a sweep through the mid-body region; sawSweepActive={_remoteSawSweepActive}, smallestAbsOffset={_remoteSmallestAbsOffset:F4}, fullMagnitude={fullMagnitude:F4}.");
+                    Finish();
+                    return;
+                }
+                GD.Print($"[crossover-sweep] (remote) PASS no-teleport — smallestAbsOffset={_remoteSmallestAbsOffset:F4} < half of {fullMagnitude:F4}, sweep observed active.");
+
+                PlayerController holderAfter = NodeForPeer(_remoteHolderId);
+                float offsetAfter = LateralOffset(_remoteHolderId);
+                bool switchedSides = holderAfter.HandSide != _remoteHandSideBefore
+                    && System.Math.Sign(offsetAfter) != System.Math.Sign(_remoteOffsetBefore)
+                    && System.MathF.Abs(offsetAfter) > fullMagnitude * 0.5f;
+                if (!switchedSides)
+                {
+                    Fail($"expected the broadcast-driven sweep to finish on the OPPOSITE side; before(hand={_remoteHandSideBefore}, offset={_remoteOffsetBefore:F4}), after(hand={holderAfter.HandSide}, offset={offsetAfter:F4}).");
+                    Finish();
+                    return;
+                }
+                GD.Print($"[crossover-sweep] (remote) PASS sweep-completes — settled on {holderAfter.HandSide} at offset={offsetAfter:F4}.");
                 GD.Print("[crossover-sweep] RESULT: PASS (exit 0)");
                 Finish(0);
                 return;
