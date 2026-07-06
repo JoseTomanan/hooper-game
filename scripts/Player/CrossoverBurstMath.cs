@@ -43,16 +43,37 @@ namespace Hooper.Player;
 ///
 /// A backward-pointing exit vector contributes no forward burst (real-ball
 /// rationale: a crossover explodes forward or lateral, never backward — you
-/// don't cross yourself into retreat). When the exit vector is neutral
-/// (magnitude at or below <paramref name="exitDeadzone"/>) AND there is no
-/// surviving momentum either, the function falls back to the pre-#198 pure
-/// flick-driven lateral burst (HandStateResolver.BurstWorldDir) rather than
-/// silently reducing a bare stationary crossover flick to a no-op — no table
-/// row covers "no steering input at all," so this preserves the legacy feel
-/// for that untested edge case.
+/// don't cross yourself into retreat). There are two DISTINCT fallbacks to
+/// the pre-#198 pure flick-driven lateral burst (HandStateResolver.BurstWorldDir),
+/// both existing so a committed crossover never silently no-ops:
+///   1. Exit vector neutral (magnitude at or below <paramref name="exitDeadzone"/>)
+///      AND no surviving momentum either — no table row covers "no steering
+///      input at all," so this preserves the legacy feel for that untested edge
+///      case.
+///   2. Exit vector ACTIVE but held anti-parallel to forwardAxis (a straight-back
+///      pull) — the "never backward" clamp above composes a near-zero impulse on
+///      its own (see DeadImpulseFloor's doc), which would otherwise dead-stop a
+///      fully committed move the player just paid startup frames for.
 /// </summary>
 public static class CrossoverBurstMath
 {
+    /// <summary>
+    /// Floor on the exit-vector-driven impulse's magnitude (m/s) below which
+    /// the composition falls back to the legacy flick-driven lateral burst
+    /// (code review, #198 fix round). An exit vector held anti-parallel to
+    /// forwardAxis — the player pulls the stick straight back during the
+    /// crossover — clamps forwardContribution to 0 (see the "never backward"
+    /// rationale below) AND has a near-zero lateral dot product (it is
+    /// nearly co-linear with forwardAxis, just negative), so the composed
+    /// impulse is itself near Vector2.Zero: a fully committed crossover that
+    /// produces a dead stop with no burst at all. That is exactly the
+    /// silent no-op ADR-0003 rules out for a committed move — the player
+    /// paid the startup frames and got nothing back. Well below the tuned
+    /// default burst speeds (9 m/s) so it never fires for a genuine
+    /// diagonal/lateral/forward exit, only the degenerate backward cone.
+    /// </summary>
+    private const float DeadImpulseFloor = 0.5f;
+
     /// <summary>
     /// Composes the Active-phase velocity for a crossover.
     /// </summary>
@@ -107,6 +128,15 @@ public static class CrossoverBurstMath
 
             impulse = rightAxis * (lateralAmount * burstSpeed)
                     + forwardAxis * (forwardContribution * forwardBurstScale);
+
+            // Never let a committed crossover silently no-op (see
+            // DeadImpulseFloor's doc) — a backward-held exit vector falls
+            // back to the pre-#198 pure flick-driven lateral burst so the
+            // cross always crosses.
+            if (impulse.LengthSquared() < DeadImpulseFloor * DeadImpulseFloor)
+            {
+                impulse = rightAxis * (flickSign * burstSpeed);
+            }
         }
         else if (survivingXZ.LengthSquared() < 0.0001f)
         {

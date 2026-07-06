@@ -134,9 +134,16 @@ public class CrossoverBurstMathTests
 
     // Backward exit input never reverses the burst — a crossover explodes
     // forward or lateral, never backward (real-ball rationale: you don't
-    // cross yourself into retreat).
+    // cross yourself into retreat). Code-review fix (#198): the naive
+    // composition clamps forward to 0 AND has a near-zero lateral dot
+    // product for a purely-backward exit vector, so it used to compose a
+    // dead-zero impulse — a fully committed crossover producing a dead
+    // stop the player didn't ask for. The fix falls back to the legacy
+    // flick-driven lateral burst so the cross always crosses; this test
+    // now pins THAT guaranteed behavior (nonzero magnitude, correct
+    // lateral sign) instead of the too-weak "Z <= 0" it replaces.
     [Fact]
-    public void ExitVectorPointingBackward_ContributesNoForwardBurst()
+    public void ExitVectorPointingBackward_FallsBackToFlickDrivenLateralBurst()
     {
         Vector3 result = CrossoverBurstMath.ComposeActiveVelocity(
             survivingVelocity: Vector3.Zero,
@@ -148,5 +155,48 @@ public class CrossoverBurstMathTests
             exitDeadzone: ExitDeadzone);
 
         Assert.True(result.Z <= 0f, $"expected no forward burst from backward input, got Z={result.Z}");
+        Assert.Equal(-BurstSpeed, result.X, precision: 4); // HandStateResolver.BurstWorldDir(0, +1) == (-1, 0)
+        Assert.Equal(0f, result.Z, precision: 4);
+        Assert.True(new Vector2(result.X, result.Z).Length() > 0f,
+            "expected a nonzero burst (the dead-move fallback), not a silent dead stop");
+    }
+
+    // Burst-magnitude invariant (code review, optional item): across a sweep
+    // of exit-vector angles from a dead stop (isolating the impulse itself
+    // from any surviving-momentum contribution), the composed impulse must
+    // never exceed the orthonormal-basis bound sqrt(burstSpeed^2 +
+    // forwardBurstScale^2) — pins "no superhuman burst" now that a fallback
+    // branch exists that could, in principle, stack on top of the primary
+    // composition instead of replacing it.
+    [Theory]
+    [InlineData(0f)]
+    [InlineData(30f)]
+    [InlineData(60f)]
+    [InlineData(90f)]
+    [InlineData(120f)]
+    [InlineData(150f)]
+    [InlineData(180f)]
+    [InlineData(210f)]
+    [InlineData(270f)]
+    [InlineData(315f)]
+    public void ComposedImpulse_NeverExceedsOrthonormalBasisBound(float exitAngleDegrees)
+    {
+        float radians = Mathf.DegToRad(exitAngleDegrees);
+        var exitVector = new Vector2(Mathf.Sin(radians), Mathf.Cos(radians));
+        float bound = Mathf.Sqrt(BurstSpeed * BurstSpeed + ForwardBurstScale * ForwardBurstScale);
+
+        Vector3 result = CrossoverBurstMath.ComposeActiveVelocity(
+            survivingVelocity: Vector3.Zero, // isolates the impulse — no momentum to add on top
+            heading: 0f,
+            flickSign: +1,
+            exitVector,
+            burstSpeed: BurstSpeed,
+            forwardBurstScale: ForwardBurstScale,
+            exitDeadzone: ExitDeadzone);
+
+        float magnitude = new Vector2(result.X, result.Z).Length();
+        Assert.True(magnitude <= bound + 0.01f,
+            $"exit angle {exitAngleDegrees}deg composed a {magnitude:F3} m/s impulse, exceeding the " +
+            $"orthonormal-basis bound {bound:F3} m/s.");
     }
 }
