@@ -201,11 +201,18 @@ jobs:
       # amendment's own scoping claim ("bounded... to the moving crossover
       # only") — a driving player who throws a Hesitation (not a Crossover)
       # must still plant to a hard instant zero, not gain GatherDecel's bleed.
+      # 'remote-pending-stick' (code review, #198 fix round) covers the
+      # SERVER's copy of a REMOTE player: a node named "2" (TickServerRemotePlayer
+      # role) has its exit vector seeded into _pendingRawStick via the harness
+      # seam instead of the local Input singleton, proving that path — not just
+      # the own-player ReadInput() path the other scenarios exercise — reaches
+      # CrossoverBurstMath correctly.
       - name: Run moving-crossover harness
         run: |
           godot --headless --path . res://tests/integration/MovingCrossoverTest.tscn -- --harness-scenario=retains-speed
           godot --headless --path . res://tests/integration/MovingCrossoverTest.tscn -- --harness-scenario=stationary-forward-exit
           godot --headless --path . res://tests/integration/MovingCrossoverTest.tscn -- --harness-scenario=hesitation-still-hard-zeroes
+          godot --headless --path . res://tests/integration/MovingCrossoverTest.tscn -- --harness-scenario=remote-pending-stick
 
       # Dual-instance harness, increment 1: two headless Godot processes complete
       # a real ENet handshake over localhost. The orchestrator launches a server

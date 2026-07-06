@@ -18,6 +18,7 @@ namespace HOOPERGAME.Tests.Integration;
 //
 //   godot --headless --path . res://tests/integration/MovingCrossoverTest.tscn -- --harness-scenario=retains-speed
 //   godot --headless --path . res://tests/integration/MovingCrossoverTest.tscn -- --harness-scenario=stationary-forward-exit
+//   godot --headless --path . res://tests/integration/MovingCrossoverTest.tscn -- --harness-scenario=remote-pending-stick
 //   Exit: 0 = PASS, 1 = FAIL (via GetTree().Quit) — the ADR-0016 exit-code contract.
 //
 // ── Why a single offline instance is enough ─────────────────────────────────
@@ -30,16 +31,18 @@ namespace HOOPERGAME.Tests.Integration;
 // exit-vector source TickCommittedMoveBehavior's exitVectorSample parameter
 // takes for this role (see PlayerController's doc on that parameter).
 //
-// ── What is explicitly NOT attempted here (reported, not faked) ────────────
-// The doubt-driven netcode question this issue's PR resolves — whether the
-// SERVER's copy of a REMOTE player derives the SAME exit vector via
-// _pendingRawStick (fed by the new SubmitInput trailing floats) — has no
-// dual-instance harness pattern to reuse here (same limitation PivotPlantTest
-// names for reconciliation). That channel is a straightforward field
-// assignment with no branching logic to discriminate old-vs-new behavior the
-// way StealTurnoverTest's shadow-client trick needs, so it is left to code
-// review of the wiring plus this file proving the SAME composition function
-// the server-remote path also calls.
+// ── Remote path (code review, #198 fix round) ───────────────────────────────
+// The gap named above at PR time — the SERVER's copy of a REMOTE player
+// deriving its exit vector from _pendingRawStick rather than live hardware —
+// is now covered by the "remote-pending-stick" scenario below via
+// MovingCrossoverHarnessSeam's SetPendingRawStickForHarness: a single
+// offline instance named "2" (not "1") makes IsServer true and IsLocalPlayer
+// false (OfflineMultiplayerPeer's unique_id is hardcoded 1), which is exactly
+// the TickServerRemotePlayer role — see that method's doc. The seam sets the
+// SAME field SubmitInput would, letting this harness drive the real
+// TickCommittedMoveBehavior(delta, _pendingRawStick) path with no second
+// Godot process needed (same offline-instance trick StealTurnoverTest/
+// TripleThreatTest use for their own server-remote coverage).
 //
 // ── Scenarios ────────────────────────────────────────────────────────────
 // retains-speed: drives the player to speed, throws a crossover with the
@@ -52,6 +55,13 @@ namespace HOOPERGAME.Tests.Integration;
 //   stick pushed FORWARD by Active-entry, and asserts Velocity gains a
 //   forward (+Z) component on Active-entry — the "stationary + push forward"
 //   row, impossible under the pre-#198 pure-lateral-only burst model.
+// remote-pending-stick: player named "2" (TickServerRemotePlayer role), seeds
+//   _pendingRawStick to a forward-aligned exit vector via the harness seam
+//   (standing in for a real remote client's SubmitInput stream) BEFORE
+//   throwing a stationary crossover directly through BeginCrossoverForHarness,
+//   and asserts Velocity gains the SAME forward (+Z) burst the "local hardware"
+//   stationary-forward-exit scenario proves — pinning that _pendingRawStick,
+//   not just ReadInput(), reaches CrossoverBurstMath on this role.
 public partial class MovingCrossoverTest : Node
 {
     private const double TimeoutSeconds = 10.0;
@@ -81,6 +91,8 @@ public partial class MovingCrossoverTest : Node
     private bool _sawActive;
     private float _minSpeedDuringMove = float.MaxValue;
     private float _maxForwardDuringActive = float.MinValue;
+    private float _maxLateralAbsDuringActive = float.MinValue;
+    private bool _crossoverBegunForHarness;
 
     public override void _Ready()
     {
@@ -88,11 +100,15 @@ public partial class MovingCrossoverTest : Node
         _scenario = HarnessArgs.ReadArg(args, "--harness-scenario", "retains-speed");
         GD.Print($"[moving-crossover] scenario={_scenario} booting headless…");
 
-        // Bare PlayerController, named "1" so OfflineMultiplayerPeer's
-        // unique_id==1 makes it both IsServer and IsLocalPlayer — the
-        // TickServerOwnPlayer path (see class doc). No Players/Ball wrapper
-        // needed: nothing in this scenario touches the ball.
-        _player = new PlayerController { Name = "1" };
+        // Bare PlayerController. Named "1" for every local-hardware scenario
+        // so OfflineMultiplayerPeer's unique_id==1 makes it both IsServer and
+        // IsLocalPlayer — the TickServerOwnPlayer path (see class doc).
+        // "remote-pending-stick" instead names it "2", which is NOT the
+        // offline peer's own id, so IsServer stays true but IsLocalPlayer
+        // becomes false — the TickServerRemotePlayer role this scenario
+        // targets. No Players/Ball wrapper needed either way: nothing in
+        // this file touches the ball.
+        _player = new PlayerController { Name = _scenario == "remote-pending-stick" ? "2" : "1" };
         AddChild(_player);
     }
 
@@ -107,6 +123,7 @@ public partial class MovingCrossoverTest : Node
             case "retains-speed": TickRetainsSpeed(); break;
             case "stationary-forward-exit": TickStationaryForwardExit(); break;
             case "hesitation-still-hard-zeroes": TickHesitationStillHardZeroes(); break;
+            case "remote-pending-stick": TickRemotePendingStick(); break;
             default:
                 Fail($"unknown scenario '{_scenario}'.");
                 Finish();
@@ -268,6 +285,96 @@ public partial class MovingCrossoverTest : Node
         {
             Fail($"stationary-forward-exit expected a forward (+Z) component > {ForwardEpsilon} during Active; got " +
                  $"{_maxForwardDuringActive:F3} (sawStartup={_sawStartup}, sawActive={_sawActive}).");
+        }
+        Finish(pass ? 0 : 1);
+    }
+
+    // ── Scenario: remote path — SERVER's copy of a REMOTE player, exit
+    // vector fed via _pendingRawStick instead of live hardware ─────────────
+    // Mirrors stationary-forward-exit's assertion (forward burst on Active-
+    // entry) but through TickServerRemotePlayer's exitVectorSample source
+    // (_pendingRawStick, seeded via the harness seam) instead of
+    // TickServerOwnPlayer's ReadInput(). This is the discriminator the code
+    // review flagged as untested: proving the SAME CrossoverBurstMath
+    // composition the own-player path already proved is reachable is not
+    // enough — the remote-role plumbing (_machine.Tick() driven with no
+    // local hardware sampling at all, TickCommittedMoveBehavior fed
+    // _pendingRawStick) needed its own harness-level proof.
+    private void TickRemotePendingStick()
+    {
+        // Seed the exit vector BEFORE the crossover begins, mirroring a real
+        // remote client that has already been streaming SubmitInput's
+        // trailing floats every tick — by the time Active begins, whatever
+        // is currently in _pendingRawStick is what gets snapshotted (model A,
+        // "snapshotted at Active-entry" — see CrossoverBurstMath's doc), so
+        // seeding once up front and never touching it again is sufficient.
+        // Heading is the engine default 0 (this player never moves — Move()
+        // is what advances it, and it is skipped throughout a committed
+        // move), so forwardAxis = (0,1): a pure (0,1) stick reading is the
+        // forward-aligned exit vector for THIS stationary player, exactly
+        // like stationary-forward-exit's heading-forward-aligned push.
+        if (_frame == 1)
+        {
+            _player.SetPendingRawStickForHarness(new Vector2(0f, 1f));
+            bool begun = _player.BeginCrossoverForHarness(flickSign: 1f);
+            _crossoverBegunForHarness = begun;
+            if (!begun)
+            {
+                Fail("BeginCrossoverForHarness returned false — machine was not Inactive at begin.");
+                Finish();
+                return;
+            }
+            GD.Print($"[moving-crossover] frame {_frame}: seeded _pendingRawStick=(0,1) and began crossover on remote-role player \"2\"");
+        }
+
+        var (phase, _) = _player.DisplayMove();
+
+        if (phase == MovePhase.Active)
+        {
+            _sawActive = true;
+            if (_player.Velocity.Z > _maxForwardDuringActive)
+                _maxForwardDuringActive = _player.Velocity.Z;
+            if (Mathf.Abs(_player.Velocity.X) > _maxLateralAbsDuringActive)
+                _maxLateralAbsDuringActive = Mathf.Abs(_player.Velocity.X);
+        }
+        else if (phase == MovePhase.Startup)
+        {
+            _sawStartup = true;
+        }
+
+        if (_crossoverBegunForHarness && _sawStartup && _sawActive && phase == MovePhase.Recovery)
+        {
+            VerdictRemotePendingStick();
+        }
+    }
+
+    private void VerdictRemotePendingStick()
+    {
+        // Same epsilon/rationale as stationary-forward-exit: the pre-#198
+        // (and pre-remote-coverage) model has zero forward burst by
+        // construction for this role, so any meaningfully positive forward
+        // component proves _pendingRawStick actually reached
+        // CrossoverBurstMath on the server-remote path. Lateral is asserted
+        // near-zero too — the seeded stick is PURE forward, so a nonzero
+        // lateral burst would mean the wrong axis (or the wrong field) fed
+        // the composition.
+        const float ForwardEpsilon = 0.5f;
+        const float LateralCeiling = 0.5f;
+        bool pass = _sawStartup && _sawActive
+            && _maxForwardDuringActive > ForwardEpsilon
+            && _maxLateralAbsDuringActive < LateralCeiling;
+
+        if (pass)
+        {
+            GD.Print($"[moving-crossover] PASS remote-pending-stick — maxForwardDuringActive={_maxForwardDuringActive:F3} m/s, " +
+                     $"maxLateralAbsDuringActive={_maxLateralAbsDuringActive:F3} m/s.");
+        }
+        else
+        {
+            Fail($"remote-pending-stick expected a forward (+Z) burst > {ForwardEpsilon} with lateral < {LateralCeiling} " +
+                 $"during Active (proving _pendingRawStick, not ReadInput(), fed CrossoverBurstMath); got " +
+                 $"maxForwardDuringActive={_maxForwardDuringActive:F3}, maxLateralAbsDuringActive={_maxLateralAbsDuringActive:F3} " +
+                 $"(sawStartup={_sawStartup}, sawActive={_sawActive}).");
         }
         Finish(pass ? 0 : 1);
     }
