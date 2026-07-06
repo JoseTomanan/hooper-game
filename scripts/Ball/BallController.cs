@@ -109,6 +109,22 @@ public partial class BallController : Node3D
 	/// </summary>
 	[Export] public float CrossoverSweepDipDepth { get; set; } = 0.15f;
 
+	/// <summary>
+	/// How far (metres) BEHIND the holder's DribbleForwardOffset baseline the
+	/// ball is pulled at the midpoint of a BehindTheBack sweep (#194) — the
+	/// "shielded" transit: the ball travels behind the body, away from a
+	/// front-facing defender, instead of Crossover's in-front sweep. Larger
+	/// than DribbleForwardOffset (0.5) by default so the ball's forward
+	/// offset actually goes NEGATIVE at the peak (i.e. genuinely behind the
+	/// holder's centerline, not just less-in-front). Reuses the SAME
+	/// single-arch curve CrossoverBallSweep.Offset already computes for the
+	/// vertical dip (0 at both ends, peak at t=0.5) — one pure curve, two
+	/// consumers, per the "composition over hierarchy" call (#194). Feel-
+	/// tuned default, hitl sign-off deferred to the per-milestone human pass
+	/// like every other sweep tunable.
+	/// </summary>
+	[Export] public float BehindTheBackSweepDepth { get; set; } = 0.7f;
+
 	/// <summary>Full down-and-up dribble cycle duration (seconds).</summary>
 	[Export] public float DribblePeriod { get; set; } = 0.6f;
 
@@ -563,6 +579,16 @@ public partial class BallController : Node3D
 	private float _sweepToLateral;
 
 	/// <summary>
+	/// True when the CURRENT sweep is a BehindTheBack (behind-body/shielded)
+	/// transit rather than a Crossover (in-front) one (#194). Captured ONCE,
+	/// at the tick the flip is detected (see AdvanceHandSweep rule 1), from
+	/// the holder's DisplayMoveId() — never re-read mid-sweep, so a move
+	/// finishing its Active phase partway through the (shorter) sweep
+	/// animation cannot flip which path this in-flight sweep renders as.
+	/// </summary>
+	private bool _sweepIsBehindBody;
+
+	/// <summary>
 	/// The in-flight (or loose) trajectory. Non-null only while InFlight or
 	/// Loose — it carries the position+velocity the integrator advances. Reused
 	/// for the loose fall so a bounced ball keeps moving under gravity.
@@ -700,6 +726,13 @@ public partial class BallController : Node3D
 	/// identical from outside once settled.
 	/// </summary>
 	internal bool SweepActiveForHarness => _sweepActive;
+
+	/// <summary>
+	/// Test-only: exposes whether the CURRENT sweep is a BehindTheBack
+	/// (behind-body) transit rather than a Crossover (in-front) one (#194) —
+	/// the harness discriminator between the two ball-transit paths.
+	/// </summary>
+	internal bool SweepIsBehindBodyForHarness => _sweepIsBehindBody;
 
 	// ── Shot scatter RNG (issue #62, ADR-0009) ─────────────────────────────
 
@@ -1354,15 +1387,16 @@ public partial class BallController : Node3D
 		Vector3 holderPos = holderBody?.GlobalPosition ?? Vector3.Zero;
 		Vector3 forward   = HolderForward(holderBody);
 		Vector3 right     = HandRight(forward);
-		(float lateralSign, float verticalDip) = AdvanceHandSweep(holderBody);
+		(float lateralSign, float verticalDip, bool isBehindBody) = AdvanceHandSweep(holderBody);
+		float forwardOffset = SweepForwardOffset(verticalDip, isBehindBody);
 
 		// World-space Y = DribbleHandHeight, consistent with DribbleCycle's
 		// world-Y convention, minus the crossover sweep's mid-transit dip
 		// (#195; 0 outside an active sweep).
 		GlobalPosition = new Vector3(
-			holderPos.X + forward.X * DribbleForwardOffset + right.X * HandOffset * lateralSign,
+			holderPos.X + forward.X * forwardOffset + right.X * HandOffset * lateralSign,
 			DribbleHandHeight - verticalDip * CrossoverSweepDipDepth,
-			holderPos.Z + forward.Z * DribbleForwardOffset + right.Z * HandOffset * lateralSign
+			holderPos.Z + forward.Z * forwardOffset + right.Z * HandOffset * lateralSign
 		);
 		CheckJumpShotRelease(holderBody);
 	}
@@ -1375,16 +1409,17 @@ public partial class BallController : Node3D
 		Vector3 holderPos = holderBody?.GlobalPosition ?? Vector3.Zero;
 		Vector3 forward   = HolderForward(holderBody);
 		Vector3 right     = HandRight(forward);
-		(float lateralSign, float verticalDip) = AdvanceHandSweep(holderBody);
+		(float lateralSign, float verticalDip, bool isBehindBody) = AdvanceHandSweep(holderBody);
+		float forwardOffset = SweepForwardOffset(verticalDip, isBehindBody);
 
 		// Pass XZ-offset position; GetBallPosition discards the Y and uses
 		// HeightAtPhase instead — so the crossover sweep's dip (#195) is
 		// applied as a separate Y subtraction afterward rather than folded
 		// into the position passed in here.
 		GlobalPosition = _dribble.GetBallPosition(new Vector3(
-			holderPos.X + forward.X * DribbleForwardOffset + right.X * HandOffset * lateralSign,
+			holderPos.X + forward.X * forwardOffset + right.X * HandOffset * lateralSign,
 			holderPos.Y,
-			holderPos.Z + forward.Z * DribbleForwardOffset + right.Z * HandOffset * lateralSign
+			holderPos.Z + forward.Z * forwardOffset + right.Z * HandOffset * lateralSign
 		));
 		GlobalPosition -= new Vector3(0f, verticalDip * CrossoverSweepDipDepth, 0f);
 		// GetBallPosition's Y is 0 at the bounce's floor-contact phase, and the
@@ -1405,6 +1440,28 @@ public partial class BallController : Node3D
 	/// rather than only in front of it.
 	/// </summary>
 	private static Vector3 HandRight(Vector3 forward) => new(-forward.Z, 0f, forward.X);
+
+	/// <summary>
+	/// The in-hand forward offset (metres) for this tick, given the current
+	/// sweep's verticalDip curve value and whether it is a BehindTheBack
+	/// (behind-body) sweep (#194).
+	///
+	/// Crossover's in-front sweep never touches the forward axis — only the
+	/// existing lateral/dip terms — so isBehindBody=false returns the plain
+	/// DribbleForwardOffset baseline, bit-identical to pre-#194 behaviour.
+	/// A BehindTheBack sweep instead pulls the ball BACK along that same
+	/// single-arch curve (0 at both ends, peak at t=0.5 — reusing
+	/// verticalDip's shape rather than a second pure curve, since it is
+	/// exactly the "how far through the transit" progress both the dip and
+	/// this pull-back need): at the peak, BehindTheBackSweepDepth (0.7 by
+	/// default) exceeds DribbleForwardOffset (0.5), so the ball's forward
+	/// offset goes NEGATIVE — genuinely behind the holder's centerline, the
+	/// "shielded, away from the defender" transit the issue calls for.
+	/// </summary>
+	private float SweepForwardOffset(float verticalDip, bool isBehindBody) =>
+		isBehindBody
+			? DribbleForwardOffset - verticalDip * BehindTheBackSweepDepth
+			: DribbleForwardOffset;
 
 	/// <summary>
 	/// +1 when the ball renders in the holder's right hand, -1 when in the left.
@@ -1483,7 +1540,7 @@ public partial class BallController : Node3D
 	///      wins" broadcast, not something reliable delivery would be worth
 	///      adding new netcode for here.
 	/// </summary>
-	private (float lateralFactor, float verticalDip) AdvanceHandSweep(PlayerController holder)
+	private (float lateralFactor, float verticalDip, bool isBehindBody) AdvanceHandSweep(PlayerController holder)
 	{
 		if (StateMachine.HolderPeerId != _handSideHolderId)
 		{
@@ -1491,7 +1548,7 @@ public partial class BallController : Node3D
 			holder?.ResetHandSide();
 			_sweepActive = false;
 			_lastObservedHandSide = holder?.HandSide;
-			return (HandSign(holder), 0f);
+			return (HandSign(holder), 0f, false);
 		}
 
 		// (Doubt cycle, #195, finding #3) Only overwrite the cached baseline
@@ -1521,12 +1578,22 @@ public partial class BallController : Node3D
 			_sweepTicks          = 0;
 			_sweepDurationTicks  = Mathf.Max(1, Mathf.RoundToInt(CrossoverSweepDuration * Engine.PhysicsTicksPerSecond));
 			_sweepActive         = true;
+			// #194: sampled ONCE, at the moment the flip is detected — see
+			// _sweepIsBehindBody's doc for why this is not re-read per tick.
+			// DisplayMoveId() is the same per-role broadcast-aware resolver
+			// DisplayMove() already uses (M7b #69's gap class): the holder's
+			// OWN simulated role reads its live _machine, but the remote
+			// client's copy of the opponent has no live _machine to read and
+			// must fall back to the broadcast _serverMoveId — exactly the
+			// same role split this class's own doc above already establishes
+			// is safe for HandSide itself.
+			_sweepIsBehindBody = holder?.DisplayMoveId() == "behindtheback";
 		}
 		if (current.HasValue)
 			_lastObservedHandSide = current;
 
 		if (!_sweepActive)
-			return (HandSign(holder), 0f);
+			return (HandSign(holder), 0f, false);
 
 		// (Doubt cycle, #195, finding #2) Sample t up to AND INCLUDING 1.0
 		// before deactivating — advancing _sweepTicks only when t hasn't yet
@@ -1547,7 +1614,7 @@ public partial class BallController : Node3D
 		else
 			_sweepTicks++;
 
-		return (lateral, dip);
+		return (lateral, dip, _sweepIsBehindBody);
 	}
 
 	/// <summary>Normalised progress [0, 1] through the current sweep, for CrossoverBallSweep.Offset.</summary>
