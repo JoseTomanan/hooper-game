@@ -210,10 +210,19 @@ ADR's central anti-goal:
   `CommittedMove` skeleton, any future move built the same way — see M9's
   behind-the-back/between-the-legs/spin sub-issues, which are explicitly
   speced to reuse this same momentum model). It is NOT a general license to
-  soften every committed move's plant, and it does not touch Recovery (still
-  a hard decel-to-zero punish window) or the JumpShot's Startup (a shooter
-  must still fully plant — no momentum to redirect makes the bleed a no-op
-  there in practice, but the rule is not special-cased away for it).
+  soften every committed move's plant: the gather-bleed is explicitly
+  scoped to the Crossover (and, by the same skeleton, future burst-family
+  moves that opt into it) — `TickCommittedMoveBehavior`'s Startup branch
+  gates on `_machine.CurrentMove is Crossover`, and every other move
+  (Hesitation, StealMove, JumpShot, …) keeps the pre-#198 instant-zero
+  plant. Code review (fix round) caught this ADR text previously claiming
+  the opposite for the JumpShot — that the bleed rule "is not special-cased
+  away for it." The code was right and the prose was wrong: a JumpShot's
+  Startup hard-zeroes every tick exactly like it always has, and that is a
+  stationary-commitment move that keeps the instant plant, not a
+  bleed-then-redirect one. This amendment also does not touch Recovery
+  (still a hard decel-to-zero punish window) for any move, including the
+  Crossover itself.
 - **Exit direction is separately bounded (model A, "snapshotted at
   Active-entry").** The left stick shapes WHERE the surviving momentum + burst
   go, but only at the single moment Active begins — it PARAMETERIZES the
