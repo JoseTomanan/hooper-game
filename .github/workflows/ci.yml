@@ -182,6 +182,38 @@ jobs:
           godot --headless --path . res://tests/integration/PivotPlantTest.tscn -- --harness-scenario=no-plant-boundary
           godot --headless --path . res://tests/integration/PivotPlantTest.tscn -- --harness-scenario=committed-cancel
 
+      # Moving crossover — momentum-aware burst with left-stick exit (issue
+      # #198, ADR-0003 amendment). CrossoverBurstMathTests already pin the
+      # pure composition function; this drives a REAL PlayerController
+      # through the REAL Input singleton and the unmodified TickServerOwnPlayer
+      # -> SampleMoveInput -> TickCommittedMoveBehavior path, proving Startup's
+      # GatherDecel genuinely bleeds (not hard-zeroes) momentum and that the
+      # composed burst actually lands in Velocity. 'retains-speed' drives the
+      # player to speed, throws a crossover with the left stick released to
+      # neutral by Active-entry, and asserts speed never hits zero across
+      # Startup+Active (the discriminator against the pre-#198 hard-zero
+      # model). 'stationary-forward-exit' throws a crossover from a dead stop
+      # with the left stick pushed toward the player's forward facing by
+      # Active-entry, and asserts the burst gains a forward component —
+      # impossible under the pre-#198 pure-lateral-only burst. Each exits
+      # 0=PASS/1=FAIL (ADR-0016).
+      # 'hesitation-still-hard-zeroes' is the regression guard for the ADR-0003
+      # amendment's own scoping claim ("bounded... to the moving crossover
+      # only") — a driving player who throws a Hesitation (not a Crossover)
+      # must still plant to a hard instant zero, not gain GatherDecel's bleed.
+      # 'remote-pending-stick' (code review, #198 fix round) covers the
+      # SERVER's copy of a REMOTE player: a node named "2" (TickServerRemotePlayer
+      # role) has its exit vector seeded into _pendingRawStick via the harness
+      # seam instead of the local Input singleton, proving that path — not just
+      # the own-player ReadInput() path the other scenarios exercise — reaches
+      # CrossoverBurstMath correctly.
+      - name: Run moving-crossover harness
+        run: |
+          godot --headless --path . res://tests/integration/MovingCrossoverTest.tscn -- --harness-scenario=retains-speed
+          godot --headless --path . res://tests/integration/MovingCrossoverTest.tscn -- --harness-scenario=stationary-forward-exit
+          godot --headless --path . res://tests/integration/MovingCrossoverTest.tscn -- --harness-scenario=hesitation-still-hard-zeroes
+          godot --headless --path . res://tests/integration/MovingCrossoverTest.tscn -- --harness-scenario=remote-pending-stick
+
       # Dual-instance harness, increment 1: two headless Godot processes complete
       # a real ENet handshake over localhost. The orchestrator launches a server
       # and a client of the same scene and reads the client's exit code. This is

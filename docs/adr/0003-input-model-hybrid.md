@@ -14,6 +14,11 @@
   the commitment read moved from raw turn-rate cost into the plant-then-pivot
   gate itself. See *Back-turn legibility relaxed for the movement-stick pivot*
   below; cross-linked with the ADR-0010 amendment of the same date.
+- **Refined:** 2026-07-04 (M9, #198) — a committed move's Startup plant may now
+  BLEED momentum via a bounded hard decel instead of instant-zeroing it, and
+  Active may REDIRECT the survivor with a left-stick-driven exit rather than
+  firing a fixed burst. Bounded and scoped to the moving crossover only — see
+  *Bounded momentum retention through Startup's plant* below.
 - **Superseded-by:** —
 
 ---
@@ -169,6 +174,68 @@ relaxation to any other committed move contradicts this note's scope; it does
 not refine it. See the ADR-0010 amendment of the same date for the mechanical
 detail (`PivotState`, the plant gate, and the re-rejection of visual-only
 heading) this note's design-authority record complements.
+
+### Bounded momentum retention through Startup's plant (M9, #198)
+
+Since M3, every committed move's Startup phase has hard-zeroed `Velocity`
+every tick: `Velocity = Vector3.Zero`. This reads as an honest, fully-planted
+commitment — but for the moving crossover it produced a real gap in the move
+taxonomy (`docs/handoffs/M9-move-taxonomy.md` §2, grilled 2026-07-04): a
+player driving at full speed who throws a crossover was instantly and
+completely dead-stopped by the plant, making "drive → cross → change
+direction" — a real, common basketball move — mechanically impossible. Only
+"stand still, plant, shuffle sideways" could ever be expressed.
+
+**Decision: hybrid gather (model C).** Startup now BLEEDS momentum via a hard
+decel (`PlayerController.GatherDecel`, tuned steeper than the open-field
+`Decel` but bounded so it does not always fully zero within the Startup
+window) instead of an instant zero. Whatever momentum survives is what
+Active's burst redirects — never re-added to, never re-zeroed. This is
+recorded here, not silently implemented, because it visibly touches this
+ADR's central anti-goal:
+
+- **Why this is NOT the arcade-decoupling anti-goal.** The anti-goal is
+  action decoupled from bodily commitment — a strike that fires with the feet
+  unplanted, or a move that costs nothing to throw. Bounded momentum
+  retention does not remove the plant: Startup still visibly decelerates the
+  body (a fast player is CLEARLY seen slowing down into the plant, frame by
+  frame, exactly as legible as the old instant-zero), and the deceleration
+  rate is a tuned, finite bleed — not free carry-through. What changes is
+  only WHETHER the plant is allowed to leave a residue of momentum once it
+  completes, not whether the plant itself is honestly rendered. The
+  commitment read (defender sees the startup frames; the body pays a real,
+  visible cost) is unaffected.
+- **Why this is bounded, not general-purpose.** This amendment applies to the
+  moving crossover's Startup→Active handoff specifically (and, by the shared
+  `CommittedMove` skeleton, any future move built the same way — see M9's
+  behind-the-back/between-the-legs/spin sub-issues, which are explicitly
+  speced to reuse this same momentum model). It is NOT a general license to
+  soften every committed move's plant: the gather-bleed is explicitly
+  scoped to the Crossover (and, by the same skeleton, future burst-family
+  moves that opt into it) — `TickCommittedMoveBehavior`'s Startup branch
+  gates on `_machine.CurrentMove is Crossover`, and every other move
+  (Hesitation, StealMove, JumpShot, …) keeps the pre-#198 instant-zero
+  plant. Code review (fix round) caught this ADR text previously claiming
+  the opposite for the JumpShot — that the bleed rule "is not special-cased
+  away for it." The code was right and the prose was wrong: a JumpShot's
+  Startup hard-zeroes every tick exactly like it always has, and that is a
+  stationary-commitment move that keeps the instant plant, not a
+  bleed-then-redirect one. This amendment also does not touch Recovery
+  (still a hard decel-to-zero punish window) for any move, including the
+  Crossover itself.
+- **Exit direction is separately bounded (model A, "snapshotted at
+  Active-entry").** The left stick shapes WHERE the surviving momentum + burst
+  go, but only at the single moment Active begins — it PARAMETERIZES the
+  move (which direction the already-committed burst takes), it does not let
+  the player re-decide mid-Active or cancel the move. Startup/Active/Recovery
+  stay intact and un-flow-cancellable exactly as this ADR already requires;
+  see `CrossoverBurstMath` (scripts/Player/CrossoverBurstMath.cs) for the pure
+  composition this produces.
+
+A request to extend momentum retention to a move's PUNISH window (Recovery),
+or to let the exit vector be re-read continuously through Active (turning it
+into a steerable, flow-cancellable action), contradicts this amendment's
+scope; it does not refine it.
 
 ## Consequences
 
