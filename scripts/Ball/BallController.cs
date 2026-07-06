@@ -1539,6 +1539,18 @@ public partial class BallController : Node3D
 	///      one — inherent to HandSide's existing "unreliable, latest-value-
 	///      wins" broadcast, not something reliable delivery would be worth
 	///      adding new netcode for here.
+	///   3. (Doubt cycle, #194) The SAME mispredicted-move revert from gap 1
+	///      can additionally pick the WRONG sweep PATH for its self-
+	///      correcting reverse sweep: at the exact revert tick,
+	///      _machine.CurrentMove has typically already gone null/Inactive
+	///      (ReconcileFromServer's force-Inactive branch), so
+	///      DisplayMoveId() reads "" rather than "behindtheback" — the
+	///      extra reverse sweep plays as a front (Crossover-style) transit
+	///      even if the reverted move was a BehindTheBack. Cosmetic-only,
+	///      self-correcting within one sweep duration, and strictly a
+	///      narrower instance of gap 1 (a wrong PATH, not a wrong COUNT of
+	///      sweeps) — not worth caching a second piece of pre-revert state
+	///      to close.
 	/// </summary>
 	private (float lateralFactor, float verticalDip, bool isBehindBody) AdvanceHandSweep(PlayerController holder)
 	{
