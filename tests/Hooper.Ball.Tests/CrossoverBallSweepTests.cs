@@ -102,6 +102,25 @@ public class CrossoverBallSweepTests
         }
     }
 
+    [Theory]
+    [InlineData(0.25f, 0.15625f)]
+    [InlineData(0.75f, 0.84375f)]
+    public void LateralFactor_MatchesTheSmoothstepFraction_NotLinear(float t, float expectedEasedFraction)
+    {
+        // Pins the mandated smoothstep (3t^2 - 2t^3) against the specific
+        // fraction it produces at these two ts — a mutant that swapped in a
+        // linear ease (eased = t, giving 0.25/0.75 here instead) would still
+        // pass every other test in this file but fails this one.
+        var (lateral, _) = CrossoverBallSweep.Offset(t, fromSign: -1f, toSign: 1f);
+
+        float expectedLateral = -1f + (1f - (-1f)) * expectedEasedFraction;
+        Assert.Equal(expectedLateral, lateral, precision: 5);
+
+        // Sanity: the expected fraction really is the non-linear smoothstep
+        // value, distinct from a linear ease at the same t.
+        Assert.NotEqual(t, expectedEasedFraction, precision: 5);
+    }
+
     [Fact]
     public void ReCross_RestartsFromTheCurrentInterpolatedPosition_NotTheOldSide()
     {
