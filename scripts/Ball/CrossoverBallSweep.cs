@@ -64,4 +64,34 @@ public static class CrossoverBallSweep
 
         return (lateralFactor, verticalDip);
     }
+
+    /// <summary>
+    /// The in-hand forward offset (metres) for this tick, given the current
+    /// sweep's verticalDip curve value and whether it is a BehindTheBack
+    /// (behind-body) sweep (#194). Extracted to a pure static (#211
+    /// code-review fix) so mutation coverage can pin this formula directly —
+    /// it previously lived as a private BallController method with zero
+    /// xUnit coverage and survived a sign-flip mutation.
+    ///
+    /// Crossover's in-front sweep never touches the forward axis — only the
+    /// existing lateral/dip terms — so isBehindBody=false returns the plain
+    /// baseline (DribbleForwardOffset), bit-identical to pre-#194 behaviour.
+    /// A BehindTheBack sweep instead pulls the ball BACK along that same
+    /// single-arch curve (0 at both ends, peak at t=0.5 — reusing
+    /// verticalDip's shape rather than a second pure curve, since it is
+    /// exactly the "how far through the transit" progress both the dip and
+    /// this pull-back need): at the peak, behindDepth (BehindTheBackSweepDepth,
+    /// 0.7 by default) exceeds baseline (DribbleForwardOffset, 0.5 by
+    /// default), so the ball's forward offset goes NEGATIVE — genuinely
+    /// behind the holder's centerline, the "shielded, away from the
+    /// defender" transit the issue calls for.
+    /// </summary>
+    /// <param name="baseline">The holder's steady-state forward offset (BallController.DribbleForwardOffset).</param>
+    /// <param name="verticalDip">This tick's sweep dip curve value, from <see cref="Offset"/>.</param>
+    /// <param name="behindDepth">How far behind baseline the peak of a behind-body sweep pulls (BallController.BehindTheBackSweepDepth).</param>
+    /// <param name="isBehindBody">Whether the active sweep is BehindTheBack's behind-body transit rather than Crossover's in-front one.</param>
+    public static float ForwardOffset(float baseline, float verticalDip, float behindDepth, bool isBehindBody) =>
+        isBehindBody
+            ? baseline - verticalDip * behindDepth
+            : baseline;
 }

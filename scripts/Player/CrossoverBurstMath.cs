@@ -1,3 +1,4 @@
+using System;
 using Godot;
 
 namespace Hooper.Player;
@@ -75,6 +76,15 @@ public static class CrossoverBurstMath
     private const float DeadImpulseFloor = 0.5f;
 
     /// <summary>
+    /// "No clamp" sentinel for <c>maxExitAngleRadians</c> — 180 degrees, i.e.
+    /// every direction the "never backward" forward-contribution clamp
+    /// already allows through. A caller that omits the parameter (every
+    /// pre-#194 Crossover call site) is bit-identical to the original
+    /// unclamped composition.
+    /// </summary>
+    private const float FullExitCone = MathF.PI;
+
+    /// <summary>
     /// Composes the Active-phase velocity for a crossover.
     /// </summary>
     /// <param name="survivingVelocity">
@@ -97,6 +107,18 @@ public static class CrossoverBurstMath
     /// <param name="burstSpeed">Lateral burst impulse magnitude (m/s).</param>
     /// <param name="forwardBurstScale">Forward burst impulse magnitude (m/s) for the exit vector's forward-aligned component.</param>
     /// <param name="exitDeadzone">Exit-vector magnitude at/below which the stick counts as neutral (no steering input).</param>
+    /// <param name="maxExitAngleRadians">
+    /// The "exit cone" (issue #194): the exit vector's angle is clamped to
+    /// within this many radians of forwardAxis BEFORE decomposing into
+    /// forward/lateral contributions. Defaults to an unclamped 180 degrees
+    /// (<see cref="FullExitCone"/>) — every pre-#194 caller (plain
+    /// Crossover) gets exactly the old un-narrowed behaviour, since the
+    /// "never backward" clamp below already bounds the effective cone to a
+    /// forward hemisphere on its own. BehindTheBack (#194) passes a
+    /// genuinely narrower angle here: "fewer follow-ups" is modelled ONLY as
+    /// this narrower cone (docs/handoffs/M9-move-taxonomy.md), never as a
+    /// recovery-frame or cooldown penalty.
+    /// </param>
     /// <returns>The Active-phase velocity (Y always 0).</returns>
     public static Vector3 ComposeActiveVelocity(
         Vector3 survivingVelocity,
@@ -105,7 +127,8 @@ public static class CrossoverBurstMath
         Vector2 exitVector,
         float burstSpeed,
         float forwardBurstScale,
-        float exitDeadzone)
+        float exitDeadzone,
+        float maxExitAngleRadians = FullExitCone)
     {
         Vector2 forwardAxis = HeadingMath.Forward(heading);
         // Reuse HandStateResolver's own +1-flick convention for "right" so
@@ -120,6 +143,49 @@ public static class CrossoverBurstMath
             Vector2 exitDir = exitVector.Normalized();
             float forwardAmount = exitDir.Dot(forwardAxis);
             float lateralAmount = exitDir.Dot(rightAxis);
+
+            // Exit-cone clamp (#194): only touches the pair when the cone is
+            // genuinely narrower than FullExitCone AND the exit direction
+            // actually exceeds it — so a full-cone caller (plain Crossover)
+            // never pays the atan2/cos/sin round-trip and stays bit-
+            // identical to the pre-#194 direct-dot-product computation.
+            // {forwardAxis, rightAxis} is an orthonormal basis and exitDir is
+            // unit length, so forwardAmount/lateralAmount ARE exactly
+            // cos/sin of the signed angle between exitDir and forwardAxis —
+            // recomputing them from a clamped angle is a like-for-like swap,
+            // not an approximation.
+            if (maxExitAngleRadians < FullExitCone)
+            {
+                if (lateralAmount == 0f && forwardAmount < 0f)
+                {
+                    // Exact backward pole (#211 code-review fix). exitDir sits
+                    // dead-on -forwardAxis, so lateralAmount is a sum of
+                    // products that are each individually a signed zero —
+                    // MathF.Atan2(±0.0, negative) returns ±π depending on
+                    // THAT sign, which is an IEEE-754 implementation detail,
+                    // not gameplay. ADR-0004 requires server and client to
+                    // compute identically on every build, so the bend
+                    // direction can never ride Atan2's sign-of-zero — it must
+                    // be picked from an explicit signal. Bend to the side the
+                    // flick already committed to (flickSign), matching the
+                    // DeadImpulseFloor fallback below (`rightAxis * flickSign
+                    // * burstSpeed`) so the pole case is continuous with its
+                    // neighbourhood instead of an arbitrary left/right pick.
+                    float clampedAngle = flickSign >= 0 ? maxExitAngleRadians : -maxExitAngleRadians;
+                    forwardAmount = MathF.Cos(clampedAngle);
+                    lateralAmount = MathF.Sin(clampedAngle);
+                }
+                else
+                {
+                    float angle = MathF.Atan2(lateralAmount, forwardAmount);
+                    float clampedAngle = Mathf.Clamp(angle, -maxExitAngleRadians, maxExitAngleRadians);
+                    if (clampedAngle != angle)
+                    {
+                        forwardAmount = MathF.Cos(clampedAngle);
+                        lateralAmount = MathF.Sin(clampedAngle);
+                    }
+                }
+            }
 
             // Clamp negative (backward-pointing) forward contribution to
             // zero — see class doc's "never backward" rationale. Lateral is

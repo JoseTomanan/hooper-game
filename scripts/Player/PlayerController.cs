@@ -239,8 +239,58 @@ public partial class PlayerController : CharacterBody3D
 	/// <summary>
 	/// Left-stick exit-vector magnitude at/below which Active-entry treats the
 	/// stick as neutral (no steering input) — see CrossoverBurstMath's doc.
+	/// Shared with BehindTheBack — deadzone is a hardware-feel constant, not
+	/// part of either move's tuning profile.
 	/// </summary>
 	[Export] public float ExitDeadzone { get; set; } = 0.15f;
+
+	// ── Behind-the-back tuning (issue #194) ───────────────────────────────────
+	// BehindTheBack shares CrossoverBurstMath/CrossoverBallSweep with Crossover
+	// (composition, not a subclass of it — see BehindTheBack's doc) but is a
+	// deliberately SAFER move: smaller burst, heavier gather bleed, narrower
+	// exit cone. Recovery/Startup/Active frame counts differ too, but those
+	// live on BehindTheBack.DefaultFrameData, not here.
+
+	/// <summary>
+	/// Lateral speed of BehindTheBack's Active-phase burst (m/s). Lower than
+	/// Crossover's BurstSpeed (9) — "less explosive" per the spec. Bare feel
+	/// default (33% below Crossover's), deferred to the per-milestone human
+	/// pass like every other burst-family tunable (ADR-0015/CLAUDE.md).
+	/// </summary>
+	[Export] public float BehindTheBackBurstSpeed { get; set; } = 6.0f;
+
+	/// <summary>
+	/// Forward speed of BehindTheBack's Active-phase burst (m/s). Matches
+	/// BehindTheBackBurstSpeed by default for the same symmetric-feel
+	/// reasoning as Crossover's ForwardBurstScale. Bare feel default.
+	/// </summary>
+	[Export] public float BehindTheBackForwardBurstScale { get; set; } = 6.0f;
+
+	/// <summary>
+	/// Hard-decel rate (m/s²) BehindTheBack's Startup plant bleeds momentum
+	/// at — the SAME hybrid-gather model #198 introduced for Crossover
+	/// (ADR-0003 amendment), just tuned STEEPER: "heavier gather bleed" per
+	/// the spec. At MoveSpeed's top speed (6 m/s) over 6 Startup ticks
+	/// (0.1s), 55 leaves ~0.5 m/s surviving — noticeably less than
+	/// Crossover's GatherDecel=40 (~2 m/s survives) while still not an
+	/// instant zero (which would collapse back to the pre-#198 model this
+	/// move deliberately keeps). Bare feel default, deferred sign-off.
+	/// </summary>
+	[Export] public float BehindTheBackGatherDecel { get; set; } = 55.0f;
+
+	/// <summary>
+	/// BehindTheBack's exit cone half-angle (degrees) — the left-stick exit
+	/// vector is clamped to within this many degrees of the player's current
+	/// heading before CrossoverBurstMath composes the burst (see its
+	/// maxExitAngleRadians doc). "Fewer follow-up options" is modelled
+	/// ONLY as this narrower cone (docs/handoffs/M9-move-taxonomy.md) —
+	/// explicitly not a recovery penalty or a chain cooldown. 50 degrees
+	/// (vs. Crossover's effectively unclamped ~180) still allows a genuine
+	/// diagonal exit but rules out the "classic side-to-side shuffle"
+	/// Crossover's pure-lateral row produces — you can't snap a sharp cut
+	/// like a front cross. Bare feel default, deferred sign-off.
+	/// </summary>
+	[Export] public float BehindTheBackExitConeDegrees { get; set; } = 50.0f;
 
 	// ── Authoritative heading (issue #80) ────────────────────────────────────
 
@@ -1059,7 +1109,11 @@ public partial class PlayerController : CharacterBody3D
 		// Gated on IsBallHolder specifically — a player WITHOUT the ball
 		// (defense) is never affected; their crossover/hesitation attempts
 		// are unrelated to possession state.
-		if ((move is Crossover || move is Hesitation) && IsBallHolder
+		//
+		// BehindTheBack (#194) is gated the same way — it is ALSO a dribble
+		// move in real ball (the hand-swap only makes sense off a live
+		// dribble), so the dead-dribble rule must apply to it identically.
+		if ((move is Crossover || move is Hesitation || move is BehindTheBack) && IsBallHolder
 			&& GetBall()?.State == BallState.Held)
 			return false;
 
@@ -1099,13 +1153,14 @@ public partial class PlayerController : CharacterBody3D
 	/// rarely — once per committed move attempt, not every physics tick — so
 	/// there is no continuous stream for a retransmit to stall.
 	///
-	/// moveId/param is the minimal payload to reconstruct a move. Two concrete
-	/// moves exist now ("crossover", carrying BurstDirection as param; and
-	/// "jumpshot", M7b issue #74, carrying no param) so a small if-chain is
-	/// still correct and proportionate — see CommittedMove.Id's doc comment,
-	/// which already anticipated this exact use. Revisit only if a third move
-	/// arrives with materially different reconstruction needs than a simple
-	/// id dispatch; do not build a registry/factory pre-emptively.
+	/// moveId/param is the minimal payload to reconstruct a move. A handful of
+	/// concrete moves exist now ("crossover" and "behindtheback", both
+	/// carrying BurstDirection as param; "jumpshot", carrying none; "steal",
+	/// carrying TargetHand) so a small if-chain is still correct and
+	/// proportionate — see CommittedMove.Id's doc comment, which already
+	/// anticipated this exact use. Revisit only if a future move arrives with
+	/// materially different reconstruction needs than a simple id dispatch;
+	/// do not build a registry/factory pre-emptively.
 	///
 	/// Security: same sender check as SubmitInput — PlayerController has a
 	/// per-peer node identity (Name == peer ID), unlike the Ball, which had to
@@ -1151,6 +1206,10 @@ public partial class PlayerController : CharacterBody3D
 			// param is the body-relative flick sign (M9, #85) — the world burst
 			// direction is derived from Heading when the move reaches Active.
 			BeginCommittedMove(new Crossover(burstDirection: param));
+		else if (moveId == "behindtheback")
+			// Same reconstruction payload as "crossover" (issue #194) — param
+			// is the body-relative flick sign.
+			BeginCommittedMove(new BehindTheBack(burstDirection: param));
 		else if (moveId == "hesitation")
 			BeginCommittedMove(new Hesitation());
 		else if (moveId == "jumpshot")
@@ -1367,9 +1426,16 @@ public partial class PlayerController : CharacterBody3D
 		//     pathological RTTs — consistent with the latency tolerance the
 		//     rest of this prediction system already assumes.
 		//
-		// Only one move type exists today, so a "different move Id while both
-		// sides are active" case is unreachable; revisit this gate when a
-		// second move type makes that distinguishable from this check.
+		// Multiple move types exist now (crossover, behindtheback, hesitation,
+		// jumpshot, steal, block, contest), but a "different move Id while
+		// both sides are active" case is still structurally unreachable: the
+		// server only ever moves out of Inactive by echoing back the EXACT
+		// moveId the client's own RPC requested (RequestBeginMove's Id
+		// parameter round-trips unchanged through the broadcast). There is no
+		// path where the server is Active/Startup/Recovery on a move whose Id
+		// differs from what this client itself asked to begin — so the two
+		// sides' move Ids can never disagree while both are non-Inactive,
+		// regardless of how many move types the game has.
 		//
 		// (#21 doubt cycle 2, finding #1) Known bounded gap: if the client begins
 		// a SECOND move right as its own local Recovery from a FIRST move
@@ -1634,11 +1700,31 @@ public partial class PlayerController : CharacterBody3D
 	public (MovePhase phase, float burstDir) DisplayMove()
 	{
 		if (DisplayPhaseResolver.LocalMachineDrivesDisplay(IsServer, IsLocalPlayer))
-			return (_machine.Phase, (_machine.CurrentMove as Crossover)?.BurstDirection ?? 0f);
+			return (_machine.Phase,
+				(_machine.CurrentMove as Crossover)?.BurstDirection
+				?? (_machine.CurrentMove as BehindTheBack)?.BurstDirection
+				?? 0f);
 
-		float burstDir = _serverMoveId == "crossover" ? _serverMoveParam : 0f;
+		float burstDir = _serverMoveId is "crossover" or "behindtheback" ? _serverMoveParam : 0f;
 		return (_serverMovePhase, burstDir);
 	}
+
+	/// <summary>
+	/// The committed-move Id this node should DISPLAY this frame — same
+	/// per-role resolution as <see cref="DisplayMove"/> (M7b, #69), but
+	/// returning the identity string instead of phase/burst. Added for
+	/// BehindTheBack (#194): BallController.AdvanceHandSweep needs to tell a
+	/// Crossover-driven hand flip apart from a BehindTheBack-driven one (the
+	/// in-front sweep vs. the shielded behind-body path) for EVERY role,
+	/// including the remote client's copy of the opponent — which, like
+	/// DisplayMove, has no live local _machine to read (that peer's _machine
+	/// never advances for the opponent's node), so it must fall back to the
+	/// broadcast _serverMoveId exactly like DisplayMove's burstDir already does.
+	/// </summary>
+	public string DisplayMoveId() =>
+		DisplayPhaseResolver.LocalMachineDrivesDisplay(IsServer, IsLocalPlayer)
+			? MoveIdOf(_machine.CurrentMove)
+			: _serverMoveId;
 
 	// ── Input (unchanged from M1a) ────────────────────────────────────────────
 
@@ -1736,8 +1822,28 @@ public partial class PlayerController : CharacterBody3D
 				// (TickCommittedMoveBehavior), so the burst follows the body's
 				// facing rather than a fixed screen axis. The wire param is the
 				// same single float RequestBeginMove already speaks.
-				if (BeginCommittedMove(new Crossover(flickSign)) && !isServer)
+				//
+				// BehindTheBack (#194) reuses this SAME flick-toward-the-empty-
+				// hand gesture — it is a size-up VARIANT of the crossover read,
+				// not a separate gesture grammar (real ball has no dedicated
+				// analog input for "which crossover variant"; a player decides
+				// by choice, not by a different stick motion). The "move_size_up"
+				// modifier held DURING the flick selects it, mirroring 2K's
+				// modifier-gated advanced-dribble convention (ADR-0014 tier 3 —
+				// neither real ball nor Undisputed 3 specify a literal control
+				// mapping here, so the lowest-ranked but still valid reference
+				// resolves it). Held, not a separate discrete press: the flick
+				// itself is still what commits the move; the modifier only
+				// selects WHICH move the flick becomes.
+				if (Input.IsActionPressed("move_size_up"))
+				{
+					if (BeginCommittedMove(new BehindTheBack(flickSign)) && !isServer)
+						RpcId(1, MethodName.RequestBeginMove, "behindtheback", flickSign);
+				}
+				else if (BeginCommittedMove(new Crossover(flickSign)) && !isServer)
+				{
 					RpcId(1, MethodName.RequestBeginMove, "crossover", flickSign);
+				}
 			}
 			else if (BeginCommittedMove(new Hesitation()) && !isServer)
 			{
@@ -1850,18 +1956,24 @@ public partial class PlayerController : CharacterBody3D
 		switch (_machine.Phase)
 		{
 			case MovePhase.Startup:
-				// #198's hybrid gather is scoped to the CROSSOVER's plant only
-				// (ADR-0003 amendment) — every other committed move (Hesitation,
-				// StealMove, JumpShot, …) keeps the original instant-zero plant.
-				// A blanket bleed here would have silently let a driving player
-				// slide through a Hesitation's "stand still and sell the fake"
-				// or a defender's StealMove Active window on residual momentum
-				// GatherDecel's budget doesn't fully cover for their (shorter)
-				// Startup lengths — exactly the un-bounded relaxation the ADR
-				// amendment explicitly rules out.
-				Velocity = _machine.CurrentMove is Crossover
-					? Velocity.MoveToward(Vector3.Zero, GatherDecel * (float)delta)
-					: Vector3.Zero;
+				// #198's hybrid gather is scoped to the burst-family moves that
+				// explicitly opt into it (ADR-0003 amendment) — every other
+				// committed move (Hesitation, StealMove, JumpShot, …) keeps the
+				// original instant-zero plant. A blanket bleed here would have
+				// silently let a driving player slide through a Hesitation's
+				// "stand still and sell the fake" or a defender's StealMove
+				// Active window on residual momentum GatherDecel's budget
+				// doesn't fully cover for their (shorter) Startup lengths —
+				// exactly the un-bounded relaxation the ADR amendment explicitly
+				// rules out. BehindTheBack (#194) opts in with its OWN, steeper
+				// rate (BehindTheBackGatherDecel — "heavier gather bleed" per
+				// the spec), not Crossover's GatherDecel.
+				Velocity = _machine.CurrentMove switch
+				{
+					Crossover     => Velocity.MoveToward(Vector3.Zero, GatherDecel * (float)delta),
+					BehindTheBack => Velocity.MoveToward(Vector3.Zero, BehindTheBackGatherDecel * (float)delta),
+					_             => Vector3.Zero,
+				};
 				MoveAndSlide();
 				break;
 
@@ -1871,12 +1983,19 @@ public partial class PlayerController : CharacterBody3D
 				// MoveAndSlide() applies it each tick, producing sustained separation.
 				// A JumpShot (M7b, #74) has no horizontal effect here — Velocity is
 				// already bled toward zero by Startup's gather above and nothing
-				// sets it for a non-Crossover move, so the shooter stays
+				// sets it for a non-burst-family move, so the shooter stays
 				// (near-)planted through the release. BallController reads
 				// JustReleasedJumpShot to fire the actual ball transition on this
 				// same tick — that is a SEPARATE node's read of this machine's
 				// state, not a side effect this switch needs to produce.
-				if (_machine.JustEnteredActive && _machine.CurrentMove is Crossover crossover)
+				//
+				// Crossover and BehindTheBack (#194) share the SAME
+				// CrossoverBurstMath composition (composition, not inheritance —
+				// see BehindTheBack's doc) with different tunables: BehindTheBack
+				// passes its own (smaller) burst speeds and a NARROWER exit cone
+				// (BehindTheBackExitConeDegrees, "fewer follow-ups" per the M9
+				// taxonomy handoff — never a recovery/cooldown penalty).
+				if (_machine.JustEnteredActive && _machine.CurrentMove is Crossover or BehindTheBack)
 				{
 					// #198: CrossoverBurstMath composes the surviving Startup
 					// momentum with the exit-vector-driven burst impulse — see
@@ -1893,17 +2012,30 @@ public partial class PlayerController : CharacterBody3D
 					// loss/jitter they can genuinely diverge for a tick or two —
 					// an accepted gap, corrected by the existing prediction/
 					// reconciliation path rather than closed here. Tracked as
-					// issue #210; not this issue's scope to fix.
-					int sign = System.Math.Sign(crossover.BurstDirection);
-					Velocity = CrossoverBurstMath.ComposeActiveVelocity(
-						Velocity, Heading, sign, exitVectorSample,
-						BurstSpeed, ForwardBurstScale, ExitDeadzone);
+					// issue #210; not this issue's scope to fix — BehindTheBack
+					// rides the SAME composition path, so #210's eventual fix
+					// covers it for free.
+					float burstSign = _machine.CurrentMove switch
+					{
+						Crossover c     => c.BurstDirection,
+						BehindTheBack b => b.BurstDirection,
+						_               => 0f,
+					};
+					int sign = System.Math.Sign(burstSign);
+					Velocity = _machine.CurrentMove is BehindTheBack
+						? CrossoverBurstMath.ComposeActiveVelocity(
+							Velocity, Heading, sign, exitVectorSample,
+							BehindTheBackBurstSpeed, BehindTheBackForwardBurstScale, ExitDeadzone,
+							Mathf.DegToRad(BehindTheBackExitConeDegrees))
+						: CrossoverBurstMath.ComposeActiveVelocity(
+							Velocity, Heading, sign, exitVectorSample,
+							BurstSpeed, ForwardBurstScale, ExitDeadzone);
 
-					// The crossover swaps the ball to the (now near) empty hand —
-					// the authoritative hand-state change (M9, #83). It rides this
-					// same predicted + reconciled Active-entry event as the burst;
-					// a Hesitation is not a Crossover, so it never reaches here and
-					// the hand stays put.
+					// Both moves swap the ball to the (now near) empty hand —
+					// the authoritative hand-state change (M9, #83). It rides
+					// this same predicted + reconciled Active-entry event as
+					// the burst; a Hesitation is neither of these, so it never
+					// reaches here and the hand stays put.
 					HandSide = HandStateResolver.Opposite(HandSide);
 				}
 				MoveAndSlide();
@@ -1921,15 +2053,16 @@ public partial class PlayerController : CharacterBody3D
 	/// <summary>
 	/// The moveId to broadcast for the current move, or "" if none — the
 	/// ReceiveState payload's sentinel for "Inactive / no move running".
-	/// Only one concrete move type exists today (see RequestBeginMove's doc
+	/// Each concrete move's Id is unique and stable (see RequestBeginMove's doc
 	/// comment for why a small if-chain, not a registry, is appropriate here).
 	/// </summary>
 	private static string MoveIdOf(CommittedMove move) => move?.Id ?? "";
 
 	/// <summary>
-	/// The move's reconstruction payload to broadcast — today, Crossover's
-	/// BurstDirection. 0 when there is no current move or the move type
-	/// carries no extra payload.
+	/// The move's reconstruction payload to broadcast — Crossover's and
+	/// BehindTheBack's shared BurstDirection shape, or StealMove's TargetHand.
+	/// 0 when there is no current move or the move type carries no extra
+	/// payload.
 	///
 	/// (#21 doubt cycle 1, finding #2) _serverMoveId/_serverMoveParam are stored
 	/// from every broadcast — satisfying "active move included in the server
@@ -1940,8 +2073,9 @@ public partial class PlayerController : CharacterBody3D
 	/// agree a move is active, but disagree on WHICH one" a reachable case.
 	/// </summary>
 	private static float MoveParamOf(CommittedMove move) =>
-		move is Crossover crossover ? crossover.BurstDirection :
-		move is StealMove steal    ? (float)(int)steal.TargetHand :
+		move is Crossover crossover         ? crossover.BurstDirection :
+		move is BehindTheBack behindTheBack ? behindTheBack.BurstDirection :
+		move is StealMove steal             ? (float)(int)steal.TargetHand :
 		0f;
 
 	// ── Shared motion step ────────────────────────────────────────────────────
