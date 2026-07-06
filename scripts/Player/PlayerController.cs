@@ -1879,9 +1879,20 @@ public partial class PlayerController : CharacterBody3D
 				{
 					// #198: CrossoverBurstMath composes the surviving Startup
 					// momentum with the exit-vector-driven burst impulse — see
-					// its doc for the full emergent-move table. Heading is
-					// reconciled, so server and client derive the identical
-					// world-space forward/right axes from it.
+					// its doc for the full emergent-move table.
+					//
+					// NOT jointly deterministic across client/server the way
+					// Heading is (ADR-0010). Each role composes from its OWN
+					// snapshot of exitVectorSample, sampled at its OWN tick:
+					// the local, zero-lag ReadInput() for an own-player role
+					// vs. the server's networked _pendingRawStick snapshot for
+					// its copy of a remote player (see TickCommittedMoveBehavior's
+					// exitVectorSample param doc). Steady-state (no packet loss,
+					// no jitter) the two composed bursts coincide, but under
+					// loss/jitter they can genuinely diverge for a tick or two —
+					// an accepted gap, corrected by the existing prediction/
+					// reconciliation path rather than closed here. Tracked as
+					// issue #210; not this issue's scope to fix.
 					int sign = System.Math.Sign(crossover.BurstDirection);
 					Velocity = CrossoverBurstMath.ComposeActiveVelocity(
 						Velocity, Heading, sign, exitVectorSample,
