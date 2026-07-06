@@ -127,6 +127,37 @@ public class CrossoverBurstMathExitConeTests
         Assert.True(new Vector2(result.X, result.Z).Length() > 0.5f, "expected a real burst, not a dead stop");
     }
 
+    // #211 code-review fix: every other test in this file hardcodes 45deg,
+    // so a mutant that shrinks PlayerController.BehindTheBackExitConeDegrees
+    // (the REAL production default, currently 50deg) down to anywhere in
+    // (45, 50) would silently make BehindTheBack's actual cone dead code —
+    // every test above would stay green because none of them exercise the
+    // production value. xUnit can't instantiate PlayerController (a Godot
+    // Node), so this mirrors the literal default directly; if that default
+    // ever changes, update BOTH this literal and the doc comment together.
+    // A pure-lateral exit vector clamped at 50deg must still show clamping
+    // occurred (a nonzero forward component appears) — that's the property
+    // this test protects, not the exact 45deg-tuned numbers above.
+    [Fact]
+    public void NarrowCone_AtProductionFiftyDegreeDefault_StillClamps()
+    {
+        // Mirrors PlayerController.BehindTheBackExitConeDegrees's default
+        // (50.0f) — see scripts/Player/PlayerController.cs.
+        const float BehindTheBackExitConeDegreesDefault = 50f;
+
+        Vector3 result = CrossoverBurstMath.ComposeActiveVelocity(
+            survivingVelocity: Vector3.Zero,
+            heading: 0f,
+            flickSign: +1,
+            exitVector: new Vector2(-1f, 0f), // pure lateral, 90deg from forward
+            burstSpeed: BurstSpeed,
+            forwardBurstScale: ForwardBurstScale,
+            exitDeadzone: ExitDeadzone,
+            maxExitAngleRadians: Mathf.DegToRad(BehindTheBackExitConeDegreesDefault));
+
+        Assert.True(result.Z > 0.5f, $"expected the production 50deg cone to bend a pure-lateral exit forward, got Z={result.Z}");
+    }
+
     // #211 code-review fix: an exit vector pointing EXACTLY backward is the
     // degenerate pole where lateralAmount is a sum of two signed-zero
     // products (0 * -1 and -1 * 0 here) and forwardAmount is exactly -1.
