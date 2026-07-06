@@ -1442,26 +1442,13 @@ public partial class BallController : Node3D
 	private static Vector3 HandRight(Vector3 forward) => new(-forward.Z, 0f, forward.X);
 
 	/// <summary>
-	/// The in-hand forward offset (metres) for this tick, given the current
-	/// sweep's verticalDip curve value and whether it is a BehindTheBack
-	/// (behind-body) sweep (#194).
-	///
-	/// Crossover's in-front sweep never touches the forward axis — only the
-	/// existing lateral/dip terms — so isBehindBody=false returns the plain
-	/// DribbleForwardOffset baseline, bit-identical to pre-#194 behaviour.
-	/// A BehindTheBack sweep instead pulls the ball BACK along that same
-	/// single-arch curve (0 at both ends, peak at t=0.5 — reusing
-	/// verticalDip's shape rather than a second pure curve, since it is
-	/// exactly the "how far through the transit" progress both the dip and
-	/// this pull-back need): at the peak, BehindTheBackSweepDepth (0.7 by
-	/// default) exceeds DribbleForwardOffset (0.5), so the ball's forward
-	/// offset goes NEGATIVE — genuinely behind the holder's centerline, the
-	/// "shielded, away from the defender" transit the issue calls for.
+	/// The in-hand forward offset (metres) for this tick. Thin wrapper over
+	/// CrossoverBallSweep.ForwardOffset (#211 code-review fix) — the formula
+	/// itself is a pure static there so xUnit can pin it directly; this
+	/// method just supplies BallController's own tunables.
 	/// </summary>
 	private float SweepForwardOffset(float verticalDip, bool isBehindBody) =>
-		isBehindBody
-			? DribbleForwardOffset - verticalDip * BehindTheBackSweepDepth
-			: DribbleForwardOffset;
+		CrossoverBallSweep.ForwardOffset(DribbleForwardOffset, verticalDip, BehindTheBackSweepDepth, isBehindBody);
 
 	/// <summary>
 	/// +1 when the ball renders in the holder's right hand, -1 when in the left.
