@@ -122,6 +122,26 @@ public class CrossoverBallSweepTests
     }
 
     [Fact]
+    public void TBelowZero_ClampsToTheStartEndpoint()
+    {
+        var atNegative = CrossoverBallSweep.Offset(t: -0.5f, fromSign: -1f, toSign: 1f);
+        var atZero = CrossoverBallSweep.Offset(t: 0f, fromSign: -1f, toSign: 1f);
+
+        Assert.Equal(atZero.LateralFactor, atNegative.LateralFactor, precision: 5);
+        Assert.Equal(atZero.VerticalDip, atNegative.VerticalDip, precision: 5);
+    }
+
+    [Fact]
+    public void TAboveOne_ClampsToTheEndEndpoint()
+    {
+        var atTooFar = CrossoverBallSweep.Offset(t: 1.5f, fromSign: -1f, toSign: 1f);
+        var atOne = CrossoverBallSweep.Offset(t: 1f, fromSign: -1f, toSign: 1f);
+
+        Assert.Equal(atOne.LateralFactor, atTooFar.LateralFactor, precision: 5);
+        Assert.Equal(atOne.VerticalDip, atTooFar.VerticalDip, precision: 5);
+    }
+
+    [Fact]
     public void ReCross_RestartsFromTheCurrentInterpolatedPosition_NotTheOldSide()
     {
         // Rule 3 (issue #195): a re-cross mid-sweep restarts from the ball's
