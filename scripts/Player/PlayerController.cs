@@ -1047,8 +1047,9 @@ public partial class PlayerController : CharacterBody3D
 		// the only move #193 special-cased, so a dead-Held player (post-
 		// cradle, or post a canceled pump-fake) could still Begin a
 		// crossover: the burst fires and the JustEnteredActive HandSide flip
-		// (TickCommittedMoveBehavior) authoritatively teleports the HELD ball
-		// to the other hand, escaping the dead-dribble rule's whole point —
+		// (TickCommittedMoveBehavior) authoritatively moves the HELD ball to
+		// the other hand — a sweep transit since #195, no longer a teleport —
+		// escaping the dead-dribble rule's whole point —
 		// #193's own "stranded in dead Held" cost became avoidable. From a
 		// LIVE Held possession the fix is the same: the player must push the
 		// stick to start dribbling first (CheckAutoStartDribble ->

@@ -91,6 +91,24 @@ public partial class BallController : Node3D
 	/// </summary>
 	[Export] public float HandOffset { get; set; } = 0.18f;
 
+	/// <summary>
+	/// Duration (seconds) of the crossover's authoritative cross-body ball
+	/// transit (#195) — how long the ball takes to sweep from the old hand's
+	/// lateral offset to the new one instead of teleporting there in one
+	/// tick. ~0.12s default (feel-tuned; hitl sign-off deferred to the
+	/// per-milestone human pass, NOT this issue — see CrossoverBallSweep).
+	/// </summary>
+	[Export] public float CrossoverSweepDuration { get; set; } = 0.12f;
+
+	/// <summary>
+	/// Depth (metres) of the single-arch low dip the ball takes at the
+	/// midpoint of a crossover sweep (#195) — a real cross-body dribble dips
+	/// low and protective through the middle of the transit rather than
+	/// sliding flat across the body. ~0.15m default (feel-tuned; hitl
+	/// sign-off deferred, NOT this issue — see CrossoverBallSweep).
+	/// </summary>
+	[Export] public float CrossoverSweepDipDepth { get; set; } = 0.15f;
+
 	/// <summary>Full down-and-up dribble cycle duration (seconds).</summary>
 	[Export] public float DribblePeriod { get; set; } = 0.6f;
 
@@ -505,9 +523,44 @@ public partial class BallController : Node3D
 	/// (M9, #83/ADR-0012). Ball-hand is no longer a cosmetic value derived here;
 	/// it lives on PlayerController.HandSide (server-authoritative, predicted +
 	/// reconciled) and the ball mesh merely READS it (HandSign). This field is the
-	/// edge-detector that fires the once-per-possession reset (UpdateHandSide).
+	/// edge-detector that fires the once-per-possession reset (AdvanceHandSweep,
+	/// formerly UpdateHandSide — renamed when #195 folded the crossover ball
+	/// sweep trigger into the same method).
 	/// </summary>
 	private int _handSideHolderId;
+
+	/// <summary>
+	/// The holder's HandSide as of the last AdvanceHandSweep call (#195) — the
+	/// OTHER edge-detector alongside _handSideHolderId. Comparing this against
+	/// the current tick's holder.HandSide (itself already broadcast +
+	/// reconciled, same as HandSign reads) is how a same-holder crossover flip
+	/// is told apart from a possession-change reset: _handSideHolderId changing
+	/// means "new holder, snap" (rule 2); this changing while
+	/// _handSideHolderId stays put means "same holder crossed over, sweep"
+	/// (rule 1). Null before any holder has ever been observed.
+	/// </summary>
+	private HandSide? _lastObservedHandSide;
+
+	/// <summary>True while a crossover ball sweep (#195) is interpolating the lateral hand offset.</summary>
+	private bool _sweepActive;
+
+	/// <summary>Ticks elapsed since the current sweep started (0 on the trigger tick itself).</summary>
+	private int _sweepTicks;
+
+	/// <summary>
+	/// Sweep length in ticks, derived from CrossoverSweepDuration at the
+	/// moment the sweep (re)started — computed via the physics tick rate
+	/// (Engine.PhysicsTicksPerSecond) so the sweep is a deterministic tick
+	/// count (ADR-0004), identical on every peer, rather than a wall-clock
+	/// timer that could drift between machines.
+	/// </summary>
+	private int _sweepDurationTicks;
+
+	/// <summary>Lateral factor the current sweep started from (an old HandSign, or an in-progress sweep's position on a re-cross — rule 3).</summary>
+	private float _sweepFromLateral;
+
+	/// <summary>Lateral factor the current sweep is travelling toward (the new HandSign).</summary>
+	private float _sweepToLateral;
 
 	/// <summary>
 	/// The in-flight (or loose) trajectory. Non-null only while InFlight or
@@ -637,6 +690,16 @@ public partial class BallController : Node3D
 	/// of restarting at 0).
 	/// </summary>
 	internal float DribblePhaseForHarness => _dribble.Phase;
+
+	/// <summary>
+	/// Test-only: exposes whether a crossover ball sweep (#195) is currently
+	/// interpolating. The harness needs this as a direct proof that a
+	/// possession-change hand reset produces NO sweep (rule 2) — position
+	/// alone can't distinguish "reset straight to the default hand" from "a
+	/// sweep that happens to already be at its endpoint", since both look
+	/// identical from outside once settled.
+	/// </summary>
+	internal bool SweepActiveForHarness => _sweepActive;
 
 	// ── Shot scatter RNG (issue #62, ADR-0009) ─────────────────────────────
 
@@ -1291,13 +1354,15 @@ public partial class BallController : Node3D
 		Vector3 holderPos = holderBody?.GlobalPosition ?? Vector3.Zero;
 		Vector3 forward   = HolderForward(holderBody);
 		Vector3 right     = HandRight(forward);
-		UpdateHandSide(holderBody);
+		(float lateralSign, float verticalDip) = AdvanceHandSweep(holderBody);
 
-		// World-space Y = DribbleHandHeight, consistent with DribbleCycle's world-Y convention.
+		// World-space Y = DribbleHandHeight, consistent with DribbleCycle's
+		// world-Y convention, minus the crossover sweep's mid-transit dip
+		// (#195; 0 outside an active sweep).
 		GlobalPosition = new Vector3(
-			holderPos.X + forward.X * DribbleForwardOffset + right.X * HandOffset * HandSign(holderBody),
-			DribbleHandHeight,
-			holderPos.Z + forward.Z * DribbleForwardOffset + right.Z * HandOffset * HandSign(holderBody)
+			holderPos.X + forward.X * DribbleForwardOffset + right.X * HandOffset * lateralSign,
+			DribbleHandHeight - verticalDip * CrossoverSweepDipDepth,
+			holderPos.Z + forward.Z * DribbleForwardOffset + right.Z * HandOffset * lateralSign
 		);
 		CheckJumpShotRelease(holderBody);
 	}
@@ -1310,14 +1375,25 @@ public partial class BallController : Node3D
 		Vector3 holderPos = holderBody?.GlobalPosition ?? Vector3.Zero;
 		Vector3 forward   = HolderForward(holderBody);
 		Vector3 right     = HandRight(forward);
-		UpdateHandSide(holderBody);
+		(float lateralSign, float verticalDip) = AdvanceHandSweep(holderBody);
 
-		// Pass XZ-offset position; GetBallPosition discards the Y and uses HeightAtPhase instead.
+		// Pass XZ-offset position; GetBallPosition discards the Y and uses
+		// HeightAtPhase instead — so the crossover sweep's dip (#195) is
+		// applied as a separate Y subtraction afterward rather than folded
+		// into the position passed in here.
 		GlobalPosition = _dribble.GetBallPosition(new Vector3(
-			holderPos.X + forward.X * DribbleForwardOffset + right.X * HandOffset * HandSign(holderBody),
+			holderPos.X + forward.X * DribbleForwardOffset + right.X * HandOffset * lateralSign,
 			holderPos.Y,
-			holderPos.Z + forward.Z * DribbleForwardOffset + right.Z * HandOffset * HandSign(holderBody)
+			holderPos.Z + forward.Z * DribbleForwardOffset + right.Z * HandOffset * lateralSign
 		));
+		GlobalPosition -= new Vector3(0f, verticalDip * CrossoverSweepDipDepth, 0f);
+		// GetBallPosition's Y is 0 at the bounce's floor-contact phase, and the
+		// dip above can subtract up to CrossoverSweepDipDepth more — uncorrelated
+		// with the dribble phase, so the two CAN coincide and drive the ball
+		// center under the floor. The dip is cosmetic transit flavor; it must
+		// never win over the "stay above the floor" invariant the rest of this
+		// class enforces (see the depenetration guard further down).
+		GlobalPosition = GlobalPosition with { Y = Mathf.Max(GlobalPosition.Y, BallRadius) };
 		CheckJumpShotRelease(holderBody);
 	}
 
@@ -1343,25 +1419,143 @@ public partial class BallController : Node3D
 		(holder?.HandSide ?? HandSide.Left) == HandSide.Right ? 1f : -1f;
 
 	/// <summary>
-	/// Resets the new holder's authoritative ball-hand to the default on a
-	/// possession change (M9, #83/ADR-0012): a new holder has no carried-over hand
-	/// state. Fires at most once per possession via the _handSideHolderId edge.
+	/// Drives both the once-per-possession hand reset (M9, #83/ADR-0012, the
+	/// former UpdateHandSide) and the crossover ball sweep (#195), and returns
+	/// this tick's (lateralFactor, verticalDip) for TickHeld/TickDribbling to
+	/// fold into the in-hand position. lateralFactor replaces the old bare
+	/// HandSign() read; verticalDip is 0 whenever no sweep is running.
 	///
-	/// Runs on every machine — the state switch (TickHeld/TickDribbling) ticks on
-	/// server AND clients, and HolderPeerId is the broadcast authoritative holder
-	/// — so the server resets authoritatively, the client's own player predicts the
-	/// same reset, and the client's remote copy picks the reset up via the broadcast
-	/// HandSide. The per-possession swaps themselves are NOT touched here (they are
-	/// driven by the crossover's Active-entry in PlayerController); this only sets
-	/// the clean starting hand when possession changes.
+	/// ── Trigger rules (#195) ──────────────────────────────────────────────
+	/// 1. Same-holder HandSide flip -> (re)start the sweep.
+	/// 2. Possession change (HolderPeerId changed) -> snap, NO sweep. Edge-
+	///    detected by _handSideHolderId, exactly as UpdateHandSide always did
+	///    — a new holder has no carried-over hand OR sweep state.
+	/// 3. A flip while a sweep is already running (a re-cross) -> restart
+	///    from the ball's CURRENT interpolated lateral position, never
+	///    jumping back to the old side.
+	/// Rules 2 and 1 are told apart by caching BOTH _handSideHolderId (the
+	/// possession edge) and _lastObservedHandSide (the hand edge) — rule 2 is
+	/// checked first and returns early, so a possession change can never also
+	/// register as a same-holder flip on the same tick.
+	///
+	/// ── Doubt-driven: why this is safe to trigger off broadcast state alone ──
+	/// HandSide is server-authoritative, predicted, and reconciled per
+	/// PlayerController (ReceiveState) — never a local-only signal like
+	/// CurrentMove, which the opponent's remote copy doesn't have (the M7b
+	/// #69 remote-display gap class this issue's spec explicitly calls out).
+	/// TickHeld/TickDribbling run once per fixed physics tick on EVERY role —
+	/// server, the predicting holder-client, and the remote client alike (see
+	/// this class's doc) — and Players ticks before Ball in the scene tree,
+	/// so by the time this runs, holder.HandSide already holds THIS tick's
+	/// authoritative value everywhere: the server/holder set it inline
+	/// (TickCommittedMoveBehavior's Active-entry), the remote copy adopted
+	/// the broadcast value (TickClientRemotePlayer). Comparing it against the
+	/// PREVIOUS tick's locally-cached value is therefore comparing two
+	/// already-reconciled samples on each machine independently — the sweep
+	/// derives identically everywhere with no new RPC, exactly like
+	/// DribbleCycle's local phase advance already does for the dribble bounce.
+	/// (A sweep started by one machine slightly before another, due to
+	/// network latency in HandSide's arrival, is the same acceptable
+	/// per-machine timing skew every other reconciled field already has —
+	/// not a new class of desync.)
+	///
+	/// ── Known, accepted residual gaps (doubt cycle, #195) ─────────────────
+	/// Two edge cases can make a peer's sweep count diverge from another's;
+	/// both are pre-existing properties of the underlying HandSide field
+	/// itself (unchanged by this method), not new netcode gaps this sweep
+	/// introduces, so they are documented rather than "fixed" with more
+	/// machinery:
+	///   1. A rare mispredicted Crossover: the predicting holder-client's
+	///      ReconcileFromServer can force HandSide back to _serverHandSide
+	///      when the server rejects the move — a SECOND HandSide change this
+	///      method cannot tell apart from a genuine flip, so it plays an
+	///      (extra, self-correcting) reverse sweep the server never plays.
+	///      This rides the exact same accepted "residual staleness" gap
+	///      ReconcileFromServer's own doc already calls out for the raw
+	///      HandSide snap (ADR-0012) — this method just makes that already-
+	///      accepted transient divergence visible as a cosmetic ripple.
+	///   2. Packet loss on the remote-opponent-client: HandSide there only
+	///      updates on ticks a fresh ReceiveState broadcast lands
+	///      (TickClientRemotePlayer's _hasNewState gate). A rapid re-cross
+	///      whose intermediate broadcast is dropped can vanish entirely on
+	///      that peer (no sweep at all), while the server/holder-client play
+	///      one — inherent to HandSide's existing "unreliable, latest-value-
+	///      wins" broadcast, not something reliable delivery would be worth
+	///      adding new netcode for here.
 	/// </summary>
-	private void UpdateHandSide(PlayerController holder)
+	private (float lateralFactor, float verticalDip) AdvanceHandSweep(PlayerController holder)
 	{
-		if (StateMachine.HolderPeerId == _handSideHolderId) return;
+		if (StateMachine.HolderPeerId != _handSideHolderId)
+		{
+			_handSideHolderId = StateMachine.HolderPeerId;
+			holder?.ResetHandSide();
+			_sweepActive = false;
+			_lastObservedHandSide = holder?.HandSide;
+			return (HandSign(holder), 0f);
+		}
 
-		_handSideHolderId = StateMachine.HolderPeerId;
-		holder?.ResetHandSide();
+		// (Doubt cycle, #195, finding #3) Only overwrite the cached baseline
+		// when we actually observed a real HandSide this tick. A transient
+		// null holder (e.g. a momentary NodePath lookup miss) must NOT
+		// clobber _lastObservedHandSide with null — doing so would silently
+		// drop the next tick's flip detection (comparing the real value
+		// against null instead of against the true last-known side) instead
+		// of merely skipping one tick's read, which is all a transient miss
+		// should cost.
+		HandSide? current = holder?.HandSide;
+		if (current.HasValue && _lastObservedHandSide.HasValue && current.Value != _lastObservedHandSide.Value)
+		{
+			// Rule 3 (re-cross restart): live-but-dormant under default tuning —
+			// the sweep (~7 ticks at CrossoverSweepDuration=0.12s) completes long
+			// before Crossover's own Startup+Recovery lets a second crossover
+			// legally Begin (~tick 21), so _sweepActive is never still true when
+			// this runs today. It becomes reachable (and would then need real
+			// coverage, not just this unit-tested branch) if a future tuning pass
+			// shortens Recovery or lengthens CrossoverSweepDuration past ~15 ticks.
+			float fromLateral = _sweepActive
+				? CrossoverBallSweep.Offset(CurrentSweepT(), _sweepFromLateral, _sweepToLateral).LateralFactor
+				: SignOf(_lastObservedHandSide.Value);
+
+			_sweepFromLateral    = fromLateral;
+			_sweepToLateral      = SignOf(current.Value);
+			_sweepTicks          = 0;
+			_sweepDurationTicks  = Mathf.Max(1, Mathf.RoundToInt(CrossoverSweepDuration * Engine.PhysicsTicksPerSecond));
+			_sweepActive         = true;
+		}
+		if (current.HasValue)
+			_lastObservedHandSide = current;
+
+		if (!_sweepActive)
+			return (HandSign(holder), 0f);
+
+		// (Doubt cycle, #195, finding #2) Sample t up to AND INCLUDING 1.0
+		// before deactivating — advancing _sweepTicks only when t hasn't yet
+		// reached the end — so the final active sample is the curve's true
+		// t=1 endpoint (lateral = toSign exactly, dip = 0 exactly) and the
+		// following tick's early-return fallback (HandSign = toSign, dip
+		// hardcoded 0) is a continuation of that same value, not a pop. The
+		// previous version advanced the tick counter first, so the sweep's
+		// LAST active sample landed at t=(duration-1)/duration — short of
+		// the endpoint — and the tick after that hard-snapped, producing a
+		// one-tick discontinuity in the dip (visible; the lateral discrepancy
+		// was small enough to be imperceptible, but the dip curve peaks
+		// nowhere near 0 at that point).
+		float t = CurrentSweepT();
+		(float lateral, float dip) = CrossoverBallSweep.Offset(t, _sweepFromLateral, _sweepToLateral);
+		if (t >= 1f)
+			_sweepActive = false;
+		else
+			_sweepTicks++;
+
+		return (lateral, dip);
 	}
+
+	/// <summary>Normalised progress [0, 1] through the current sweep, for CrossoverBallSweep.Offset.</summary>
+	private float CurrentSweepT() =>
+		_sweepDurationTicks <= 0 ? 1f : (float)_sweepTicks / _sweepDurationTicks;
+
+	/// <summary>+1 for HandSide.Right, -1 for HandSide.Left — the same convention HandSign reads off a holder node.</summary>
+	private static float SignOf(HandSide side) => side == HandSide.Right ? 1f : -1f;
 
 	/// <summary>
 	/// Ball in flight: advance the arc, resolve against the basket, and move
