@@ -126,4 +126,46 @@ public class CrossoverBurstMathExitConeTests
         Assert.True(result.Z > 0.5f, $"expected the cone clamp to bend a backward push forward, got Z={result.Z}");
         Assert.True(new Vector2(result.X, result.Z).Length() > 0.5f, "expected a real burst, not a dead stop");
     }
+
+    // #211 code-review fix: an exit vector pointing EXACTLY backward is the
+    // degenerate pole where lateralAmount is a sum of two signed-zero
+    // products (0 * -1 and -1 * 0 here) and forwardAmount is exactly -1.
+    // MathF.Atan2(±0.0, -1) returns ±PI depending on that sign of zero, which
+    // is an implementation detail of how the dot products round, NOT a
+    // gameplay signal — left uncontrolled, the clamp could bend the burst to
+    // either cone edge non-deterministically across builds, violating
+    // ADR-0004 (server and client must compute identically). The fix picks
+    // the bend side explicitly from flickSign instead: bend to the SAME side
+    // the flick already committed to. This theory pins the SIGN of result.X
+    // for both flick directions so a regression back to trusting Atan2's
+    // sign-of-zero fails loudly.
+    [Theory]
+    [InlineData(1)]
+    [InlineData(-1)]
+    public void NarrowCone_ExactBackwardPole_BendsTowardFlickCommittedSide(int flickSign)
+    {
+        Vector3 result = CrossoverBurstMath.ComposeActiveVelocity(
+            survivingVelocity: Vector3.Zero,
+            heading: 0f,
+            flickSign: flickSign,
+            exitVector: new Vector2(0f, -1f), // exactly backward: the Atan2 pole
+            burstSpeed: BurstSpeed,
+            forwardBurstScale: ForwardBurstScale,
+            exitDeadzone: ExitDeadzone,
+            maxExitAngleRadians: Mathf.DegToRad(45f));
+
+        // rightAxis at heading 0 is (-1, 0) (see class doc), so a burst
+        // toward the +1-flick's own committed side (positive lateralAmount)
+        // lands on NEGATIVE world X, and the -1-flick's side lands on
+        // POSITIVE world X — matching the DeadImpulseFloor fallback's own
+        // `rightAxis * flickSign * burstSpeed` convention.
+        if (flickSign >= 0)
+        {
+            Assert.True(result.X < -0.1f, $"expected a +1 flick to bend toward its own (negative-X) side, got X={result.X}");
+        }
+        else
+        {
+            Assert.True(result.X > 0.1f, $"expected a -1 flick to bend toward its own (positive-X) side, got X={result.X}");
+        }
+    }
 }

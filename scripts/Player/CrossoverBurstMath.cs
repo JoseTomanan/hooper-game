@@ -156,12 +156,34 @@ public static class CrossoverBurstMath
             // not an approximation.
             if (maxExitAngleRadians < FullExitCone)
             {
-                float angle = MathF.Atan2(lateralAmount, forwardAmount);
-                float clampedAngle = Mathf.Clamp(angle, -maxExitAngleRadians, maxExitAngleRadians);
-                if (clampedAngle != angle)
+                if (lateralAmount == 0f && forwardAmount < 0f)
                 {
+                    // Exact backward pole (#211 code-review fix). exitDir sits
+                    // dead-on -forwardAxis, so lateralAmount is a sum of
+                    // products that are each individually a signed zero —
+                    // MathF.Atan2(±0.0, negative) returns ±π depending on
+                    // THAT sign, which is an IEEE-754 implementation detail,
+                    // not gameplay. ADR-0004 requires server and client to
+                    // compute identically on every build, so the bend
+                    // direction can never ride Atan2's sign-of-zero — it must
+                    // be picked from an explicit signal. Bend to the side the
+                    // flick already committed to (flickSign), matching the
+                    // DeadImpulseFloor fallback below (`rightAxis * flickSign
+                    // * burstSpeed`) so the pole case is continuous with its
+                    // neighbourhood instead of an arbitrary left/right pick.
+                    float clampedAngle = flickSign >= 0 ? maxExitAngleRadians : -maxExitAngleRadians;
                     forwardAmount = MathF.Cos(clampedAngle);
                     lateralAmount = MathF.Sin(clampedAngle);
+                }
+                else
+                {
+                    float angle = MathF.Atan2(lateralAmount, forwardAmount);
+                    float clampedAngle = Mathf.Clamp(angle, -maxExitAngleRadians, maxExitAngleRadians);
+                    if (clampedAngle != angle)
+                    {
+                        forwardAmount = MathF.Cos(clampedAngle);
+                        lateralAmount = MathF.Sin(clampedAngle);
+                    }
                 }
             }
 
