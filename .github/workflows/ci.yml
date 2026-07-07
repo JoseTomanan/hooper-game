@@ -297,3 +297,21 @@ jobs:
         run: |
           chmod +x tests/integration/run-net-node-replication.sh
           tests/integration/run-net-node-replication.sh godot
+
+      # Dual-instance harness: BehindTheBack broadcast-driven shielded sweep
+      # (issue #212). The single-instance BehindTheBackTest cannot reach
+      # PlayerController.DisplayMoveId()'s _serverMoveId branch — in one
+      # process Multiplayer.IsServer() is unconditionally true, so every node
+      # reads its LIVE local machine. Here the server (listen-server via
+      # NetworkManager.HostGame, so it owns holder node "1") begins a real
+      # BehindTheBack; the CLIENT process passes only if, on the SAME
+      # live-sweep tick, its own locally-rendered ball flags the sweep
+      # behind-body, the remote holder's DisplayMoveId() returns
+      # "behindtheback" (the broadcast branch — the client's copy of the
+      # opponent never advances a local machine), and the ball's forward
+      # offset goes genuinely NEGATIVE behind the holder's centerline. The
+      # client's exit code is the verdict (ADR-0016).
+      - name: Run dual-instance behind-the-back sweep harness
+        run: |
+          chmod +x tests/integration/run-net-behindtheback-sweep.sh
+          tests/integration/run-net-behindtheback-sweep.sh godot
