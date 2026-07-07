@@ -1,0 +1,17 @@
+[gd_scene load_steps=2 format=3]
+
+; Spawnable for the dual-instance BehindTheBack sweep harness (issue #212).
+;
+; Unlike HarnessPlayer.tscn (a bare Node3D — increment 3 only proved node
+; EXISTENCE replicates), this spawnable carries the REAL PlayerController
+; script, because the thing under test is PlayerController.DisplayMoveId()'s
+; per-role branch on the client's copy of a remote player. It is still
+; deliberately NOT scenes/Player.tscn: the humanoid FBX + AnimationTree are
+; cosmetic surface this proof doesn't touch, and PlayerController._Ready
+; null-guards every one of those children (the single-instance harnesses
+; already run it bare the same way).
+
+[ext_resource type="Script" path="res://scripts/Player/PlayerController.cs" id="1_playerctl"]
+
+[node name="HarnessNetPlayer" type="CharacterBody3D"]
+script = ExtResource("1_playerctl")
