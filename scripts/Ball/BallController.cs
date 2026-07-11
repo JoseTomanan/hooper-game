@@ -1554,6 +1554,18 @@ public partial class BallController : Node3D
 	/// The existing TickLoose proximity scramble then awards possession next tick.
 	///
 	/// On a whiff: no action. The defender pays Recovery naturally.
+	///
+	/// Deliberately NO reach/proximity term: success is timing-only, matching
+	/// #98/ADR-0018 §2 exactly — a defender's Active window overlapping the
+	/// vulnerable window blocks regardless of distance to the shooter. A
+	/// positional gate is a real, separate gap, tracked as deferral issue
+	/// #214 (sibling of #196).
+	///
+	/// Not client-predicted: this runs only here, IsServer-gated, so the
+	/// blocking client sees its own swat ~1 RTT late via ReceiveState — the
+	/// same accepted gap as the steal. ADR-0018 §4's prediction sentence
+	/// stays aspirational until the remote-phase/display work (#69/#102
+	/// lineage) lands.
 	/// </summary>
 	private void ResolveBlockAttempts()
 	{
@@ -1565,14 +1577,22 @@ public partial class BallController : Node3D
 		{
 			if (child is not PlayerController defender) continue;
 
+			// A non-peer node (unparsable Name) is never a blocker — fail
+			// SAFE by excluding it, matching ResolveLooseBallRecovery's own
+			// convention. The inverted form matters: `TryParse(...) &&
+			// defenderId == _lastShooterPeerId` would let a parse FAILURE
+			// (defenderId left at 0) fall through as a live candidate instead
+			// of being excluded, silently disabling the self-block guard for
+			// exactly the nodes it can't identify.
+			if (!int.TryParse(defender.Name, out int defenderId)) continue;
+
 			// You cannot block your own shot. The holder is 0 while InFlight,
 			// so the "defender == holder" exclusion the steal uses has no
 			// meaning here — the shooter is identified by _lastShooterPeerId
 			// instead. Server-side because authority rules must not live only
 			// in client input code (ADR-0002): the client-side !IsBallHolder
 			// input gate is UX, this is the rule.
-			if (int.TryParse(defender.Name, out int defenderId)
-				&& defenderId == _lastShooterPeerId) continue;
+			if (defenderId == _lastShooterPeerId) continue;
 
 			// BlockMoveActiveInterval is non-null only when the defender is in
 			// Active phase on a BlockMove. Most ticks this is null (fast path).
@@ -1621,9 +1641,21 @@ public partial class BallController : Node3D
 				// needed — overwriting Velocity in place is enough.
 				Vector3 fromRim = GlobalPosition - RimCenter;
 				fromRim.Y = 0f;
-				Vector3 swatDir = fromRim.LengthSquared() > 0.0001f
-					? fromRim.Normalized()
-					: Vector3.Zero; // degenerate (ball directly over the rim) — straight-down drop
+				Vector3 fromDefender = GlobalPosition - defender.GlobalPosition;
+				fromDefender.Y = 0f;
+				Vector3 swatDir;
+				if (fromRim.LengthSquared() > 0.0001f)
+					swatDir = fromRim.Normalized();
+				else if (fromDefender.LengthSquared() > 0.0001f)
+					// Degenerate case: the ball's XZ coincides with RimCenter's —
+					// release from directly under the rim, the most common block
+					// range. A pure "away from rim" direction is undefined there,
+					// so fall back to "away from the defender's hand" instead: the
+					// swat physically comes off whoever's hand touched the ball,
+					// not a vertical drop through the rim geometry.
+					swatDir = fromDefender.Normalized();
+				else
+					swatDir = Vector3.Zero; // both degenerate — straight-down drop
 				_arc.Velocity = new Vector3(
 					swatDir.X * BlockSwatSpeed,
 					-BlockSwatDropSpeed,
