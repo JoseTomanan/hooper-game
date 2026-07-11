@@ -135,7 +135,21 @@ public partial class BlockTurnoverTest : Node
     private bool _shooterBegun;
     private bool _defenderBegun;
     private int _shooterBeginFrame;
-    private int _releaseFrame = -1; // set once we observe InFlight (the shot's true release tick)
+
+    // The release frame DERIVED from the shooter's begin frame + JumpShot's
+    // live Startup count — the same prediction the defender scheduling uses.
+    // All frame MATH must use this, never the observed _releaseFrame below:
+    // in "success"/"success-lastactive" the block resolves INSIDE the ball's
+    // own processing of the release frame (Held -> InFlight -> Loose within
+    // one frame), so this parent — which observes children one frame late —
+    // never sees InFlight at all and the observed latch stays -1.
+    private int _predictedReleaseFrame = -1;
+
+    // Observed InFlight latch — logging/sanity only, NEVER frame math (see
+    // _predictedReleaseFrame for why it provably stays -1 in the scenarios
+    // whose block lands on the release tick).
+    private int _releaseFrame = -1;
+
     private int _defenderBeginFrame;
 
     private bool _everLoose;
@@ -163,9 +177,13 @@ public partial class BlockTurnoverTest : Node
     private bool _settled;
 
     // "success" only: the frame past which it is safe to assert the score is
-    // STILL 0-0 — computed lazily (once _releaseFrame is known) as
-    // _releaseFrame + ComputeUnblockedMakeTicks() + VerdictMarginFrames. -1
-    // means "not yet computed".
+    // STILL 0-0 — computed lazily as _predictedReleaseFrame +
+    // ComputeUnblockedMakeTicks() + VerdictMarginFrames. -1 means "not yet
+    // computed". Built on the PREDICTED release frame: the observed
+    // _releaseFrame is never latched in "success" (see its field doc), and
+    // computing from its -1 sentinel would end this wait ~20 frames BEFORE
+    // the counterfactual make tick — exactly the hole this wait exists to
+    // close.
     private int _counterfactualVerdictFrame = -1;
 
     public override void _Ready()
@@ -292,6 +310,15 @@ public partial class BlockTurnoverTest : Node
             // the ball on the holder's position every tick regardless.
             _shooter.GlobalPosition = ShooterPosition;
 
+            // Predicted release frame, from the SHOOTER's actual begin frame
+            // plus the LIVE JumpShot frame data — not hardcoded, so it
+            // survives #104 retuning. Computed for EVERY scenario: it drives
+            // the defender scheduling below AND the "success" scenario's
+            // counterfactual wait (see _predictedReleaseFrame's field doc for
+            // why the observed InFlight latch cannot serve either role).
+            int jumpShotStartup = JumpShot.DefaultFrameData.StartupFrames;
+            _predictedReleaseFrame = _shooterBeginFrame + (jumpShotStartup - 1);
+
             // "control-make" never begins a BlockMove at all (that's the
             // point — it's the counterfactual "what would have happened"
             // scenario success/success-lastactive are checked against), so
@@ -300,12 +327,7 @@ public partial class BlockTurnoverTest : Node
             // at 1 and only increases).
             if (_scenario != "control-make")
             {
-                // Defender's begin frame is computed from the SHOOTER's actual
-                // begin frame plus the LIVE JumpShot/BlockMove frame data and
-                // BlockGraceTicks — not hardcoded — so it survives #104 retuning.
-                int jumpShotStartup = JumpShot.DefaultFrameData.StartupFrames;
-                int releaseFrame = _shooterBeginFrame + (jumpShotStartup - 1);
-                _defenderBeginFrame = ComputeDefenderBeginFrame(releaseFrame);
+                _defenderBeginFrame = ComputeDefenderBeginFrame(_predictedReleaseFrame);
 
                 // Fail-fast scheduling guard: if a legal frame-data retune (e.g.
                 // #104 making BlockMove.Startup >= JumpShot.Startup) pushes the
@@ -326,7 +348,7 @@ public partial class BlockTurnoverTest : Node
                 }
 
                 GD.Print($"[block-turnover] frame {_frame}: shooter begun JumpShot " +
-                         $"(expected release frame {releaseFrame}); defender scheduled to begin at frame {_defenderBeginFrame}.");
+                         $"(predicted release frame {_predictedReleaseFrame}); defender scheduled to begin at frame {_defenderBeginFrame}.");
             }
         }
 
@@ -344,13 +366,14 @@ public partial class BlockTurnoverTest : Node
             GD.Print($"[block-turnover] frame {_frame}: defender begun BlockMove.");
         }
 
-        // Latch the true release tick from live ball state — ApplyShootLocally
-        // sets BallState.InFlight synchronously inside this same physics frame
-        // once JumpShot's Active begins, so the FIRST tick we observe InFlight
-        // is the release tick (used only for logging/sanity here; the
-        // defender's begin frame was already scheduled off the PREDICTED
-        // release frame above, exactly like StealTurnoverTest schedules off
-        // predicted dribble-phase frames rather than waiting to observe them).
+        // Observed-InFlight latch — logging/sanity ONLY, never frame math
+        // (that is _predictedReleaseFrame's job; see its field doc). In the
+        // whiff/control-make scenarios this fires one frame after the true
+        // release tick (parent observes children one frame late); in
+        // "success"/"success-lastactive" it never fires at all — the block
+        // resolves inside the ball's own release-frame processing, so the
+        // ball is Held -> InFlight -> Loose within one frame and this parent
+        // never observes InFlight.
         if (_releaseFrame < 0 && _ball.State == BallState.InFlight)
         {
             _releaseFrame = _frame;
@@ -468,7 +491,10 @@ public partial class BlockTurnoverTest : Node
                 if (_elapsed > TimeoutSeconds)
                 {
                     Fail($"timed out at frame {_frame} waiting for the block's loose-ball scramble to settle. " +
-                         $"everLoose={_everLoose}, state={_ball.State}, defenderBegun={_defenderBegun}, releaseFrame={_releaseFrame}.");
+                         $"everLoose={_everLoose}, state={_ball.State}, defenderBegun={_defenderBegun}, " +
+                         $"predictedReleaseFrame={_predictedReleaseFrame} (observed InFlight latch " +
+                         $"{_releaseFrame}; -1 is EXPECTED here — a release-tick block never shows " +
+                         $"this parent an InFlight frame).");
                     Finish();
                 }
                 return;
@@ -485,15 +511,21 @@ public partial class BlockTurnoverTest : Node
         // re-proving the counterfactual (already proven by "success").
         if (_scenario == "success")
         {
+            // PREDICTED release frame, never the observed _releaseFrame: the
+            // release-tick block means this parent never observes InFlight,
+            // so the observed latch is still -1 here — computing from it
+            // would end this wait ~20 frames before the counterfactual make
+            // tick and let a same-tick-scoring regression slip through.
             if (_counterfactualVerdictFrame < 0)
-                _counterfactualVerdictFrame = _releaseFrame + ComputeUnblockedMakeTicks() + VerdictMarginFrames;
+                _counterfactualVerdictFrame = _predictedReleaseFrame + ComputeUnblockedMakeTicks() + VerdictMarginFrames;
 
             if (_frame < _counterfactualVerdictFrame)
             {
                 if (_elapsed > TimeoutSeconds)
                 {
                     Fail($"timed out at frame {_frame} waiting to safely outlast the counterfactual make frame " +
-                         $"{_counterfactualVerdictFrame} before rendering the success verdict.");
+                         $"{_counterfactualVerdictFrame} (predictedReleaseFrame={_predictedReleaseFrame}) " +
+                         $"before rendering the success verdict.");
                     Finish();
                 }
                 return;
