@@ -143,6 +143,19 @@ public partial class BlockTurnoverTest : Node
     private Vector3 _velocityAtBlock;   // latched on the first Loose tick
     private bool _velocityLatched;
 
+    // Latched on the SAME first-Loose observation tick as _toucherAtBlock:
+    // whether the defender's machine was in Recovery right after the block
+    // resolved. EndResolvedDefensiveMove enters Recovery on the resolution
+    // tick itself, and this latch reads it one tick later (the harness parent
+    // observes children one tick late) — 1-2 ticks into the 20-tick
+    // RecoveryFrames, provably still Recovery. The success verdicts must
+    // assert THIS latch, not the live phase at verdict time: "success"
+    // deliberately outlasts the counterfactual make (~80 ticks past the
+    // block), by which point the defender has LEGITIMATELY finished Recovery
+    // and returned to Inactive — a live read there is stale, not wrong (the
+    // CI failure that motivated this latch).
+    private bool _defenderRecoveryAtBlock;
+
     // "success"/"success-lastactive": latched once the loose-ball scramble
     // has settled into a fresh Held possession, so TickSuccess only re-checks
     // the (possibly still-waiting) counterfactual condition afterward instead
@@ -314,6 +327,10 @@ public partial class BlockTurnoverTest : Node
             if (!_everLoose)
             {
                 _toucherAtBlock = _ball.LastToucherPeerIdForHarness;
+                // Read the defender's phase NOW, while Recovery is provably
+                // in progress — not at verdict time, when it may have
+                // legitimately expired back to Inactive (see the field's doc).
+                _defenderRecoveryAtBlock = _defender.PhaseForHarness == MovePhase.Recovery;
                 _everLoose = true;
             }
             if (!_velocityLatched)
@@ -498,8 +515,33 @@ public partial class BlockTurnoverTest : Node
 
         int blockStartup = BlockMove.DefaultFrameData.StartupFrames;
         int blockActive = BlockMove.DefaultFrameData.ActiveFrames;
+        int blockRecovery = BlockMove.DefaultFrameData.RecoveryFrames;
         int defenderActiveEnd = _defenderBeginFrame + (blockStartup - 1) + blockActive;
         int verdictFrame = defenderActiveEnd + VerdictMarginFrames;
+
+        // Unlike the success scenarios there is no block event to latch the
+        // Recovery observation on here — the whiffed move expires NATURALLY —
+        // so the verdict's live "defender pays Recovery" read must instead be
+        // TIMED provably inside the Recovery window: Recovery is entered on
+        // defenderActiveEnd (the Active->Recovery expiry tick) and is live
+        // for [defenderActiveEnd, defenderActiveEnd + RecoveryFrames) — with
+        // defaults, ticks 37..56 of a begin-at-20 whiff. The verdict fires at
+        // defenderActiveEnd + VerdictMarginFrames (37 + 6 = 43), which reads
+        // the defender's post-frame-42 state (the harness parent observes
+        // children one tick late) — inside the window whenever
+        // VerdictMarginFrames <= RecoveryFrames. Fail fast if a retune ever
+        // breaks that inequality, instead of letting the verdict silently
+        // read a legitimately-expired Inactive phase (the same live-read-
+        // too-late bug class the success scenarios' latch fixes).
+        if (VerdictMarginFrames > blockRecovery)
+        {
+            Fail($"VerdictMarginFrames ({VerdictMarginFrames}) exceeds BlockMove.RecoveryFrames " +
+                 $"({blockRecovery}) — the whiff verdict's live Recovery read would land after Recovery " +
+                 $"has legitimately expired. A frame-data retune broke this timing; re-derive the " +
+                 $"whiff verdict frame rather than chasing the resulting phase-assert failure.");
+            Finish();
+            return;
+        }
 
         if (_frame >= verdictFrame)
         {
@@ -612,28 +654,32 @@ public partial class BlockTurnoverTest : Node
 
         // Spent once: the block resolved the defender's Active phase early
         // (EndResolvedDefensiveMove -> CommittedMoveMachine.EndActiveEarly),
-        // so by verdict time the defender's machine must be in Recovery (not
-        // still Active, and not yet back to Inactive — RecoveryFrames is 20
-        // ticks, comfortably longer than the settle margin this verdict waits
-        // on top of the block tick).
-        bool defenderSpentOnce = _defender.PhaseForHarness == MovePhase.Recovery;
+        // so the defender's machine must be in Recovery ON THE TICK THE
+        // TURNOVER IS OBSERVED. LATCHED at block-observation time (like
+        // _velocityAtBlock), NOT read live here: this verdict deliberately
+        // runs ~80 ticks past the block (the counterfactual wait), by which
+        // point the 20-tick Recovery has legitimately expired back to
+        // Inactive — a live read would fail on correct behaviour.
+        bool defenderSpentOnceLatched = _defenderRecoveryAtBlock;
 
-        bool pass = turnoverCompleted && toucherCorrect && scoreUnchanged && velocityIsSwat && defenderSpentOnce;
+        bool pass = turnoverCompleted && toucherCorrect && scoreUnchanged && velocityIsSwat && defenderSpentOnceLatched;
 
         if (pass)
         {
             GD.Print($"[block-turnover] PASS — scenario=success, finalState={_ball.State}, " +
                      $"holder={_ball.StateMachine.HolderPeerId}, toucherAtBlock={_toucherAtBlock}, " +
-                     $"velocityAtBlock={_velocityAtBlock}, defenderPhase={_defender.PhaseForHarness}, " +
+                     $"velocityAtBlock={_velocityAtBlock}, defenderRecoveryAtBlock={_defenderRecoveryAtBlock}, " +
                      $"score1={_gameManager.ScoreOf(1)}, score2={_gameManager.ScoreOf(2)}.");
         }
         else
         {
             Fail($"scenario=success expected a completed turnover, toucherAtBlock=2, unchanged score, a swat " +
-                 $"velocity (Z>0, Y<0), and defender Recovery, but got turnoverCompleted={turnoverCompleted}, " +
+                 $"velocity (Z>0, Y<0), and defender Recovery at block time, but got turnoverCompleted={turnoverCompleted}, " +
                  $"toucherAtBlock={_toucherAtBlock}, scoreUnchanged={scoreUnchanged} (score1={_gameManager.ScoreOf(1)}, " +
                  $"score2={_gameManager.ScoreOf(2)}), velocityAtBlock={_velocityAtBlock} " +
-                 $"(latched={_velocityLatched}), defenderPhase={_defender.PhaseForHarness}.");
+                 $"(latched={_velocityLatched}), defenderRecoveryAtBlock={_defenderRecoveryAtBlock} " +
+                 $"(livePhaseNow={_defender.PhaseForHarness} — informational only; Inactive here is expected " +
+                 $"long after the block).");
         }
         Finish(pass ? 0 : 1);
     }
@@ -649,20 +695,27 @@ public partial class BlockTurnoverTest : Node
     private void VerdictSuccessLastActive()
     {
         bool turnoverCompleted = _everLoose && _ball.State == BallState.Held && _ball.StateMachine.HolderPeerId != 0;
-        bool defenderSpentOnce = _defender.PhaseForHarness == MovePhase.Recovery;
 
-        bool pass = turnoverCompleted && defenderSpentOnce;
+        // Latched, not live (same reasoning as VerdictSuccess): this verdict
+        // fires whenever the loose-ball scramble settles, and nothing bounds
+        // that settle time to land inside the defender's 20-tick Recovery —
+        // a slow scramble would flip a live read to Inactive on perfectly
+        // correct behaviour.
+        bool defenderSpentOnceLatched = _defenderRecoveryAtBlock;
+
+        bool pass = turnoverCompleted && defenderSpentOnceLatched;
 
         if (pass)
         {
             GD.Print($"[block-turnover] PASS — scenario=success-lastactive, finalState={_ball.State}, " +
-                     $"holder={_ball.StateMachine.HolderPeerId}, defenderPhase={_defender.PhaseForHarness}.");
+                     $"holder={_ball.StateMachine.HolderPeerId}, defenderRecoveryAtBlock={_defenderRecoveryAtBlock}.");
         }
         else
         {
-            Fail($"scenario=success-lastactive expected a completed turnover and defender Recovery, but got " +
-                 $"turnoverCompleted={turnoverCompleted} (everLoose={_everLoose}, state={_ball.State}, " +
-                 $"holder={_ball.StateMachine.HolderPeerId}), defenderPhase={_defender.PhaseForHarness}.");
+            Fail($"scenario=success-lastactive expected a completed turnover and defender Recovery at block time, " +
+                 $"but got turnoverCompleted={turnoverCompleted} (everLoose={_everLoose}, state={_ball.State}, " +
+                 $"holder={_ball.StateMachine.HolderPeerId}), defenderRecoveryAtBlock={_defenderRecoveryAtBlock} " +
+                 $"(livePhaseNow={_defender.PhaseForHarness} — informational only).");
         }
         Finish(pass ? 0 : 1);
     }
@@ -679,10 +732,12 @@ public partial class BlockTurnoverTest : Node
         bool toucherUnchanged = _ball.LastToucherPeerIdForHarness == 1;
 
         // The defender still pays Recovery for the whiff (ADR-0018 §3's
-        // reaction-tilt asymmetry applies to a miss just as much as a hit) —
-        // by the verdict frame (defenderActiveEnd + margin) their machine has
-        // left Active either way, whether the block resolved (it must not
-        // have here) or simply expired.
+        // reaction-tilt asymmetry applies to a miss just as much as a hit).
+        // Live read, deliberately NOT latched: there is no block event to
+        // latch on for a whiff — instead TickWhiff times this verdict to a
+        // frame provably inside the natural Recovery window and fail-fasts
+        // if a frame-data retune would break that timing (see the derivation
+        // at TickWhiff's verdict-frame computation).
         bool defenderPaysRecovery = _defender.PhaseForHarness == MovePhase.Recovery;
 
         bool pass = shotProceeded && toucherUnchanged && defenderPaysRecovery;
