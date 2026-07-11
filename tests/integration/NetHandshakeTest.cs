@@ -49,8 +49,8 @@ public partial class NetHandshakeTest : Node
         // Merge both arg arrays, exactly as DedicatedServerBootstrap does — which
         // array the "--" separator routes user args into varies, so read both.
         string[] args = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).ToArray();
-        _role = ReadArg(args, "--harness-role", "server");
-        _port = int.TryParse(ReadArg(args, "--harness-port", "7777"), out int p) ? p : 7777;
+        _role = HarnessArgs.ReadArg(args, "--harness-role", "server");
+        _port = int.TryParse(HarnessArgs.ReadArg(args, "--harness-port", "7777"), out int p) ? p : 7777;
 
         GD.Print($"[net-harness] role={_role} port={_port} booting…");
 
@@ -134,19 +134,5 @@ public partial class NetHandshakeTest : Node
         _finished = true;
         GD.Print($"[net-harness] {_role} RESULT: {(code == 0 ? "PASS" : "FAIL")} (exit {code})");
         GetTree().Quit(code);
-    }
-
-    // Supports "--flag value" (two tokens) and "--flag=value" (joined), mirroring
-    // DedicatedServerArgs' tolerance for both spellings.
-    private static string ReadArg(string[] args, string flag, string fallback)
-    {
-        for (int i = 0; i < args.Length; i++)
-        {
-            if (args[i] == flag && i + 1 < args.Length)
-                return args[i + 1];
-            if (args[i].StartsWith(flag + "="))
-                return args[i].Substring(flag.Length + 1);
-        }
-        return fallback;
     }
 }

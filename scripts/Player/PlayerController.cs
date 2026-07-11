@@ -100,7 +100,7 @@ namespace Hooper.Player;
 /// </summary>
 public partial class PlayerController : CharacterBody3D
 {
-	// ── Movement tuning (unchanged from M1a) ─────────────────────────────────
+	// ── Movement tuning (issue #183 retune of the M1a values) ────────────────
 
 	/// <summary>Top ground speed in metres/second.</summary>
 	[Export] public float MoveSpeed { get; set; } = 6.0f;
@@ -112,38 +112,62 @@ public partial class PlayerController : CharacterBody3D
 	/// differences (micro-corrections). Scaled down toward BackTurnSlowFactor
 	/// as the angle widens to 180° (see HeadingMath.RotateToward).
 	///
-	/// Default 530 °/s: a full 180° back-turn takes ≈ 0.55 s — this is the
-	/// integrated time of the non-linear rate schedule (rate accelerates as the
-	/// diff closes), NOT the constant-rate 180/(rate×f) estimate, which
-	/// overestimates the time. A 20° micro-correction takes ≈ 0.05 s —
-	/// effectively instant to the player. Raising this scales EVERY turn
-	/// proportionally and keeps the reversal ~3× slower than a micro-turn, so
-	/// the back-turn stays a readable commitment (ADR-0003); it is the knob to
-	/// reach for when "turning feels too slow". (To instead flatten that
-	/// commitment — speed up only the reversal — raise BackTurnSlowFactor.)
+	/// 900 °/s at the shipped BackTurnSlowFactor of 0.95 (issue #172 follow-up
+	/// feel pass): a full 180° back-turn takes ≈ 0.20 s — this is the integrated
+	/// time of the non-linear rate schedule (rate accelerates as the diff closes),
+	/// NOT the constant-rate 180/(rate×f) estimate, which overestimates the time.
+	/// A 20° micro-correction takes ≈ 0.02 s — effectively instant to the player, so the reversal is now
+	/// only mildly slower than a micro-turn (the plant-then-pivot gate at
+	/// <see cref="PivotThresholdDeg"/> carries the "commitment" read instead — see
+	/// HeadingMath.Step's doc). Raising this scales EVERY turn proportionally; it
+	/// is the knob to reach for when "turning feels too slow" overall. (To instead
+	/// change only the reversal's relative slowdown, adjust BackTurnSlowFactor.)
 	/// </summary>
-	[Export] public float MaxTurnRateDeg { get; set; } = 530f;
+	[Export] public float MaxTurnRateDeg { get; set; } = 900f;
 
 	/// <summary>
 	/// Fraction of MaxTurnRateDeg applied at exactly 180° (back-turn).
 	/// The effective rate lerps continuously from MaxTurnRateDeg at diff=0°
 	/// to MaxTurnRateDeg × BackTurnSlowFactor at diff=180° — no sharp gear-change.
 	///
-	/// 0.35: a back-turn is about 3× slower than a small correction, making
-	/// a reverse-pivot a real readable commitment (ADR-0003) while micro-aim
-	/// still feels near-instant. Values closer to 1.0 approach linear (no
-	/// slowdown); values closer to 0 approach a frozen back-turn.
+	/// 0.95 (issue #172 retune 0.35 → 0.90, then a #172 follow-up 0.90 → 0.95): a
+	/// back-turn is now only mildly slower than a small correction — the raw
+	/// rate no longer has to carry the "back-turn is a commitment" read on
+	/// its own, because <see cref="PivotThresholdDeg"/>'s plant-then-pivot
+	/// gate now carries that commitment instead (see HeadingMath.Step's doc).
+	/// Combined with MaxTurnRateDeg 900, a full 180° reversal comes down to
+	/// ≈0.20 s (from the pre-#172 ≈0.55 s).
+	/// Values closer to 1.0 approach linear (no slowdown); values closer to
+	/// 0 approach a frozen back-turn.
 	/// </summary>
-	[Export] public float BackTurnSlowFactor { get; set; } = 0.35f;
+	[Export] public float BackTurnSlowFactor { get; set; } = 0.95f;
 
-	/// <summary>Ground acceleration in m/s².</summary>
-	[Export] public float Accel { get; set; } = 30.0f;
+	/// <summary>
+	/// Facing difference, in degrees, above which a turn demands the player
+	/// plant their feet and pivot in place before moving, rather than
+	/// resolving as an ordinary same-tick rotation (issue #172,
+	/// HeadingMath.Step). 90° default: anything up to a quarter-turn is
+	/// "forward-ish" and never gates movement; a flick past that — including
+	/// a full reverse — is a committed read the opponent can see and punish
+	/// (ADR-0003), not a free instant snap-turn.
+	/// </summary>
+	[Export] public float PivotThresholdDeg { get; set; } = 90f;
+
+	/// <summary>
+	/// Ground acceleration in m/s². 45 (issue #183 retune, up from the M1a
+	/// default of 30): 0 → top speed in ≈ 0.13 s instead of 0.20 s — the
+	/// NBA-2K-style snappier start the human picked for the arcade-relaxed
+	/// feel pass (same relaxation as #172). Human feel sign-off pending.
+	/// </summary>
+	[Export] public float Accel { get; set; } = 45.0f;
 
 	/// <summary>
 	/// Ground deceleration in m/s². Higher than Accel intentionally —
-	/// that asymmetry is where "change of pace" lives (ADR-0003).
+	/// that asymmetry is where "change of pace" lives (ADR-0003) and the
+	/// #183 retune (45 → 70; full stop in ≈ 0.086 s) deliberately preserves
+	/// the ratio so a sudden stop still reads as a change of pace.
 	/// </summary>
-	[Export] public float Decel { get; set; } = 45.0f;
+	[Export] public float Decel { get; set; } = 70.0f;
 
 	// ── Reconciliation tuning ─────────────────────────────────────────────────
 
@@ -190,13 +214,90 @@ public partial class PlayerController : CharacterBody3D
 	/// Applied for the full ActiveFrames duration. Intentionally higher than
 	/// MoveSpeed to create visible separation — that is the point of the move.
 	/// </summary>
-	[Export] public float BurstSpeed { get; set; } = 12.0f;
+	[Export] public float BurstSpeed { get; set; } = 9.0f;
+
+	/// <summary>
+	/// Forward speed of the crossover's Active-phase burst (m/s) — the exit
+	/// vector's forward-aligned component (#198). Matches BurstSpeed by
+	/// default for a symmetric feel; both are bare feel defaults deferred to
+	/// the per-milestone human pass (ADR-0015/CLAUDE.md), not signed off here.
+	/// </summary>
+	[Export] public float ForwardBurstScale { get; set; } = 9.0f;
+
+	/// <summary>
+	/// Hard-decel rate (m/s²) a crossover's Startup plant bleeds momentum at
+	/// (#198's hybrid-gather model — see the ADR-0003 amendment this issue's
+	/// PR carries). Deliberately LOWER than Decel (70): at MoveSpeed's top
+	/// speed (6 m/s) over the crossover's 6-tick/0.1s Startup, 70 would fully
+	/// zero it (70×0.1=7 > 6) — indistinguishable from the pre-#198 instant
+	/// zero this issue exists to replace. 40 leaves ~2 m/s surviving at top
+	/// speed (a genuinely bled, not-zeroed, plant) while still fully clamping
+	/// a slow jog to a clean stop. Bare feel default, deferred sign-off.
+	/// </summary>
+	[Export] public float GatherDecel { get; set; } = 40.0f;
+
+	/// <summary>
+	/// Left-stick exit-vector magnitude at/below which Active-entry treats the
+	/// stick as neutral (no steering input) — see CrossoverBurstMath's doc.
+	/// Shared with BehindTheBack — deadzone is a hardware-feel constant, not
+	/// part of either move's tuning profile.
+	/// </summary>
+	[Export] public float ExitDeadzone { get; set; } = 0.15f;
+
+	// ── Behind-the-back tuning (issue #194) ───────────────────────────────────
+	// BehindTheBack shares CrossoverBurstMath/CrossoverBallSweep with Crossover
+	// (composition, not a subclass of it — see BehindTheBack's doc) but is a
+	// deliberately SAFER move: smaller burst, heavier gather bleed, narrower
+	// exit cone. Recovery/Startup/Active frame counts differ too, but those
+	// live on BehindTheBack.DefaultFrameData, not here.
+
+	/// <summary>
+	/// Lateral speed of BehindTheBack's Active-phase burst (m/s). Lower than
+	/// Crossover's BurstSpeed (9) — "less explosive" per the spec. Bare feel
+	/// default (33% below Crossover's), deferred to the per-milestone human
+	/// pass like every other burst-family tunable (ADR-0015/CLAUDE.md).
+	/// </summary>
+	[Export] public float BehindTheBackBurstSpeed { get; set; } = 6.0f;
+
+	/// <summary>
+	/// Forward speed of BehindTheBack's Active-phase burst (m/s). Matches
+	/// BehindTheBackBurstSpeed by default for the same symmetric-feel
+	/// reasoning as Crossover's ForwardBurstScale. Bare feel default.
+	/// </summary>
+	[Export] public float BehindTheBackForwardBurstScale { get; set; } = 6.0f;
+
+	/// <summary>
+	/// Hard-decel rate (m/s²) BehindTheBack's Startup plant bleeds momentum
+	/// at — the SAME hybrid-gather model #198 introduced for Crossover
+	/// (ADR-0003 amendment), just tuned STEEPER: "heavier gather bleed" per
+	/// the spec. At MoveSpeed's top speed (6 m/s) over 6 Startup ticks
+	/// (0.1s), 55 leaves ~0.5 m/s surviving — noticeably less than
+	/// Crossover's GatherDecel=40 (~2 m/s survives) while still not an
+	/// instant zero (which would collapse back to the pre-#198 model this
+	/// move deliberately keeps). Bare feel default, deferred sign-off.
+	/// </summary>
+	[Export] public float BehindTheBackGatherDecel { get; set; } = 55.0f;
+
+	/// <summary>
+	/// BehindTheBack's exit cone half-angle (degrees) — the left-stick exit
+	/// vector is clamped to within this many degrees of the player's current
+	/// heading before CrossoverBurstMath composes the burst (see its
+	/// maxExitAngleRadians doc). "Fewer follow-up options" is modelled
+	/// ONLY as this narrower cone (docs/handoffs/M9-move-taxonomy.md) —
+	/// explicitly not a recovery penalty or a chain cooldown. 50 degrees
+	/// (vs. Crossover's effectively unclamped ~180) still allows a genuine
+	/// diagonal exit but rules out the "classic side-to-side shuffle"
+	/// Crossover's pure-lateral row produces — you can't snap a sharp cut
+	/// like a front cross. Bare feel default, deferred sign-off.
+	/// </summary>
+	[Export] public float BehindTheBackExitConeDegrees { get; set; } = 50.0f;
 
 	// ── Authoritative heading (issue #80) ────────────────────────────────────
 
 	/// <summary>
 	/// Server-authoritative heading in radians (Y-rotation, Godot convention).
-	/// Updated every tick inside Move() via HeadingMath.RotateToward —
+	/// Updated every tick inside Move() via HeadingMath.Step (issue #172's
+	/// flick-to-latch pivot wrapper around the RotateToward rate schedule) —
 	/// the same shared step used for prediction, server authority, and
 	/// reconciliation replay (ADR-0002). Broadcast in ReceiveState alongside
 	/// pos/vel; the client replays it during reconciliation exactly as pos/vel.
@@ -208,6 +309,36 @@ public partial class PlayerController : CharacterBody3D
 	/// is actually pointing when the shot releases.
 	/// </summary>
 	public float Heading { get; private set; }
+
+	/// <summary>
+	/// Server-authoritative in-place-pivot latch (issue #172), predicted +
+	/// reconciled with EXACTLY the same treatment as <see cref="Heading"/>:
+	/// updated every tick inside Move() via HeadingMath.Step, broadcast on
+	/// ReceiveState, and snapped to the authoritative value before the
+	/// reconciliation replay loop so the replay re-evolves it forward
+	/// deterministically rather than force-matching a stale broadcast every
+	/// tick (see ReconcileFromServer, and the NETCODE LAW note there).
+	/// </summary>
+	private HeadingMath.PivotState _pivot = HeadingMath.PivotState.None;
+
+	/// <summary>
+	/// True while the player is planted mid-pivot and Move() must not advance
+	/// position (a flick or held turn past <see cref="PivotThresholdDeg"/>
+	/// that hasn't yet reached its latched facing). Exposed read-only for the
+	/// deferred animation layer (#184) to drive a plant/pivot pose; movement
+	/// and netcode do not read it back — <see cref="_pivot"/> alone is what
+	/// Move() consults.
+	///
+	/// Deliberately a COMPUTED property, not its own stored+set field: per
+	/// HeadingMath.Step's contract every one of its return branches sets
+	/// IsPivotingInPlace exactly equal to Pivot.HasLatch, so deriving it here
+	/// keeps the two impossible to desync — a separate stored bool would need
+	/// to be re-set by hand at every place _pivot is snapped from the network
+	/// (ReconcileFromServer's pre-replay snap, TickClientRemotePlayer's
+	/// display adoption), and missing one of those would leave a stale value
+	/// exactly on the tick that matters most (an empty-replay reconcile).
+	/// </summary>
+	public bool IsPivotingInPlace => _pivot.HasLatch;
 
 	// ── Authoritative ball-hand (M9, issue #83, ADR-0012) ─────────────────────
 
@@ -243,9 +374,8 @@ public partial class PlayerController : CharacterBody3D
 	/// BallController on a possession change (the new holder has no carried-over
 	/// hand state). Runs on every simulating role — server authoritative, client
 	/// predicted — so all machines agree; the client's remote copy instead adopts
-	/// the broadcast value. Left is the historical default (issue #73): with the
-	/// keyboard crossover hardcoded to a right flick, starting Left makes the
-	/// first crossover of a possession visibly switch Left→Right.
+	/// the broadcast value. Left is simply *a* deterministic default every peer
+	/// agrees on (issue #73); nothing downstream depends on which side it is.
 	/// </summary>
 	public void ResetHandSide() => HandSide = HandSide.Left;
 
@@ -338,6 +468,32 @@ public partial class PlayerController : CharacterBody3D
 	private Vector2 _pendingInput;
 
 	/// <summary>
+	/// The latest RAW left-stick reading received from the client this tick
+	/// (server-side, remote player only) — separate from <see cref="_pendingInput"/>
+	/// on purpose (#198). _pendingInput is deliberately zeroed by the CLIENT
+	/// itself while a committed move IsActive (TickClientOwnPlayer's own
+	/// comment explains why: it protects the brief Inactive-on-server/
+	/// predicted-Active-on-client window before RequestBeginMove arrives, so
+	/// the server does not move the player on stale intent during that gap).
+	/// The moving crossover's exit vector needs the OPPOSITE guarantee — the
+	/// TRUE stick value, continuously, even mid-move — so it rides its own
+	/// always-on field fed by two extra SubmitInput floats, never the
+	/// intentionally-gated _pendingInput. Read ONLY inside
+	/// TickCommittedMoveBehavior's Crossover branch; never substituted into
+	/// the Move() call the way _pendingInput is.
+	///
+	/// This deliberately does NOT ride the moveId/moveParam one-shot RPC the
+	/// way Crossover.BurstDirection does: that RPC fires once at Begin()
+	/// (Startup-entry), 6 frames before Active begins, so the stick's future
+	/// position is unknowable at send time. SubmitInput already streams the
+	/// true stick every tick — exactly the "not a local-only read, predicted
+	/// + reconciled" channel the exit vector needs at the LATER Active-entry
+	/// tick, without racing Active's short (3-tick default) window the way a
+	/// new one-shot RPC fired at Active-entry would (doubt cycle, #198).
+	/// </summary>
+	private Vector2 _pendingRawStick;
+
+	/// <summary>
 	/// Records the client's own predicted inputs and drains them once the
 	/// server confirms them. Extracted from inline _seq/_pending fields
 	/// (issue #55, sibling of #37's MovementMath extraction) so the seq/ack
@@ -362,6 +518,15 @@ public partial class PlayerController : CharacterBody3D
 	private float _serverHeading;
 
 	/// <summary>
+	/// Authoritative pivot-latch state from the latest server broadcast
+	/// (issue #172) — the exact same staging role _serverHeading plays.
+	/// Consumed by ReconcileFromServer's pre-replay snap (own player) and by
+	/// TickClientRemotePlayer's display adoption (remote copy).
+	/// </summary>
+	private bool _serverPivotHasLatch;
+	private float _serverPivotLatchedYaw;
+
+	/// <summary>
 	/// Authoritative committed-move phase received from the server, staged for
 	/// reconcile (M4, #21) AND for display of a remote player's commitment (M7b,
 	/// #69). ReconcileFromServer's Step 0 consults it only for the own-player
@@ -384,6 +549,18 @@ public partial class PlayerController : CharacterBody3D
 	/// </summary>
 	private string _serverMoveId = "";
 	private float _serverMoveParam;
+
+	/// <summary>
+	/// (#175) Authoritative CommittedMoveMachine.WasRecoveryEnteredEarly from
+	/// the latest broadcast — level-triggered (true for the server's WHOLE
+	/// Recovery duration when it resulted from an EndActiveEarly() early end,
+	/// e.g. a resolved steal), not a single-tick edge, so a dropped
+	/// UnreliableOrdered broadcast doesn't lose the signal for the remainder of
+	/// that Recovery window. Feeds ReconcileFromServer's Step 0.5
+	/// (ShouldForceRecovery) — the fix for the OWN client's Active prediction
+	/// otherwise never learning the server ended its move early.
+	/// </summary>
+	private bool _serverEndedActiveEarly;
 
 	/// <summary>True once ReceiveState has arrived since the last _PhysicsProcess.</summary>
 	private bool _hasNewState;
@@ -447,7 +624,28 @@ public partial class PlayerController : CharacterBody3D
 		get
 		{
 			BallController ball = GetBall();
-			return ball != null && ball.StateMachine.HolderPeerId.ToString() == Name;
+			return ball != null && OwnPeerId != 0 && ball.StateMachine.HolderPeerId == OwnPeerId;
+		}
+	}
+
+	private int? _cachedOwnPeerId;
+
+	/// <summary>
+	/// This node's own peer id, parsed from Name once and cached (#204
+	/// code-review cleanup). Name is the peer-ID-as-node-name identity
+	/// contract every Name-parse site in this class already assumes
+	/// (NetworkManager.SpawnPlayer names nodes by peer id; it never changes
+	/// for the node's lifetime), so caching removes a redundant
+	/// int.TryParse from the 60Hz tick path. 0 (never a real peer id) is
+	/// returned if Name fails to parse, matching every other Name-parse
+	/// site's fail-safe default.
+	/// </summary>
+	private int OwnPeerId
+	{
+		get
+		{
+			_cachedOwnPeerId ??= int.TryParse(Name, out int id) ? id : 0;
+			return _cachedOwnPeerId.Value;
 		}
 	}
 
@@ -467,25 +665,53 @@ public partial class PlayerController : CharacterBody3D
 		JumpShotReleaseResolver.ShouldRelease(_machine.JustEnteredActive, _machine.CurrentMove);
 
 	/// <summary>
-	/// If this player's committed-move machine just entered Active on a StealMove
-	/// this tick, returns the targeted hand side; null otherwise.
+	/// While this player's committed-move machine is in the Active phase of a
+	/// StealMove, returns the targeted hand side; null on every other tick.
 	///
 	/// BallController.ResolveStealAttempts reads this every physics tick (server-
-	/// only) to resolve steal attempts (ADR-0018 §1, issue #96). The null return
+	/// only) to resolve steal attempts (ADR-0018 §1–2, issue #96). The null return
 	/// is the fast path — most ticks nobody is stealing — so the caller can do a
 	/// simple null-guard with zero overhead on inactive defenders.
 	///
-	/// Pattern mirrors JustReleasedJumpShot: thin node glue forwarding the pure
-	/// machine state; no logic here, no engine calls, trivially readable.
+	/// Why the WHOLE Active phase, not just its entry tick (JustEnteredActive):
+	/// ADR-0018 defines a steal's success as its Active window OVERLAPPING the
+	/// exposed dribble band — an interval relationship. Sampling only the single
+	/// entry tick collapses that interval to a point and makes the Active window's
+	/// width inert, so a defender who enters Active a tick early (band not yet
+	/// open) but whose window fully covers the band would wrongly whiff. Reporting
+	/// the hand on every Active tick lets ResolveStealAttempts re-check the live
+	/// dribble phase each tick and succeed on the first in-band tick — the
+	/// interval model, evaluated against ground-truth phase with no projection.
+	/// (Note: IsActive is the WRONG check — it is true for Startup/Recovery too.)
 	/// </summary>
-	public HandSide? JustEnteredStealActive
+	public HandSide? ActiveStealTargetHand
 	{
 		get
 		{
-			if (!_machine.JustEnteredActive) return null;
+			if (_machine.Phase != MovePhase.Active) return null;
 			return _machine.CurrentMove is StealMove steal ? steal.TargetHand : (HandSide?)null;
 		}
 	}
+
+	/// <summary>
+	/// Server-only: ends this defender's StealMove Active phase the instant
+	/// BallController.ResolveStealAttempts resolves it as a success, paying
+	/// Recovery immediately instead of riding out the remaining ActiveFrames.
+	///
+	/// Why this must exist (issue #96 remediation, multi-fire bug): a
+	/// resolved steal calls BallState.GoLoose(), and TickLoose's proximity
+	/// scramble (ResolveLooseBallRecovery) can re-award the ball to the SAME
+	/// still-in-place holder within the very next tick — but DribbleCycle.Phase
+	/// only advances in TickDribbling, so it is frozen in-band for as long as
+	/// the ball is Loose. Without this call, ActiveStealTargetHand keeps
+	/// returning this defender's TargetHand for every remaining Active tick,
+	/// and ResolveStealAttempts would see Dribbling + in-band + matching-hand
+	/// again and fire GoLoose() repeatedly — up to ActiveFrames times for one
+	/// committed move. Ending Active the moment it resolves means one
+	/// StealMove can produce at most one turnover, matching every other
+	/// committed move's "spent once, then Recovery" contract.
+	/// </summary>
+	public bool EndResolvedSteal() => _machine.EndActiveEarly();
 
 	/// <summary>
 	/// When this player's committed-move machine is currently in Active phase on
@@ -640,11 +866,15 @@ public partial class PlayerController : CharacterBody3D
 		SampleMoveInput(isServer: true); // reads gesture + feint, advances machine one tick
 
 		if (_machine.IsActive)
-			TickCommittedMoveBehavior(delta);
+			// The host IS the local machine — ReadInput() is the TRUE, zero-
+			// latency left stick, exactly what the exit-vector snapshot needs
+			// at Active-entry (#198). No network involved for this role.
+			TickCommittedMoveBehavior(delta, ReadInput());
 		else
 		{
 			Vector2 input = ReadInput();
 			Move(input, delta);
+			CheckAutoStartDribble(input);
 		}
 
 		// Broadcast authoritative state to all clients.
@@ -652,9 +882,20 @@ public partial class PlayerController : CharacterBody3D
 		// Heading is piggybacked on this existing broadcast — same staleness
 		// and redundancy properties as pos/vel; no separate channel needed.
 		// Source: Rpc(MethodName.X) broadcasts to all peers.
+		// (#175) WasRecoveryEnteredEarly appended LAST, after handSide — kept
+		// as its own trailing bool (not packed into an existing int slot) so a
+		// future positional edit to this already enum-as-int-heavy signature
+		// can't silently transpose it with handSide (see ReceiveState's doc).
+		// (#172) pivotHasLatch/pivotLatchedYaw appended AFTER that, as their
+		// own distinct bool+float pair (not reusing handSide's int slot or
+		// heading's float slot) for the same transposition-safety reason —
+		// two same-typed trailing params next to unrelated ones is exactly
+		// the positional-arg fragility this file's ReceiveState doc already
+		// warns about; keeping them last and together limits the blast radius
+		// of a future edit to one contiguous pair.
 		Rpc(MethodName.ReceiveState, 0, GlobalPosition, Velocity,
 			(int)_machine.Phase, _machine.FrameInPhase, MoveIdOf(_machine.CurrentMove), MoveParamOf(_machine.CurrentMove),
-			Heading, (int)HandSide);
+			Heading, (int)HandSide, _machine.WasRecoveryEnteredEarly, _pivot.HasLatch, _pivot.LatchedYaw);
 	}
 
 	/// <summary>
@@ -674,16 +915,24 @@ public partial class PlayerController : CharacterBody3D
 		_machine.Tick();
 
 		if (_machine.IsActive)
-			TickCommittedMoveBehavior(delta);
+			// _pendingRawStick, NOT _pendingInput — see that field's doc for why
+			// the exit-vector snapshot needs the always-on channel rather than
+			// the one the client itself zeroes during a committed move (#198).
+			TickCommittedMoveBehavior(delta, _pendingRawStick);
 		else
+		{
 			Move(_pendingInput, delta);
+			CheckAutoStartDribble(_pendingInput);
+		}
 
 		// Echo _serverAckedSeq so the client prunes its pending buffer, plus
 		// the committed-move state and heading piggybacked on the same broadcast
-		// (see ReceiveState below for the payload rationale).
+		// (see ReceiveState below for the payload rationale). (#175) Same
+		// trailing WasRecoveryEnteredEarly bool as TickServerOwnPlayer's broadcast.
+		// (#172) Same trailing pivotHasLatch/pivotLatchedYaw pair too.
 		Rpc(MethodName.ReceiveState, _serverAckedSeq, GlobalPosition, Velocity,
 			(int)_machine.Phase, _machine.FrameInPhase, MoveIdOf(_machine.CurrentMove), MoveParamOf(_machine.CurrentMove),
-			Heading, (int)HandSide);
+			Heading, (int)HandSide, _machine.WasRecoveryEnteredEarly, _pivot.HasLatch, _pivot.LatchedYaw);
 	}
 
 	/// <summary>
@@ -716,7 +965,8 @@ public partial class PlayerController : CharacterBody3D
 		// accepted, _smoothOffset-covered trade-off before M4 (originally
 		// "Doubt cycle 2" on this file) — M4 narrows what it's compensating
 		// for but doesn't need to eliminate it.
-		Vector2 moveInput = _machine.IsActive ? Vector2.Zero : ReadInput();
+		Vector2 rawStick = ReadInput();
+		Vector2 moveInput = _machine.IsActive ? Vector2.Zero : rawStick;
 
 		// Record() assigns the seq and handles capacity eviction (see
 		// PredictionBuffer doc) — behavior-identical to the inline
@@ -724,14 +974,30 @@ public partial class PlayerController : CharacterBody3D
 		int seq = _buffer.Record(moveInput);
 
 		if (_machine.IsActive)
-			TickCommittedMoveBehavior(delta);
+			// Local zero-lag prediction: rawStick, not moveInput (moveInput is
+			// deliberately zeroed above for Move()/replay purposes — see the
+			// comment on that line — but the exit-vector snapshot needs the
+			// TRUE stick, #198).
+			TickCommittedMoveBehavior(delta, rawStick);
 		else
+		{
 			Move(moveInput, delta);
+			CheckAutoStartDribble(moveInput);
+		}
 
 		// Send input to server. UnreliableOrdered: dropped packets are gone,
 		// but arriving packets are always in seq order (no regress to stale input).
 		// Source: RpcId(peerId, MethodName.X) — peerId 1 = server.
-		RpcId(1, MethodName.SubmitInput, seq, moveInput.X, moveInput.Y);
+		//
+		// rawStick is sent as TWO EXTRA trailing floats, always the true stick
+		// value — deliberately NOT gated by _machine.IsActive the way moveInput
+		// is (#198). This is what lets the SERVER's copy of a REMOTE player's
+		// crossover read a real, continuously-updated exit vector at its own
+		// Active-entry tick (via _pendingRawStick) instead of the intentionally-
+		// blanked moveInput/_pendingInput. See _pendingRawStick's doc for the
+		// full doubt-driven rationale (why this rides SubmitInput's continuous
+		// stream rather than the moveId/moveParam one-shot RPC).
+		RpcId(1, MethodName.SubmitInput, seq, moveInput.X, moveInput.Y, rawStick.X, rawStick.Y);
 	}
 
 	/// <summary>
@@ -757,6 +1023,11 @@ public partial class PlayerController : CharacterBody3D
 		// Setting it here ensures ApplyCosmetics displays the correct
 		// authoritative facing on the opponent's model.
 		Heading = _serverHeading;
+		// Same for the pivot latch (#172): the remote copy never runs Move(),
+		// so it has no local HeadingMath.Step to derive it from — adopting the
+		// broadcast value directly is what lets IsPivotingInPlace (computed
+		// from _pivot) drive a future opponent-plant animation (#184).
+		_pivot = new HeadingMath.PivotState(_serverPivotHasLatch, _serverPivotLatchedYaw);
 		// Same for the ball-hand (M9, #83): the remote copy never simulates the
 		// swap, so it adopts the broadcast value — this is how the opponent's
 		// crossover hand-switch renders on your screen (BallController.HandSign
@@ -783,11 +1054,16 @@ public partial class PlayerController : CharacterBody3D
 	///
 	/// inputX/Y sent as two floats rather than one Vector2 because Godot 4's
 	/// Variant RPC does not support direct Vector2 without boxing overhead.
+	///
+	/// rawStickX/Y (#198) are the SAME hardware read as inputX/Y EXCEPT they
+	/// are never gated to zero during a committed move — see _pendingRawStick's
+	/// doc for why the moving crossover's exit vector needs that guarantee and
+	/// why it piggybacks this existing continuous RPC rather than a new one.
 	/// </summary>
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer,
 		 CallLocal = false,
 		 TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
-	private void SubmitInput(int seq, float inputX, float inputY)
+	private void SubmitInput(int seq, float inputX, float inputY, float rawStickX, float rawStickY)
 	{
 		// Validate sender (read synchronously at top — GetRemoteSenderId() is
 		// only valid during the RPC call, never after).
@@ -802,8 +1078,92 @@ public partial class PlayerController : CharacterBody3D
 		// at transport level, but guard anyway for safety).
 		if (seq <= _serverAckedSeq) return;
 
-		_serverAckedSeq = seq;
-		_pendingInput   = new Vector2(inputX, inputY);
+		_serverAckedSeq  = seq;
+		_pendingInput    = new Vector2(inputX, inputY);
+		// Same "freshest wins" semantics as _pendingInput above (both are
+		// behind the same stale-seq guard on this method). The distinction
+		// from _pendingInput is NOT about seq ordering — it's that the SENDER
+		// (TickClientOwnPlayer) never blanks rawStickX/Y to zero while a
+		// committed move IsActive the way it blanks moveInput.X/Y, so this
+		// field always reflects the true stick, not a role/move-state gate
+		// applied on this end.
+		_pendingRawStick = new Vector2(rawStickX, rawStickY);
+	}
+
+	/// <summary>
+	/// Starts a committed move on <see cref="_machine"/> and — only if it
+	/// actually started — cancels any in-progress in-place pivot (issue #172).
+	///
+	/// This is the ONE shared code path every _machine.Begin(...) call site in
+	/// this file must go through instead of calling Begin() directly, so the
+	/// pivot-cancel rule is enforced identically regardless of which role is
+	/// starting the move: the server's own player and the owning client's
+	/// local prediction both reach it via SampleMoveInput; the server's copy
+	/// of a remote player reaches it via RequestBeginMove. Because it's the
+	/// same code running on both server and client — not a value carried over
+	/// the network — server and client agree on "a pivot was cancelled" on
+	/// the same tick the move begins, with no RTT needed to converge.
+	///
+	/// Gated on Begin()'s return value (not called unconditionally before it)
+	/// because Begin() silently no-ops when the move is illegal in the current
+	/// phase (e.g. still mid-Recovery) — an illegal attempt must not cancel a
+	/// legitimately in-progress pivot.
+	///
+	/// A committed move plants and freezes Heading for its whole duration
+	/// (TickCommittedMoveBehavior skips Move() entirely), so there is nothing
+	/// left for a stale pivot latch to resolve against once the move starts;
+	/// clearing it here rather than leaving it to silently resume after
+	/// Recovery is what makes the burst fire from the CURRENT Heading, not an
+	/// unrelated facing debt inherited from before the move (HandStateResolver.
+	/// BurstWorldDir already reads Heading directly — no change needed there).
+	/// </summary>
+	private bool BeginCommittedMove(CommittedMove move)
+	{
+		// #193 code-review fix: a Crossover/Hesitation IS a dribble move in
+		// real ball — it cannot legally begin while this player HOLDS the
+		// ball in Held state, dead OR live. Without this gate, JumpShot was
+		// the only move #193 special-cased, so a dead-Held player (post-
+		// cradle, or post a canceled pump-fake) could still Begin a
+		// crossover: the burst fires and the JustEnteredActive HandSide flip
+		// (TickCommittedMoveBehavior) authoritatively moves the HELD ball to
+		// the other hand — a sweep transit since #195, no longer a teleport —
+		// escaping the dead-dribble rule's whole point —
+		// #193's own "stranded in dead Held" cost became avoidable. From a
+		// LIVE Held possession the fix is the same: the player must push the
+		// stick to start dribbling first (CheckAutoStartDribble ->
+		// BallController.TryStartDribble), matching real ball's "you can't
+		// crossover a ball you haven't started bouncing yet."
+		//
+		// Gated on IsBallHolder specifically — a player WITHOUT the ball
+		// (defense) is never affected; their crossover/hesitation attempts
+		// are unrelated to possession state.
+		//
+		// BehindTheBack (#194) is gated the same way — it is ALSO a dribble
+		// move in real ball (the hand-swap only makes sense off a live
+		// dribble), so the dead-dribble rule must apply to it identically.
+		if ((move is Crossover || move is Hesitation || move is BehindTheBack) && IsBallHolder
+			&& GetBall()?.State == BallState.Held)
+			return false;
+
+		if (!_machine.Begin(move)) return false;
+		_pivot = HeadingMath.PivotState.None;
+
+		// #193 (triple threat / dead-dribble rule): a JumpShot's gather is
+		// inherent to the shooting motion, not a separate input — so cradling
+		// a live dribble is a SIDE EFFECT of the shot's Startup beginning,
+		// fired right here at the ONE choke point every Begin(JumpShot) call
+		// already funnels through. This also covers the pump-fake: a feint is
+		// a Startup-phase ABORT of this SAME move (CommittedMoveMachine.
+		// Feint()), not a second Begin(), so there is no separate hook needed
+		// for it — a canceled pump-fake still leaves HasDribbled set, which is
+		// the intentional "you can't un-pick-up your dribble by faking a shot"
+		// cost the issue calls for. BallController.CradleForShotStartup no-ops
+		// on its own if the ball isn't Dribbling for this exact peer, so this
+		// call is safe to fire unconditionally whenever a JumpShot begins.
+		if (move is JumpShot && OwnPeerId != 0)
+			GetBall()?.CradleForShotStartup(OwnPeerId);
+
+		return true;
 	}
 
 	/// <summary>
@@ -821,13 +1181,14 @@ public partial class PlayerController : CharacterBody3D
 	/// rarely — once per committed move attempt, not every physics tick — so
 	/// there is no continuous stream for a retransmit to stall.
 	///
-	/// moveId/param is the minimal payload to reconstruct a move. Two concrete
-	/// moves exist now ("crossover", carrying BurstDirection as param; and
-	/// "jumpshot", M7b issue #74, carrying no param) so a small if-chain is
-	/// still correct and proportionate — see CommittedMove.Id's doc comment,
-	/// which already anticipated this exact use. Revisit only if a third move
-	/// arrives with materially different reconstruction needs than a simple
-	/// id dispatch; do not build a registry/factory pre-emptively.
+	/// moveId/param is the minimal payload to reconstruct a move. A handful of
+	/// concrete moves exist now ("crossover" and "behindtheback", both
+	/// carrying BurstDirection as param; "jumpshot", carrying none; "steal",
+	/// carrying TargetHand) so a small if-chain is still correct and
+	/// proportionate — see CommittedMove.Id's doc comment, which already
+	/// anticipated this exact use. Revisit only if a future move arrives with
+	/// materially different reconstruction needs than a simple id dispatch;
+	/// do not build a registry/factory pre-emptively.
 	///
 	/// Security: same sender check as SubmitInput — PlayerController has a
 	/// per-peer node identity (Name == peer ID), unlike the Ball, which had to
@@ -872,14 +1233,18 @@ public partial class PlayerController : CharacterBody3D
 		if (moveId == "crossover")
 			// param is the body-relative flick sign (M9, #85) — the world burst
 			// direction is derived from Heading when the move reaches Active.
-			_machine.Begin(new Crossover(burstDirection: param));
+			BeginCommittedMove(new Crossover(burstDirection: param));
+		else if (moveId == "behindtheback")
+			// Same reconstruction payload as "crossover" (issue #194) — param
+			// is the body-relative flick sign.
+			BeginCommittedMove(new BehindTheBack(burstDirection: param));
 		else if (moveId == "hesitation")
-			_machine.Begin(new Hesitation());
+			BeginCommittedMove(new Hesitation());
 		else if (moveId == "jumpshot")
 		{
 			// Capture the server-authoritative pre-plant speed at begin for the
 			// movement scatter penalty (#137) — see ShotInitiationSpeed.
-			if (_machine.Begin(new JumpShot()))
+			if (BeginCommittedMove(new JumpShot()))
 				CaptureShotInitiationSpeed();
 		}
 		else if (moveId == "steal")
@@ -890,7 +1255,7 @@ public partial class PlayerController : CharacterBody3D
 			// only Begin), so a client that sends "steal" while still in Recovery
 			// gets a silent no-op — Begin() returns false and nothing happens.
 			HandSide target = param > 0.5f ? HandSide.Right : HandSide.Left;
-			_machine.Begin(new StealMove(target));
+			BeginCommittedMove(new StealMove(target));
 		}
 		else if (moveId == "block")
 		{
@@ -986,12 +1351,29 @@ public partial class PlayerController : CharacterBody3D
 	/// burst-lean direction (ApplyCosmetics), since the client's copy of the
 	/// opponent has no live local CurrentMove to read BurstDirection from. This is
 	/// a display-only read; reconciliation is unchanged.
+	///
+	/// (#175) endedActiveEarly is CommittedMoveMachine.WasRecoveryEnteredEarly
+	/// from the server's copy of THIS player's machine — appended last, as a
+	/// plain bool (Godot's [Rpc] Variant marshaling handles bool natively, so
+	/// unlike movePhase there is no enum-boxing reason to send it as an int).
+	/// It feeds ReconcileFromServer's Step 0.5 (ShouldForceRecovery): the fix
+	/// for the OWN client's Active prediction never learning that the server
+	/// resolved this move's Active phase early (e.g. a successful steal).
+	///
+	/// (#172) pivotHasLatch/pivotLatchedYaw are the authoritative in-place-
+	/// pivot latch, same UnreliableOrdered snapshot properties as heading:
+	/// staged here, then snapped into _pivot pre-replay in ReconcileFromServer
+	/// (own player) or adopted directly for display in TickClientRemotePlayer
+	/// (remote copy) — never force-matched every tick, per this file's
+	/// standing snap-then-replay reconciliation law (see that method's
+	/// Heading-snap comment).
 	/// </summary>
 	[Rpc(MultiplayerApi.RpcMode.Authority,
 		 CallLocal = false,
 		 TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
 	private void ReceiveState(int ackSeq, Vector3 pos, Vector3 vel,
-		int movePhase, int frameInPhase, string moveId, float moveParam, float heading, int handSide)
+		int movePhase, int frameInPhase, string moveId, float moveParam, float heading, int handSide,
+		bool endedActiveEarly, bool pivotHasLatch, float pivotLatchedYaw)
 	{
 		_serverPos       = pos;
 		_serverVel       = vel;
@@ -1009,6 +1391,13 @@ public partial class PlayerController : CharacterBody3D
 		// as pos/vel — fine, since the replay loop catches the own player up
 		// and the remote player displays the latest received value.
 		_serverHeading   = heading;
+		// (#172) See _serverPivotHasLatch/_serverPivotLatchedYaw's field doc.
+		_serverPivotHasLatch   = pivotHasLatch;
+		_serverPivotLatchedYaw = pivotLatchedYaw;
+		// (#175) See _serverEndedActiveEarly's field doc — level-triggered,
+		// so overwriting every broadcast (even a redundant "still true") is
+		// correct and required for the packet-loss robustness that field relies on.
+		_serverEndedActiveEarly = endedActiveEarly;
 		_hasNewState     = true;
 	}
 
@@ -1071,9 +1460,16 @@ public partial class PlayerController : CharacterBody3D
 		//     pathological RTTs — consistent with the latency tolerance the
 		//     rest of this prediction system already assumes.
 		//
-		// Only one move type exists today, so a "different move Id while both
-		// sides are active" case is unreachable; revisit this gate when a
-		// second move type makes that distinguishable from this check.
+		// Multiple move types exist now (crossover, behindtheback, hesitation,
+		// jumpshot, steal, block, contest), but a "different move Id while
+		// both sides are active" case is still structurally unreachable: the
+		// server only ever moves out of Inactive by echoing back the EXACT
+		// moveId the client's own RPC requested (RequestBeginMove's Id
+		// parameter round-trips unchanged through the broadcast). There is no
+		// path where the server is Active/Startup/Recovery on a move whose Id
+		// differs from what this client itself asked to begin — so the two
+		// sides' move Ids can never disagree while both are non-Inactive,
+		// regardless of how many move types the game has.
 		//
 		// (#21 doubt cycle 2, finding #1) Known bounded gap: if the client begins
 		// a SECOND move right as its own local Recovery from a FIRST move
@@ -1111,6 +1507,39 @@ public partial class PlayerController : CharacterBody3D
 			// in Step 0 above.
 			HandSide = _serverHandSide;
 		}
+		// Step 0.5 (#175): the OWN client keeps predicting Active for the rest
+		// of a move's window even after the server ends that move's Active
+		// phase EARLY (EndActiveEarly() — today only a resolved steal). Unlike
+		// Step 0 above, this is NOT "the server disagrees a move ran at all" —
+		// it is "the server agrees a move ran, but it's further along than the
+		// client's local prediction" — so it is deliberately a SEPARATE gate
+		// (ShouldForceRecovery), not a broadened Step 0. Folding a
+		// `serverPhase == Recovery` case into ShouldForceInactive's contract
+		// would misfire on every ORDINARY Active→Recovery boundary a move
+		// crosses under jitter, which is exactly the failure mode this issue's
+		// remediation must not reintroduce (see ShouldForceRecovery's doc for
+		// how the level-triggered WasRecoveryEnteredEarly bit — not serverPhase
+		// alone — is what distinguishes "early" from "on schedule", and why a
+		// moveId identity check bounds this to the same accepted staleness
+		// trade-off Step 0 above already documents, rather than a wider one).
+		//
+		// Only reachable when Step 0 above did NOT already force Inactive
+		// (mutually exclusive: Step 0 fires on serverSaysInactive, this one
+		// requires serverPhase == Recovery).
+		else if (CommittedMoveMachine.ShouldForceRecovery(
+			_machine.Phase, _serverMovePhase, _serverEndedActiveEarly,
+			MoveIdOf(_machine.CurrentMove), _serverMoveId))
+		{
+			// frameInPhase forced to 0, not the server's (possibly further-
+			// advanced, ~1-RTT-stale) FrameInPhase — a discrete identity
+			// correction (Phase), never a stale continuous value snap, per
+			// this file's standing reconciliation law (see Step 0's comment).
+			// recoveryWasEarly: true so a future consumer of
+			// WasRecoveryEnteredEarly on THIS client sees the same truth the
+			// server does (ForceState's own doc explains why leaving this
+			// un-set would be a silent partial-overwrite bug).
+			_machine.ForceState(MovePhase.Recovery, frameInPhase: 0, move: _machine.CurrentMove, recoveryWasEarly: true);
+		}
 
 		// Step 1: prune confirmed inputs.
 		_buffer.Acknowledge(ackSeq);
@@ -1130,6 +1559,23 @@ public partial class PlayerController : CharacterBody3D
 		// (e.g. after a large turn where the non-linear rate produces
 		// per-tick differences that accumulate over unacknowledged ticks).
 		Heading = authHeading;
+
+		// (#172) Same pre-replay snap for the pivot latch as Heading immediately
+		// above — IsPivotingInPlace is a computed readout of _pivot.HasLatch
+		// (see its doc), so this single assignment also makes it correct for
+		// this same tick even when the replay buffer below is EMPTY (i.e. every
+		// input has already been acked): with no snap here, an idle/ack'd-up
+		// client would otherwise keep IsPivotingInPlace pinned to whatever its
+		// last locally-predicted Move() call left it at, silently drifting from
+		// the server's opinion. Note this rides the same accepted trade-off
+		// Heading already carries into the replay loop below: a buffered input
+		// whose real-time tick had a committed move Active would have skipped
+		// Move() entirely (TickCommittedMoveBehavior instead) but is replayed
+		// through Move() here regardless (see TickClientOwnPlayer's "Step 3 of
+		// ReconcileFromServer replays ... through Move() only" comment) — a
+		// pre-existing, _smoothOffset-covered positional trade-off that _pivot
+		// now inherits rather than introduces.
+		_pivot = new HeadingMath.PivotState(_serverPivotHasLatch, _serverPivotLatchedYaw);
 
 		// Step 3: replay unacknowledged inputs using the fixed physics timestep.
 		// The server simulated each of these at the same fixed rate, so using
@@ -1288,11 +1734,31 @@ public partial class PlayerController : CharacterBody3D
 	public (MovePhase phase, float burstDir) DisplayMove()
 	{
 		if (DisplayPhaseResolver.LocalMachineDrivesDisplay(IsServer, IsLocalPlayer))
-			return (_machine.Phase, (_machine.CurrentMove as Crossover)?.BurstDirection ?? 0f);
+			return (_machine.Phase,
+				(_machine.CurrentMove as Crossover)?.BurstDirection
+				?? (_machine.CurrentMove as BehindTheBack)?.BurstDirection
+				?? 0f);
 
-		float burstDir = _serverMoveId == "crossover" ? _serverMoveParam : 0f;
+		float burstDir = _serverMoveId is "crossover" or "behindtheback" ? _serverMoveParam : 0f;
 		return (_serverMovePhase, burstDir);
 	}
+
+	/// <summary>
+	/// The committed-move Id this node should DISPLAY this frame — same
+	/// per-role resolution as <see cref="DisplayMove"/> (M7b, #69), but
+	/// returning the identity string instead of phase/burst. Added for
+	/// BehindTheBack (#194): BallController.AdvanceHandSweep needs to tell a
+	/// Crossover-driven hand flip apart from a BehindTheBack-driven one (the
+	/// in-front sweep vs. the shielded behind-body path) for EVERY role,
+	/// including the remote client's copy of the opponent — which, like
+	/// DisplayMove, has no live local _machine to read (that peer's _machine
+	/// never advances for the opponent's node), so it must fall back to the
+	/// broadcast _serverMoveId exactly like DisplayMove's burstDir already does.
+	/// </summary>
+	public string DisplayMoveId() =>
+		DisplayPhaseResolver.LocalMachineDrivesDisplay(IsServer, IsLocalPlayer)
+			? MoveIdOf(_machine.CurrentMove)
+			: _serverMoveId;
 
 	// ── Input (unchanged from M1a) ────────────────────────────────────────────
 
@@ -1307,6 +1773,40 @@ public partial class PlayerController : CharacterBody3D
 		return Input.GetVector("move_left", "move_right", "move_forward", "move_backward");
 	}
 
+	/// <summary>
+	/// Drives the ball out of a live Held possession the instant the holder
+	/// pushes the stick past deadzone (#193, ADR-0008's dead-dribble rule): a
+	/// fresh possession now starts Held-not-Dribbling (BallController.
+	/// AwardPossession no longer auto-chains into a dribble), so ordinary
+	/// movement intent is what resumes it — the "drive" read out of a triple-
+	/// threat stance.
+	///
+	/// Called only where <paramref name="input"/> is REAL ground-truth for
+	/// THIS player this tick — own-player local hardware on the server or a
+	/// client (TickServerOwnPlayer/TickClientOwnPlayer), or a remote player's
+	/// latest submitted input on the server (TickServerRemotePlayer) — never
+	/// from TickClientRemotePlayer, which has no local input to read. This is
+	/// exactly the authority set every other ball-state write in this file
+	/// already restricts to (see BallController.CradleForShotStartup's doc).
+	///
+	/// Godot's Input.GetVector already clamps anything inside an action's
+	/// configured deadzone down to an exact Vector2.Zero (project.godot's
+	/// move_* actions carry a 0.2 deadzone), so a nonzero vector here already
+	/// means "past deadzone" — no separate threshold constant needed.
+	///
+	/// BallController.TryStartDribble owns every actual gameplay guard (must
+	/// be Held, dead-dribble refusal) — this call site pre-filters on
+	/// IsBallHolder (#204 code-review cleanup) so a non-holder's movement
+	/// input never even makes the cross-object call, which TryStartDribble's
+	/// own HolderPeerId check would have no-opped on anyway.
+	/// </summary>
+	private void CheckAutoStartDribble(Vector2 input)
+	{
+		if (input == Vector2.Zero) return;
+		if (!IsBallHolder) return;
+		GetBall()?.TryStartDribble(OwnPeerId);
+	}
+
 	// ── Committed-move input and behavior (M3 local-only → M4 networked) ─────
 
 	/// <summary>
@@ -1314,9 +1814,10 @@ public partial class PlayerController : CharacterBody3D
 	/// move machine one tick. Called at the top of every local-player tick so
 	/// JustEnteredActive is correct when TickCommittedMoveBehavior reads it.
 	///
-	/// Right-stick gestures (gamepad): routed through RightStickGestureRecognizer.
-	/// Keyboard fallback (Q): triggers a crossover (right burst) directly,
-	/// bypassing the recognizer — simpler timing without a gamepad.
+	/// Right-stick gestures: routed through RightStickGestureRecognizer. Both
+	/// input devices feed it via the aim_* actions — gamepad right stick, or
+	/// the IJKL keys (#191); the recognizer is hardware-agnostic, so keyboard
+	/// gets the same crossover/hesitation/feint semantics as the stick.
 	/// Feint modifier (E key / L1): aborts a crossover during its startup window.
 	///
 	/// Note: Input.GetVector / IsActionJustPressed read the local machine's hardware.
@@ -1336,22 +1837,18 @@ public partial class PlayerController : CharacterBody3D
 		Vector2 aim = Input.GetVector("aim_left", "aim_right", "aim_up", "aim_down");
 		GestureResult gesture = _recognizer.Sample(aim);
 
-		// One right-stick flick (or keyboard Q), disambiguated by which hand holds
-		// the ball (M9, ADR-0012): a flick TOWARD the empty hand is a crossover
-		// (ball swaps to that hand + a lateral burst that way); a flick TOWARD the
-		// ball hand is a hesitation (freeze/bait — no swap, no scripted burst; the
-		// player drives the exit with the left stick after the move resolves).
-		// Keyboard Q takes precedence over the recognizer so the two paths don't
-		// double-Begin; it flicks toward the player's right (+1).
-		float flick = float.NaN;
-		if (Input.IsActionJustPressed("move_crossover"))
-			flick = +1f;
-		else if (gesture.Kind == GestureKind.Crossover)
-			flick = gesture.Direction;
-
-		if (!float.IsNaN(flick))
+		// One right-stick flick, disambiguated by which hand holds the ball
+		// (M9, ADR-0012): a flick TOWARD the empty hand is a crossover (ball
+		// swaps to that hand + a lateral burst that way); a flick TOWARD the
+		// ball hand is a hesitation (freeze/bait — no swap, no scripted burst;
+		// the player drives the exit with the left stick after the move
+		// resolves). Keyboard reaches this through the same recognizer via the
+		// IJKL bindings on the aim_* actions (#191) — there is no separate
+		// keyboard path, so the flick sign is always real and signed and
+		// IsCrossover alternates correctly on either input device.
+		if (gesture.Kind == GestureKind.Crossover)
 		{
-			int flickSign = System.Math.Sign(flick);
+			int flickSign = System.Math.Sign(gesture.Direction);
 			if (HandStateResolver.IsCrossover(HandSide, flickSign))
 			{
 				// Crossover carries the BODY-RELATIVE flick sign (M9, #85): the
@@ -1359,10 +1856,30 @@ public partial class PlayerController : CharacterBody3D
 				// (TickCommittedMoveBehavior), so the burst follows the body's
 				// facing rather than a fixed screen axis. The wire param is the
 				// same single float RequestBeginMove already speaks.
-				if (_machine.Begin(new Crossover(flickSign)) && !isServer)
+				//
+				// BehindTheBack (#194) reuses this SAME flick-toward-the-empty-
+				// hand gesture — it is a size-up VARIANT of the crossover read,
+				// not a separate gesture grammar (real ball has no dedicated
+				// analog input for "which crossover variant"; a player decides
+				// by choice, not by a different stick motion). The "move_size_up"
+				// modifier held DURING the flick selects it, mirroring 2K's
+				// modifier-gated advanced-dribble convention (ADR-0014 tier 3 —
+				// neither real ball nor Undisputed 3 specify a literal control
+				// mapping here, so the lowest-ranked but still valid reference
+				// resolves it). Held, not a separate discrete press: the flick
+				// itself is still what commits the move; the modifier only
+				// selects WHICH move the flick becomes.
+				if (Input.IsActionPressed("move_size_up"))
+				{
+					if (BeginCommittedMove(new BehindTheBack(flickSign)) && !isServer)
+						RpcId(1, MethodName.RequestBeginMove, "behindtheback", flickSign);
+				}
+				else if (BeginCommittedMove(new Crossover(flickSign)) && !isServer)
+				{
 					RpcId(1, MethodName.RequestBeginMove, "crossover", flickSign);
+				}
 			}
-			else if (_machine.Begin(new Hesitation()) && !isServer)
+			else if (BeginCommittedMove(new Hesitation()) && !isServer)
 			{
 				RpcId(1, MethodName.RequestBeginMove, "hesitation", 0f);
 			}
@@ -1379,7 +1896,7 @@ public partial class PlayerController : CharacterBody3D
 		// BallController.CheckJumpShotRelease reads via JustReleasedJumpShot.
 		BallController ball = GetBall();
 		if (ball != null && Input.IsActionJustPressed(ball.ShootAction) && IsBallHolder
-			&& _machine.Begin(new JumpShot()))
+			&& BeginCommittedMove(new JumpShot()))
 		{
 			// Capture the pre-plant locomotion speed NOW — Startup zeroes Velocity,
 			// so the movement scatter penalty must read speed at shot initiation,
@@ -1406,7 +1923,7 @@ public partial class PlayerController : CharacterBody3D
 		if (Input.IsActionJustPressed("def_steal") && !IsBallHolder)
 		{
 			HandSide target = aim.X > 0f ? HandSide.Right : HandSide.Left;
-			if (_machine.Begin(new StealMove(target)) && !isServer)
+			if (BeginCommittedMove(new StealMove(target)) && !isServer)
 				RpcId(1, MethodName.RequestBeginMove, "steal", (float)(int)target);
 		}
 
@@ -1435,9 +1952,20 @@ public partial class PlayerController : CharacterBody3D
 		// flick is exactly one GestureKind, so this never double-fires with the
 		// crossover branch above. The machine enforces the feint-window guard;
 		// false return is silent.
-		bool feintInput = Input.IsActionJustPressed("move_feint")
-			|| gesture.Kind == GestureKind.Feint;
-		if (feintInput && _machine.Feint() && !isServer)
+		//
+		// Routed through FeintGateResolver (bug fix, /diagnose 2026-07-03): the
+		// gesture-sourced Feint is ambiguous — it fires from ANY quick aim-stick
+		// flick-and-return, unrelated to which move is running. For Crossover/
+		// Hesitation that free abort is harmless, but a JumpShot's feint is a
+		// pump-fake that SILENTLY consumes the ball release (Feint() never sets
+		// JustEnteredActive), while the windup animation plays regardless
+		// (MoveAnimResolver reads Phase alone) — so an incidental stick flick
+		// while shooting read as "I pressed shoot and nothing happened." The
+		// gate withholds the gesture (but never the explicit key) from an
+		// in-progress JumpShot; see FeintGateResolver's doc for the full reasoning.
+		bool shouldFeint = FeintGateResolver.ShouldFeint(
+			Input.IsActionJustPressed("move_feint"), gesture.Kind, _machine.CurrentMove);
+		if (shouldFeint && _machine.Feint() && !isServer)
 			RpcId(1, MethodName.RequestFeint);
 
 		_machine.Tick(); // advance one frame — always called, including Inactive (no-op)
@@ -1447,10 +1975,16 @@ public partial class PlayerController : CharacterBody3D
 	/// Applies the committed-move velocity effect for the current phase and calls
 	/// MoveAndSlide(). Called instead of Move() while _machine.IsActive.
 	///
-	/// Startup  — Velocity zeroed: movement locked so the telegraph is readable.
-	///            Do NOT smooth or blend — clunky startup is intentional (ADR-0003).
-	/// Active   — Burst velocity SET on JustEnteredActive; maintained through all
-	///            Active ticks so the lateral separation spans the full duration.
+	/// Startup  — Hybrid gather (#198, ADR-0003 amendment): Velocity BLEEDS
+	///            toward zero via GatherDecel, a hard decel that never
+	///            instant-zeros. This replaces the pre-#198 "Velocity =
+	///            Vector3.Zero every tick" — a real plant sheds speed fast but
+	///            a genuine drive can still carry some momentum into Active.
+	///            Still clunky/no smoothing by design (ADR-0003).
+	/// Active   — Burst velocity SET on JustEnteredActive via CrossoverBurstMath,
+	///            composing whatever momentum survived Startup with the
+	///            left-stick exit vector snapshotted THIS tick (#198); maintained
+	///            through all Active ticks so it spans the full duration.
 	///            SET not += : additive velocity would overshoot on reconcile replay.
 	///            (Doubt cycle 2, finding #4 — actionable: sustain burst.)
 	/// Recovery — Decelerate toward zero: the punish window (ADR-0003). Player
@@ -1460,12 +1994,38 @@ public partial class PlayerController : CharacterBody3D
 	/// trade-off). Recovery decelerates from whatever clipped value results —
 	/// acceptable for M3.
 	/// </summary>
-	private void TickCommittedMoveBehavior(double delta)
+	/// <param name="exitVectorSample">
+	/// The left-stick reading to use IF this tick is a Crossover's
+	/// JustEnteredActive tick (ignored otherwise). Passed in by the caller
+	/// because which source is correct depends on ROLE — host's own/client's
+	/// own predicted read real local hardware (ReadInput()); the server's copy
+	/// of a remote player reads the networked _pendingRawStick. See
+	/// _pendingRawStick's doc for why this is a distinct channel from the
+	/// regular movement input.
+	/// </param>
+	private void TickCommittedMoveBehavior(double delta, Vector2 exitVectorSample)
 	{
 		switch (_machine.Phase)
 		{
 			case MovePhase.Startup:
-				Velocity = Vector3.Zero;
+				// #198's hybrid gather is scoped to the burst-family moves that
+				// explicitly opt into it (ADR-0003 amendment) — every other
+				// committed move (Hesitation, StealMove, JumpShot, …) keeps the
+				// original instant-zero plant. A blanket bleed here would have
+				// silently let a driving player slide through a Hesitation's
+				// "stand still and sell the fake" or a defender's StealMove
+				// Active window on residual momentum GatherDecel's budget
+				// doesn't fully cover for their (shorter) Startup lengths —
+				// exactly the un-bounded relaxation the ADR amendment explicitly
+				// rules out. BehindTheBack (#194) opts in with its OWN, steeper
+				// rate (BehindTheBackGatherDecel — "heavier gather bleed" per
+				// the spec), not Crossover's GatherDecel.
+				Velocity = _machine.CurrentMove switch
+				{
+					Crossover     => Velocity.MoveToward(Vector3.Zero, GatherDecel * (float)delta),
+					BehindTheBack => Velocity.MoveToward(Vector3.Zero, BehindTheBackGatherDecel * (float)delta),
+					_             => Vector3.Zero,
+				};
 				MoveAndSlide();
 				break;
 
@@ -1474,28 +2034,60 @@ public partial class PlayerController : CharacterBody3D
 				// Active ticks the same velocity is maintained (no else-zero here).
 				// MoveAndSlide() applies it each tick, producing sustained separation.
 				// A JumpShot (M7b, #74) has no horizontal effect here — Velocity is
-				// already Vector3.Zero carried over from Startup (every Startup tick
-				// zeros it, above) and nothing sets it for a non-Crossover move, so
-				// the shooter stays planted through the release. BallController
-				// reads JustReleasedJumpShot to fire the actual ball transition on
-				// this same tick — that is a SEPARATE node's read of this machine's
+				// already bled toward zero by Startup's gather above and nothing
+				// sets it for a non-burst-family move, so the shooter stays
+				// (near-)planted through the release. BallController reads
+				// JustReleasedJumpShot to fire the actual ball transition on this
+				// same tick — that is a SEPARATE node's read of this machine's
 				// state, not a side effect this switch needs to produce.
-				if (_machine.JustEnteredActive && _machine.CurrentMove is Crossover crossover)
+				//
+				// Crossover and BehindTheBack (#194) share the SAME
+				// CrossoverBurstMath composition (composition, not inheritance —
+				// see BehindTheBack's doc) with different tunables: BehindTheBack
+				// passes its own (smaller) burst speeds and a NARROWER exit cone
+				// (BehindTheBackExitConeDegrees, "fewer follow-ups" per the M9
+				// taxonomy handoff — never a recovery/cooldown penalty).
+				if (_machine.JustEnteredActive && _machine.CurrentMove is Crossover or BehindTheBack)
 				{
-					// World burst = the body-relative flick sign rotated by the
-					// authoritative Heading (M9, #85/ADR-0012) — the burst follows
-					// the body, never a fixed screen axis. Heading is reconciled,
-					// so server and client derive the identical world vector.
-					// BurstWorldDir returns a unit XZ vector; scale by BurstSpeed.
-					int sign     = System.Math.Sign(crossover.BurstDirection);
-					Vector2 dir  = HandStateResolver.BurstWorldDir(Heading, sign);
-					Velocity     = new Vector3(dir.X * BurstSpeed, 0f, dir.Y * BurstSpeed);
+					// #198: CrossoverBurstMath composes the surviving Startup
+					// momentum with the exit-vector-driven burst impulse — see
+					// its doc for the full emergent-move table.
+					//
+					// NOT jointly deterministic across client/server the way
+					// Heading is (ADR-0010). Each role composes from its OWN
+					// snapshot of exitVectorSample, sampled at its OWN tick:
+					// the local, zero-lag ReadInput() for an own-player role
+					// vs. the server's networked _pendingRawStick snapshot for
+					// its copy of a remote player (see TickCommittedMoveBehavior's
+					// exitVectorSample param doc). Steady-state (no packet loss,
+					// no jitter) the two composed bursts coincide, but under
+					// loss/jitter they can genuinely diverge for a tick or two —
+					// an accepted gap, corrected by the existing prediction/
+					// reconciliation path rather than closed here. Tracked as
+					// issue #210; not this issue's scope to fix — BehindTheBack
+					// rides the SAME composition path, so #210's eventual fix
+					// covers it for free.
+					float burstSign = _machine.CurrentMove switch
+					{
+						Crossover c     => c.BurstDirection,
+						BehindTheBack b => b.BurstDirection,
+						_               => 0f,
+					};
+					int sign = System.Math.Sign(burstSign);
+					Velocity = _machine.CurrentMove is BehindTheBack
+						? CrossoverBurstMath.ComposeActiveVelocity(
+							Velocity, Heading, sign, exitVectorSample,
+							BehindTheBackBurstSpeed, BehindTheBackForwardBurstScale, ExitDeadzone,
+							Mathf.DegToRad(BehindTheBackExitConeDegrees))
+						: CrossoverBurstMath.ComposeActiveVelocity(
+							Velocity, Heading, sign, exitVectorSample,
+							BurstSpeed, ForwardBurstScale, ExitDeadzone);
 
-					// The crossover swaps the ball to the (now near) empty hand —
-					// the authoritative hand-state change (M9, #83). It rides this
-					// same predicted + reconciled Active-entry event as the burst;
-					// a Hesitation is not a Crossover, so it never reaches here and
-					// the hand stays put.
+					// Both moves swap the ball to the (now near) empty hand —
+					// the authoritative hand-state change (M9, #83). It rides
+					// this same predicted + reconciled Active-entry event as
+					// the burst; a Hesitation is neither of these, so it never
+					// reaches here and the hand stays put.
 					HandSide = HandStateResolver.Opposite(HandSide);
 				}
 				MoveAndSlide();
@@ -1513,15 +2105,16 @@ public partial class PlayerController : CharacterBody3D
 	/// <summary>
 	/// The moveId to broadcast for the current move, or "" if none — the
 	/// ReceiveState payload's sentinel for "Inactive / no move running".
-	/// Only one concrete move type exists today (see RequestBeginMove's doc
+	/// Each concrete move's Id is unique and stable (see RequestBeginMove's doc
 	/// comment for why a small if-chain, not a registry, is appropriate here).
 	/// </summary>
 	private static string MoveIdOf(CommittedMove move) => move?.Id ?? "";
 
 	/// <summary>
-	/// The move's reconstruction payload to broadcast — today, Crossover's
-	/// BurstDirection. 0 when there is no current move or the move type
-	/// carries no extra payload.
+	/// The move's reconstruction payload to broadcast — Crossover's and
+	/// BehindTheBack's shared BurstDirection shape, or StealMove's TargetHand.
+	/// 0 when there is no current move or the move type carries no extra
+	/// payload.
 	///
 	/// (#21 doubt cycle 1, finding #2) _serverMoveId/_serverMoveParam are stored
 	/// from every broadcast — satisfying "active move included in the server
@@ -1532,8 +2125,9 @@ public partial class PlayerController : CharacterBody3D
 	/// agree a move is active, but disagree on WHICH one" a reachable case.
 	/// </summary>
 	private static float MoveParamOf(CommittedMove move) =>
-		move is Crossover crossover ? crossover.BurstDirection :
-		move is StealMove steal    ? (float)(int)steal.TargetHand :
+		move is Crossover crossover         ? crossover.BurstDirection :
+		move is BehindTheBack behindTheBack ? behindTheBack.BurstDirection :
+		move is StealMove steal             ? (float)(int)steal.TargetHand :
 		// BlockMove, JumpShot, Hesitation, and all future no-payload moves → 0f.
 		0f;
 
@@ -1552,24 +2146,43 @@ public partial class PlayerController : CharacterBody3D
 	/// </summary>
 	public void Move(Vector2 inputDir, double delta)
 	{
-		// Map 2D intent onto the ground plane. -Z is "forward" in Godot.
-		// World-space, not camera-relative — so the server can replay it
-		// without knowing each client's camera orientation (ADR-0002).
-		Vector3 wishDir = new Vector3(inputDir.X, 0.0f, inputDir.Y);
-		// The Accel/Decel asymmetry ("change of pace", ADR-0003) lives in
-		// MovementMath now (issue #37) so it's unit-testable without a
-		// running Godot instance — this call is behavior-identical to the
-		// inline ComputeVelocity it replaced.
-		Velocity = MovementMath.ComputeVelocity(Velocity, wishDir, delta, MoveSpeed, Accel, Decel);
+		// Advance the authoritative heading — and the in-place-pivot latch it
+		// now carries (issue #172) — toward inputDir at a bounded non-linear
+		// rate BEFORE velocity, because velocity below depends on whether this
+		// step says the player is currently planted. HeadingMath.Step is pure,
+		// so this introduces no role-checks or network calls in violation of
+		// the "keep Move() pure" contract, and — placed here inside the shared
+		// motion step — it replays identically on the server, the client
+		// prediction, and the reconciliation replay loop without any extra
+		// code paths.
+		HeadingMath.HeadingStep step = HeadingMath.Step(
+			Heading, _pivot, inputDir, delta, MaxTurnRateDeg, BackTurnSlowFactor, PivotThresholdDeg);
+		Heading = step.NewYaw;
+		_pivot  = step.Pivot;
 
-		// Advance the authoritative heading toward wishDir at a bounded
-		// non-linear rate (issue #80, ADR-0010). Placed here — inside the
-		// shared motion step — so it is replayed identically on the server,
-		// the client prediction, and the reconciliation replay loop without
-		// any extra code paths. HeadingMath.RotateToward is pure, so this
-		// introduces no role-checks or network calls in violation of the
-		// "keep Move() pure" contract.
-		Heading = HeadingMath.RotateToward(Heading, inputDir, delta, MaxTurnRateDeg, BackTurnSlowFactor);
+		if (step.IsPivotingInPlace)
+		{
+			// Feet planted mid-pivot: zero displacement is the acceptance
+			// criterion (issue #172) — a committed plant-and-turn must cost
+			// real position, not just a facing delay. MovementMath.ComputeVelocity
+			// is intentionally NOT called on this branch (it must not change).
+			// Zeroing the whole Vector3 (not just X/Z) is safe here: this
+			// controller applies no gravity and never sets Velocity.Y anywhere
+			// (a top-down half-court capsule, not a jumping character).
+			Velocity = Vector3.Zero;
+		}
+		else
+		{
+			// Map 2D intent onto the ground plane. -Z is "forward" in Godot.
+			// World-space, not camera-relative — so the server can replay it
+			// without knowing each client's camera orientation (ADR-0002).
+			Vector3 wishDir = new Vector3(inputDir.X, 0.0f, inputDir.Y);
+			// The Accel/Decel asymmetry ("change of pace", ADR-0003) lives in
+			// MovementMath now (issue #37) so it's unit-testable without a
+			// running Godot instance — this call is behavior-identical to the
+			// inline ComputeVelocity it replaced.
+			Velocity = MovementMath.ComputeVelocity(Velocity, wishDir, delta, MoveSpeed, Accel, Decel);
+		}
 
 		MoveAndSlide();
 	}

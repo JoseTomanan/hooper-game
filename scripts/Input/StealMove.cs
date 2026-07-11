@@ -22,7 +22,10 @@ namespace Hooper.Moves;
 /// The defender must commit BOTH to a timing window (Active overlaps the low
 /// dribble phase) AND to a side (TargetHand matches the holder's authoritative
 /// HandSide, ADR-0012).  BallController.ResolveStealAttempts evaluates both
-/// axes at JustEnteredActive via DefensiveResolution.StealSucceeds.
+/// axes via DefensiveResolution.StealSucceeds on EVERY tick the machine is in
+/// the Active phase (not just its entry tick) — the interval-overlap the ADR
+/// requires, produced by re-checking a point-in-band test each Active tick
+/// rather than sampling once (issue #96 remediation).
 ///
 /// ── Reaction-tilt asymmetry (ADR-0018 §3) ───────────────────────────────
 /// A defensive Active is no wider than the offensive vulnerable window it
@@ -51,8 +54,9 @@ public sealed class StealMove : CommittedMove
     /// direction disambiguated to a body-relative hand.
     ///
     /// Compared against the handler's authoritative HandSide (ADR-0012) by
-    /// DefensiveResolution.StealSucceeds at JustEnteredActive.  Body-relative:
-    /// a flick toward the handler's LEFT side targets HandSide.Left.
+    /// DefensiveResolution.StealSucceeds on every Active tick (see the class
+    /// doc's "Two-axis read").  Body-relative: a flick toward the handler's
+    /// LEFT side targets HandSide.Left.
     ///
     /// This is the "side" axis of the two-axis steal read (ADR-0018 §2):
     /// a steal committed to the wrong side fails even on perfect timing.

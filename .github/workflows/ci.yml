@@ -97,6 +97,172 @@ jobs:
       - name: Run InputMap defensive-actions assertion
         run: godot --headless --path . res://tests/integration/InputMapDefensiveActionsTest.tscn
 
+      # Steal TURNOVER mechanic, end to end (issue #96 remediation, ADR-0018).
+      # Boots a real BallController + two PlayerControllers headless, drives the
+      # deterministic tick clock, and asserts the server resolves a steal across
+      # the WHOLE Active window (not just its entry tick — the merged #96 bug).
+      # 'success' places the Active window so its entry tick is just below the
+      # exposed band and a later Active tick lands in it: entry-tick-only code
+      # whiffs (RED), per-Active-tick code steals→Loose (GREEN). 'whiff' places
+      # the window entirely above the band and asserts the ball stays Dribbling
+      # (guards against over-triggering). 'recovery-reset' (issue #176) runs the
+      # same steal through to a completed scramble recovery and asserts the
+      # dribble phase resets to 0 the instant the ball is re-caught, instead of
+      # staying frozen at its in-band value — the fix that closes the
+      # near-instant re-steal exploit a frozen phase enabled. Each exits
+      # 0=PASS/1=FAIL (ADR-0016).
+      - name: Run steal-turnover mechanic harness
+        run: |
+          godot --headless --path . res://tests/integration/StealTurnoverTest.tscn -- --harness-scenario=success
+          godot --headless --path . res://tests/integration/StealTurnoverTest.tscn -- --harness-scenario=whiff
+          godot --headless --path . res://tests/integration/StealTurnoverTest.tscn -- --harness-scenario=recovery-reset
+
+      # Held-ball out-of-bounds turnover (issue #179, adjudicating hitl #119).
+      # Boots a real BallController + two PlayerControllers headless and walks a
+      # player past the court line, asserting BallController.ResolvePlayerOutOfBounds
+      # (the surface unit tests cannot reach — it reads live player world
+      # position). 'held-turnover' proves the holder crossing the line flips
+      # possession; 'defender-exempt' proves the non-holder crossing it is a
+      # no-op; 'both-oob' proves no 60Hz strobe when both players are OOB AND
+      # pins the actual (intentional, documented) both-OOB no-op named in the
+      # audit as the suspected "still broken" repro; 'wall-placement' parses
+      # the live scenes/Main.tscn to assert the four Walls/WallCollision*
+      # shapes sit outside CourtMin/CourtMax. Each exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run OOB turnover harness
+        run: |
+          godot --headless --path . res://tests/integration/OobTurnoverTest.tscn -- --harness-scenario=held-turnover
+          godot --headless --path . res://tests/integration/OobTurnoverTest.tscn -- --harness-scenario=defender-exempt
+          godot --headless --path . res://tests/integration/OobTurnoverTest.tscn -- --harness-scenario=both-oob
+          godot --headless --path . res://tests/integration/OobTurnoverTest.tscn -- --harness-scenario=wall-placement
+
+      # Triple threat stance — Held-start possessions + dead-dribble rule
+      # (issue #193, ADR-0008 amendment). Boots a real BallController + two
+      # PlayerControllers headless and drives the actual production code path
+      # end to end: asserts the tipoff lands in a fresh, LIVE Held possession
+      # (not auto-chained into Dribbling); that TryStartDribble legitimately
+      # resumes a dribble on stick intent; that beginning a JumpShot (the real
+      # BeginCommittedMove path) cradles the dribble synchronously and sets
+      # the dead-dribble flag; that a further TryStartDribble is then refused;
+      # that a canceled pump-fake still leaves the player in dead Held; that a
+      # dribble move (Crossover/Hesitation) is refused while holding a Held
+      # ball, dead or live (#204 code-review fix — no burst, no HandSide
+      # flip); and that an OOB turnover (ADR-0008, already proven by
+      # OobTurnoverTest) resets the flag and starts the new holder's
+      # possession live. 'production-drive' (#204 code-review fix) presses
+      # REAL movement input (Input.ActionPress) and asserts the Held ->
+      # Dribbling transition happens via the UNMODIFIED PlayerController.
+      # CheckAutoStartDribble -> BallController.TryStartDribble production
+      # path, not a direct test-only call into the ball. Each exits
+      # 0=PASS/1=FAIL (ADR-0016).
+      - name: Run triple-threat / dead-dribble harness
+        run: |
+          godot --headless --path . res://tests/integration/TripleThreatTest.tscn -- --harness-scenario=dead-dribble
+          godot --headless --path . res://tests/integration/TripleThreatTest.tscn -- --harness-scenario=production-drive
+
+      # Crossover authoritative ball transit — no teleport (issue #195).
+      # Boots a real BallController + two PlayerControllers headless and
+      # drives an actual Crossover through the real BeginCommittedMove path
+      # (the same harness seam #193 added), waiting for the REAL
+      # PlayerController.HandSide flip a Crossover's Active-entry produces.
+      # 'crossover-sweep' samples the ball's authoritative lateral XZ offset
+      # every tick from the flip onward and asserts it dips well below the
+      # full HandOffset magnitude at some point (proves a real mid-body
+      # transit, not a one-tick HandSign snap) before settling on the
+      # opposite side. 'possession-change-no-sweep' walks the holder out of
+      # bounds (the already-proven OOB turnover) and asserts the fresh
+      # possession's hand reset NEVER activates a sweep
+      # (BallController.SweepActiveForHarness stays false every tick) —
+      # rule 2, a possession change snaps, it does not sweep.
+      # 'remote-handside-sweep' drives the HandSide flip through the
+      # broadcast-receive seam instead of the local Active-entry path —
+      # the remote-client display role (#195 review fix 4, PR #208) that
+      # the other two scenarios never reach. Each exits 0=PASS/1=FAIL
+      # (ADR-0016).
+      - name: Run crossover ball-sweep harness
+        run: |
+          godot --headless --path . res://tests/integration/CrossoverSweepTest.tscn -- --harness-scenario=crossover-sweep
+          godot --headless --path . res://tests/integration/CrossoverSweepTest.tscn -- --harness-scenario=possession-change-no-sweep
+          godot --headless --path . res://tests/integration/CrossoverSweepTest.tscn -- --harness-scenario=remote-handside-sweep
+
+      # In-place pivot plant (issue #172, ADR-0010 amendment). Unit tests
+      # (HeadingMathTests) already pin the pure HeadingMath.Step state machine;
+      # this drives a REAL PlayerController through the REAL Input singleton and
+      # the unmodified TickServerOwnPlayer -> SampleMoveInput -> Move() path,
+      # proving the plant/pivot gate actually withholds MoveAndSlide()
+      # displacement and that the >90° threshold, ~0.35s 180° completion time,
+      # and the #172-retuned exports are all live in the shipped wiring, not
+      # just correct in isolation. 'exports' checks BackTurnSlowFactor/
+      # MaxTurnRateDeg/PivotThresholdDeg; 'flick-180' proves a released flick
+      # keeps pivoting to completion with zero displacement and a ~0.35s
+      # timing band; 'held-135' proves a sustained >90° hold stays planted
+      # until reached, then resumes moving; 'no-plant-boundary' proves an
+      # exactly-90° turn never plants; 'committed-cancel' proves starting a
+      # committed move (def_steal) cancels an in-progress pivot immediately.
+      # Each exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run pivot-plant harness
+        run: |
+          godot --headless --path . res://tests/integration/PivotPlantTest.tscn -- --harness-scenario=exports
+          godot --headless --path . res://tests/integration/PivotPlantTest.tscn -- --harness-scenario=flick-180
+          godot --headless --path . res://tests/integration/PivotPlantTest.tscn -- --harness-scenario=held-135
+          godot --headless --path . res://tests/integration/PivotPlantTest.tscn -- --harness-scenario=no-plant-boundary
+          godot --headless --path . res://tests/integration/PivotPlantTest.tscn -- --harness-scenario=committed-cancel
+
+      # Moving crossover — momentum-aware burst with left-stick exit (issue
+      # #198, ADR-0003 amendment). CrossoverBurstMathTests already pin the
+      # pure composition function; this drives a REAL PlayerController
+      # through the REAL Input singleton and the unmodified TickServerOwnPlayer
+      # -> SampleMoveInput -> TickCommittedMoveBehavior path, proving Startup's
+      # GatherDecel genuinely bleeds (not hard-zeroes) momentum and that the
+      # composed burst actually lands in Velocity. 'retains-speed' drives the
+      # player to speed, throws a crossover with the left stick released to
+      # neutral by Active-entry, and asserts speed never hits zero across
+      # Startup+Active (the discriminator against the pre-#198 hard-zero
+      # model). 'stationary-forward-exit' throws a crossover from a dead stop
+      # with the left stick pushed toward the player's forward facing by
+      # Active-entry, and asserts the burst gains a forward component —
+      # impossible under the pre-#198 pure-lateral-only burst. Each exits
+      # 0=PASS/1=FAIL (ADR-0016).
+      # 'hesitation-still-hard-zeroes' is the regression guard for the ADR-0003
+      # amendment's own scoping claim ("bounded... to the moving crossover
+      # only") — a driving player who throws a Hesitation (not a Crossover)
+      # must still plant to a hard instant zero, not gain GatherDecel's bleed.
+      # 'remote-pending-stick' (code review, #198 fix round) covers the
+      # SERVER's copy of a REMOTE player: a node named "2" (TickServerRemotePlayer
+      # role) has its exit vector seeded into _pendingRawStick via the harness
+      # seam instead of the local Input singleton, proving that path — not just
+      # the own-player ReadInput() path the other scenarios exercise — reaches
+      # CrossoverBurstMath correctly.
+      - name: Run moving-crossover harness
+        run: |
+          godot --headless --path . res://tests/integration/MovingCrossoverTest.tscn -- --harness-scenario=retains-speed
+          godot --headless --path . res://tests/integration/MovingCrossoverTest.tscn -- --harness-scenario=stationary-forward-exit
+          godot --headless --path . res://tests/integration/MovingCrossoverTest.tscn -- --harness-scenario=hesitation-still-hard-zeroes
+          godot --headless --path . res://tests/integration/MovingCrossoverTest.tscn -- --harness-scenario=remote-pending-stick
+
+      # Behind-the-back (issue #194) — own CommittedMove subclass, shielded
+      # transit, narrower exit cone. CrossoverBurstMathExitConeTests/
+      # BehindTheBackTests (xUnit) already pin the pure cone-clamp math and
+      # the move's class/frame-data contract; this drives the LIVE glue.
+      # 'shielded-sweep' boots a real BallController + two PlayerControllers,
+      # begins a real BehindTheBack through BeginCommittedMove, and asserts
+      # the ball's forward offset goes NEGATIVE (genuinely behind the
+      # holder's centerline) during the sweep, with
+      # BallController.SweepIsBehindBodyForHarness true — the discriminator
+      # against Crossover's in-front sweep. 'narrower-exit-cone' drives the
+      # REAL SampleMoveInput -> RequestBeginMove("behindtheback") ->
+      # TickCommittedMoveBehavior path with a PURE LATERAL left-stick exit —
+      # exactly the input CrossoverBurstMathTests pins as producing zero
+      # forward burst for a plain Crossover — and asserts a real forward
+      # component appears, proving the move_size_up modifier + narrower cone
+      # are wired end-to-end. 'dead-dribble-gate' proves BehindTheBack
+      # respects the SAME Held-holder dead-dribble gate (#193) Crossover/
+      # Hesitation use. Each exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run behind-the-back harness
+        run: |
+          godot --headless --path . res://tests/integration/BehindTheBackTest.tscn -- --harness-scenario=shielded-sweep
+          godot --headless --path . res://tests/integration/BehindTheBackTest.tscn -- --harness-scenario=narrower-exit-cone
+          godot --headless --path . res://tests/integration/BehindTheBackTest.tscn -- --harness-scenario=dead-dribble-gate
+
       # Dual-instance harness, increment 1: two headless Godot processes complete
       # a real ENet handshake over localhost. The orchestrator launches a server
       # and a client of the same scene and reads the client's exit code. This is
@@ -131,3 +297,21 @@ jobs:
         run: |
           chmod +x tests/integration/run-net-node-replication.sh
           tests/integration/run-net-node-replication.sh godot
+
+      # Dual-instance harness: BehindTheBack broadcast-driven shielded sweep
+      # (issue #212). The single-instance BehindTheBackTest cannot reach
+      # PlayerController.DisplayMoveId()'s _serverMoveId branch — in one
+      # process Multiplayer.IsServer() is unconditionally true, so every node
+      # reads its LIVE local machine. Here the server (listen-server via
+      # NetworkManager.HostGame, so it owns holder node "1") begins a real
+      # BehindTheBack; the CLIENT process passes only if, on the SAME
+      # live-sweep tick, its own locally-rendered ball flags the sweep
+      # behind-body, the remote holder's DisplayMoveId() returns
+      # "behindtheback" (the broadcast branch — the client's copy of the
+      # opponent never advances a local machine), and the ball's forward
+      # offset goes genuinely NEGATIVE behind the holder's centerline. The
+      # client's exit code is the verdict (ADR-0016).
+      - name: Run dual-instance behind-the-back sweep harness
+        run: |
+          chmod +x tests/integration/run-net-behindtheback-sweep.sh
+          tests/integration/run-net-behindtheback-sweep.sh godot

@@ -27,6 +27,37 @@ namespace Hooper.Ball;
 public static class CourtBounds
 {
     /// <summary>
+    /// The single source of truth for the half-court play rectangle. Every
+    /// consumer of the court boundary — the <see cref="BallController.CourtMin"/>/
+    /// <see cref="BallController.CourtMax"/> export defaults, <c>CourtVisuals</c>'
+    /// white outline (which reads those exports live), and every test fixture
+    /// that needs "the court rectangle" — must derive from these two fields
+    /// instead of re-typing the numbers. Before this existed, five separate
+    /// test files hardcoded the same literals independently of production; a
+    /// future boundary change (like the M8b sideline widening this was
+    /// introduced for) had no way to prove the visual line and the rule
+    /// boundary hadn't silently drifted apart, short of grepping for magic
+    /// numbers. Centralizing here means changing the court's width or depth is
+    /// a one-line edit that every consumer — code and test — picks up for free.
+    ///
+    /// X = left/right sideline, Y (used as the Z axis — see class doc "Why XZ
+    /// only") = near/far baseline.
+    ///
+    /// Sideline half-width is 7.62 m (25 ft — regulation NBA half-court width
+    /// is 50 ft / 15.24 m). Widened from an earlier ±4.88 m (M8b, human design
+    /// call 2026-07-03): the narrower value read as visibly cramped next to the
+    /// baseline gap to the back wall, and regulation width is the more
+    /// realistic reference per ADR-0014. Baseline bounds (Z, unchanged) leave a
+    /// ~1 m gap to the back wall (Z ≈ -2.0); the physical side walls sit at
+    /// X ≈ ±10.0, so widening to ±7.62 still leaves a ~2.4 m buffer — plenty of
+    /// backstop room before the walls come into play.
+    /// </summary>
+    public static readonly Vector2 DefaultMin = new(-7.62f, -1.0f);
+
+    /// <summary>Upper bound of the play rectangle. See <see cref="DefaultMin"/>.</summary>
+    public static readonly Vector2 DefaultMax = new(7.62f, 11.88f);
+
+    /// <summary>
     /// Returns <paramref name="position"/> with its X and Z components clamped
     /// to the rectangle [<paramref name="min"/>.X … <paramref name="max"/>.X] ×
     /// [<paramref name="min"/>.Y … <paramref name="max"/>.Y].  Y is preserved

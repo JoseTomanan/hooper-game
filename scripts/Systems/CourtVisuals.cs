@@ -187,27 +187,49 @@ public partial class CourtVisuals : Node3D
 
 	/// <summary>
 	/// Builds four thin box-mesh segments tracing the CourtMin/CourtMax rectangle.
+	///
+	/// Bug fix (/diagnose, 2026-07-03): this node has Scale.X = 1.8 (Main.tscn)
+	/// — sideline axis only, Z/baseline is unscaled. Every X-derived value here
+	/// (min.X, max.X, w, cx) is divided by sx below before use, so that once
+	/// Godot applies the parent's Scale.X to these child segments, the line
+	/// renders back at the TRUE world-space CourtMin.X/CourtMax.X — the exact
+	/// boundary CourtBounds.IsOutOfBounds enforces against player/ball
+	/// GlobalPosition (Players/Ball are unscaled siblings of this node). Before
+	/// this fix the line rendered at min.X/max.X * 1.8 — roughly double the
+	/// real boundary — so a player could stand what looked like safely inside
+	/// the line while already out of bounds by rule. Mirrors the sx pattern
+	/// BuildClearLineArc (below, disabled) already uses for the same reason.
+	/// Z is left untouched — no scale applies to that axis.
 	/// </summary>
 	private void BuildCourtBoundOutline()
 	{
 		var min = _ball.CourtMin;
 		var max = _ball.CourtMax;
 
-		float w  = max.X - min.X;  // court width  (X axis)
-		float d  = max.Y - min.Y;  // court depth  (Z axis, stored in Vector2.Y)
-		float cx = (min.X + max.X) * 0.5f;
+		float sx = Scale.X > 1e-6f ? Scale.X : 1f;
+
+		float w  = (max.X - min.X) / sx;  // court width  (X axis, scale-compensated)
+		float d  = max.Y - min.Y;         // court depth  (Z axis, stored in Vector2.Y — unscaled)
+		float cx = (min.X + max.X) * 0.5f / sx;
 		float cz = (min.Y + max.Y) * 0.5f;
 		float t  = BoundLineThickness;
 		float h  = BoundLineHeight;
 		float y  = IndicatorHeight + h * 0.5f;
+		float minX = min.X / sx;
+		float maxX = max.X / sx;
+		// Thickness is also an X-dimension extent in two of the four segments
+		// below (the near/far walls' corner overlap, and the left/right walls'
+		// own width) — compensate it the same way so the rendered stroke width
+		// stays a true `t` in world space instead of also stretching by sx.
+		float tx = t / sx;
 
 		// Near wall (min Z), far wall (max Z), left wall (min X), right wall (max X).
 		var segments = new (Vector3 size, Vector3 pos)[]
 		{
-			(new Vector3(w + t * 2f, h, t), new Vector3(cx,    y, min.Y)),
-			(new Vector3(w + t * 2f, h, t), new Vector3(cx,    y, max.Y)),
-			(new Vector3(t, h, d),           new Vector3(min.X, y, cz)),
-			(new Vector3(t, h, d),           new Vector3(max.X, y, cz)),
+			(new Vector3(w + tx * 2f, h, t), new Vector3(cx,  y, min.Y)),
+			(new Vector3(w + tx * 2f, h, t), new Vector3(cx,  y, max.Y)),
+			(new Vector3(tx, h, d),          new Vector3(minX, y, cz)),
+			(new Vector3(tx, h, d),          new Vector3(maxX, y, cz)),
 		};
 
 		var mat = new StandardMaterial3D

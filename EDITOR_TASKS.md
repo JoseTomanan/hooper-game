@@ -241,12 +241,14 @@ present (they were added by text-edit to `project.godot` in the PR):
 
 | Action | Binding |
 |---|---|
-| `aim_right` | Joypad Axis 2 (+1.0, deadzone 0.5) — right stick right |
-| `aim_left` | Joypad Axis 2 (−1.0, deadzone 0.5) — right stick left |
-| `aim_down` | Joypad Axis 3 (+1.0, deadzone 0.5) — right stick down |
-| `aim_up` | Joypad Axis 3 (−1.0, deadzone 0.5) — right stick up |
-| `move_crossover` | Keyboard **Q** (keyboard fallback, no gamepad needed) |
+| `aim_right` | Joypad Axis 2 (+1.0, deadzone 0.5) — right stick right + Keyboard **L** |
+| `aim_left` | Joypad Axis 2 (−1.0, deadzone 0.5) — right stick left + Keyboard **J** |
+| `aim_down` | Joypad Axis 3 (+1.0, deadzone 0.5) — right stick down + Keyboard **K** |
+| `aim_up` | Joypad Axis 3 (−1.0, deadzone 0.5) — right stick up + Keyboard **I** |
 | `move_feint` | Keyboard **E** + Joypad L1 button (index 9) |
+
+(IJKL emulate the right stick on keyboard — issue #191. There is no separate
+keyboard crossover action; the old one-key `move_crossover` (Q) was removed.)
 
 If any are missing, add them manually in the Input Map tab and save.
 
@@ -264,7 +266,9 @@ Run `Main.tscn` with a single instance:
 
 **Test A — Crossover via keyboard (no gamepad required):**
 1. Move the capsule with WASD to confirm normal movement still works.
-2. Press **Q**. The capsule should:
+2. Hold **L** (aim right — toward the empty hand; the ball starts Left) for at
+   least ~0.1 s (>4 physics ticks, so the recognizer confirms a crossover
+   rather than a feint). The capsule should:
    - **Freeze** for ~6 physics ticks (~0.1 s) — this is the startup telegraph.
      The freeze must be visible and readable. If it blinks and you miss it,
      the startup window is too short — raise `StartupFrames` in `Crossover.DefaultFrameData`.
@@ -278,18 +282,23 @@ Run `Main.tscn` with a single instance:
      Recovery; check git diff on `TickCommittedMoveBehavior`).
 
 **Test B — Feint during startup:**
-1. Press **Q** to start the crossover.
+1. Hold **J** or **L** (toward the empty hand) to start the crossover.
 2. Immediately (within the first 4 physics ticks ≈ first 0.07 s) press **E**.
 3. Expected: the capsule unfreezes immediately, returns to normal movement.
    The burst and recovery do NOT occur.
 4. If feint has no effect, the feint-window may have passed — practice pressing
-   E sooner after Q. The window is `FeintWindowFrames = 4` ticks.
+   E sooner after the crossover key. The window is `FeintWindowFrames = 4` ticks.
+   (A quick tap-and-release of J/L under 4 ticks is itself a gesture feint —
+   no move starts at all; that's the same micro-fake as Test D step 1.)
 
 **Test C — Recovery blocks re-input:**
-1. Press **Q** to trigger a full crossover (do NOT feint).
-2. During the recovery slide, press **Q** again.
-3. Expected: the second Q has no effect. A new crossover only starts after
-   the recovery phase fully completes.
+1. Hold **J** or **L** (toward the empty hand) to trigger a full crossover
+   (do NOT feint).
+2. During the recovery slide, hold the opposite key (the ball has swapped
+   hands, so the opposite direction now points at the empty hand).
+3. Expected: the second input has no effect. A new crossover only starts after
+   the recovery phase fully completes — after which repeated alternating
+   J/L holds should swap the ball L→R→L indefinitely.
 
 **Test D — Gamepad (if a controller is connected):**
 1. Flick the **right stick** left or right quickly (less than ~0.07 s hold)
@@ -310,7 +319,7 @@ When all four tests pass, **Milestone 3 is proven**. Close issues #14, #15,
 
 | Symptom | Likely cause |
 |---|---|
-| Q does nothing | `move_crossover` action not in Input Map — add it (Step 2) |
+| J/L do nothing | `aim_*` actions missing their keyboard events in the Input Map — re-add IJKL (Step 2) |
 | Capsule freezes but never bursts | `ActiveFrames` = 0 or Crossover.DefaultFrameData wrong |
 | Burst fires but recovery instant | `RecoveryFrames` = 0 in DefaultFrameData |
 | Feint (E) never works | `FeintWindowFrames` = 0, or pressing E after the window closes |
@@ -371,8 +380,8 @@ With both windows on the court:
      once per session right now — there's no catch/possession-contest yet
      (future issue). One shot per window is enough to verify sync.
 3. **Committed move sync** — on EITHER player, trigger a crossover
-   (`move_crossover` / right-stick flick, from M3). Confirm in the OTHER
-   window:
+   (hold J/L toward the empty hand, or a right-stick flick, from M3).
+   Confirm in the OTHER window:
    - The startup freeze, lateral burst, and recovery slide all appear,
      matching what the triggering window shows.
    - No visible desync or teleport/snap during any phase.
@@ -749,8 +758,9 @@ engine — that is the only part that cannot be automated.
 ### Step 1 — Confirm wall placement (one-time)
 
 Open `Main.tscn`. The four `Walls/WallCollision*` shapes should sit **outside**
-the `CourtMin (-4.88, -1.0)` / `CourtMax (4.88, 11.88)` rectangle (the scene
-ships them at ≈ X ±10, Z ≈ −2.1 / 12.1). If any wall is *on* the court line,
+the `CourtMin (-7.62, -1.0)` / `CourtMax (7.62, 11.88)` rectangle — regulation
+half-court width, widened from an earlier ±4.88 (M8b) — (the scene ships them
+at ≈ X ±10, Z ≈ −2.1 / 12.1). If any wall is *on* the court line,
 move it out by a metre or two. Do **not** put a wall on the court line.
 
 ### Step 2 — Verify (two instances, host + join)

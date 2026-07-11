@@ -56,6 +56,33 @@ public sealed class CommittedMoveMachine
     public bool IsActive => Phase != MovePhase.Inactive;
 
     /// <summary>
+    /// (#175) True while Phase == Recovery AND this Recovery was entered via
+    /// EndActiveEarly() rather than a normal Tick()-driven Active→Recovery
+    /// frame-count expiry. Level-triggered — true for the WHOLE Recovery
+    /// duration that resulted from an early end, not a single-tick edge — so
+    /// the network broadcast that carries it (PlayerController.ReceiveState)
+    /// survives an UnreliableOrdered packet drop: the very next broadcast
+    /// still carries true as long as the server machine is still in that
+    /// Recovery. See ShouldForceRecovery below for the reconciliation gate
+    /// this field feeds.
+    /// </summary>
+    public bool WasRecoveryEnteredEarly => Phase == MovePhase.Recovery && _recoveryWasEarly;
+
+    /// <summary>
+    /// (#175) Backing field for WasRecoveryEnteredEarly. Set true ONLY inside
+    /// EndActiveEarly(); every normal EnterPhase() transition (the Tick()-driven
+    /// Startup→Active→Recovery→Inactive graph) resets it false first, so it can
+    /// never be mistaken for an ordinary Active→Recovery boundary crossing.
+    /// Begin() also resets it defensively — the Feint() pump-fake path (#77)
+    /// transitions Startup→Recovery WITHOUT calling EnterPhase() (see Feint()'s
+    /// doc), so Begin()'s reset is what makes "a new move never inherits the
+    /// PREVIOUS move's early-end flag" a stated invariant rather than an
+    /// accident of every prior lifecycle happening to exit through Inactive
+    /// (which already clears it via EnterPhase) before the next Begin().
+    /// </summary>
+    private bool _recoveryWasEarly;
+
+    /// <summary>
     /// True for exactly ONE tick — the tick on which the machine enters Active.
     /// The node polls this to know when to apply the move's one-shot effect
     /// (e.g. the lateral burst of a crossover). Cleared on the following Tick().
@@ -81,6 +108,7 @@ public sealed class CommittedMoveMachine
         Phase             = MovePhase.Startup;
         FrameInPhase      = 0;
         JustEnteredActive = false;
+        _recoveryWasEarly = false; // (#175) see the field's doc for why this reset is load-bearing
         return true;
     }
 
@@ -188,6 +216,46 @@ public sealed class CommittedMoveMachine
         return true;
     }
 
+    /// <summary>
+    /// Ends the Active phase early, transitioning straight to Recovery without
+    /// waiting for FrameInPhase to reach ActiveFrames. Legal only from Active;
+    /// a no-op returning false otherwise.
+    ///
+    /// Why this exists (issue #96 remediation): every OTHER phase transition in
+    /// this machine is driven purely by frame counts (Tick() above) because no
+    /// move previously had a side effect that could resolve before its Active
+    /// window naturally expired. The steal is the first — a successful steal
+    /// changes BallState (Dribbling → Loose) mid-Active, and the ball can come
+    /// straight back to the same holder while dribble phase is frozen (it only
+    /// advances in TickDribbling), which would let the SAME resolved StealMove
+    /// re-fire on every remaining Active tick. EndActiveEarly caps a committed
+    /// move's real-world effect at "resolves once, then pays Recovery like
+    /// normal" — the caller (PlayerController.EndResolvedSteal) invokes this
+    /// exactly when BallController.ResolveStealAttempts confirms a success.
+    /// </summary>
+    /// <returns>True if the phase advanced to Recovery; false if not in Active.</returns>
+    public bool EndActiveEarly()
+    {
+        if (Phase != MovePhase.Active) return false;
+        EnterPhase(MovePhase.Recovery);
+        _recoveryWasEarly = true; // (#175) marks THIS Recovery as early-entered — see WasRecoveryEnteredEarly
+
+        // (#175 audit R3) A steal that resolves on the very tick Active is
+        // entered (FrameInPhase == 0) races JustEnteredActive: EnterPhase(Active)
+        // just set it true earlier this same tick's Tick() call, and
+        // EnterPhase(Recovery) above only ever SETS it (on entering Active),
+        // never clears it for any other destination. Left alone, the flag
+        // would read true for one tick while Phase has already moved to
+        // Recovery — a phase/flag mismatch no consumer currently exploits
+        // (JumpShotReleaseResolver and the crossover burst check both only
+        // read it during Active), but it's a landmine for a future consumer.
+        // EndActiveEarly is the one path that can make Active end WITHOUT
+        // Tick() naturally clearing this flag on the next call, so it must
+        // clear it explicitly here.
+        JustEnteredActive = false;
+        return true;
+    }
+
     // ── Network reconciliation ───────────────────────────────────────────────
 
     /// <summary>
@@ -213,7 +281,21 @@ public sealed class CommittedMoveMachine
     /// Authoritative move reconstructed from the broadcast's moveId/payload, or
     /// null when phase is Inactive (no move running).
     /// </param>
-    public void ForceState(MovePhase phase, int frameInPhase, CommittedMove? move)
+    /// <param name="recoveryWasEarly">
+    /// (#175) Authoritative value of WasRecoveryEnteredEarly to adopt — true
+    /// when this ForceState call is reconciling a client onto a Recovery the
+    /// server entered via EndActiveEarly() (see ShouldForceRecovery). Defaults
+    /// false: every OTHER ForceState caller (the existing Inactive-correction
+    /// path) is forcing AWAY from a move entirely, where the flag reads false
+    /// regardless via WasRecoveryEnteredEarly's own Phase == Recovery guard —
+    /// but the backing field itself must still be set correctly here (not left
+    /// stale) so a later Begin() → EndActiveEarly() → Recovery cycle on this
+    /// SAME machine instance doesn't inherit a leftover true from a previous
+    /// forced Recovery. Doubt-cycle finding: ForceState is documented elsewhere
+    /// as an unconditional overwrite of every field ForceState knows about —
+    /// leaving this one field un-overwritten would silently violate that.
+    /// </param>
+    public void ForceState(MovePhase phase, int frameInPhase, CommittedMove? move, bool recoveryWasEarly = false)
     {
         // (Doubt cycle 1, finding #6) A non-Inactive phase with no move is
         // nonsensical — Tick() dereferences CurrentMove! unconditionally
@@ -237,6 +319,7 @@ public sealed class CommittedMoveMachine
         // on this RPC to trigger the burst; the server's own Tick() already
         // raised it locally inside the server's authoritative simulation.
         JustEnteredActive = false;
+        _recoveryWasEarly = recoveryWasEarly;
     }
 
     /// <summary>
@@ -272,12 +355,69 @@ public sealed class CommittedMoveMachine
         return serverSaysInactive && clientPastStartup;
     }
 
+    /// <summary>
+    /// (Issue #175) Decides whether a client's local Active prediction should
+    /// be force-corrected to Recovery because the SERVER already resolved this
+    /// move's Active phase early (EndActiveEarly() — today only a successful
+    /// steal, ADR-0018). Deliberately kept SEPARATE from ShouldForceInactive
+    /// rather than folding a `serverPhase == Recovery` case into it — the
+    /// issue this codifies is explicit that doing so would fire on every
+    /// LEGITIMATE Active→Recovery boundary crossing under ordinary jitter
+    /// (the client's own Tick() reaches Recovery around the same wall-clock
+    /// time the server's broadcast reports it, for every move, not just an
+    /// early-ended one). What distinguishes "early" from "on schedule" is not
+    /// serverPhase alone — it's the level-triggered WasRecoveryEnteredEarly bit,
+    /// which the server only ever sets true via EndActiveEarly(), never via a
+    /// normal Tick()-driven transition (see the field's doc on
+    /// CommittedMoveMachine).
+    ///
+    /// Correction direction: Active → Recovery ONLY, never the reverse and
+    /// never into a phase the client didn't already predict — same
+    /// one-directional, no-flicker discipline ShouldForceInactive already
+    /// follows. FrameInPhase is still not compared (same staleness reasoning);
+    /// the caller forces frameInPhase to 0 via ForceState, treating this as a
+    /// discrete identity correction, not a continuous value snap.
+    ///
+    /// Move-identity guard (doubt-cycle finding): without comparing moveId,
+    /// this predicate would be exposed to the SAME stale-broadcast race
+    /// ShouldForceInactive's own doc already accepts as a bounded trade-off
+    /// (PlayerController.ReconcileFromServer's "phantom second move" case) —
+    /// but where ShouldForceInactive's version of that race only ever reverts
+    /// to a state the server agrees with, this correction's payload (forcing
+    /// Recovery on the CLIENT's current move) would wrongly truncate a brand
+    /// new, never-early-ended move B's Active phase off a stale broadcast that
+    /// was actually reporting move A's early end. Requiring
+    /// localMoveId == serverMoveId closes that: a stale echo of move A cannot
+    /// match a locally different move B's identity, so the correction only
+    /// ever fires for the SAME move instance-in-kind the server is reporting on.
+    /// </summary>
+    /// <param name="localPhase">This machine's current Phase.</param>
+    /// <param name="serverPhase">The phase from the most recent server broadcast.</param>
+    /// <param name="serverRecoveryWasEarly">The server's WasRecoveryEnteredEarly value from the same broadcast.</param>
+    /// <param name="localMoveId">This machine's CurrentMove?.Id (empty/null if none).</param>
+    /// <param name="serverMoveId">The moveId from the same server broadcast.</param>
+    /// <returns>True if ForceState(Recovery, frameInPhase: 0, ..., recoveryWasEarly: true) should be called.</returns>
+    public static bool ShouldForceRecovery(
+        MovePhase localPhase, MovePhase serverPhase, bool serverRecoveryWasEarly,
+        string? localMoveId, string? serverMoveId)
+    {
+        if (localPhase != MovePhase.Active) return false;
+        if (serverPhase != MovePhase.Recovery) return false;
+        if (!serverRecoveryWasEarly) return false;
+        return localMoveId == serverMoveId;
+    }
+
     // ── Private helpers ───────────────────────────────────────────────────────
 
     private void EnterPhase(MovePhase next)
     {
         Phase        = next;
         FrameInPhase = 0;
+        // (#175) Cleared on every NORMAL (Tick()-driven) transition, including
+        // into Recovery — only EndActiveEarly() re-sets this true, immediately
+        // after its own EnterPhase(Recovery) call, so an ordinary Active→Recovery
+        // expiry can never be mistaken for an early end.
+        _recoveryWasEarly = false;
 
         if (next == MovePhase.Active)
             JustEnteredActive = true;

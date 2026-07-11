@@ -55,8 +55,8 @@ public partial class NetStateSyncTest : Node
     public override void _Ready()
     {
         string[] args = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).ToArray();
-        _role = ReadArg(args, "--harness-role", "server");
-        _port = int.TryParse(ReadArg(args, "--harness-port", "7777"), out int p) ? p : 7777;
+        _role = HarnessArgs.ReadArg(args, "--harness-role", "server");
+        _port = int.TryParse(HarnessArgs.ReadArg(args, "--harness-port", "7777"), out int p) ? p : 7777;
 
         GD.Print($"[net-statesync] role={_role} port={_port} booting…");
 
@@ -168,17 +168,5 @@ public partial class NetStateSyncTest : Node
         _finished = true;
         GD.Print($"[net-statesync] {_role} RESULT: {(code == 0 ? "PASS" : "FAIL")} (exit {code})");
         GetTree().Quit(code);
-    }
-
-    private static string ReadArg(string[] args, string flag, string fallback)
-    {
-        for (int i = 0; i < args.Length; i++)
-        {
-            if (args[i] == flag && i + 1 < args.Length)
-                return args[i + 1];
-            if (args[i].StartsWith(flag + "="))
-                return args[i].Substring(flag.Length + 1);
-        }
-        return fallback;
     }
 }

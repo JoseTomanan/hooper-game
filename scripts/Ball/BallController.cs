@@ -91,6 +91,40 @@ public partial class BallController : Node3D
 	/// </summary>
 	[Export] public float HandOffset { get; set; } = 0.18f;
 
+	/// <summary>
+	/// Duration (seconds) of the crossover's authoritative cross-body ball
+	/// transit (#195) — how long the ball takes to sweep from the old hand's
+	/// lateral offset to the new one instead of teleporting there in one
+	/// tick. ~0.12s default (feel-tuned; hitl sign-off deferred to the
+	/// per-milestone human pass, NOT this issue — see CrossoverBallSweep).
+	/// </summary>
+	[Export] public float CrossoverSweepDuration { get; set; } = 0.12f;
+
+	/// <summary>
+	/// Depth (metres) of the single-arch low dip the ball takes at the
+	/// midpoint of a crossover sweep (#195) — a real cross-body dribble dips
+	/// low and protective through the middle of the transit rather than
+	/// sliding flat across the body. ~0.15m default (feel-tuned; hitl
+	/// sign-off deferred, NOT this issue — see CrossoverBallSweep).
+	/// </summary>
+	[Export] public float CrossoverSweepDipDepth { get; set; } = 0.15f;
+
+	/// <summary>
+	/// How far (metres) BEHIND the holder's DribbleForwardOffset baseline the
+	/// ball is pulled at the midpoint of a BehindTheBack sweep (#194) — the
+	/// "shielded" transit: the ball travels behind the body, away from a
+	/// front-facing defender, instead of Crossover's in-front sweep. Larger
+	/// than DribbleForwardOffset (0.5) by default so the ball's forward
+	/// offset actually goes NEGATIVE at the peak (i.e. genuinely behind the
+	/// holder's centerline, not just less-in-front). Reuses the SAME
+	/// single-arch curve CrossoverBallSweep.Offset already computes for the
+	/// vertical dip (0 at both ends, peak at t=0.5) — one pure curve, two
+	/// consumers, per the "composition over hierarchy" call (#194). Feel-
+	/// tuned default, hitl sign-off deferred to the per-milestone human pass
+	/// like every other sweep tunable.
+	/// </summary>
+	[Export] public float BehindTheBackSweepDepth { get; set; } = 0.7f;
+
 	/// <summary>Full down-and-up dribble cycle duration (seconds).</summary>
 	[Export] public float DribblePeriod { get; set; } = 0.6f;
 
@@ -213,14 +247,22 @@ public partial class BallController : Node3D
 	/// (EDITOR_TASKS.md — court-bound step, issue #46). Inset from the raw
 	/// floor geometry by ~BallRadius to prevent the ball from resting half-
 	/// outside the floor mesh.
+	///
+	/// Defaults to <see cref="CourtBounds.DefaultMin"/> — the single source of
+	/// truth every test fixture also derives from, so this export, the white
+	/// outline CourtVisuals draws from it, and the test suite can never drift
+	/// apart on what "the court rectangle" is. Change the width/depth THERE,
+	/// not here, unless you're deliberately overriding a specific instance in
+	/// the Inspector.
 	/// </summary>
-	[Export] public Vector2 CourtMin { get; set; } = new(-4.88f, -1.0f);
+	[Export] public Vector2 CourtMin { get; set; } = CourtBounds.DefaultMin;
 
 	/// <summary>
 	/// Floor-plane (XZ) upper bound of the playable court rectangle: X = right
-	/// edge, Y = far edge (largest Z). See CourtMin for layout notes.
+	/// edge, Y = far edge (largest Z). See CourtMin for layout notes and the
+	/// <see cref="CourtBounds.DefaultMax"/> single-source-of-truth rationale.
 	/// </summary>
-	[Export] public Vector2 CourtMax { get; set; } = new(4.88f, 11.88f);
+	[Export] public Vector2 CourtMax { get; set; } = CourtBounds.DefaultMax;
 
 	// ── Shot scatter tunables (issue #62, ADR-0009) ──────────────────────
 
@@ -391,6 +433,25 @@ public partial class BallController : Node3D
 	/// </summary>
 	[Export] public float StealHiExposed { get; set; } = 0.65f;
 
+	/// <summary>
+	/// Horizontal speed (m/s) of the provisional "knock" velocity a successful
+	/// steal imparts on the now-Loose ball, directed from the holder toward the
+	/// stealing defender (ADR-0014 — real 1v1 ball: a stolen ball is knocked
+	/// toward whoever poked it away, not left inert). Purely provisional —
+	/// precise feel tuning is deferred to #104 + the per-milestone feel pass
+	/// (ADR-0015); this value only needs to be non-degenerate so ResolveStealAttempts
+	/// can seed a real ShotArc (see that method's doc for why an unseeded _arc
+	/// crashes TickLoose).
+	/// </summary>
+	[Export] public float StealKnockSpeed { get; set; } = 1.5f;
+
+	/// <summary>
+	/// Vertical rise (m/s) of the same provisional knock velocity — a small pop
+	/// so the ball briefly leaves the floor plane instead of sliding, matching
+	/// the visual read of a real deflection. Provisional; tuned in #104.
+	/// </summary>
+	[Export] public float StealKnockRiseSpeed { get; set; } = 1.0f;
+
 	// ── Block tunables (M10, issue #98, ADR-0018 §2) ─────────────────────
 
 	/// <summary>
@@ -438,6 +499,35 @@ public partial class BallController : Node3D
 	public bool IsCleared { get; private set; }
 
 	/// <summary>
+	/// Per-possession dead-dribble flag (#193, ADR-0008 dead-dribble amendment).
+	/// False means the current possession's dribble is still LIVE; true means
+	/// it has been cradled (a JumpShot/pump-fake Startup — see
+	/// CradleForShotStartup) and StartDribble() is refused for the rest of
+	/// this possession (DeadDribbleRule).
+	///
+	/// Reset to false on every possession change (AwardPossession) and on the
+	/// tipoff (TryAssignTipoffHolder) — never independently on "score", because
+	/// a make-it-take-it reset IS a possession change and already routes
+	/// through AwardPossession.
+	///
+	/// Broadcast alongside IsCleared (same ReceiveState payload, same
+	/// unconditional force-correct in ReconcileFromServer) — NOT the
+	/// "predicted-everywhere, never corrected" treatment an earlier draft of
+	/// this issue tried. Reasoning (doubt-driven review, #193): every OTHER
+	/// discrete identity write in this class (StateMachine.Current/HolderPeerId)
+	/// gets force-corrected on a client/server disagreement via ForceState —
+	/// but that correction can re-point HolderPeerId at a DIFFERENT peer (e.g.
+	/// the client mispredicted which player won a loose-ball scramble) while
+	/// leaving THIS flag holding whatever value it last had for a completely
+	/// different possession. Unlike IsCleared's already-accepted <=1-RTT
+	/// cosmetic window, an uncorrected stale HasDribbled=true would wrongly
+	/// refuse a legitimate drive attempt for the REST of that possession, not
+	/// just a sub-frame — broadcasting it closes that gap the same way
+	/// IsCleared already closes its own.
+	/// </summary>
+	public bool HasDribbled { get; private set; }
+
+	/// <summary>
 	/// Server-only: has the current holder been INSIDE the clear line at some point
 	/// during this possession? Crossing-detection for the take-it-back rule (#135):
 	/// a possession clears only on a genuine take-back (inside → behind), not by
@@ -468,9 +558,54 @@ public partial class BallController : Node3D
 	/// (M9, #83/ADR-0012). Ball-hand is no longer a cosmetic value derived here;
 	/// it lives on PlayerController.HandSide (server-authoritative, predicted +
 	/// reconciled) and the ball mesh merely READS it (HandSign). This field is the
-	/// edge-detector that fires the once-per-possession reset (UpdateHandSide).
+	/// edge-detector that fires the once-per-possession reset (AdvanceHandSweep,
+	/// formerly UpdateHandSide — renamed when #195 folded the crossover ball
+	/// sweep trigger into the same method).
 	/// </summary>
 	private int _handSideHolderId;
+
+	/// <summary>
+	/// The holder's HandSide as of the last AdvanceHandSweep call (#195) — the
+	/// OTHER edge-detector alongside _handSideHolderId. Comparing this against
+	/// the current tick's holder.HandSide (itself already broadcast +
+	/// reconciled, same as HandSign reads) is how a same-holder crossover flip
+	/// is told apart from a possession-change reset: _handSideHolderId changing
+	/// means "new holder, snap" (rule 2); this changing while
+	/// _handSideHolderId stays put means "same holder crossed over, sweep"
+	/// (rule 1). Null before any holder has ever been observed.
+	/// </summary>
+	private HandSide? _lastObservedHandSide;
+
+	/// <summary>True while a crossover ball sweep (#195) is interpolating the lateral hand offset.</summary>
+	private bool _sweepActive;
+
+	/// <summary>Ticks elapsed since the current sweep started (0 on the trigger tick itself).</summary>
+	private int _sweepTicks;
+
+	/// <summary>
+	/// Sweep length in ticks, derived from CrossoverSweepDuration at the
+	/// moment the sweep (re)started — computed via the physics tick rate
+	/// (Engine.PhysicsTicksPerSecond) so the sweep is a deterministic tick
+	/// count (ADR-0004), identical on every peer, rather than a wall-clock
+	/// timer that could drift between machines.
+	/// </summary>
+	private int _sweepDurationTicks;
+
+	/// <summary>Lateral factor the current sweep started from (an old HandSign, or an in-progress sweep's position on a re-cross — rule 3).</summary>
+	private float _sweepFromLateral;
+
+	/// <summary>Lateral factor the current sweep is travelling toward (the new HandSign).</summary>
+	private float _sweepToLateral;
+
+	/// <summary>
+	/// True when the CURRENT sweep is a BehindTheBack (behind-body/shielded)
+	/// transit rather than a Crossover (in-front) one (#194). Captured ONCE,
+	/// at the tick the flip is detected (see AdvanceHandSweep rule 1), from
+	/// the holder's DisplayMoveId() — never re-read mid-sweep, so a move
+	/// finishing its Active phase partway through the (shorter) sweep
+	/// animation cannot flip which path this in-flight sweep renders as.
+	/// </summary>
+	private bool _sweepIsBehindBody;
 
 	/// <summary>
 	/// The in-flight (or loose) trajectory. Non-null only while InFlight or
@@ -555,6 +690,7 @@ public partial class BallController : Node3D
 	private Vector3 _serverVel;
 	private int _serverHolderPeerId;
 	private bool _serverCleared;
+	private bool _serverHasDribbled;
 
 	/// <summary>True once ReceiveState has arrived since the last _PhysicsProcess.</summary>
 	private bool _hasNewState;
@@ -590,8 +726,60 @@ public partial class BallController : Node3D
 	/// RESULT (a possession change) is what ReceiveState carries. 0 until the
 	/// first possession (pre-tipoff), which ResolveRecipient treats as "no
 	/// turnover basis" (clamp, not an arbitrary award).
+	///
+	/// (#177 audit R1, amended) NOT set on every peer: the steal-turnover write
+	/// in ResolveStealAttempts (below) is a server-ONLY path into this field —
+	/// GoLoose() bypasses AwardPossession entirely (a live loose-ball scramble,
+	/// not a discrete Catch/Turnover edge), so the write happens once, on the
+	/// server's own copy, with no client-prediction counterpart. This is
+	/// currently safe DESPITE the exception: the sole consumer,
+	/// OobResolution.Award, is itself gated on isServer, and TickLoose's
+	/// client-side read of BallState never branches on this field. It would
+	/// stop being safe the day a client-side consumer is added — that consumer
+	/// would need its own reconciliation, not an assumption that this field is
+	/// already in sync (do NOT add a broadcast preemptively; the two known
+	/// current writers already have all the server-authority guarantees they need).
 	/// </summary>
 	private int _lastToucherPeerId;
+
+	/// <summary>
+	/// Test-only: exposes <see cref="_lastToucherPeerId"/> for the headless
+	/// integration harness (ADR-0016). The field itself must stay private —
+	/// production code never reads it from outside this class — but the steal
+	/// turnover harness (issue #96 remediation) needs to prove the defender,
+	/// not the offensive holder, is charged as the last toucher after a steal,
+	/// since that value is otherwise only observable indirectly (an actual OOB
+	/// roll, which the harness does not simulate).
+	/// </summary>
+	internal int LastToucherPeerIdForHarness => _lastToucherPeerId;
+
+	/// <summary>
+	/// Test-only: exposes <see cref="_dribble"/>'s current Phase for the
+	/// headless integration harness (ADR-0016, issue #176). Proves the live
+	/// engine — not just the pure DribbleCycle unit tests — actually resets
+	/// the phase at the moment AwardPossession fires after a scramble
+	/// recovery, which is the exact mechanism that closes the #176 re-steal
+	/// exploit (a frozen in-band phase resuming from where it froze instead
+	/// of restarting at 0).
+	/// </summary>
+	internal float DribblePhaseForHarness => _dribble.Phase;
+
+	/// <summary>
+	/// Test-only: exposes whether a crossover ball sweep (#195) is currently
+	/// interpolating. The harness needs this as a direct proof that a
+	/// possession-change hand reset produces NO sweep (rule 2) — position
+	/// alone can't distinguish "reset straight to the default hand" from "a
+	/// sweep that happens to already be at its endpoint", since both look
+	/// identical from outside once settled.
+	/// </summary>
+	internal bool SweepActiveForHarness => _sweepActive;
+
+	/// <summary>
+	/// Test-only: exposes whether the CURRENT sweep is a BehindTheBack
+	/// (behind-body) transit rather than a Crossover (in-front) one (#194) —
+	/// the harness discriminator between the two ball-transit paths.
+	/// </summary>
+	internal bool SweepIsBehindBodyForHarness => _sweepIsBehindBody;
 
 	// ── Shot scatter RNG (issue #62, ADR-0009) ─────────────────────────────
 
@@ -665,12 +853,14 @@ public partial class BallController : Node3D
 		// node, it is the first connecting client. Hardcoding peer 1 here parked
 		// the ball at the world origin forever on a dedicated host.
 		//
-		// StartDribble still runs so the ball begins Dribbling; with holder 0 it
-		// tracks the world origin until the server assigns a holder (a <=1-tick
-		// window once a player exists). This is the SAME pre-holder behaviour the
-		// listen-server already had between scene load and the Host button press.
+		// The state machine's own constructor already starts Held (#193: every
+		// possession — the tipoff included — now starts Held-not-Dribbling, so
+		// there is no separate "begin dribbling" step to run here). With
+		// holder 0 TickHeld tracks the world origin until the server assigns a
+		// holder (a <=1-tick window once a player exists) — the SAME pre-holder
+		// behaviour the listen-server already had between scene load and the
+		// Host button press.
 		StateMachine = new BallStateMachine(initialHolderPeerId: 0);
-		StateMachine.StartDribble();
 
 		// Seed the shot-scatter RNG from the editor-tunable ShotScatterSeed.
 		// Constructed on every peer (client + server) because _Ready runs
@@ -844,34 +1034,34 @@ public partial class BallController : Node3D
 			TryAssignTipoffHolder();
 		}
 
-		// Server-only: turn the ball over if the BALLHANDLER has crossed the court
-		// line (player-OOB rule). Runs before UpdateClearStatus so the clear check
-		// below evaluates the NEW holder, not the one being dispossessed.
-		if (IsServer)
-			ResolvePlayerOutOfBounds();
-
-		// Server-only: resolve defensive steal attempts (M10, issue #96, ADR-0018).
-		// Runs after the main state-switch so the dribble phase is already advanced
-		// this tick. A successful steal transitions Dribbling→Loose; the existing
-		// TickLoose scramble awards possession next tick (ADR-0008 §Amendment 2026-06-30).
-		if (IsServer)
-			ResolveStealAttempts();
-
-		// Server-only: clear the possession once the handler carries the ball
-		// back behind the clear line (#50). Server-authoritative; clients
-		// receive the flag in the broadcast below, never compute it.
-		if (IsServer)
-			UpdateClearStatus();
-
-		// Only the server broadcasts authoritative truth. Every peer (server
-		// included) already predicted its own copy above; the server's
-		// broadcast is what every OTHER peer reconciles against. IsCleared rides
-		// the same per-tick snapshot as the holder it belongs to — continuously
-		// resent, so a dropped packet self-heals on the next tick.
+		// Everything below is server-only authoritative resolution, run under a
+		// single guard (the order matters and is documented per step):
 		if (IsServer)
 		{
+			// Turn the ball over if the BALLHANDLER has crossed the court line
+			// (player-OOB rule). Runs before UpdateClearStatus so the clear check
+			// evaluates the NEW holder, not the one being dispossessed.
+			ResolvePlayerOutOfBounds();
+
+			// Resolve defensive steal attempts (M10, issue #96, ADR-0018). Runs
+			// after the main state-switch so the dribble phase is already advanced
+			// this tick. A successful steal transitions Dribbling→Loose; the
+			// existing TickLoose scramble awards possession next tick (ADR-0008
+			// §Amendment 2026-06-30).
+			ResolveStealAttempts();
+
+			// Clear the possession once the handler carries the ball back behind
+			// the clear line (#50). Clients receive the flag in the broadcast
+			// below, never compute it.
+			UpdateClearStatus();
+
+			// Broadcast authoritative truth. Every peer (server included) already
+			// predicted its own copy above; this broadcast is what every OTHER
+			// peer reconciles against. IsCleared rides the same per-tick snapshot
+			// as the holder it belongs to — continuously resent, so a dropped
+			// packet self-heals on the next tick.
 			Rpc(MethodName.ReceiveState,
-				(int)StateMachine.Current, GlobalPosition, CurrentVelocity(), StateMachine.HolderPeerId, IsCleared);
+				(int)StateMachine.Current, GlobalPosition, CurrentVelocity(), StateMachine.HolderPeerId, IsCleared, HasDribbled);
 		}
 
 		ApplySmoothCorrection();
@@ -979,6 +1169,13 @@ public partial class BallController : Node3D
 				// first basket must be allowed to count without a take-back.
 				IsCleared = true;
 
+				// The tipoff is also a fresh possession start (#193): its
+				// dribble is live. ForceState above kept whatever State this
+				// ball already was — Held by the state machine's own
+				// constructor default — so this only needs to reset the flag,
+				// not the discrete ball state.
+				HasDribbled = false;
+
 				GD.Print("[BallController] Tipoff holder assigned to peer ", peerId);
 				return;
 			}
@@ -1046,7 +1243,7 @@ public partial class BallController : Node3D
 	/// score — ADR-0008 §Amendment 2026-06-21).
 	///
 	/// ── Why the court line and not the walls ──────────────────────────────
-	/// The scene walls sit well OUTSIDE this line (≈ X ±10 vs the court's X ±4.88),
+	/// The scene walls sit well OUTSIDE this line (≈ X ±10 vs the court's X ±7.62),
 	/// so they act only as a far backstop; the turnover fires at the court line
 	/// long before a player could reach a wall. The deterministic ball ignores the
 	/// walls entirely (ADR-0004) — this rule, not a collider, is what makes leaving
@@ -1112,19 +1309,30 @@ public partial class BallController : Node3D
 	/// Called after the main state-switch (so the dribble phase is already
 	/// advanced for this tick), before the OOB and clear checks.
 	///
-	/// A steal succeeds iff the defender's committed-move machine just entered
-	/// Active on a StealMove (single-tick JustEnteredActive flag) AND both
-	/// steal axes pass (ADR-0018 §2):
+	/// A steal succeeds iff, on ANY tick the defender's committed-move machine is
+	/// in the Active phase of a StealMove, both steal axes pass (ADR-0018 §2):
 	///   Axis 1 — dribble phase in the exposed band [StealLoExposed, StealHiExposed]
 	///   Axis 2 — defender's TargetHand matches the holder's authoritative
 	///             HandSide (ADR-0012 — read from PlayerController, never from
 	///             the cosmetic FacingResolver)
 	///
-	/// On success: GoLoose() once — the ball transitions Dribbling → Loose.
-	/// The existing TickLoose proximity scramble then awards possession to
-	/// whichever player reaches the ball first (ADR-0008 §Decision-2, §Amendment
-	/// 2026-06-30: steal is a defense-induced Dribbling→Loose turnover; the
-	/// new holder is chosen by the scramble, not awarded immediately).
+	/// This is checked EVERY Active tick, not just the entry tick: ADR-0018
+	/// defines success as the Active window OVERLAPPING the exposed band (an
+	/// interval), so sampling only the entry tick (the merged #96 bug) collapsed
+	/// that to a point and left the Active window's width inert. Re-reading the
+	/// live _dribble.Phase each Active tick evaluates the interval model against
+	/// ground-truth phase — no projection, no duplicated dribble math — and
+	/// steals on the first in-band, matching-hand tick.
+	///
+	/// On success: GoLoose() once — the ball transitions Dribbling → Loose,
+	/// seeded with a provisional knock velocity (see below) — plus the
+	/// defender's StealMove Active phase is ended early via EndResolvedSteal()
+	/// so this StealMove cannot resolve a second time (issue #96 remediation's
+	/// multi-fire guard — see the comment at the success branch). The existing
+	/// TickLoose proximity scramble then awards possession to whichever player
+	/// reaches the ball first (ADR-0008 §Decision-2, §Amendment 2026-06-30:
+	/// steal is a defense-induced Dribbling→Loose turnover; the new holder is
+	/// chosen by the scramble, not awarded immediately).
 	///
 	/// On a whiff: no action. The defender's CommittedMoveMachine continues
 	/// through Recovery naturally — the punish window is implicit, not wired here.
@@ -1142,16 +1350,19 @@ public partial class BallController : Node3D
 			if (child is not PlayerController defender) continue;
 			if (defender == holder) continue; // can't steal from yourself
 
-			// JustEnteredStealActive returns the targeted hand side only on the
-			// single tick the defender's machine transitions to Active for a
-			// StealMove; null on all other ticks (fast path — no allocation).
-			HandSide? targetHand = defender.JustEnteredStealActive;
+			// ActiveStealTargetHand returns the targeted hand on EVERY tick the
+			// defender's machine is in the Active phase of a StealMove; null on
+			// all other ticks (fast path — no allocation). Reading it each Active
+			// tick is what turns the point sample into the interval overlap the
+			// spec requires (see method doc / issue #96).
+			HandSide? targetHand = defender.ActiveStealTargetHand;
 			if (targetHand == null) continue;
 
-			// Two-axis steal check (ADR-0018 §2, issue #96):
-			// DefensiveResolution.StealSucceeds checks side first (fast exit if
-			// wrong hand), then phase band. Pure method, no engine calls — same
-			// result on server AND any predicting client (ADR-0004).
+			// Two-axis steal check (ADR-0018 §2, issue #96), re-evaluated against
+			// the live dribble phase THIS tick: DefensiveResolution.StealSucceeds
+			// checks side first (fast exit if wrong hand), then the phase band.
+			// Pure method, no engine calls — same result on server AND any
+			// predicting client (ADR-0004).
 			bool success = DefensiveResolution.StealSucceeds(
 				_dribble.Phase,
 				StealLoExposed, StealHiExposed,
@@ -1162,13 +1373,80 @@ public partial class BallController : Node3D
 				// GoLoose exactly once — the ball is now a live loose-ball contest.
 				// Dribbling → Loose routes into the existing TickLoose scramble
 				// (ADR-0008 §Amendment 2026-06-30). The new holder is awarded by
-				// the scramble's proximity check next tick, not here.
+				// the scramble's proximity check next tick, not here. The
+				// Dribbling guard at the top of this method blocks any re-resolution
+				// on later Active ticks once the ball has already gone Loose.
 				StateMachine.GoLoose();
+
+				// Seed _arc: GoLoose() only flips the discrete BallState. Every
+				// OTHER path into Loose arrives FROM InFlight, where Shoot()
+				// already constructed _arc; Dribbling never touches _arc at all.
+				// This steal is the first Dribbling→Loose path, and TickLoose's
+				// very first line dereferences _arc unconditionally — an
+				// unseeded _arc here crashes the server with a
+				// NullReferenceException on the very next physics tick
+				// (confirmed via the headless harness, issue #96 remediation).
+				//
+				// The knock is a provisional straight-line "poked toward the
+				// defender, with a small rise" velocity, not a real deflection
+				// model (ADR-0014 — real 1v1 ball: a stolen ball is knocked away
+				// from the handler, not left inert; precise feel tuning deferred
+				// to #104). ShotArc's constructor solves a velocity aimed at a
+				// target point, which has no meaning for a knock, so it is built
+				// with a degenerate release==target pair purely to obtain a
+				// valid Gravity-carrying instance (this yields Velocity = Zero,
+				// verified: equal release/target collapses every term in
+				// SolveInitialVelocity to zero, no divide-by-zero), then
+				// Velocity is overwritten directly — the same seed-then-overwrite
+				// pattern ReconcileFromServer already uses for a client's null _arc.
+				Vector3 toDefender = defender.GlobalPosition - GlobalPosition;
+				toDefender.Y = 0f;
+				Vector3 knockDir = toDefender.LengthSquared() > 0.0001f
+					? toDefender.Normalized()
+					: Vector3.Zero; // degenerate (holder/defender coincident) — rise only
+				_arc = new ShotArc(GlobalPosition, GlobalPosition, GlobalPosition.Y, Gravity);
+				_arc.Velocity = new Vector3(
+					knockDir.X * StealKnockSpeed,
+					StealKnockRiseSpeed,
+					knockDir.Z * StealKnockSpeed);
+
+				// The defender is now the last toucher (#118 rule, mirrors the
+				// comment in AwardPossession): this steal bypasses AwardPossession
+				// entirely (GoLoose keeps the ball in a live loose-ball contest,
+				// not a discrete Catch/Turnover edge), so without this line
+				// _lastToucherPeerId stays pinned to the offensive holder. A
+				// knocked ball that sails OOB before the scramble recovers it
+				// would then charge the OOB turnover to the offense again
+				// instead of the defender who just touched it — backwards from
+				// the "last-toucher-out" rule this steal itself just triggered.
+				// (#177 audit R4) `&& defenderPeerId != 0` matches every other
+				// name-parse site in this class (peer 0 is the "no possession
+				// history" sentinel ResolveRecipient clamps on) — unreachable in
+				// practice since NetworkManager.SpawnPlayer can never name a node
+				// "0", but this site was the one inconsistent outlier of four.
+				if (int.TryParse(defender.Name, out int defenderPeerId) && defenderPeerId != 0)
+					_lastToucherPeerId = defenderPeerId;
+
+				// End the defender's Active phase NOW instead of letting it ride
+				// out the remaining ActiveFrames (issue #96 multi-fire bug):
+				// DribbleCycle.Phase only advances in TickDribbling, so it is
+				// frozen at the in-band value read above for as long as the ball
+				// stays Loose. If TickLoose's proximity scramble re-awards the
+				// ball to this SAME holder before the Active window would have
+				// naturally expired, this method re-enters next tick and would
+				// see Dribbling + the same frozen in-band phase + matching hand
+				// again — firing GoLoose() a second time for one committed move.
+				// EndResolvedSteal caps it at exactly one turnover per StealMove,
+				// then the defender pays Recovery like any other spent move.
+				defender.EndResolvedSteal();
+
 				GD.Print($"[BallController] Steal success: defender {defender.Name}, " +
-				         $"phase {_dribble.Phase:F2}, hand {holder.HandSide}");
+						 $"phase {_dribble.Phase:F2}, hand {holder.HandSide}");
 				return; // only one steal resolves per tick
 			}
-			// Whiff: Recovery is the natural punishment; nothing to do here.
+			// Whiff this tick: keep checking subsequent Active ticks (the loop
+			// re-enters next physics tick). Recovery is the natural punishment for
+			// a fully-missed window; not wired here.
 		}
 	}
 
@@ -1252,13 +1530,16 @@ public partial class BallController : Node3D
 		Vector3 holderPos = holderBody?.GlobalPosition ?? Vector3.Zero;
 		Vector3 forward   = HolderForward(holderBody);
 		Vector3 right     = HandRight(forward);
-		UpdateHandSide(holderBody);
+		(float lateralSign, float verticalDip, bool isBehindBody) = AdvanceHandSweep(holderBody);
+		float forwardOffset = SweepForwardOffset(verticalDip, isBehindBody);
 
-		// World-space Y = DribbleHandHeight, consistent with DribbleCycle's world-Y convention.
+		// World-space Y = DribbleHandHeight, consistent with DribbleCycle's
+		// world-Y convention, minus the crossover sweep's mid-transit dip
+		// (#195; 0 outside an active sweep).
 		GlobalPosition = new Vector3(
-			holderPos.X + forward.X * DribbleForwardOffset + right.X * HandOffset * HandSign(holderBody),
-			DribbleHandHeight,
-			holderPos.Z + forward.Z * DribbleForwardOffset + right.Z * HandOffset * HandSign(holderBody)
+			holderPos.X + forward.X * forwardOffset + right.X * HandOffset * lateralSign,
+			DribbleHandHeight - verticalDip * CrossoverSweepDipDepth,
+			holderPos.Z + forward.Z * forwardOffset + right.Z * HandOffset * lateralSign
 		);
 		CheckJumpShotRelease(holderBody);
 	}
@@ -1271,14 +1552,26 @@ public partial class BallController : Node3D
 		Vector3 holderPos = holderBody?.GlobalPosition ?? Vector3.Zero;
 		Vector3 forward   = HolderForward(holderBody);
 		Vector3 right     = HandRight(forward);
-		UpdateHandSide(holderBody);
+		(float lateralSign, float verticalDip, bool isBehindBody) = AdvanceHandSweep(holderBody);
+		float forwardOffset = SweepForwardOffset(verticalDip, isBehindBody);
 
-		// Pass XZ-offset position; GetBallPosition discards the Y and uses HeightAtPhase instead.
+		// Pass XZ-offset position; GetBallPosition discards the Y and uses
+		// HeightAtPhase instead — so the crossover sweep's dip (#195) is
+		// applied as a separate Y subtraction afterward rather than folded
+		// into the position passed in here.
 		GlobalPosition = _dribble.GetBallPosition(new Vector3(
-			holderPos.X + forward.X * DribbleForwardOffset + right.X * HandOffset * HandSign(holderBody),
+			holderPos.X + forward.X * forwardOffset + right.X * HandOffset * lateralSign,
 			holderPos.Y,
-			holderPos.Z + forward.Z * DribbleForwardOffset + right.Z * HandOffset * HandSign(holderBody)
+			holderPos.Z + forward.Z * forwardOffset + right.Z * HandOffset * lateralSign
 		));
+		GlobalPosition -= new Vector3(0f, verticalDip * CrossoverSweepDipDepth, 0f);
+		// GetBallPosition's Y is 0 at the bounce's floor-contact phase, and the
+		// dip above can subtract up to CrossoverSweepDipDepth more — uncorrelated
+		// with the dribble phase, so the two CAN coincide and drive the ball
+		// center under the floor. The dip is cosmetic transit flavor; it must
+		// never win over the "stay above the floor" invariant the rest of this
+		// class enforces (see the depenetration guard further down).
+		GlobalPosition = GlobalPosition with { Y = Mathf.Max(GlobalPosition.Y, BallRadius) };
 		CheckJumpShotRelease(holderBody);
 	}
 
@@ -1290,6 +1583,15 @@ public partial class BallController : Node3D
 	/// rather than only in front of it.
 	/// </summary>
 	private static Vector3 HandRight(Vector3 forward) => new(-forward.Z, 0f, forward.X);
+
+	/// <summary>
+	/// The in-hand forward offset (metres) for this tick. Thin wrapper over
+	/// CrossoverBallSweep.ForwardOffset (#211 code-review fix) — the formula
+	/// itself is a pure static there so xUnit can pin it directly; this
+	/// method just supplies BallController's own tunables.
+	/// </summary>
+	private float SweepForwardOffset(float verticalDip, bool isBehindBody) =>
+		CrossoverBallSweep.ForwardOffset(DribbleForwardOffset, verticalDip, BehindTheBackSweepDepth, isBehindBody);
 
 	/// <summary>
 	/// +1 when the ball renders in the holder's right hand, -1 when in the left.
@@ -1304,25 +1606,165 @@ public partial class BallController : Node3D
 		(holder?.HandSide ?? HandSide.Left) == HandSide.Right ? 1f : -1f;
 
 	/// <summary>
-	/// Resets the new holder's authoritative ball-hand to the default on a
-	/// possession change (M9, #83/ADR-0012): a new holder has no carried-over hand
-	/// state. Fires at most once per possession via the _handSideHolderId edge.
+	/// Drives both the once-per-possession hand reset (M9, #83/ADR-0012, the
+	/// former UpdateHandSide) and the crossover ball sweep (#195), and returns
+	/// this tick's (lateralFactor, verticalDip) for TickHeld/TickDribbling to
+	/// fold into the in-hand position. lateralFactor replaces the old bare
+	/// HandSign() read; verticalDip is 0 whenever no sweep is running.
 	///
-	/// Runs on every machine — the state switch (TickHeld/TickDribbling) ticks on
-	/// server AND clients, and HolderPeerId is the broadcast authoritative holder
-	/// — so the server resets authoritatively, the client's own player predicts the
-	/// same reset, and the client's remote copy picks the reset up via the broadcast
-	/// HandSide. The per-possession swaps themselves are NOT touched here (they are
-	/// driven by the crossover's Active-entry in PlayerController); this only sets
-	/// the clean starting hand when possession changes.
+	/// ── Trigger rules (#195) ──────────────────────────────────────────────
+	/// 1. Same-holder HandSide flip -> (re)start the sweep.
+	/// 2. Possession change (HolderPeerId changed) -> snap, NO sweep. Edge-
+	///    detected by _handSideHolderId, exactly as UpdateHandSide always did
+	///    — a new holder has no carried-over hand OR sweep state.
+	/// 3. A flip while a sweep is already running (a re-cross) -> restart
+	///    from the ball's CURRENT interpolated lateral position, never
+	///    jumping back to the old side.
+	/// Rules 2 and 1 are told apart by caching BOTH _handSideHolderId (the
+	/// possession edge) and _lastObservedHandSide (the hand edge) — rule 2 is
+	/// checked first and returns early, so a possession change can never also
+	/// register as a same-holder flip on the same tick.
+	///
+	/// ── Doubt-driven: why this is safe to trigger off broadcast state alone ──
+	/// HandSide is server-authoritative, predicted, and reconciled per
+	/// PlayerController (ReceiveState) — never a local-only signal like
+	/// CurrentMove, which the opponent's remote copy doesn't have (the M7b
+	/// #69 remote-display gap class this issue's spec explicitly calls out).
+	/// TickHeld/TickDribbling run once per fixed physics tick on EVERY role —
+	/// server, the predicting holder-client, and the remote client alike (see
+	/// this class's doc) — and Players ticks before Ball in the scene tree,
+	/// so by the time this runs, holder.HandSide already holds THIS tick's
+	/// authoritative value everywhere: the server/holder set it inline
+	/// (TickCommittedMoveBehavior's Active-entry), the remote copy adopted
+	/// the broadcast value (TickClientRemotePlayer). Comparing it against the
+	/// PREVIOUS tick's locally-cached value is therefore comparing two
+	/// already-reconciled samples on each machine independently — the sweep
+	/// derives identically everywhere with no new RPC, exactly like
+	/// DribbleCycle's local phase advance already does for the dribble bounce.
+	/// (A sweep started by one machine slightly before another, due to
+	/// network latency in HandSide's arrival, is the same acceptable
+	/// per-machine timing skew every other reconciled field already has —
+	/// not a new class of desync.)
+	///
+	/// ── Known, accepted residual gaps (doubt cycle, #195) ─────────────────
+	/// Two edge cases can make a peer's sweep count diverge from another's;
+	/// both are pre-existing properties of the underlying HandSide field
+	/// itself (unchanged by this method), not new netcode gaps this sweep
+	/// introduces, so they are documented rather than "fixed" with more
+	/// machinery:
+	///   1. A rare mispredicted Crossover: the predicting holder-client's
+	///      ReconcileFromServer can force HandSide back to _serverHandSide
+	///      when the server rejects the move — a SECOND HandSide change this
+	///      method cannot tell apart from a genuine flip, so it plays an
+	///      (extra, self-correcting) reverse sweep the server never plays.
+	///      This rides the exact same accepted "residual staleness" gap
+	///      ReconcileFromServer's own doc already calls out for the raw
+	///      HandSide snap (ADR-0012) — this method just makes that already-
+	///      accepted transient divergence visible as a cosmetic ripple.
+	///   2. Packet loss on the remote-opponent-client: HandSide there only
+	///      updates on ticks a fresh ReceiveState broadcast lands
+	///      (TickClientRemotePlayer's _hasNewState gate). A rapid re-cross
+	///      whose intermediate broadcast is dropped can vanish entirely on
+	///      that peer (no sweep at all), while the server/holder-client play
+	///      one — inherent to HandSide's existing "unreliable, latest-value-
+	///      wins" broadcast, not something reliable delivery would be worth
+	///      adding new netcode for here.
+	///   3. (Doubt cycle, #194) The SAME mispredicted-move revert from gap 1
+	///      can additionally pick the WRONG sweep PATH for its self-
+	///      correcting reverse sweep: at the exact revert tick,
+	///      _machine.CurrentMove has typically already gone null/Inactive
+	///      (ReconcileFromServer's force-Inactive branch), so
+	///      DisplayMoveId() reads "" rather than "behindtheback" — the
+	///      extra reverse sweep plays as a front (Crossover-style) transit
+	///      even if the reverted move was a BehindTheBack. Cosmetic-only,
+	///      self-correcting within one sweep duration, and strictly a
+	///      narrower instance of gap 1 (a wrong PATH, not a wrong COUNT of
+	///      sweeps) — not worth caching a second piece of pre-revert state
+	///      to close.
 	/// </summary>
-	private void UpdateHandSide(PlayerController holder)
+	private (float lateralFactor, float verticalDip, bool isBehindBody) AdvanceHandSweep(PlayerController holder)
 	{
-		if (StateMachine.HolderPeerId == _handSideHolderId) return;
+		if (StateMachine.HolderPeerId != _handSideHolderId)
+		{
+			_handSideHolderId = StateMachine.HolderPeerId;
+			holder?.ResetHandSide();
+			_sweepActive = false;
+			_lastObservedHandSide = holder?.HandSide;
+			return (HandSign(holder), 0f, false);
+		}
 
-		_handSideHolderId = StateMachine.HolderPeerId;
-		holder?.ResetHandSide();
+		// (Doubt cycle, #195, finding #3) Only overwrite the cached baseline
+		// when we actually observed a real HandSide this tick. A transient
+		// null holder (e.g. a momentary NodePath lookup miss) must NOT
+		// clobber _lastObservedHandSide with null — doing so would silently
+		// drop the next tick's flip detection (comparing the real value
+		// against null instead of against the true last-known side) instead
+		// of merely skipping one tick's read, which is all a transient miss
+		// should cost.
+		HandSide? current = holder?.HandSide;
+		if (current.HasValue && _lastObservedHandSide.HasValue && current.Value != _lastObservedHandSide.Value)
+		{
+			// Rule 3 (re-cross restart): live-but-dormant under default tuning —
+			// the sweep (~7 ticks at CrossoverSweepDuration=0.12s) completes long
+			// before Crossover's own Startup+Recovery lets a second crossover
+			// legally Begin (~tick 21), so _sweepActive is never still true when
+			// this runs today. It becomes reachable (and would then need real
+			// coverage, not just this unit-tested branch) if a future tuning pass
+			// shortens Recovery or lengthens CrossoverSweepDuration past ~15 ticks.
+			float fromLateral = _sweepActive
+				? CrossoverBallSweep.Offset(CurrentSweepT(), _sweepFromLateral, _sweepToLateral).LateralFactor
+				: SignOf(_lastObservedHandSide.Value);
+
+			_sweepFromLateral    = fromLateral;
+			_sweepToLateral      = SignOf(current.Value);
+			_sweepTicks          = 0;
+			_sweepDurationTicks  = Mathf.Max(1, Mathf.RoundToInt(CrossoverSweepDuration * Engine.PhysicsTicksPerSecond));
+			_sweepActive         = true;
+			// #194: sampled ONCE, at the moment the flip is detected — see
+			// _sweepIsBehindBody's doc for why this is not re-read per tick.
+			// DisplayMoveId() is the same per-role broadcast-aware resolver
+			// DisplayMove() already uses (M7b #69's gap class): the holder's
+			// OWN simulated role reads its live _machine, but the remote
+			// client's copy of the opponent has no live _machine to read and
+			// must fall back to the broadcast _serverMoveId — exactly the
+			// same role split this class's own doc above already establishes
+			// is safe for HandSide itself.
+			_sweepIsBehindBody = holder?.DisplayMoveId() == "behindtheback";
+		}
+		if (current.HasValue)
+			_lastObservedHandSide = current;
+
+		if (!_sweepActive)
+			return (HandSign(holder), 0f, false);
+
+		// (Doubt cycle, #195, finding #2) Sample t up to AND INCLUDING 1.0
+		// before deactivating — advancing _sweepTicks only when t hasn't yet
+		// reached the end — so the final active sample is the curve's true
+		// t=1 endpoint (lateral = toSign exactly, dip = 0 exactly) and the
+		// following tick's early-return fallback (HandSign = toSign, dip
+		// hardcoded 0) is a continuation of that same value, not a pop. The
+		// previous version advanced the tick counter first, so the sweep's
+		// LAST active sample landed at t=(duration-1)/duration — short of
+		// the endpoint — and the tick after that hard-snapped, producing a
+		// one-tick discontinuity in the dip (visible; the lateral discrepancy
+		// was small enough to be imperceptible, but the dip curve peaks
+		// nowhere near 0 at that point).
+		float t = CurrentSweepT();
+		(float lateral, float dip) = CrossoverBallSweep.Offset(t, _sweepFromLateral, _sweepToLateral);
+		if (t >= 1f)
+			_sweepActive = false;
+		else
+			_sweepTicks++;
+
+		return (lateral, dip, _sweepIsBehindBody);
 	}
+
+	/// <summary>Normalised progress [0, 1] through the current sweep, for CrossoverBallSweep.Offset.</summary>
+	private float CurrentSweepT() =>
+		_sweepDurationTicks <= 0 ? 1f : (float)_sweepTicks / _sweepDurationTicks;
+
+	/// <summary>+1 for HandSide.Right, -1 for HandSide.Left — the same convention HandSign reads off a holder node.</summary>
+	private static float SignOf(HandSide side) => side == HandSide.Right ? 1f : -1f;
 
 	/// <summary>
 	/// Ball in flight: advance the arc, resolve against the basket, and move
@@ -1641,13 +2083,15 @@ public partial class BallController : Node3D
 	}
 
 	/// <summary>
-	/// Awards possession of a loose / in-flight ball to a player and resumes a
-	/// live dribble — the shared handoff path used by a live rebound (#48) and
-	/// the make-it-take-it reset (#49). Mirrors the tipoff sequence
-	/// (Catch → StartDribble): Catch is legal only from InFlight/Loose (it
-	/// returns false otherwise, leaving state untouched), and StartDribble then
-	/// puts the new holder into the same dribbling state the game opens in, so
-	/// they can immediately dribble and shoot.
+	/// Awards possession of a loose / in-flight ball to a player — the shared
+	/// handoff path used by a live rebound (#48), the make-it-take-it reset
+	/// (#49), and every OOB/steal/block turnover. Lands the new holder in a
+	/// fresh, LIVE Held possession (#193, ADR-0008): unlike the pre-#193
+	/// behaviour, this no longer auto-chains into Dribbling — the new holder
+	/// gets the "triple threat" beat (they may shoot immediately, or drive by
+	/// pushing the stick past deadzone, see PlayerController.
+	/// CheckAutoStartDribble) rather than being dropped straight into a
+	/// dribble they never asked to start.
 	///
 	/// <paramref name="cleared"/> controls the clear state of the new possession
 	/// (ADR-0008 §Decision-3, amended 2026-06-21):
@@ -1695,21 +2139,41 @@ public partial class BallController : Node3D
 		}
 
 		// Possession changed hands → this player is now the last toucher (#118).
-		// Set on every peer (AwardPossession runs as prediction on clients too),
-		// but only the server's value drives the OOB award (OobResolution gates
-		// Award on isServer). Updating here — not only on a shot — is the whole
-		// fix: a rebounder who later fumbles the ball OOB is no longer handed it
-		// straight back, because the toucher has advanced to them.
+		// Set on every peer that calls AwardPossession itself (this path runs as
+		// prediction on clients too), but only the server's value drives the OOB
+		// award (OobResolution gates Award on isServer). Updating here — not only
+		// on a shot — is the whole fix: a rebounder who later fumbles the ball OOB
+		// is no longer handed it straight back, because the toucher has advanced
+		// to them. (#177 audit R1) This is the general AwardPossession path — the
+		// steal-turnover write in ResolveStealAttempts is the one EXCEPTION that
+		// bypasses AwardPossession and this per-peer symmetry; see
+		// _lastToucherPeerId's field doc for why that server-only write is
+		// currently safe.
 		_lastToucherPeerId = peerId;
 
-		// StartDribble is legal from Held (the state Catch just transitioned to).
-		// Guard the return value so a future internal-state divergence (e.g. a
-		// ForceState landing between Catch and StartDribble) fails loudly rather
-		// than leaving the ball Held with no dribble cycle.
-		if (!StateMachine.StartDribble())
-		{
-			GD.PrintErr($"[BallController] AwardPossession({peerId}): StartDribble rejected after Catch in state {State}; possession partially awarded, ball may behave unexpectedly.");
-		}
+		// #193: this possession's dribble is LIVE — reset the dead-dribble flag
+		// unconditionally. This is the ONE reset point for every possession
+		// change (rebound, turnover, make-it-take-it); the tipoff resets it
+		// separately in TryAssignTipoffHolder, which never calls AwardPossession.
+		// No StartDribble() call follows here any more (pre-#193 behaviour):
+		// the new holder starts Held, not Dribbling — see this method's doc.
+		HasDribbled = false;
+
+		// Every possession change starts a fresh dribble (#176, ADR-0014 call
+		// recorded on the issue): real half-court 1v1 rules end a dribble the
+		// instant the ball leaves the previous holder's control, so a rebound,
+		// steal/block recovery, OOB turnover, and make-it-take-it award all
+		// restart _dribble.Phase at 0 — the same value a brand-new DribbleCycle
+		// starts at. Without this, Phase stayed frozen at whatever value existed
+		// when the ball last went Loose (DribbleCycle.Phase only advances in
+		// TickDribbling), which let a defender who forced a scramble and then
+		// recovered the SAME ball re-attempt a steal against a phase that could
+		// already sit inside the steal-exposed band — no genuine timing read
+		// required. Called unconditionally for every AwardPossession path
+		// (there is no "live-recovery only" special case) because the same
+		// stale-phase hazard is reachable from every one of them, not just the
+		// steal path that first exposed it.
+		_dribble.Reset();
 
 		// `cleared` is false for rebounds/turnovers (every peer sets this
 		// deterministically; clients predict it immediately for HUD responsiveness),
@@ -1726,6 +2190,82 @@ public partial class BallController : Node3D
 		// early-returns on IsCleared — but resetting unconditionally keeps the
 		// invariant simple: every possession begins with the take-back not yet done.
 		_holderHasBeenInsideClearLine = false;
+	}
+
+	// ── Triple threat: dead-dribble rule (#193, ADR-0008 amendment) ─────────
+
+	/// <summary>
+	/// Cradles a live dribble as the side effect of the holder BEGINNING a
+	/// JumpShot — covers the pump-fake too, since a feint is a Startup-phase
+	/// abort of the SAME Begin(), not a separate one (#193's spec). Ends the
+	/// dribble (StopDribble → Held) and marks <see cref="HasDribbled"/>
+	/// immediately, even though the shot itself may still be feinted away:
+	/// you can't un-pick-up your dribble by faking a shot. Matches real ball
+	/// / 2K — the gather is inherent to the shooting motion, not a separate
+	/// discrete action or CommittedMove.
+	///
+	/// Called from PlayerController.BeginCommittedMove — the ONE shared choke
+	/// point every Begin(JumpShot) call already funnels through (the server,
+	/// for every player node it runs authoritatively; a client, only for its
+	/// own predicted player) — so this runs under exactly the same authority
+	/// set CheckJumpShotRelease already restricts ball-state writes to, with
+	/// no separate IsServer/IsLocalHolder guard needed here.
+	///
+	/// No-ops if the ball isn't currently Dribbling, or if the caller isn't
+	/// the ball's holder — so a stray/mistimed call can never desync ball
+	/// state. In particular, shooting straight out of a fresh live Held
+	/// possession never touches StopDribble at all: there is no dribble to
+	/// end, and HasDribbled is already false for that possession.
+	/// </summary>
+	public void CradleForShotStartup(int peerId)
+	{
+		// KNOWN ACCEPTED RACE (code review on PR #204, ~1-tick window, NOT
+		// fixed here): PlayerController.RequestBeginMove travels Reliable
+		// while SubmitInput (the channel that carries the drive input
+		// CheckAutoStartDribble reads) travels UnreliableOrdered — separate
+		// channels with no cross-ordering guarantee. A client that drives and
+		// then pump-fakes within roughly one tick can have the SERVER process
+		// Begin(JumpShot) BEFORE that drive's SubmitInput arrives: the server
+		// still sees Held here (this guard no-ops), so HasDribbled stays
+		// false server-side while the client's own prediction already set it
+		// true — the client is then force-corrected back to false by the next
+		// ReceiveState broadcast (HasDribbled IS broadcast; see the
+		// ReconcileFromServer doc), a silent, narrow dead-dribble bypass. A
+		// robust fix is cross-channel input/RPC ordering, which is a separate
+		// piece of work, not a #193 fix — see the cradle-race follow-up issue
+		// linked from PR #204's conversation.
+		if (StateMachine.Current != BallState.Dribbling) return;
+		if (StateMachine.HolderPeerId != peerId) return;
+
+		if (StateMachine.StopDribble())
+			HasDribbled = true;
+	}
+
+	/// <summary>
+	/// Attempts to resume a live dribble out of a fresh Held possession — the
+	/// "drive" exit from the triple-threat stance (#193): the holder pushing
+	/// the left stick past deadzone. Refused once <see cref="HasDribbled"/> is
+	/// set for this possession (DeadDribbleRule.CanStartDribble) — the dead-
+	/// dribble rule means a feinted pump-fake strands the holder in dead Held
+	/// until the next possession change; they can still walk (Move() is
+	/// unaffected), they just can't resume bouncing the ball.
+	///
+	/// Called from PlayerController.CheckAutoStartDribble wherever a tick's
+	/// REAL movement input is available for this player — see that method's
+	/// doc for exactly which roles that is (the same authority set every
+	/// other ball-state write in this class already restricts to).
+	///
+	/// No-ops if the ball isn't Held, or if the caller isn't the ball's
+	/// holder — so an off-ball player's own stick input can never touch
+	/// someone else's possession.
+	/// </summary>
+	public void TryStartDribble(int peerId)
+	{
+		if (StateMachine.Current != BallState.Held) return;
+		if (StateMachine.HolderPeerId != peerId) return;
+		if (!DeadDribbleRule.CanStartDribble(HasDribbled)) return;
+
+		StateMachine.StartDribble();
 	}
 
 	// ── Shot trigger / input authority (M4 → M7b #74) ───────────────────────
@@ -1959,16 +2499,23 @@ public partial class BallController : Node3D
 	/// a state/holder pair here. This is the same trust boundary
 	/// PlayerController.ReceiveState already relies on for its own payload.
 	/// </summary>
+	/// hasDribbled appended LAST, after cleared (#193, doubt-driven review):
+	/// kept as its own trailing bool rather than reusing an existing slot, the
+	/// same transposition-safety convention PlayerController.ReceiveState uses
+	/// for WasRecoveryEnteredEarly — two same-typed trailing params next to
+	/// unrelated ones is exactly the positional-arg fragility this doc already
+	/// warns about elsewhere in this file.
 	[Rpc(MultiplayerApi.RpcMode.Authority,
 		 CallLocal = false,
 		 TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
-	private void ReceiveState(int state, Vector3 pos, Vector3 vel, int holderPeerId, bool cleared)
+	private void ReceiveState(int state, Vector3 pos, Vector3 vel, int holderPeerId, bool cleared, bool hasDribbled)
 	{
 		_serverState         = (BallState)state;
 		_serverPos           = pos;
 		_serverVel           = vel;
 		_serverHolderPeerId  = holderPeerId;
 		_serverCleared       = cleared;
+		_serverHasDribbled   = hasDribbled;
 		_hasNewState         = true;
 	}
 
@@ -2005,6 +2552,19 @@ public partial class BallController : Node3D
 		// the broadcast value verbatim (#50). This corrects the <=1-RTT window
 		// after a client-predicted rebound where the local flag was left stale.
 		IsCleared = _serverCleared;
+
+		// HasDribbled (#193, doubt-driven review): same unconditional force-
+		// correct as IsCleared, for the same reason. Without this, a client
+		// whose local rebound/turnover prediction disagreed with the server's
+		// actual recipient (ForceState above just repointed HolderPeerId at a
+		// DIFFERENT peer than the client predicted) would keep whatever stale
+		// HasDribbled value it last held — potentially TRUE for what the
+		// corrected identity is really a brand-new possession — wrongly
+		// refusing that player's next legitimate drive attempt until some
+		// LATER real possession change happened to reset it. Unlike IsCleared's
+		// already-accepted <=1-RTT cosmetic window, that staleness had no
+		// natural expiry, so it needed the same broadcast treatment.
+		HasDribbled = _serverHasDribbled;
 
 		Vector3 renderedPos = GlobalPosition;
 		GlobalPosition = _serverPos;

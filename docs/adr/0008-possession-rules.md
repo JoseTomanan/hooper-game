@@ -213,7 +213,7 @@ including its premise that "the holder is already wall-bounded … so no holder-
 case can currently occur."
 
 **Walls are a far backstop, not the play boundary.** The scene's `StaticBody3D`
-walls sit well outside the court rectangle (≈ X ±10 vs the court's X ±4.88), and
+walls sit well outside the court rectangle (≈ X ±10 vs the court's X ±7.62), and
 the deterministic mini-physics ball never consults them anyway (ADR-0004). The
 *court line* (`CourtMin`/`CourtMax`) is the real boundary for both ball and player;
 the walls only stop a player from running to infinity.
@@ -483,3 +483,116 @@ start uncleared by that same reasoning.
 *when* a steal or block connects. Issue #96 (steal) implements the
 `Dribbling → Loose` transition; issue #98 (block) implements the
 `InFlight → Loose` transition.
+
+## Amendment — 2026-07-05 (issue #193: triple threat stance — Held-start
+possessions + the dead-dribble rule)
+
+**Status remains Accepted.** This amendment adds two new rules on top of the
+existing possession machinery; nothing above is superseded. It was speced by
+the M9 move-taxonomy triage session (2026-07-04) and grilled with the human
+before landing — recorded here per CLAUDE.md's Decision Discipline (the
+implementation PR (#204) cited this amendment in eight places before it
+actually existed; this section closes that gap).
+
+**Scope note — what this is NOT.** "Pass" is explicitly out of scope: 1v1
+half-court has no recipient. The check-ball ritual (a start-of-possession
+handoff ceremony) belongs to M12 (match flow), not here. What "triple threat"
+means in this codebase is narrower: the dual threat (dribble / shoot) plus the
+pivot mind game (#172, already landed), sharpened by the two rules below.
+
+**Rule 1 — every possession now starts in a fresh, LIVE `Held` stance, not an
+instant dribble.** Previously `BallController.AwardPossession` unconditionally
+chained `Catch`/`Turnover` into `StateMachine.StartDribble()`, so a rebound,
+an OOB turnover, a steal/block scramble recovery, and a make-it-take-it award
+all dropped the new holder straight into `BallState.Dribbling` — the player
+never got the "triple threat" beat real ball gives a new possession. `
+AwardPossession` no longer makes that call; the new holder lands in `Held`
+with the ball live. They may shoot directly from `Held` (already legal per
+§Decision rules above — unchanged), or drive by pushing the stick past
+deadzone, which auto-fires `StartDribble()`
+(`PlayerController.CheckAutoStartDribble` → `BallController.TryStartDribble`).
+The tipoff (`TryAssignTipoffHolder`, which never routes through
+`AwardPossession`) starts the same way for consistency — the opening
+possession is also a fresh live `Held`.
+
+**Rule 2 — the dead-dribble rule.** A new per-possession, server-authoritative
+flag, `BallController.HasDribbled`, tracks whether the CURRENT possession's
+dribble has already been cradled (picked up). While set, `StartDribble()` is
+refused (`DeadDribbleRule.CanStartDribble`) — the real half-court "you can't
+dribble again once you've picked it up" rule. The flag:
+- **Resets to `false`** on every possession change (`AwardPossession`, covering
+  rebound/turnover/make-it-take-it uniformly) and on the tipoff
+  (`TryAssignTipoffHolder`) — there is no separate "on score" reset, because a
+  make-it-take-it award already IS a possession change and already routes
+  through `AwardPossession`.
+- **Sets to `true`** the instant the holder BEGINS a `JumpShot` from
+  `Dribbling` (`PlayerController.BeginCommittedMove` → `BallController.
+  CradleForShotStartup`, which calls `StateMachine.StopDribble()` as the side
+  effect). This also covers the pump-fake: a feint is a Startup-phase ABORT of
+  the *same* `Begin()` (`CommittedMoveMachine.Feint()`), not a second one, so
+  there is no separate hook for it — a canceled pump-fake still leaves the
+  flag set. This matches real ball and 2K: the gather is inherent to the
+  shooting motion, not a separate discrete input or `CommittedMove`. The
+  consequence is deliberate: **a feinted pump-fake strands the player in dead
+  `Held`** for the rest of the possession — a real cost to feinting off the
+  dribble that keeps the read-and-punish mind game legible (CLAUDE.md §1).
+- **Also gates any dribble move**, not just a raw `StartDribble()` attempt
+  (code-review finding on #204): `Crossover`/`Hesitation` are dribble moves in
+  real ball too, so `BeginCommittedMove` refuses either while the acting
+  player holds the ball in `Held` state — dead OR live. Without this, a
+  dead-`Held` player could still throw a crossover (full separation burst, and
+  the Active-entry `HandSide` flip would authoritatively teleport the
+  Held-tracked ball to the other hand), escaping Rule 2's whole point. From a
+  LIVE `Held` possession the same gate applies for the same real-ball reason —
+  the player must start dribbling (push the stick) before a crossover is
+  legal, exactly as Rule 1 already requires for a raw drive.
+
+**Known accepted race (server-gated, not fixed here):** `RequestBeginMove`
+travels Reliable while `SubmitInput` travels UnreliableOrdered — separate
+channels with no cross-ordering guarantee. A client that drives and then
+pump-fakes within roughly one tick can have the server process
+`Begin(JumpShot)` before the drive's `SubmitInput` arrives: the server still
+sees `Held` (not yet `Dribbling`), so `CradleForShotStartup` no-ops and
+`HasDribbled` stays `false` server-side, while the client's own prediction set
+it `true` — the client's optimistic value is then force-corrected back to
+`false` by the next `ReceiveState` broadcast (HasDribbled is broadcast — see
+below), a silent, narrow dead-dribble bypass bounded to ~1 RTT of packet
+timing. A robust fix is cross-channel input/RPC ordering, which is out of
+scope for this amendment; the guard's "why" is documented at
+`CradleForShotStartup`'s `Dribbling` check, referencing the cradle-race
+follow-up issue linked from PR #204's conversation.
+
+**Netcode note — `HasDribbled` IS broadcast, unlike a first draft assumed.**
+The original implementation reasoned no peer ever needs another peer's copy of
+this flag, so it was left unpredicted/unbroadcast. Doubt-driven review on #204
+found a real gap: `ReconcileFromServer`'s `ForceState` can re-point
+`HolderPeerId` at a DIFFERENT peer than a client locally predicted (e.g.
+disagreeing on a loose-ball scramble's winner) without touching
+`HasDribbled`, so a stale `true` could wrongly refuse a legitimate drive for
+the rest of what is, per the corrected identity, actually a brand-new
+possession — unlike `IsCleared`'s already-accepted ≤1-RTT cosmetic window,
+nothing bounded how long that staleness could persist. `HasDribbled` is now
+broadcast on the same `ReceiveState` payload as `IsCleared` and force-corrected
+the same unconditional way in `ReconcileFromServer`.
+
+**Rejected — travel and 5-second closely-guarded violations.** Real half-court
+ball pairs the dead-dribble rule with a travel call (moving the pivot foot
+after picking up the dribble) and a 5-second closely-guarded count. Both are
+explicitly OUT of scope for #193: bare-minimum realism — don't build
+enforcement nobody asked for yet. If either is wanted later, it is a separate,
+separately-recorded decision, not a silent extension of this amendment.
+
+**Rejected — a separate "cradle" input or `CommittedMove`.** Modeling the
+gather as its own discrete action (a button press, or a dedicated move
+subclass) was considered and rejected: it does not match real ball or 2K,
+where the gather is inherent to the shooting motion, and it would have
+required a second RPC/prediction path for no gameplay benefit over piggy-
+backing on the existing `JumpShot` Begin.
+
+**Code:** `DeadDribbleRule.CanStartDribble` (pure, headless-tested predicate,
+`tests/Hooper.Ball.Tests/DeadDribbleRuleTests.cs`); `BallController.HasDribbled`,
+`CradleForShotStartup`, `TryStartDribble`; `PlayerController.
+CheckAutoStartDribble` and the `BeginCommittedMove` dribble-move gate. Proven
+end to end by the headless `TripleThreatTest` harness (ADR-0016), which also
+sweeps `OobTurnoverTest`/`StealTurnoverTest`'s stale "award possession ⇒
+Dribbling" assumptions the prior behaviour left them with.

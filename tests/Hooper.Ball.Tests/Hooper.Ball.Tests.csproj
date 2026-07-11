@@ -52,6 +52,10 @@
     <Compile Include="..\..\scripts\Ball\FloorBounce.cs" />
     <!-- M10 defensive resolution helper (issue #96, ADR-0018 §1) -->
     <Compile Include="..\..\scripts\Ball\DefensiveResolution.cs" />
+    <!-- Triple-threat dead-dribble rule (issue #193, ADR-0008 amendment) -->
+    <Compile Include="..\..\scripts\Ball\DeadDribbleRule.cs" />
+    <!-- Crossover ball sweep curve (issue #195) -->
+    <Compile Include="..\..\scripts\Ball\CrossoverBallSweep.cs" />
   </ItemGroup>
 
   <!--
@@ -67,10 +71,15 @@
     <Compile Include="..\..\scripts\Input\CommittedMoveMachine.cs" />
     <Compile Include="..\..\scripts\Input\Crossover.cs" />
     <Compile Include="..\..\scripts\Input\Hesitation.cs" />
+    <!-- Behind-the-back committed move, own subclass (issue #194) -->
+    <Compile Include="..\..\scripts\Input\BehindTheBack.cs" />
     <Compile Include="..\..\scripts\Input\GestureResult.cs" />
     <Compile Include="..\..\scripts\Input\RightStickGestureRecognizer.cs" />
     <Compile Include="..\..\scripts\Input\JumpShot.cs" />
     <Compile Include="..\..\scripts\Input\JumpShotReleaseResolver.cs" />
+    <!-- Bug fix (/diagnose, 2026-07-03): gates the ambiguous right-stick feint
+         gesture off JumpShot so it can't silently eat the ball release. -->
+    <Compile Include="..\..\scripts\Input\FeintGateResolver.cs" />
     <!-- M10 steal committed move (issue #96, ADR-0018) -->
     <Compile Include="..\..\scripts\Input\StealMove.cs" />
     <!-- M10 block committed move (issue #98, ADR-0018) -->
@@ -118,6 +127,8 @@
     <Compile Include="..\..\scripts\Player\DisplayPhaseResolver.cs" />
     <Compile Include="..\..\scripts\Player\HandSide.cs" />
     <Compile Include="..\..\scripts\Player\HandStateResolver.cs" />
+    <!-- Moving-crossover burst composition (issue #198) -->
+    <Compile Include="..\..\scripts\Player\CrossoverBurstMath.cs" />
   </ItemGroup>
 
   <ItemGroup>
