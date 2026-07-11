@@ -6,11 +6,17 @@ namespace Hooper.Moves;
 /// The block attempt — the second M10 defensive committed move (issue #98,
 /// epic #89, ADR-0018 §2).
 ///
-/// A block in half-court 1v1 is a timed leap at the ball during its release
-/// / early-flight window: the defender commits with a visible wind-up (Startup),
-/// the block window opens (Active), and if that window overlaps the shot's
-/// vulnerable interval — [JumpShot.Active start, InFlight start + blockGraceTicks)
-/// — the ball goes Loose (ADR-0008 §Amendment 2026-06-30, ADR-0018 §2).
+/// A block in half-court 1v1 is a timed, planted, standing swat at the ball
+/// during its release / early-flight window: the defender commits with a
+/// visible plant (Startup — no jump/vertical motion yet; Startup zeroes
+/// velocity, the defender stays grounded), the block window opens (Active),
+/// and if that window overlaps the shot's vulnerable interval —
+/// [JumpShot.Active start, InFlight start + blockGraceTicks), the same tick
+/// by construction since release fires on JumpShot's Active entry (see
+/// BallController.ResolveBlockAttempts) — the ball goes Loose (ADR-0008
+/// §Amendment 2026-06-30, ADR-0018 §2). A leaping/jumping presentation is
+/// deferred to the animation pass (#102); the underlying mechanic here is
+/// grounded.
 ///
 /// ── ADR-0003 legibility commitment ──────────────────────────────────────
 /// The block is NOT an instant button (move-and-strike, ADR-0003 anti-goal).
@@ -41,7 +47,8 @@ namespace Hooper.Moves;
 /// tuning issue #104 and the per-milestone feel pass (ADR-0015).
 ///
 /// Default frame data (provisional, tuning deferred to #104):
-///   Startup:  10 ticks — jump wind-up (~0.17s at 60 Hz). Shorter than the
+///   Startup:  10 ticks — planted swat wind-up (~0.17s at 60 Hz; no jump yet,
+///             see the class doc above). Shorter than the
 ///             JumpShot's 18-tick Startup because the defender reacts to a
 ///             visible shot attempt rather than initiating one from scratch;
 ///             that is the "reaction tilt" (ADR-0018 §3). But NOT instant:

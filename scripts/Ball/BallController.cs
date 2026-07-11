@@ -638,25 +638,42 @@ public partial class BallController : Node3D
 
 	/// <summary>
 	/// Monotonically-increasing physics tick counter — incremented at the
-	/// start of every _PhysicsProcess call, server and client alike. Used by
-	/// ResolveBlockAttempts to compute absolute tick intervals for the full
-	/// interval overlap check (ADR-0018 §2).
+	/// start of every _PhysicsProcess call. Purely LOCAL: each peer starts
+	/// counting from 0 whenever its own ball node enters the tree, and nothing
+	/// synchronizes it across peers — it is NOT a shared/networked clock.
+	/// That's fine because its only consumer, ResolveBlockAttempts, is gated
+	/// `IsServer`-only: every absolute-tick interval it computes (the
+	/// defender's Active window, the shot's vulnerable window) is compared
+	/// entirely within the server's own counter, so no cross-peer property is
+	/// ever needed.
 	///
-	/// Why: the block uses DefensiveResolution.Succeeds with two REAL intervals
-	/// (the defender's Active window and the shot's vulnerable window). The steal
-	/// reduces to a point-in-time test, so it doesn't need an absolute clock.
-	/// The block check runs every InFlight tick, so we need the defender's
-	/// entry tick (derived from FrameInPhase + currentTick) and the shot's
-	/// InFlight start tick. This counter supplies those values.
+	/// Why it exists at all: the block uses DefensiveResolution.Succeeds with
+	/// two REAL intervals (the defender's Active window and the shot's
+	/// vulnerable window). The steal reduces to a point-in-time test, so it
+	/// doesn't need an absolute clock. The block check runs every InFlight
+	/// tick, so we need the defender's entry tick (derived from FrameInPhase +
+	/// currentTick) and the shot's InFlight start tick. This counter supplies
+	/// those values.
 	/// </summary>
 	private int _physicsTick;
 
 	/// <summary>
 	/// The physics tick on which the ball last transitioned to InFlight (a shot
-	/// was released). Set in CheckJumpShotRelease when StateMachine.Shoot() fires.
-	/// Reset to -1 whenever the ball leaves InFlight (GoLoose, reconcile to non-
-	/// InFlight). -1 means "no shot in flight" and causes ResolveBlockAttempts to
-	/// return immediately.
+	/// was released). Set in ApplyShootLocally (called by CheckJumpShotRelease)
+	/// right after StateMachine.Shoot() succeeds.
+	///
+	/// It is reset to -1 in exactly one place: ResolveBlockAttempts' success
+	/// branch, when a block turns the shot into a Loose ball. There is no reset
+	/// on a miss/make or any other InFlight exit — the value is simply
+	/// overwritten the next time a shot is released, and in the meantime it sits
+	/// inert behind the `StateMachine.Current != BallState.InFlight` guard at
+	/// the top of ResolveBlockAttempts (State isn't InFlight, so the stale value
+	/// is never read as a live window). -1 means "no shot has ever been
+	/// released yet" and also causes ResolveBlockAttempts to return immediately.
+	///
+	/// Any FUTURE path that transitions the ball into InFlight without going
+	/// through ApplyShootLocally would inherit whatever stale value this field
+	/// last held — worth flagging at that call site if one is ever added.
 	///
 	/// The block vulnerable window is [_inFlightStartTick, _inFlightStartTick + BlockGraceTicks).
 	/// </summary>
@@ -1008,10 +1025,12 @@ public partial class BallController : Node3D
 		}
 
 		// Monotonic tick counter used by block resolution for absolute-tick
-		// interval arithmetic (ADR-0018 §2, issue #98). Incremented after reconcile
-		// so the server and the client's own-player prediction share the same clock
-		// (both increment each _PhysicsProcess regardless of role). Remote-player
-		// block evaluation is handled server-side only via ResolveBlockAttempts.
+		// interval arithmetic (ADR-0018 §2, issue #98). Purely local — it is
+		// NOT synchronized with any other peer's counter — which is fine
+		// because its only consumer, ResolveBlockAttempts, is IsServer-gated
+		// and only ever compares ticks drawn from this same counter. Incremented
+		// after reconcile so a reconciled snapshot never itself gets counted as
+		// a tick.
 		_physicsTick++;
 
 		// Fixed timestep — NOT the variable wall-clock delta — so the arc is
@@ -1509,6 +1528,17 @@ public partial class BallController : Node3D
 	/// window, so a defender who entered Active slightly before or after the release
 	/// can still block if their window overlaps the grace period.
 	///
+	/// Phrasing note: ADR-0018 §2 writes the vulnerable window as
+	/// [JumpShot.Active start, InFlight start + BlockGraceTicks), while this
+	/// method uses [_inFlightStartTick, _inFlightStartTick + BlockGraceTicks).
+	/// These are the SAME tick by construction, not two different quantities —
+	/// the ball releases on JumpShot's JustEnteredActive (its first Active
+	/// tick; see JumpShotReleaseResolver / PlayerController.
+	/// JustReleasedJumpShot), so JumpShot.Active start == InFlight start. This
+	/// equivalence holds only as long as release continues to fire on Active
+	/// entry; if a future change decouples them, the two phrasings would need
+	/// to be reconciled explicitly.
+	///
 	/// On success: GoLoose() once — InFlight → Loose (ADR-0008 Amendment 2026-06-30).
 	/// The existing TickLoose proximity scramble then awards possession next tick.
 	///
@@ -1543,6 +1573,15 @@ public partial class BallController : Node3D
 			// Compute the defender's Active window as absolute physics ticks.
 			// frameInPhase = 0 means they JUST entered Active this very tick;
 			// frameInPhase = N means they entered Active N ticks ago.
+			//
+			// Hidden assumption: this reads defActiveStart as of THIS Ball tick,
+			// which is only correct because the Players node precedes the Ball
+			// node in Main.tscn — player CommittedMoveMachines tick before the
+			// ball reads their phase/frame here. Reordering those nodes would
+			// shift every block window by one tick without changing a single
+			// line in this file (see the repo's recorded parent-precedes-child
+			// tick-observation gotcha). The headless harness pins the resulting
+			// end-to-end timing, so a reorder regression would show up there.
 			int defActiveStart = _physicsTick - frameInPhase;
 			int defActiveEnd   = defActiveStart + activeFrames;
 

@@ -731,9 +731,16 @@ public partial class PlayerController : CharacterBody3D
 	///     if the grace window hasn't closed.
 	/// Both cases need continuous checking, not a single-tick snapshot.
 	///
-	/// BallController.ResolveBlockAttempts reads this before the per-state tick
-	/// switch so a successful block prevents TickInFlight from running (and thus
-	/// prevents RegisterBasket from being called on the same tick).
+	/// BallController.ResolveBlockAttempts reads this from two call sites: once
+	/// before the per-state tick switch (so a successful block prevents
+	/// TickInFlight from running, and thus prevents RegisterBasket from being
+	/// called on the same tick), and once more AFTER the switch but ONLY on
+	/// the shot's own release tick — the ball only becomes InFlight partway
+	/// through that switch (TickHeld/TickDribbling → CheckJumpShotRelease), so
+	/// the pre-switch call still saw Held/Dribbling and returned null on that
+	/// exact tick; the post-switch top-up is what makes the release tick itself
+	/// evaluable without weakening the "blocked shot cannot score" ordering
+	/// guarantee (see the comments at both call sites in _PhysicsProcess).
 	/// </summary>
 	public (int FrameInPhase, int ActiveFrames)? BlockMoveActiveInterval
 	{
@@ -1943,15 +1950,22 @@ public partial class PlayerController : CharacterBody3D
 
 		// Block: defensive committed move (M10, issue #98, ADR-0018 §2).
 		//
-		// Gated on NOT holding the ball — you cannot block your own shot.
+		// Gated on NOT holding the ball — you cannot block your own shot. This
+		// local check is client-side UX only (stops a ball-holder from even
+		// attempting the input); RequestBeginMove's "block" case re-asserts it
+		// server-side, since a tampered client could send the RPC regardless
+		// of this gate (ADR-0002).
 		// Unlike the steal (two-axis: when + which hand), the block is a
 		// ONE-AXIS read: only timing matters. The ball is airborne when it
 		// can be blocked, so there is no hand-side to target.
 		//
-		// The vulnerable window is [InFlight start, InFlight start + blockGraceTicks).
-		// BallController.ResolveBlockAttempts evaluates the full interval overlap
-		// (not a point-in-time check like steal) — a defender who entered Active
-		// before or after the release still blocks if their window overlaps the grace.
+		// The vulnerable window is [InFlight start, InFlight start + blockGraceTicks)
+		// — the same tick as [JumpShot.Active start, ...) since release fires on
+		// Active entry (see BallController.ResolveBlockAttempts' doc for the
+		// equivalence). BallController.ResolveBlockAttempts evaluates the full
+		// interval overlap (not a point-in-time check like steal) — a defender
+		// who entered Active before or after the release still blocks if their
+		// window overlaps the grace.
 		// param = 0f: block carries no payload.
 		if (Input.IsActionJustPressed("def_block") && !IsBallHolder)
 		{
