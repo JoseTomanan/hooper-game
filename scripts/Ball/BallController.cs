@@ -1044,6 +1044,23 @@ public partial class BallController : Node3D
 			case BallState.Loose:     TickLoose(dt);     break;
 		}
 
+		// Server-only: release-tick top-up. The pre-switch call above ran while
+		// State was still Held/Dribbling — the shot only becomes InFlight INSIDE
+		// this switch (TickHeld/TickDribbling → CheckJumpShotRelease →
+		// ApplyShootLocally sets _inFlightStartTick = _physicsTick). So the release
+		// tick itself was never evaluated: a defender whose Active window's last
+		// frame is exactly this tick should connect per the half-open interval
+		// semantics (ADR-0018 §2), but without this call the first evaluation
+		// would be next tick, by which time that defender has moved into Recovery.
+		// The `_inFlightStartTick == _physicsTick` guard makes this strictly a
+		// release-tick-only top-up (every later InFlight tick is already covered
+		// by the pre-switch call above). It cannot double-resolve the same shot:
+		// on the tick a block succeeds, ResolveBlockAttempts resets
+		// _inFlightStartTick to -1, and the function's own early-return guards on
+		// `_inFlightStartTick < 0`.
+		if (IsServer && StateMachine.Current == BallState.InFlight && _inFlightStartTick == _physicsTick)
+			ResolveBlockAttempts();
+
 		// Server-only: assign the tipoff holder once a player node exists but the
 		// ball has none yet (ADR-0007). The broadcast below propagates the holder
 		// to every client; clients never compute it themselves.
