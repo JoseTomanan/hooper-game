@@ -119,12 +119,12 @@ jobs:
 
       # Block TURNOVER mechanic, end to end (issue #98, ADR-0018 §2). Boots a
       # real BallController + two PlayerControllers headless, begins a REAL
-      # JumpShot (shooter) and a REAL BlockMove (defender) through the same
-      # BeginCommittedMove/_machine.Begin() paths production input reaches,
-      # and asserts BallController.ResolveBlockAttempts's full-interval-form
-      # overlap check against the LIVE engine state — the pre-switch-plus-
-      # release-tick-top-up call
-      # ordering that makes "a blocked shot cannot score" true. 'success'
+      # JumpShot (shooter) and a REAL BlockMove (defender) through the SAME
+      # BeginCommittedMove path production input reaches for both moves (see
+      # BlockHarnessSeam), and asserts BallController.ResolveBlockAttempts's
+      # full-interval-form overlap check against the LIVE engine state — the
+      # pre-switch-plus-release-tick-top-up call ordering that makes "a
+      # blocked shot cannot score" true. 'success'
       # places the defender's Active window so its entry tick lands exactly
       # on the shot's release tick: asserts the turnover completes (Loose ->
       # settled Held), the swat velocity (away from the rim, downward)
