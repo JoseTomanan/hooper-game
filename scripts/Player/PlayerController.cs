@@ -1265,7 +1265,17 @@ public partial class PlayerController : CharacterBody3D
 		{
 			// param = 0f (block carries no payload — it is a one-axis timing read,
 			// no hand-side). Same phase guards apply: Begin() no-ops while mid-Recovery.
-			_machine.Begin(new BlockMove());
+			//
+			// "You cannot block your own shot" must be enforced where authority
+			// actually lives (ADR-0002) — the local !IsBallHolder check at the
+			// def_block input site is client-side UX (keeps a ball-holder from
+			// even attempting the input), not authority; a tampered client could
+			// send "block" while holding the ball. ResolveBlockAttempts' own
+			// _lastShooterPeerId exclusion only covers the POST-release window
+			// (a shooter can't block their own already-released shot); this gate
+			// covers the PRE-release Begin() itself.
+			if (!IsBallHolder)
+				BeginCommittedMove(new BlockMove());
 		}
 		// Unrecognized moveId: silently ignored. A malformed/forged moveId
 		// from a tampered client simply does nothing.
@@ -1945,7 +1955,7 @@ public partial class PlayerController : CharacterBody3D
 		// param = 0f: block carries no payload.
 		if (Input.IsActionJustPressed("def_block") && !IsBallHolder)
 		{
-			if (_machine.Begin(new BlockMove()) && !isServer)
+			if (BeginCommittedMove(new BlockMove()) && !isServer)
 				RpcId(1, MethodName.RequestBeginMove, "block", 0f);
 		}
 
