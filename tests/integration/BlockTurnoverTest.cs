@@ -196,6 +196,22 @@ public partial class BlockTurnoverTest : Node
         // the shot, not a lucky miss the block had nothing to do with.
         _ball.ShotScatterEnabled = false;
 
+        // Place the backboard BEHIND the rim, mirroring the production scene's
+        // RELATIVE placement (Main.tscn: board (0, 3.205, 0.03) sits 0.27 m
+        // behind rim (0, 3.05, 0.3), away from the court). The CODE-default
+        // BoardCenter (0, 3.5, 0.3) is 0.3 m in FRONT of the code-default
+        // RimCenter (0, 3.05, 0) — mutually inconsistent export defaults that
+        // production corrects in the .tscn but this code-built tree inherits
+        // raw. Under the raw defaults, every make-arc from ShooterPosition
+        // descends through the board face on its way to the rim (it crosses
+        // the Z = 0.3 board plane at Y ≈ 3.42, inside the face's [3.2, 3.8]
+        // span) and Bounces Loose — the control-make CI timeout at 0-0, and
+        // a silently vacuous "score unchanged" in the success scenario (an
+        // arc that physically cannot score proves nothing about the block).
+        // Verified against the pure ShotArc + RimBackboard classes: raw
+        // defaults → backboard Bounce at the plane; this placement → Make.
+        _ball.BoardCenter = new Vector3(0f, 3.205f, -0.27f);
+
         _gameManager = new GameManager { Name = "GameManager" };
 
         AddChild(players);      // matches scenes/Main.tscn: Players before Ball
@@ -246,6 +262,28 @@ public partial class BlockTurnoverTest : Node
             }
 
             _shooterBeginFrame = _frame;
+
+            // Every scoring-relevant conclusion in this harness rests on the
+            // shot being CLEARED: an uncleared make routes to ADR-0008's
+            // take-it-back branch (no points, turnover to the defender) —
+            // which is indistinguishable from a block/miss by score alone.
+            // The tipoff pre-clears the opening possession by design
+            // (TryAssignTipoffHolder, ADR-0008: the tipoff is neither a
+            // change of possession nor a made basket), and this harness
+            // shoots on that very first possession — assert that premise
+            // fails FAST and by name if a future rule change un-clears
+            // tipoffs, instead of masquerading as a mechanic failure.
+            // "whiff" is exempt: its assertions (no turnover, still
+            // InFlight, Recovery paid) never consult the score.
+            if (_scenario != "whiff" && !_ball.IsCleared)
+            {
+                Fail($"the tipoff possession is not cleared (IsCleared=false) at shot begin — the make " +
+                     $"would be swallowed by the take-it-back rule (ADR-0008), so no scoring assertion in " +
+                     $"this scenario can mean anything. The tipoff pre-clear (TryAssignTipoffHolder) " +
+                     $"changed; fix the harness setup to clear the possession before the shot.");
+                Finish();
+                return;
+            }
 
             // Position the shooter away from the rim's XZ (see ShooterPosition's
             // doc) BEFORE the release tick, so the eventual swat-direction
