@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://tests/integration/BlockTurnoverTest.cs" id="1_blockturnover"]
+
+[node name="BlockTurnoverTest" type="Node"]
+script = ExtResource("1_blockturnover")

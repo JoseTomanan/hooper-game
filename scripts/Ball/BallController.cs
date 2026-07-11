@@ -818,6 +818,17 @@ public partial class BallController : Node3D
 	/// </summary>
 	internal bool SweepIsBehindBodyForHarness => _sweepIsBehindBody;
 
+	/// <summary>
+	/// Test-only: exposes the current ball velocity (issue #98) — the block
+	/// harness needs to prove a successful block's swat velocity (away from
+	/// the rim, downward) actually overwrote the shot's original toward-the-rim
+	/// arc velocity, which is otherwise only observable indirectly through the
+	/// resulting trajectory over several ticks. Delegates to the existing
+	/// private CurrentVelocity() (used by the ReceiveState broadcast) so the
+	/// harness reads the exact same value every peer already reconciles from.
+	/// </summary>
+	internal Vector3 VelocityForHarness => CurrentVelocity();
+
 	// ── Shot scatter RNG (issue #62, ADR-0009) ─────────────────────────────
 
 	/// <summary>
