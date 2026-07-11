@@ -471,6 +471,26 @@ public partial class BallController : Node3D
 	/// </summary>
 	[Export] public int BlockGraceTicks { get; set; } = 10;
 
+	/// <summary>
+	/// Horizontal speed (m/s) of the provisional "swat" velocity a successful
+	/// block imparts on the now-Loose ball, directed from the rim toward the
+	/// ball — i.e. AWAY from the basket (ADR-0014 — real 1v1 ball: a blocked
+	/// shot is swatted back toward the court, it does not continue its arc to
+	/// the rim; ADR-0008 Amendment 2026-06-30: "the in-flight arc terminates").
+	/// Mirrors StealKnockSpeed's role for the steal. Provisional — feel tuning
+	/// deferred to #104 + the per-milestone feel pass (ADR-0015).
+	/// </summary>
+	[Export] public float BlockSwatSpeed { get; set; } = 2.0f;
+
+	/// <summary>
+	/// Downward speed (m/s) of the same swat velocity — a block knocks the
+	/// ball DOWN out of its rising arc (contrast StealKnockRiseSpeed: a steal
+	/// pokes a low ball up off the floor plane; a block swats a high ball down
+	/// toward it). TickLoose's FloorBounce then gives the natural
+	/// hit-the-hardwood-and-bounce read. Provisional; tuned in #104.
+	/// </summary>
+	[Export] public float BlockSwatDropSpeed { get; set; } = 1.0f;
+
 	// ── Composed pure logic ───────────────────────────────────────────────
 
 	/// <summary>The state machine that tracks which ball moment we're in.</summary>
@@ -1487,6 +1507,15 @@ public partial class BallController : Node3D
 		{
 			if (child is not PlayerController defender) continue;
 
+			// You cannot block your own shot. The holder is 0 while InFlight,
+			// so the "defender == holder" exclusion the steal uses has no
+			// meaning here — the shooter is identified by _lastShooterPeerId
+			// instead. Server-side because authority rules must not live only
+			// in client input code (ADR-0002): the client-side !IsBallHolder
+			// input gate is UX, this is the rule.
+			if (int.TryParse(defender.Name, out int defenderId)
+				&& defenderId == _lastShooterPeerId) continue;
+
 			// BlockMoveActiveInterval is non-null only when the defender is in
 			// Active phase on a BlockMove. Most ticks this is null (fast path).
 			var interval = defender.BlockMoveActiveInterval;
@@ -1513,9 +1542,54 @@ public partial class BallController : Node3D
 				// (ADR-0008 Amendment 2026-06-30: block is a defense-induced
 				// InFlight→Loose turnover; the loose-ball scramble awards next tick.)
 				StateMachine.GoLoose();
+
+				// Terminate the arc's shot velocity with a provisional "swat":
+				// horizontal away from the rim, vertical down (ADR-0014 — a real
+				// blocked shot is knocked back toward the court and down, it does
+				// NOT keep sailing toward the basket; without this the ball flies
+				// its unaltered make-trajectory as a Loose ball, passing through
+				// the rim geometry, and the block reads as a phantom miss). _arc
+				// is already a valid instance here (Shoot() built it), so unlike
+				// the steal's Dribbling→Loose path no seed-then-overwrite is
+				// needed — overwriting Velocity in place is enough.
+				Vector3 fromRim = GlobalPosition - RimCenter;
+				fromRim.Y = 0f;
+				Vector3 swatDir = fromRim.LengthSquared() > 0.0001f
+					? fromRim.Normalized()
+					: Vector3.Zero; // degenerate (ball directly over the rim) — straight-down drop
+				_arc.Velocity = new Vector3(
+					swatDir.X * BlockSwatSpeed,
+					-BlockSwatDropSpeed,
+					swatDir.Z * BlockSwatSpeed);
+
+				// The blocker is now the last toucher (#118 last-toucher-out rule,
+				// same reasoning as the steal's success branch): a swatted ball
+				// that sails OOB before the scramble recovers it must charge the
+				// turnover to the DEFENDER who touched it — offense retains —
+				// not re-key off the shooter, which would hand the blocker the
+				// ball for blocking it out of bounds.
+				if (defenderId != 0)
+					_lastToucherPeerId = defenderId;
+
+				// One committed move = at most one turnover ("spent once, then
+				// Recovery" — the steal remediation's contract). Today the frame
+				// data makes a second resolution unreachable (the ball cannot be
+				// caught and re-shot inside the ≤8 remaining Active ticks:
+				// JumpShot Startup alone is 18), but nothing should rely on
+				// tunables staying that way — #104 retunes them. Ending Active
+				// now pins the invariant AND frees the blocker to contest the
+				// very scramble their block just created instead of standing
+				// planted through the leftover Active ticks.
+				defender.EndResolvedDefensiveMove();
+
 				GD.Print($"[BallController] Block success: defender {defender.Name}, " +
 				         $"defActive [{defActiveStart},{defActiveEnd}), " +
 				         $"vulnWindow [{_inFlightStartTick},{_inFlightStartTick + BlockGraceTicks})");
+
+				// No shot is in flight any more. ApplyShootLocally re-arms this
+				// on the next release; clearing it here keeps the field's
+				// "-1 means no shot recorded" reading truthful between shots.
+				_inFlightStartTick = -1;
 				return; // only one block resolves per tick
 			}
 			// Whiff: Recovery is the natural punishment; nothing to do here.
