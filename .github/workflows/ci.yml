@@ -117,6 +117,32 @@ jobs:
           godot --headless --path . res://tests/integration/StealTurnoverTest.tscn -- --harness-scenario=whiff
           godot --headless --path . res://tests/integration/StealTurnoverTest.tscn -- --harness-scenario=recovery-reset
 
+      # Block TURNOVER mechanic, end to end (issue #98, ADR-0018 §2). Boots a
+      # real BallController + two PlayerControllers headless, begins a REAL
+      # JumpShot (shooter) and a REAL BlockMove (defender) through the same
+      # BeginCommittedMove/_machine.Begin() paths production input reaches,
+      # and asserts BallController.ResolveBlockAttempts's full-interval-form
+      # overlap check against the LIVE engine state — the pre-switch-plus-
+      # release-tick-top-up call ordering that makes "a blocked shot cannot
+      # score" true. 'success' places the defender's Active window so its
+      # entry tick lands exactly on the shot's release tick: asserts the
+      # turnover completes (Loose -> settled Held), the swat velocity
+      # (away from the rim, downward) replaces the shot's original toward-
+      # the-rim trajectory, score stays unchanged (shot scatter disabled, so
+      # an unblocked shot here is a guaranteed clean make — proving the block
+      # actually intercepted it), the defender is last-toucher, and the
+      # defender's machine ends up in Recovery. 'whiff' places the Active
+      # window one tick past the grace window's exclusive close: asserts no
+      # turnover fires, the shot proceeds unblocked (state stays InFlight),
+      # and the defender still pays Recovery for the miss. Both scenarios also
+      # assert the ADR-0018 §3 frame-data invariant (BlockMove.ActiveFrames
+      # <= BallController.BlockGraceTicks) against the LIVE ball node's
+      # export. Each exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run block-turnover mechanic harness
+        run: |
+          godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=success
+          godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=whiff
+
       # Held-ball out-of-bounds turnover (issue #179, adjudicating hitl #119).
       # Boots a real BallController + two PlayerControllers headless and walks a
       # player past the court line, asserting BallController.ResolvePlayerOutOfBounds
