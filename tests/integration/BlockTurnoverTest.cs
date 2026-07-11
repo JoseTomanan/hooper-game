@@ -17,7 +17,9 @@ namespace HOOPERGAME.Tests.Integration;
 // velocity/last-toucher/Recovery side effects.
 //
 //   godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=success
+//   godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=success-lastactive
 //   godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=whiff
+//   godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=control-make
 //   Exit: 0 = PASS, 1 = FAIL (via GetTree().Quit) — the ADR-0016 exit-code contract.
 //   Omitting --harness-scenario defaults to "success".
 //
@@ -44,11 +46,42 @@ namespace HOOPERGAME.Tests.Integration;
 // (BallController._PhysicsProcess) is what makes that first tick observable
 // at all, since the pre-switch call that same tick still saw Held/Dribbling.
 //
-// ── Scenario "whiff": defender's Active begins strictly after the grace window closes ──
-// ComputeDefenderBeginFrame places the Active window's entry tick one tick
-// past the vulnerable window's exclusive end, so DefensiveResolution.Succeeds'
-// half-open-interval check can never true — the shot must proceed unblocked
-// (state stays InFlight) and the defender still pays Recovery for the whiff.
+// ── Scenario "success-lastactive": the boundary "success" doesn't reach ──────
+// "success" places the defender's Active window's FIRST tick on the release
+// tick T. This scenario instead places the window's LAST tick on T (Active
+// entry at T - (ActiveFrames - 1)) — the exact case BallController.
+// _PhysicsProcess's post-switch "release-tick top-up" call exists for: the
+// PRE-switch ResolveBlockAttempts call on tick T still sees State !=
+// InFlight (the switch that flips it hasn't run yet that same tick), so
+// without the top-up call re-evaluating after the switch, this overlap would
+// never be observed at all — by tick T+1 the defender has already rolled
+// into Recovery. Deleting the top-up call must fail this scenario
+// deterministically (it would pass "success" regardless, since that overlap
+// is already visible on the pre-switch call of a LATER tick). Asserts only
+// the core turnover outcome (Loose happened / fresh possession / defender
+// Recovery) — the toucher/velocity/score checks are "success"'s job.
+//
+// ── Scenario "whiff": defender's Active begins at the vulnerable window's exclusive end ──
+// ComputeDefenderBeginFrame places the Active window's entry tick EXACTLY on
+// the vulnerable window's exclusive end (releaseFrame + BlockGraceTicks) —
+// the first tick the half-open interval [vulnStart, vulnEnd) excludes — so
+// DefensiveResolution.Succeeds' overlap check can never be true. Pinning the
+// boundary tick itself (rather than a tick safely past it) catches a ±1 shift
+// in the production tick arithmetic (e.g. a node-reorder skew) that a
+// one-tick-past placement would silently absorb. The shot must proceed
+// unblocked (state stays InFlight) and the defender still pays Recovery.
+//
+// ── Scenario "control-make": the counterfactual "success" is checked against ──
+// Identical shooter setup to "success" (same ShooterPosition, same clean
+// ShotScatterEnabled=false geometry), but the defender never begins a
+// BlockMove at all. Asserts the shot SCORES — turning "success"'s "score
+// unchanged" from "the scramble happened to settle before the shot could
+// have scored anyway" into real proof that the block intercepted a shot that
+// would otherwise have gone in. "success" derives a generous upper bound on
+// this scenario's make tick (ComputeUnblockedMakeTicks, from ShotArc's own
+// closed-form flight-time solve) and keeps ticking past it before asserting
+// the score is still 0-0, rather than verdicting the instant the scramble
+// settles.
 //
 // ── Self-block (dropped scenario) ──────────────────────────────────────────
 // ADR-0018/BallController.ResolveBlockAttempts excludes the shooter from being
@@ -70,9 +103,14 @@ public partial class BlockTurnoverTest : Node
     private const double TimeoutSeconds = 15.0;
     private const int ArmFrames = 2; // ticks for TryAssignTipoffHolder to run
 
-    // Extra ticks to let the loose-ball scramble settle into a fresh Held
-    // possession before rendering the "success" verdict, and to let the
-    // "whiff" verdict observe a state well clear of any one-tick read skew.
+    // Extra ticks past a computed boundary before rendering a verdict, so the
+    // check lands well clear of any one-tick read skew rather than pinned to
+    // the exact frame something is expected to happen. Used by TickWhiff
+    // (past the defender's Active window close) and by TickSuccess's
+    // counterfactual wait for the "success" scenario (past the frame an
+    // unblocked shot would have scored on, see ComputeUnblockedMakeTicks).
+    // "success-lastactive" does not use it — it verdicts as soon as the
+    // scramble settles, same as the pre-existing "success" behaviour.
     private const int VerdictMarginFrames = 6;
 
     // Holder position for the shot (issue #98): far enough from RimCenter's
@@ -104,6 +142,18 @@ public partial class BlockTurnoverTest : Node
     private int _toucherAtBlock = -1;   // latched on the first Loose tick
     private Vector3 _velocityAtBlock;   // latched on the first Loose tick
     private bool _velocityLatched;
+
+    // "success"/"success-lastactive": latched once the loose-ball scramble
+    // has settled into a fresh Held possession, so TickSuccess only re-checks
+    // the (possibly still-waiting) counterfactual condition afterward instead
+    // of re-deriving "has it settled yet" every tick.
+    private bool _settled;
+
+    // "success" only: the frame past which it is safe to assert the score is
+    // STILL 0-0 — computed lazily (once _releaseFrame is known) as
+    // _releaseFrame + ComputeUnblockedMakeTicks() + VerdictMarginFrames. -1
+    // means "not yet computed".
+    private int _counterfactualVerdictFrame = -1;
 
     public override void _Ready()
     {
@@ -191,15 +241,42 @@ public partial class BlockTurnoverTest : Node
             // the ball on the holder's position every tick regardless.
             _shooter.GlobalPosition = ShooterPosition;
 
-            // Defender's begin frame is computed from the SHOOTER's actual
-            // begin frame plus the LIVE JumpShot/BlockMove frame data and
-            // BlockGraceTicks — not hardcoded — so it survives #104 retuning.
-            int jumpShotStartup = JumpShot.DefaultFrameData.StartupFrames;
-            int releaseFrame = _shooterBeginFrame + (jumpShotStartup - 1);
-            _defenderBeginFrame = ComputeDefenderBeginFrame(releaseFrame);
+            // "control-make" never begins a BlockMove at all (that's the
+            // point — it's the counterfactual "what would have happened"
+            // scenario success/success-lastactive are checked against), so
+            // there is nothing to schedule. Leave _defenderBeginFrame at its
+            // default 0, which Step 2 below can never reach (_frame starts
+            // at 1 and only increases).
+            if (_scenario != "control-make")
+            {
+                // Defender's begin frame is computed from the SHOOTER's actual
+                // begin frame plus the LIVE JumpShot/BlockMove frame data and
+                // BlockGraceTicks — not hardcoded — so it survives #104 retuning.
+                int jumpShotStartup = JumpShot.DefaultFrameData.StartupFrames;
+                int releaseFrame = _shooterBeginFrame + (jumpShotStartup - 1);
+                _defenderBeginFrame = ComputeDefenderBeginFrame(releaseFrame);
 
-            GD.Print($"[block-turnover] frame {_frame}: shooter begun JumpShot " +
-                     $"(expected release frame {releaseFrame}); defender scheduled to begin at frame {_defenderBeginFrame}.");
+                // Fail-fast scheduling guard: if a legal frame-data retune (e.g.
+                // #104 making BlockMove.Startup >= JumpShot.Startup) pushes the
+                // computed begin frame to or before the CURRENT frame, Step 2
+                // below can never fire (_frame == _defenderBeginFrame will never
+                // become true again) and this test would otherwise just scramble
+                // for the full 15s TimeoutSeconds before failing with a
+                // misleading "timed out" message. Fail immediately instead, and
+                // name the actual cause.
+                if (_defenderBeginFrame <= _frame)
+                {
+                    Fail($"computed defender begin frame {_defenderBeginFrame} is not reachable from the " +
+                         $"current frame {_frame} — a frame-data change (JumpShot/BlockMove Startup/Active or " +
+                         $"BlockGraceTicks) made this scenario's placement unschedulable. Fix the harness's " +
+                         $"frame arithmetic for the new tunables rather than chasing the resulting timeout.");
+                    Finish();
+                    return;
+                }
+
+                GD.Print($"[block-turnover] frame {_frame}: shooter begun JumpShot " +
+                         $"(expected release frame {releaseFrame}); defender scheduled to begin at frame {_defenderBeginFrame}.");
+            }
         }
 
         // Step 2: begin the defender's REAL BlockMove at the computed frame.
@@ -252,7 +329,13 @@ public partial class BlockTurnoverTest : Node
             return;
         }
 
-        TickSuccess();
+        if (_scenario == "control-make")
+        {
+            TickControlMake();
+            return;
+        }
+
+        TickSuccess(); // "success" and "success-lastactive"
     }
 
     // Where to begin the defender's BlockMove so its Active window lands in
@@ -277,11 +360,34 @@ public partial class BlockTurnoverTest : Node
         int graceTicks = _ball.BlockGraceTicks;
 
         if (_scenario == "whiff")
-            // Active entry lands ONE TICK PAST the vulnerable window's
-            // exclusive end (releaseFrame + graceTicks) — guarantees
-            // DefensiveResolution.Succeeds' half-open-interval overlap test
-            // can never be true (defActiveStart < vulnEnd fails outright).
-            return (releaseFrame + graceTicks + 1) - (blockStartup - 1);
+            // Active entry lands EXACTLY on the vulnerable window's exclusive
+            // end (releaseFrame + graceTicks) — the FIRST tick the half-open
+            // interval [vulnStart, vulnEnd) EXCLUDES. DefensiveResolution.
+            // Succeeds' overlap test is defActiveStart < vulnEnd && vulnStart
+            // < defActiveEnd; with defActiveStart == vulnEnd the first half
+            // (vulnEnd < vulnEnd) is false outright, so this pins the boundary
+            // itself rather than a tick safely past it — catching an ±1 shift
+            // in the production tick arithmetic (e.g. node-reorder skew) that
+            // a one-tick-past placement would silently absorb.
+            return (releaseFrame + graceTicks) - (blockStartup - 1);
+
+        if (_scenario == "success-lastactive")
+        {
+            // Active entry lands so the defender's LAST Active tick (not the
+            // first) coincides with the release tick T: defActiveStart =
+            // T - (ActiveFrames - 1), i.e. beginFrame = T - (ActiveFrames-1)
+            // - (StartupFrames-1). This is the exact case
+            // BallController._PhysicsProcess's post-switch "release-tick
+            // top-up" call exists for: the PRE-switch ResolveBlockAttempts
+            // call on tick T still observes State != InFlight (the switch
+            // that flips it to InFlight hasn't run yet that same tick), so
+            // without the top-up call this overlap would never be evaluated
+            // at all — by tick T+1 the defender has already rolled into
+            // Recovery and BlockMoveActiveInterval is null. Deleting the
+            // top-up call must fail this scenario deterministically.
+            int blockActive = BlockMove.DefaultFrameData.ActiveFrames;
+            return releaseFrame - (blockActive - 1) - (blockStartup - 1);
+        }
 
         // "success": Active entry lands EXACTLY on the release tick itself —
         // guarantees an overlap (defActiveStart == vulnStart).
@@ -295,20 +401,79 @@ public partial class BlockTurnoverTest : Node
         // rationale for why _everLoose alone is insufficient). Since #193,
         // AwardPossession settles the loose-ball scramble into a fresh, live
         // Held possession, not Dribbling.
-        bool settled = _everLoose && _ball.State == BallState.Held && _ball.StateMachine.HolderPeerId != 0;
-
-        if (settled)
+        if (!_settled)
         {
-            Verdict();
-            return;
+            bool settled = _everLoose && _ball.State == BallState.Held && _ball.StateMachine.HolderPeerId != 0;
+            if (settled)
+            {
+                _settled = true;
+            }
+            else
+            {
+                if (_elapsed > TimeoutSeconds)
+                {
+                    Fail($"timed out at frame {_frame} waiting for the block's loose-ball scramble to settle. " +
+                         $"everLoose={_everLoose}, state={_ball.State}, defenderBegun={_defenderBegun}, releaseFrame={_releaseFrame}.");
+                    Finish();
+                }
+                return;
+            }
         }
 
-        if (_elapsed > TimeoutSeconds)
+        // "success" alone must also outlast the frame an UNBLOCKED clean shot
+        // from this exact setup would have scored on — the counterfactual
+        // "control-make" scenario's make — before rendering its verdict. This
+        // turns "score unchanged" from "the scramble merely settled quickly"
+        // into "a blocked shot can never score, even generously past the
+        // moment rim contact would have happened." "success-lastactive" skips
+        // this: its point is pinning the release-tick top-up boundary, not
+        // re-proving the counterfactual (already proven by "success").
+        if (_scenario == "success")
         {
-            Fail($"timed out at frame {_frame} waiting for the block's loose-ball scramble to settle. " +
-                 $"everLoose={_everLoose}, state={_ball.State}, defenderBegun={_defenderBegun}, releaseFrame={_releaseFrame}.");
-            Finish();
+            if (_counterfactualVerdictFrame < 0)
+                _counterfactualVerdictFrame = _releaseFrame + ComputeUnblockedMakeTicks() + VerdictMarginFrames;
+
+            if (_frame < _counterfactualVerdictFrame)
+            {
+                if (_elapsed > TimeoutSeconds)
+                {
+                    Fail($"timed out at frame {_frame} waiting to safely outlast the counterfactual make frame " +
+                         $"{_counterfactualVerdictFrame} before rendering the success verdict.");
+                    Finish();
+                }
+                return;
+            }
         }
+
+        Verdict();
+    }
+
+    // A generous UPPER BOUND (not a guess) on how many ticks an UNBLOCKED
+    // clean shot from this exact setup would take to reach the rim and
+    // register a Make, derived from ShotArc's own closed-form flight-time
+    // solve (see ShotArc.SolveInitialVelocity's doc) rather than hardcoded —
+    // so a tuning change to any of these exports doesn't silently stale this
+    // bound out. Release Y is DribbleHandHeight exactly: TickHeld sets the
+    // ball's world-Y to DribbleHandHeight minus the crossover sweep's
+    // mid-transit dip, and this shooter never dribbles or crosses over, so
+    // the dip term is always 0 here. Target Y is RimCenter.Y (ShotTarget ==
+    // RimCenter with ShotScatterEnabled disabled, per this class's doc).
+    private int ComputeUnblockedMakeTicks()
+    {
+        float apex = _ball.ShotApexHeight;
+        float gravity = _ball.Gravity;
+        float releaseY = _ball.DribbleHandHeight;
+        float targetY = _ball.RimCenter.Y;
+
+        float riseH = Mathf.Max(apex - releaseY, 0f);
+        float vyLaunch = Mathf.Sqrt(2f * gravity * riseH);
+        float tUp = vyLaunch / gravity;
+
+        float fallH = Mathf.Max(apex - targetY, 0f);
+        float tDown = Mathf.Sqrt(2f * fallH / gravity);
+
+        float tTotal = tUp + tDown;
+        return Mathf.CeilToInt(tTotal * Engine.PhysicsTicksPerSecond);
     }
 
     private void TickWhiff()
@@ -349,6 +514,28 @@ public partial class BlockTurnoverTest : Node
         }
     }
 
+    // "control-make": no BlockMove ever begins — this is the counterfactual
+    // "what would have happened" run "success" is checked against (see
+    // ComputeUnblockedMakeTicks / TickSuccess's counterfactual wait). Waits
+    // for the shooter's own score to register — with ShotScatterEnabled
+    // disabled and the same clean geometry "success" uses, an unblocked shot
+    // from this setup is a guaranteed make.
+    private void TickControlMake()
+    {
+        if (_gameManager.ScoreOf(1) > 0)
+        {
+            Verdict();
+            return;
+        }
+
+        if (_elapsed > TimeoutSeconds)
+        {
+            Fail($"timed out at frame {_frame} waiting for the unblocked control shot to score. " +
+                 $"state={_ball.State}, score1={_gameManager.ScoreOf(1)}.");
+            Finish();
+        }
+    }
+
     private void Verdict()
     {
         if (_scenario == "whiff")
@@ -357,7 +544,41 @@ public partial class BlockTurnoverTest : Node
             return;
         }
 
+        if (_scenario == "control-make")
+        {
+            VerdictControlMake();
+            return;
+        }
+
+        if (_scenario == "success-lastactive")
+        {
+            VerdictSuccessLastActive();
+            return;
+        }
+
         VerdictSuccess();
+    }
+
+    private void VerdictControlMake()
+    {
+        // The whole point of this scenario: with no block ever attempted, the
+        // SAME clean setup "success" uses scores exactly once — the real proof
+        // that "success"/"success-lastactive"'s "score unchanged" means the
+        // block intercepted a shot that would otherwise have gone in, not that
+        // the shot never had a chance to score in the first place.
+        bool pass = _gameManager.ScoreOf(1) == 1 && _gameManager.ScoreOf(2) == 0;
+
+        if (pass)
+        {
+            GD.Print($"[block-turnover] PASS — scenario=control-make, score1={_gameManager.ScoreOf(1)}, " +
+                     $"score2={_gameManager.ScoreOf(2)}.");
+        }
+        else
+        {
+            Fail($"scenario=control-make expected the unblocked shot to score exactly once, but got " +
+                 $"score1={_gameManager.ScoreOf(1)}, score2={_gameManager.ScoreOf(2)}.");
+        }
+        Finish(pass ? 0 : 1);
     }
 
     private void VerdictSuccess()
@@ -413,6 +634,35 @@ public partial class BlockTurnoverTest : Node
                  $"toucherAtBlock={_toucherAtBlock}, scoreUnchanged={scoreUnchanged} (score1={_gameManager.ScoreOf(1)}, " +
                  $"score2={_gameManager.ScoreOf(2)}), velocityAtBlock={_velocityAtBlock} " +
                  $"(latched={_velocityLatched}), defenderPhase={_defender.PhaseForHarness}.");
+        }
+        Finish(pass ? 0 : 1);
+    }
+
+    // "success-lastactive" pins the release-tick TOP-UP call specifically
+    // (see ComputeDefenderBeginFrame's doc): the defender's Active window
+    // overlaps the vulnerable window by exactly one tick, at its OWN last
+    // tick rather than its first. Checks only the core turnover outcome
+    // (Loose happened / fresh possession / defender Recovery) — the
+    // toucher/velocity/score details are already the "success" scenario's
+    // job; re-asserting them here would not add coverage of the boundary
+    // this scenario exists to pin.
+    private void VerdictSuccessLastActive()
+    {
+        bool turnoverCompleted = _everLoose && _ball.State == BallState.Held && _ball.StateMachine.HolderPeerId != 0;
+        bool defenderSpentOnce = _defender.PhaseForHarness == MovePhase.Recovery;
+
+        bool pass = turnoverCompleted && defenderSpentOnce;
+
+        if (pass)
+        {
+            GD.Print($"[block-turnover] PASS — scenario=success-lastactive, finalState={_ball.State}, " +
+                     $"holder={_ball.StateMachine.HolderPeerId}, defenderPhase={_defender.PhaseForHarness}.");
+        }
+        else
+        {
+            Fail($"scenario=success-lastactive expected a completed turnover and defender Recovery, but got " +
+                 $"turnoverCompleted={turnoverCompleted} (everLoose={_everLoose}, state={_ball.State}, " +
+                 $"holder={_ball.StateMachine.HolderPeerId}), defenderPhase={_defender.PhaseForHarness}.");
         }
         Finish(pass ? 0 : 1);
     }
