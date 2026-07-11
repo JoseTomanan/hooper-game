@@ -694,9 +694,10 @@ public partial class PlayerController : CharacterBody3D
 	}
 
 	/// <summary>
-	/// Server-only: ends this defender's StealMove Active phase the instant
-	/// BallController.ResolveStealAttempts resolves it as a success, paying
-	/// Recovery immediately instead of riding out the remaining ActiveFrames.
+	/// Server-only: ends this defender's defensive-move Active phase the instant
+	/// BallController resolves it as a success (ResolveStealAttempts /
+	/// ResolveBlockAttempts), paying Recovery immediately instead of riding out
+	/// the remaining ActiveFrames.
 	///
 	/// Why this must exist (issue #96 remediation, multi-fire bug): a
 	/// resolved steal calls BallState.GoLoose(), and TickLoose's proximity
@@ -708,10 +709,13 @@ public partial class PlayerController : CharacterBody3D
 	/// and ResolveStealAttempts would see Dribbling + in-band + matching-hand
 	/// again and fire GoLoose() repeatedly — up to ActiveFrames times for one
 	/// committed move. Ending Active the moment it resolves means one
-	/// StealMove can produce at most one turnover, matching every other
-	/// committed move's "spent once, then Recovery" contract.
+	/// defensive move can produce at most one turnover, matching every other
+	/// committed move's "spent once, then Recovery" contract. The block (#98)
+	/// shares the contract for the same reason — its remaining Active ticks
+	/// must not linger over the scramble it just created (and the successful
+	/// defender is freed to contest that scramble instead of standing planted).
 	/// </summary>
-	public bool EndResolvedSteal() => _machine.EndActiveEarly();
+	public bool EndResolvedDefensiveMove() => _machine.EndActiveEarly();
 
 	/// <summary>
 	/// When this player's committed-move machine is currently in Active phase on

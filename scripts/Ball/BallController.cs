@@ -1326,7 +1326,7 @@ public partial class BallController : Node3D
 	///
 	/// On success: GoLoose() once — the ball transitions Dribbling → Loose,
 	/// seeded with a provisional knock velocity (see below) — plus the
-	/// defender's StealMove Active phase is ended early via EndResolvedSteal()
+	/// defender's StealMove Active phase is ended early via EndResolvedDefensiveMove()
 	/// so this StealMove cannot resolve a second time (issue #96 remediation's
 	/// multi-fire guard — see the comment at the success branch). The existing
 	/// TickLoose proximity scramble then awards possession to whichever player
@@ -1436,9 +1436,10 @@ public partial class BallController : Node3D
 				// naturally expired, this method re-enters next tick and would
 				// see Dribbling + the same frozen in-band phase + matching hand
 				// again — firing GoLoose() a second time for one committed move.
-				// EndResolvedSteal caps it at exactly one turnover per StealMove,
-				// then the defender pays Recovery like any other spent move.
-				defender.EndResolvedSteal();
+				// EndResolvedDefensiveMove caps it at exactly one turnover per
+				// StealMove, then the defender pays Recovery like any other
+				// spent move.
+				defender.EndResolvedDefensiveMove();
 
 				GD.Print($"[BallController] Steal success: defender {defender.Name}, " +
 						 $"phase {_dribble.Phase:F2}, hand {holder.HandSide}");

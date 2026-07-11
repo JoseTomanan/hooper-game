@@ -46,7 +46,7 @@ public partial class PlayerController
     /// Test-only (issue #175): exposes CommittedMoveMachine.WasRecoveryEnteredEarly
     /// — the level-triggered signal that gets piggybacked on ReceiveState and
     /// drives ShouldForceRecovery client-side. Proving THIS flag flips true at
-    /// the real moment BallController.ResolveStealAttempts calls EndResolvedSteal
+    /// the real moment BallController.ResolveStealAttempts calls EndResolvedDefensiveMove
     /// is the server-side half of the #175 fix; StealTurnoverTest's shadow-client
     /// block proves the client-side half (ShouldForceRecovery + ForceState)
     /// against these real values.
