@@ -452,6 +452,45 @@ public partial class BallController : Node3D
 	/// </summary>
 	[Export] public float StealKnockRiseSpeed { get; set; } = 1.0f;
 
+	// ── Block tunables (M10, issue #98, ADR-0018 §2) ─────────────────────
+
+	/// <summary>
+	/// Number of ticks after the ball enters InFlight during which a block
+	/// attempt can still connect — the "grace" tail of the shot's vulnerable
+	/// window. The vulnerable interval is [InFlight start, InFlight start + BlockGraceTicks)
+	/// on the deterministic physics-tick clock (ADR-0018 §2).
+	///
+	/// Mechanically: after the ball leaves the hand it continues to rise near
+	/// the shooter. A defender jumping to block connects if their Active window
+	/// overlaps this window. Once the grace period expires the ball is past
+	/// the defender and the block opportunity is gone.
+	///
+	/// Default 10 ticks ≈ 0.17 s at 60 Hz — provisional; deferred to #104
+	/// and the per-milestone feel pass (ADR-0015). Must be ≥ BlockMove.ActiveFrames
+	/// (currently 8) per ADR-0018 §3 so a perfectly-timed block can always connect.
+	/// </summary>
+	[Export] public int BlockGraceTicks { get; set; } = 10;
+
+	/// <summary>
+	/// Horizontal speed (m/s) of the provisional "swat" velocity a successful
+	/// block imparts on the now-Loose ball, directed from the rim toward the
+	/// ball — i.e. AWAY from the basket (ADR-0014 — real 1v1 ball: a blocked
+	/// shot is swatted back toward the court, it does not continue its arc to
+	/// the rim; ADR-0008 Amendment 2026-06-30: "the in-flight arc terminates").
+	/// Mirrors StealKnockSpeed's role for the steal. Provisional — feel tuning
+	/// deferred to #104 + the per-milestone feel pass (ADR-0015).
+	/// </summary>
+	[Export] public float BlockSwatSpeed { get; set; } = 2.0f;
+
+	/// <summary>
+	/// Downward speed (m/s) of the same swat velocity — a block knocks the
+	/// ball DOWN out of its rising arc (contrast StealKnockRiseSpeed: a steal
+	/// pokes a low ball up off the floor plane; a block swats a high ball down
+	/// toward it). TickLoose's FloorBounce then gives the natural
+	/// hit-the-hardwood-and-bounce read. Provisional; tuned in #104.
+	/// </summary>
+	[Export] public float BlockSwatDropSpeed { get; set; } = 1.0f;
+
 	// ── Composed pure logic ───────────────────────────────────────────────
 
 	/// <summary>The state machine that tracks which ball moment we're in.</summary>
@@ -595,6 +634,51 @@ public partial class BallController : Node3D
 	/// </summary>
 	private ShotArc _arc;
 
+	// ── Block tracking (M10, issue #98) ───────────────────────────────────
+
+	/// <summary>
+	/// Monotonically-increasing physics tick counter — incremented at the
+	/// start of every _PhysicsProcess call. Purely LOCAL: each peer starts
+	/// counting from 0 whenever its own ball node enters the tree, and nothing
+	/// synchronizes it across peers — it is NOT a shared/networked clock.
+	/// That's fine because its only consumer, ResolveBlockAttempts, is gated
+	/// `IsServer`-only: every absolute-tick interval it computes (the
+	/// defender's Active window, the shot's vulnerable window) is compared
+	/// entirely within the server's own counter, so no cross-peer property is
+	/// ever needed.
+	///
+	/// Why it exists at all: the block uses DefensiveResolution.Succeeds with
+	/// two REAL intervals (the defender's Active window and the shot's
+	/// vulnerable window). The steal reduces to a point-in-time test, so it
+	/// doesn't need an absolute clock. The block check runs every InFlight
+	/// tick, so we need the defender's entry tick (derived from FrameInPhase +
+	/// currentTick) and the shot's InFlight start tick. This counter supplies
+	/// those values.
+	/// </summary>
+	private int _physicsTick;
+
+	/// <summary>
+	/// The physics tick on which the ball last transitioned to InFlight (a shot
+	/// was released). Set in ApplyShootLocally (called by CheckJumpShotRelease)
+	/// right after StateMachine.Shoot() succeeds.
+	///
+	/// It is reset to -1 in exactly one place: ResolveBlockAttempts' success
+	/// branch, when a block turns the shot into a Loose ball. There is no reset
+	/// on a miss/make or any other InFlight exit — the value is simply
+	/// overwritten the next time a shot is released, and in the meantime it sits
+	/// inert behind the `StateMachine.Current != BallState.InFlight` guard at
+	/// the top of ResolveBlockAttempts (State isn't InFlight, so the stale value
+	/// is never read as a live window). -1 means "no shot has ever been
+	/// released yet" and also causes ResolveBlockAttempts to return immediately.
+	///
+	/// Any FUTURE path that transitions the ball into InFlight without going
+	/// through ApplyShootLocally would inherit whatever stale value this field
+	/// last held — worth flagging at that call site if one is ever added.
+	///
+	/// The block vulnerable window is [_inFlightStartTick, _inFlightStartTick + BlockGraceTicks).
+	/// </summary>
+	private int _inFlightStartTick = -1;
+
 	// ── Visual-correction mesh reference ───────────────────────────────────
 
 	/// <summary>
@@ -733,6 +817,17 @@ public partial class BallController : Node3D
 	/// the harness discriminator between the two ball-transit paths.
 	/// </summary>
 	internal bool SweepIsBehindBodyForHarness => _sweepIsBehindBody;
+
+	/// <summary>
+	/// Test-only: exposes the current ball velocity (issue #98) — the block
+	/// harness needs to prove a successful block's swat velocity (away from
+	/// the rim, downward) actually overwrote the shot's original toward-the-rim
+	/// arc velocity, which is otherwise only observable indirectly through the
+	/// resulting trajectory over several ticks. Delegates to the existing
+	/// private CurrentVelocity() (used by the ReceiveState broadcast) so the
+	/// harness reads the exact same value every peer already reconciles from.
+	/// </summary>
+	internal Vector3 VelocityForHarness => CurrentVelocity();
 
 	// ── Shot scatter RNG (issue #62, ADR-0009) ─────────────────────────────
 
@@ -940,9 +1035,36 @@ public partial class BallController : Node3D
 			_hasNewState = false;
 		}
 
+		// Monotonic tick counter used by block resolution for absolute-tick
+		// interval arithmetic (ADR-0018 §2, issue #98). Purely local — it is
+		// NOT synchronized with any other peer's counter — which is fine
+		// because its only consumer, ResolveBlockAttempts, is IsServer-gated
+		// and only ever compares ticks drawn from this same counter. Incremented
+		// after reconcile so a reconciled snapshot never itself gets counted as
+		// a tick.
+		_physicsTick++;
+
 		// Fixed timestep — NOT the variable wall-clock delta — so the arc is
 		// deterministic and reproducible identically on server and every client.
 		float dt = 1.0f / Engine.PhysicsTicksPerSecond;
+
+		// Server-only: resolve block attempts BEFORE the per-state tick so that
+		// a successful block (GoLoose from InFlight) prevents TickInFlight from
+		// running on the same tick. This ordering is CRITICAL for the
+		// "blocked shot cannot score" correctness requirement (issue #98):
+		//
+		//   Without pre-switch block: TickInFlight runs first → rim contact can
+		//   trigger RegisterBasket → THEN block GoLoose → basket already counted.
+		//
+		//   With pre-switch block: if block succeeds, State transitions to Loose
+		//   BEFORE the switch → switch falls into TickLoose instead of TickInFlight
+		//   → RegisterBasket is never reached (ADR-0008 Amendment 2026-06-30).
+		//
+		// Contrast with steal (ResolveStealAttempts after the switch): steal targets
+		// Dribbling state which has no make-detection code, so ordering doesn't matter
+		// for steal. Block specifically interrupts InFlight's scoring path.
+		if (IsServer)
+			ResolveBlockAttempts();
 
 		switch (State)
 		{
@@ -951,6 +1073,23 @@ public partial class BallController : Node3D
 			case BallState.InFlight:  TickInFlight(dt);  break;
 			case BallState.Loose:     TickLoose(dt);     break;
 		}
+
+		// Server-only: release-tick top-up. The pre-switch call above ran while
+		// State was still Held/Dribbling — the shot only becomes InFlight INSIDE
+		// this switch (TickHeld/TickDribbling → CheckJumpShotRelease →
+		// ApplyShootLocally sets _inFlightStartTick = _physicsTick). So the release
+		// tick itself was never evaluated: a defender whose Active window's last
+		// frame is exactly this tick should connect per the half-open interval
+		// semantics (ADR-0018 §2), but without this call the first evaluation
+		// would be next tick, by which time that defender has moved into Recovery.
+		// The `_inFlightStartTick == _physicsTick` guard makes this strictly a
+		// release-tick-only top-up (every later InFlight tick is already covered
+		// by the pre-switch call above). It cannot double-resolve the same shot:
+		// on the tick a block succeeds, ResolveBlockAttempts resets
+		// _inFlightStartTick to -1, and the function's own early-return guards on
+		// `_inFlightStartTick < 0`.
+		if (IsServer && StateMachine.Current == BallState.InFlight && _inFlightStartTick == _physicsTick)
+			ResolveBlockAttempts();
 
 		// Server-only: assign the tipoff holder once a player node exists but the
 		// ball has none yet (ADR-0007). The broadcast below propagates the holder
@@ -1254,7 +1393,7 @@ public partial class BallController : Node3D
 	///
 	/// On success: GoLoose() once — the ball transitions Dribbling → Loose,
 	/// seeded with a provisional knock velocity (see below) — plus the
-	/// defender's StealMove Active phase is ended early via EndResolvedSteal()
+	/// defender's StealMove Active phase is ended early via EndResolvedDefensiveMove()
 	/// so this StealMove cannot resolve a second time (issue #96 remediation's
 	/// multi-fire guard — see the comment at the success branch). The existing
 	/// TickLoose proximity scramble then awards possession to whichever player
@@ -1364,9 +1503,10 @@ public partial class BallController : Node3D
 				// naturally expired, this method re-enters next tick and would
 				// see Dribbling + the same frozen in-band phase + matching hand
 				// again — firing GoLoose() a second time for one committed move.
-				// EndResolvedSteal caps it at exactly one turnover per StealMove,
-				// then the defender pays Recovery like any other spent move.
-				defender.EndResolvedSteal();
+				// EndResolvedDefensiveMove caps it at exactly one turnover per
+				// StealMove, then the defender pays Recovery like any other
+				// spent move.
+				defender.EndResolvedDefensiveMove();
 
 				GD.Print($"[BallController] Steal success: defender {defender.Name}, " +
 						 $"phase {_dribble.Phase:F2}, hand {holder.HandSide}");
@@ -1375,6 +1515,183 @@ public partial class BallController : Node3D
 			// Whiff this tick: keep checking subsequent Active ticks (the loop
 			// re-enters next physics tick). Recovery is the natural punishment for
 			// a fully-missed window; not wired here.
+		}
+	}
+
+	/// <summary>
+	/// Server-only: resolve block attempts by defenders every InFlight tick.
+	///
+	/// Called BEFORE the per-state switch in _PhysicsProcess so that a successful
+	/// block (GoLoose from InFlight) prevents TickInFlight from running this tick —
+	/// which is the only way to guarantee a blocked shot cannot score. If block
+	/// resolution ran AFTER TickInFlight, rim contact could trigger RegisterBasket
+	/// on the same tick the block connected. (ADR-0008 Amendment 2026-06-30.)
+	///
+	/// Success condition (ADR-0018 §2 — full interval form):
+	///   DefensiveResolution.Succeeds(blockActiveStart, blockActiveEnd,
+	///                                inFlightStartTick, inFlightStartTick + BlockGraceTicks)
+	///
+	/// where blockActiveStart = _physicsTick − FrameInPhase (the absolute tick the
+	/// defender entered Active) and blockActiveEnd = blockActiveStart + ActiveFrames.
+	///
+	/// This is the INTERVAL FORM (not the point-in-band form used by steal):
+	/// the defender's entire Active window is checked against the shot's vulnerable
+	/// window, so a defender who entered Active slightly before or after the release
+	/// can still block if their window overlaps the grace period.
+	///
+	/// Phrasing note: ADR-0018 §2 writes the vulnerable window as
+	/// [JumpShot.Active start, InFlight start + BlockGraceTicks), while this
+	/// method uses [_inFlightStartTick, _inFlightStartTick + BlockGraceTicks).
+	/// These are the SAME tick by construction, not two different quantities —
+	/// the ball releases on JumpShot's JustEnteredActive (its first Active
+	/// tick; see JumpShotReleaseResolver / PlayerController.
+	/// JustReleasedJumpShot), so JumpShot.Active start == InFlight start. This
+	/// equivalence holds only as long as release continues to fire on Active
+	/// entry; if a future change decouples them, the two phrasings would need
+	/// to be reconciled explicitly.
+	///
+	/// On success: GoLoose() once — InFlight → Loose (ADR-0008 Amendment 2026-06-30).
+	/// The existing TickLoose proximity scramble then awards possession next tick.
+	///
+	/// On a whiff: no action. The defender pays Recovery naturally.
+	///
+	/// Deliberately NO reach/proximity term: success is timing-only, matching
+	/// #98/ADR-0018 §2 exactly — a defender's Active window overlapping the
+	/// vulnerable window blocks regardless of distance to the shooter. A
+	/// positional gate is a real, separate gap, tracked as deferral issue
+	/// #214 (sibling of #196).
+	///
+	/// Not client-predicted: this runs only here, IsServer-gated, so the
+	/// blocking client sees its own swat ~1 RTT late via ReceiveState — the
+	/// same accepted gap as the steal. ADR-0018 §4's prediction sentence
+	/// stays aspirational until the remote-phase/display work (#69/#102
+	/// lineage) lands.
+	/// </summary>
+	private void ResolveBlockAttempts()
+	{
+		if (StateMachine.Current != BallState.InFlight) return;
+		if (_inFlightStartTick < 0) return; // defensive: no shot recorded yet
+		if (Players == null) return;
+
+		foreach (Node child in Players.GetChildren())
+		{
+			if (child is not PlayerController defender) continue;
+
+			// A non-peer node (unparsable Name) is never a blocker — fail
+			// SAFE by excluding it, matching ResolveLooseBallRecovery's own
+			// convention. The inverted form matters: `TryParse(...) &&
+			// defenderId == _lastShooterPeerId` would let a parse FAILURE
+			// (defenderId left at 0) fall through as a live candidate instead
+			// of being excluded, silently disabling the self-block guard for
+			// exactly the nodes it can't identify.
+			if (!int.TryParse(defender.Name, out int defenderId)) continue;
+
+			// You cannot block your own shot. The holder is 0 while InFlight,
+			// so the "defender == holder" exclusion the steal uses has no
+			// meaning here — the shooter is identified by _lastShooterPeerId
+			// instead. Server-side because authority rules must not live only
+			// in client input code (ADR-0002): the client-side !IsBallHolder
+			// input gate is UX, this is the rule.
+			if (defenderId == _lastShooterPeerId) continue;
+
+			// BlockMoveActiveInterval is non-null only when the defender is in
+			// Active phase on a BlockMove. Most ticks this is null (fast path).
+			var interval = defender.BlockMoveActiveInterval;
+			if (interval == null) continue;
+
+			var (frameInPhase, activeFrames) = interval.Value;
+
+			// Compute the defender's Active window as absolute physics ticks.
+			// frameInPhase = 0 means they JUST entered Active this very tick;
+			// frameInPhase = N means they entered Active N ticks ago.
+			//
+			// Hidden assumption: this reads defActiveStart as of THIS Ball tick,
+			// which is only correct because the Players node precedes the Ball
+			// node in Main.tscn — player CommittedMoveMachines tick before the
+			// ball reads their phase/frame here. Reordering those nodes would
+			// shift every block window by one tick without changing a single
+			// line in this file (see the repo's recorded parent-precedes-child
+			// tick-observation gotcha). The headless harness pins the resulting
+			// end-to-end timing, so a reorder regression would show up there.
+			int defActiveStart = _physicsTick - frameInPhase;
+			int defActiveEnd   = defActiveStart + activeFrames;
+
+			// Vulnerable window: [inFlightStart, inFlightStart + BlockGraceTicks).
+			// Full interval form of the shared predicate (ADR-0018 §2):
+			//   defActiveStart < vulnEnd  AND  vulnStart < defActiveEnd
+			bool success = DefensiveResolution.Succeeds(
+				defActiveStart, defActiveEnd,
+				_inFlightStartTick, _inFlightStartTick + BlockGraceTicks);
+
+			if (success)
+			{
+				// InFlight → Loose: the shot arc terminates mid-flight.
+				// (ADR-0008 Amendment 2026-06-30: block is a defense-induced
+				// InFlight→Loose turnover; the loose-ball scramble awards next tick.)
+				StateMachine.GoLoose();
+
+				// Terminate the arc's shot velocity with a provisional "swat":
+				// horizontal away from the rim, vertical down (ADR-0014 — a real
+				// blocked shot is knocked back toward the court and down, it does
+				// NOT keep sailing toward the basket; without this the ball flies
+				// its unaltered make-trajectory as a Loose ball, passing through
+				// the rim geometry, and the block reads as a phantom miss). _arc
+				// is already a valid instance here (Shoot() built it), so unlike
+				// the steal's Dribbling→Loose path no seed-then-overwrite is
+				// needed — overwriting Velocity in place is enough.
+				Vector3 fromRim = GlobalPosition - RimCenter;
+				fromRim.Y = 0f;
+				Vector3 fromDefender = GlobalPosition - defender.GlobalPosition;
+				fromDefender.Y = 0f;
+				Vector3 swatDir;
+				if (fromRim.LengthSquared() > 0.0001f)
+					swatDir = fromRim.Normalized();
+				else if (fromDefender.LengthSquared() > 0.0001f)
+					// Degenerate case: the ball's XZ coincides with RimCenter's —
+					// release from directly under the rim, the most common block
+					// range. A pure "away from rim" direction is undefined there,
+					// so fall back to "away from the defender's hand" instead: the
+					// swat physically comes off whoever's hand touched the ball,
+					// not a vertical drop through the rim geometry.
+					swatDir = fromDefender.Normalized();
+				else
+					swatDir = Vector3.Zero; // both degenerate — straight-down drop
+				_arc.Velocity = new Vector3(
+					swatDir.X * BlockSwatSpeed,
+					-BlockSwatDropSpeed,
+					swatDir.Z * BlockSwatSpeed);
+
+				// The blocker is now the last toucher (#118 last-toucher-out rule,
+				// same reasoning as the steal's success branch): a swatted ball
+				// that sails OOB before the scramble recovers it must charge the
+				// turnover to the DEFENDER who touched it — offense retains —
+				// not re-key off the shooter, which would hand the blocker the
+				// ball for blocking it out of bounds.
+				if (defenderId != 0)
+					_lastToucherPeerId = defenderId;
+
+				// One committed move = at most one turnover ("spent once, then
+				// Recovery" — the steal remediation's contract). Today the frame
+				// data makes a second resolution unreachable (the ball cannot be
+				// caught and re-shot inside the ≤8 remaining Active ticks:
+				// JumpShot Startup alone is 18), but nothing should rely on
+				// tunables staying that way — #104 retunes them. Ending Active
+				// now pins the invariant AND frees the blocker to contest the
+				// very scramble their block just created instead of standing
+				// planted through the leftover Active ticks.
+				defender.EndResolvedDefensiveMove();
+
+				GD.Print($"[BallController] Block success: defender {defender.Name}, " +
+				         $"defActive [{defActiveStart},{defActiveEnd}), " +
+				         $"vulnWindow [{_inFlightStartTick},{_inFlightStartTick + BlockGraceTicks})");
+
+				// No shot is in flight any more. ApplyShootLocally re-arms this
+				// on the next release; clearing it here keeps the field's
+				// "-1 means no shot recorded" reading truthful between shots.
+				_inFlightStartTick = -1;
+				return; // only one block resolves per tick
+			}
+			// Whiff: Recovery is the natural punishment; nothing to do here.
 		}
 	}
 
@@ -2235,6 +2552,13 @@ public partial class BallController : Node3D
 
 		int holderAtShootTime = StateMachine.HolderPeerId;
 		if (!StateMachine.Shoot()) return false;
+
+		// Record the tick the ball entered InFlight so block resolution can
+		// compute the shot's vulnerable window [_inFlightStartTick, _inFlightStartTick +
+		// BlockGraceTicks) each tick while InFlight (ADR-0018 §2, issue #98).
+		// NOTE: _physicsTick was already incremented at the top of _PhysicsProcess
+		// for this tick, so this value is the CURRENT tick (the release tick itself).
+		_inFlightStartTick = _physicsTick;
 
 		_lastShooterPeerId = holderAtShootTime;
 

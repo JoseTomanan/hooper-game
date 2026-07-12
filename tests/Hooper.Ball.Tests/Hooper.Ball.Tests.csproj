@@ -82,6 +82,8 @@
     <Compile Include="..\..\scripts\Input\FeintGateResolver.cs" />
     <!-- M10 steal committed move (issue #96, ADR-0018) -->
     <Compile Include="..\..\scripts\Input\StealMove.cs" />
+    <!-- M10 block committed move (issue #98, ADR-0018) -->
+    <Compile Include="..\..\scripts\Input\BlockMove.cs" />
   </ItemGroup>
 
   <!--

@@ -230,7 +230,7 @@ public sealed class CommittedMoveMachine
     /// advances in TickDribbling), which would let the SAME resolved StealMove
     /// re-fire on every remaining Active tick. EndActiveEarly caps a committed
     /// move's real-world effect at "resolves once, then pays Recovery like
-    /// normal" — the caller (PlayerController.EndResolvedSteal) invokes this
+    /// normal" — the caller (PlayerController.EndResolvedDefensiveMove) invokes this
     /// exactly when BallController.ResolveStealAttempts confirms a success.
     /// </summary>
     /// <returns>True if the phase advanced to Recovery; false if not in Active.</returns>

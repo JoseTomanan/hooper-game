@@ -83,7 +83,7 @@ public partial class StealTurnoverTest : Node
     // exactly mirroring what a real client's local prediction would prevail as
     // — and, at the moment the REAL server-side machine resolves the steal
     // early (BallController.ResolveStealAttempts → PlayerController.
-    // EndResolvedSteal, the exact code path #175 is about), feeds the shadow
+    // EndResolvedDefensiveMove, the exact code path #175 is about), feeds the shadow
     // the REAL broadcast values (via the ForHarness accessors) through the
     // actual CommittedMoveMachine.ShouldForceRecovery + ForceState production
     // logic. This proves the full server→signal→client-reconciliation chain
