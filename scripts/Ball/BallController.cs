@@ -665,25 +665,49 @@ public partial class BallController : Node3D
 	// ── Block tracking (M10, issue #98) ───────────────────────────────────
 
 	/// <summary>
-	/// Monotonically-increasing physics tick counter — incremented at the
-	/// start of every _PhysicsProcess call. Purely LOCAL: each peer starts
-	/// counting from 0 whenever its own ball node enters the tree, and nothing
-	/// synchronizes it across peers — it is NOT a shared/networked clock.
-	/// That's fine because its only consumer, ResolveBlockAttempts, is gated
-	/// `IsServer`-only: every absolute-tick interval it computes (the
-	/// defender's Active window, the shot's vulnerable window) is compared
-	/// entirely within the server's own counter, so no cross-peer property is
-	/// ever needed.
+	/// Monotonically-increasing physics tick number, used for block
+	/// resolution's absolute-tick interval arithmetic (issue #216 finding —
+	/// original body row 1). Reads the ENGINE's own physics-frame counter
+	/// (<see cref="Engine.GetPhysicsFrames"/>) instead of a hand-rolled
+	/// per-node field: Godot already increments this exactly once per physics
+	/// tick, in lockstep with every node's own _PhysicsProcess call, so a
+	/// second, independently-incremented counter was pure duplication (and a
+	/// latent two-clocks-different-epochs desync risk — see the doubt-cycle
+	/// note below).
 	///
-	/// Why it exists at all: the block uses DefensiveResolution.Succeeds with
-	/// two REAL intervals (the defender's Active window and the shot's
-	/// vulnerable window). The steal reduces to a point-in-time test, so it
-	/// doesn't need an absolute clock. The block check runs every InFlight
-	/// tick, so we need the defender's entry tick (derived from FrameInPhase +
-	/// currentTick) and the shot's InFlight start tick. This counter supplies
-	/// those values.
+	/// Still purely LOCAL in the sense that matters here: each peer's process
+	/// has its own engine instance and its own physics-frame count, and
+	/// nothing synchronizes that VALUE across peers. That's fine because its
+	/// only consumer, ResolveBlockAttempts, is gated `IsServer`-only: every
+	/// absolute-tick interval it computes (the defender's Active window, the
+	/// shot's vulnerable window) is compared entirely within the server's own
+	/// reading of this same property, so no cross-peer property is ever
+	/// needed.
+	///
+	/// (Doubt cycle, issue #216 row 1) The one real risk this substitution
+	/// introduces: Engine.GetPhysicsFrames() returns ulong, narrowed to int
+	/// here to match every existing downstream consumer (_inFlightStartTick,
+	/// DefensiveResolution.Succeeds' int parameters, PlayerController's int
+	/// FrameInPhase). This is NOT a new overflow risk — the OLD hand-rolled
+	/// `_physicsTick++` was already an unbounded int counter with the exact
+	/// same eventual wraparound behaviour (~1.13 years of continuous ticks at
+	/// 60 Hz) — and it is NOT an epoch-mismatch risk either: every use site
+	/// below is a DIFFERENCE or an interval-overlap comparison between two
+	/// readings of THIS SAME property, never a comparison against a literal
+	/// or another clock, so shifting the epoch from "0 at this node's first
+	/// tick" to "whatever the engine's count already was" changes no
+	/// arithmetic outcome. Grep-verified: no test or harness reads this tick
+	/// number directly or assumes it starts near 0.
+	///
+	/// Why the underlying counter exists at all: the block uses
+	/// DefensiveResolution.Succeeds with two REAL intervals (the defender's
+	/// Active window and the shot's vulnerable window). The steal reduces to
+	/// a point-in-time test, so it doesn't need an absolute clock. The block
+	/// check runs every InFlight tick, so we need the defender's entry tick
+	/// (derived from FrameInPhase + currentTick) and the shot's InFlight
+	/// start tick. This property supplies those values.
 	/// </summary>
-	private int _physicsTick;
+	private int PhysicsTick => (int)Engine.GetPhysicsFrames();
 
 	/// <summary>
 	/// The physics tick on which the ball last transitioned to InFlight (a shot
@@ -1063,14 +1087,10 @@ public partial class BallController : Node3D
 			_hasNewState = false;
 		}
 
-		// Monotonic tick counter used by block resolution for absolute-tick
-		// interval arithmetic (ADR-0018 §2, issue #98). Purely local — it is
-		// NOT synchronized with any other peer's counter — which is fine
-		// because its only consumer, ResolveBlockAttempts, is IsServer-gated
-		// and only ever compares ticks drawn from this same counter. Incremented
-		// after reconcile so a reconciled snapshot never itself gets counted as
-		// a tick.
-		_physicsTick++;
+		// PhysicsTick (issue #216 row 1) reads Engine.GetPhysicsFrames()
+		// directly — the engine already increments it once per physics tick,
+		// so there is nothing to increment here anymore (see PhysicsTick's
+		// own doc for why removing the hand-rolled counter is safe).
 
 		// Fixed timestep — NOT the variable wall-clock delta — so the arc is
 		// deterministic and reproducible identically on server and every client.
@@ -1105,18 +1125,18 @@ public partial class BallController : Node3D
 		// Server-only: release-tick top-up. The pre-switch call above ran while
 		// State was still Held/Dribbling — the shot only becomes InFlight INSIDE
 		// this switch (TickHeld/TickDribbling → CheckJumpShotRelease →
-		// ApplyShootLocally sets _inFlightStartTick = _physicsTick). So the release
+		// ApplyShootLocally sets _inFlightStartTick = PhysicsTick). So the release
 		// tick itself was never evaluated: a defender whose Active window's last
 		// frame is exactly this tick should connect per the half-open interval
 		// semantics (ADR-0018 §2), but without this call the first evaluation
 		// would be next tick, by which time that defender has moved into Recovery.
-		// The `_inFlightStartTick == _physicsTick` guard makes this strictly a
+		// The `_inFlightStartTick == PhysicsTick` guard makes this strictly a
 		// release-tick-only top-up (every later InFlight tick is already covered
 		// by the pre-switch call above). It cannot double-resolve the same shot:
 		// on the tick a block succeeds, ResolveBlockAttempts resets
 		// _inFlightStartTick to -1, and the function's own early-return guards on
 		// `_inFlightStartTick < 0`.
-		if (IsServer && StateMachine.Current == BallState.InFlight && _inFlightStartTick == _physicsTick)
+		if (IsServer && StateMachine.Current == BallState.InFlight && _inFlightStartTick == PhysicsTick)
 			ResolveBlockAttempts();
 
 		// Server-only: assign the tipoff holder once a player node exists but the
@@ -1559,7 +1579,7 @@ public partial class BallController : Node3D
 	///   DefensiveResolution.Succeeds(blockActiveStart, blockActiveEnd,
 	///                                inFlightStartTick, inFlightStartTick + BlockGraceTicks)
 	///
-	/// where blockActiveStart = _physicsTick − FrameInPhase (the absolute tick the
+	/// where blockActiveStart = PhysicsTick − FrameInPhase (the absolute tick the
 	/// defender entered Active) and blockActiveEnd = blockActiveStart + ActiveFrames.
 	///
 	/// This is the INTERVAL FORM (not the point-in-band form used by steal):
@@ -1641,7 +1661,7 @@ public partial class BallController : Node3D
 			// line in this file (see the repo's recorded parent-precedes-child
 			// tick-observation gotcha). The headless harness pins the resulting
 			// end-to-end timing, so a reorder regression would show up there.
-			int defActiveStart = _physicsTick - frameInPhase;
+			int defActiveStart = PhysicsTick - frameInPhase;
 			int defActiveEnd   = defActiveStart + activeFrames;
 
 			// Vulnerable window: [inFlightStart, inFlightStart + BlockGraceTicks).
@@ -2584,9 +2604,11 @@ public partial class BallController : Node3D
 		// Record the tick the ball entered InFlight so block resolution can
 		// compute the shot's vulnerable window [_inFlightStartTick, _inFlightStartTick +
 		// BlockGraceTicks) each tick while InFlight (ADR-0018 §2, issue #98).
-		// NOTE: _physicsTick was already incremented at the top of _PhysicsProcess
-		// for this tick, so this value is the CURRENT tick (the release tick itself).
-		_inFlightStartTick = _physicsTick;
+		// PhysicsTick reads the engine's own physics-frame counter, stable for
+		// this whole tick regardless of when within _PhysicsProcess it's read
+		// (see its doc) — this value is the CURRENT tick (the release tick
+		// itself).
+		_inFlightStartTick = PhysicsTick;
 
 		_lastShooterPeerId = holderAtShootTime;
 
