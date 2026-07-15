@@ -221,14 +221,7 @@ public sealed class ShotArc
         float riseH   = MathF.Max(apexHeight - release.Y, 0.0f);
         float vyLaunch = MathF.Sqrt(2.0f * gravity * riseH);
 
-        // Time to reach the apex (Vy decelerates to 0).
-        float tUp = vyLaunch / gravity;
-
-        // Fall from apex down to target.Y under free-fall.
-        float fallH  = MathF.Max(apexHeight - target.Y, 0.0f);
-        float tDown  = MathF.Sqrt(2.0f * fallH / gravity);
-
-        float tTotal = tUp + tDown;
+        float tTotal = ComputeFlightTime(release.Y, target.Y, apexHeight, gravity);
 
         // Horizontal velocities (constant, no drag).
         // Guard against degenerate t_total = 0 (release == target, zero apex delta).
@@ -236,5 +229,40 @@ public sealed class ShotArc
         float vz = tTotal > 0.0f ? (target.Z - release.Z) / tTotal : 0.0f;
 
         return new Vector3(vx, vyLaunch, vz);
+    }
+
+    /// <summary>
+    /// Closed-form total flight time (seconds) for an arc rising from
+    /// <paramref name="releaseY"/> to <paramref name="apexHeight"/> and
+    /// falling back down to <paramref name="targetY"/> under
+    /// <paramref name="gravity"/> — the same t_up + t_down derivation
+    /// SolveInitialVelocity uses internally to solve horizontal velocity.
+    ///
+    /// Exposed publicly (issue #216 original body row 6) for callers that
+    /// only need DURATION, not a full velocity solve — e.g. a harness
+    /// computing a generous upper bound on "how many ticks should this shot
+    /// take to land" (BlockTurnoverTest.ComputeUnblockedMakeTicks used to
+    /// re-derive this exact math by hand, which could silently drift from
+    /// the real physics on a future ShotArc change).
+    ///
+    ///   t_up   = sqrt(2 * g * max(apexHeight - releaseY, 0)) / g
+    ///   t_down = sqrt(2 * max(apexHeight - targetY, 0) / g)
+    ///   t_total = t_up + t_down
+    ///
+    /// Same malformed-input caveat as SolveInitialVelocity: callers should
+    /// ensure apexHeight > max(releaseY, targetY) for a physically
+    /// meaningful arc (the max-with-0 clamps prevent a negative-sqrt crash,
+    /// not a physically sensible result, if that's violated).
+    /// </summary>
+    public static float ComputeFlightTime(float releaseY, float targetY, float apexHeight, float gravity)
+    {
+        float riseH    = MathF.Max(apexHeight - releaseY, 0.0f);
+        float vyLaunch = MathF.Sqrt(2.0f * gravity * riseH);
+        float tUp      = vyLaunch / gravity;
+
+        float fallH = MathF.Max(apexHeight - targetY, 0.0f);
+        float tDown = MathF.Sqrt(2.0f * fallH / gravity);
+
+        return tUp + tDown;
     }
 }

@@ -382,6 +382,72 @@ public class ShotArcTests
     }
 
     // ═════════════════════════════════════════════════════════════════════
+    // ComputeFlightTime — publicly-exposed closed-form duration (issue #216
+    // original body row 6). SolveInitialVelocity (exercised by every test
+    // above) uses this SAME method internally, so these tests double as a
+    // guard against the two ever silently diverging.
+    // ═════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void ComputeFlightTime_MatchesActualArcFlightDuration()
+    {
+        // Same release/target/apex/gravity as a real shot elsewhere in this
+        // file — cross-checks the closed-form prediction against actually
+        // stepping the arc until it crosses back down through targetY.
+        const float releaseY = 2.5f;
+        const float targetY  = 3.05f;
+        const float apex     = 4.0f;
+
+        float predictedSeconds = ShotArc.ComputeFlightTime(releaseY, targetY, apex, GravityMagnitude);
+
+        var arc = new ShotArc(
+            releasePoint: new Vector3(0f, releaseY, 0f),
+            targetPoint:  new Vector3(0f, targetY, 0f),
+            apexHeight:   apex,
+            gravity:      GravityMagnitude);
+
+        int actualSteps = StepUntilYCrossesAndReturnSteps(arc, targetY, maxSteps: 600);
+        float actualSeconds = actualSteps * FixedDt;
+
+        // Within one tick's worth of time — the closed-form solve is
+        // continuous, stepping is discretized at FixedDt.
+        Assert.Equal(predictedSeconds, actualSeconds, 1);
+    }
+
+    [Fact]
+    public void ComputeFlightTime_ReleaseAboveApex_ClampsRiseToZero()
+    {
+        // releaseY > apexHeight is malformed input (the shooter starts
+        // ABOVE the apex) — the max-with-0 clamp prevents a negative-sqrt
+        // crash, degenerating to "already at apex, only falls."
+        float t = ShotArc.ComputeFlightTime(releaseY: 10f, targetY: 0f, apexHeight: 4f, gravity: GravityMagnitude);
+
+        float expectedFallOnly = MathF.Sqrt(2f * 4f / GravityMagnitude);
+        Assert.Equal(expectedFallOnly, t, FineEpsilon);
+    }
+
+    [Fact]
+    public void ComputeFlightTime_TargetAboveApex_ClampsFallToZero()
+    {
+        // targetY > apexHeight is malformed input (the target is ABOVE the
+        // apex) — the max-with-0 clamp degenerates to "only rises, no fall."
+        float t = ShotArc.ComputeFlightTime(releaseY: 0f, targetY: 10f, apexHeight: 4f, gravity: GravityMagnitude);
+
+        float vyLaunch = MathF.Sqrt(2f * GravityMagnitude * 4f);
+        float expectedRiseOnly = vyLaunch / GravityMagnitude;
+        Assert.Equal(expectedRiseOnly, t, FineEpsilon);
+    }
+
+    [Fact]
+    public void ComputeFlightTime_ReleaseEqualsTargetEqualsApex_ReturnsZero()
+    {
+        // Degenerate: no rise, no fall — an instantaneous "shot."
+        float t = ShotArc.ComputeFlightTime(releaseY: 3f, targetY: 3f, apexHeight: 3f, gravity: GravityMagnitude);
+
+        Assert.Equal(0f, t, FineEpsilon);
+    }
+
+    // ═════════════════════════════════════════════════════════════════════
     // Helper utilities (not tests)
     // ═════════════════════════════════════════════════════════════════════
 

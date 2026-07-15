@@ -561,29 +561,23 @@ public partial class BlockTurnoverTest : Node
 
     // A generous UPPER BOUND (not a guess) on how many ticks an UNBLOCKED
     // clean shot from this exact setup would take to reach the rim and
-    // register a Make, derived from ShotArc's own closed-form flight-time
-    // solve (see ShotArc.SolveInitialVelocity's doc) rather than hardcoded —
-    // so a tuning change to any of these exports doesn't silently stale this
-    // bound out. Release Y is DribbleHandHeight exactly: TickHeld sets the
-    // ball's world-Y to DribbleHandHeight minus the crossover sweep's
-    // mid-transit dip, and this shooter never dribbles or crosses over, so
-    // the dip term is always 0 here. Target Y is RimCenter.Y (ShotTarget ==
-    // RimCenter with ShotScatterEnabled disabled, per this class's doc).
+    // register a Make, calling ShotArc.ComputeFlightTime directly (issue
+    // #216 original body row 6 — this used to hand-re-derive the same t_up +
+    // t_down math, which could silently drift from ShotArc's own solve on a
+    // future change) rather than hardcoding a tick count — so a tuning
+    // change to any of these exports doesn't silently stale this bound out.
+    // Release Y is DribbleHandHeight exactly: TickHeld sets the ball's
+    // world-Y to DribbleHandHeight minus the crossover sweep's mid-transit
+    // dip, and this shooter never dribbles or crosses over, so the dip term
+    // is always 0 here. Target Y is RimCenter.Y (ShotTarget == RimCenter
+    // with ShotScatterEnabled disabled, per this class's doc).
     private int ComputeUnblockedMakeTicks()
     {
-        float apex = _ball.ShotApexHeight;
-        float gravity = _ball.Gravity;
-        float releaseY = _ball.DribbleHandHeight;
-        float targetY = _ball.RimCenter.Y;
-
-        float riseH = Mathf.Max(apex - releaseY, 0f);
-        float vyLaunch = Mathf.Sqrt(2f * gravity * riseH);
-        float tUp = vyLaunch / gravity;
-
-        float fallH = Mathf.Max(apex - targetY, 0f);
-        float tDown = Mathf.Sqrt(2f * fallH / gravity);
-
-        float tTotal = tUp + tDown;
+        float tTotal = ShotArc.ComputeFlightTime(
+            releaseY:   _ball.DribbleHandHeight,
+            targetY:    _ball.RimCenter.Y,
+            apexHeight: _ball.ShotApexHeight,
+            gravity:    _ball.Gravity);
         return Mathf.CeilToInt(tTotal * Engine.PhysicsTicksPerSecond);
     }
 
