@@ -27,6 +27,17 @@ public class FlightTerminationIntegrationTests
     private const float Gravity    = 9.8f;
     private const float HandHeight = 1.0f;
     private static readonly Vector3 RimCenter   = new(0, 3.05f, 0);
+
+    // BoardCenter is the pre-#217 literal and does NOT match BallController's
+    // live default (issue #216 finding 4 — this file's board geometry was
+    // never actually "must mirror production," it was just never corrected
+    // after #217/#218 moved the live default to
+    // RimCenter + RimBackboard.DefaultRimToBoardOffset = (0, 3.205, -0.27)).
+    // Comment-accuracy only: MakeAirBallArc's whole point is an arc that
+    // "never contacts rim or backboard" at all, so no assertion here depends
+    // on the board's exact placement. Do not retune this to "fix" the
+    // mismatch — it risks disturbing the pinned termination-tick bounds
+    // above for no behavioural benefit.
     private static readonly Vector3 BoardCenter = new(0, 3.5f, 0.3f);
     private static readonly Vector3 BoardNormal = new(0, 0, -1);
 
