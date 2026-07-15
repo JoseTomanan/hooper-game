@@ -28,7 +28,18 @@ namespace Hooper.Ball.Tests;
 /// </summary>
 public class ShotScoreIntegrationTests
 {
-    // ── Shared geometry (matches BallController defaults and Main.tscn hoop) ──
+    // ── Shared geometry ───────────────────────────────────────────────────────
+    // RimCenter matches BallController's live default and Main.tscn's hoop.
+    // BoardCenter/BoardNormal do NOT (issue #216 finding 4 — this comment was
+    // stale after #217/#218's fix moved the live default to
+    // RimCenter + RimBackboard.DefaultRimToBoardOffset = (0, 3.205, -0.27)).
+    // Comment-accuracy only: every ShotArc below aims straight up or purely
+    // along X at Z=0, so it never approaches the board's Z=0.3 plane
+    // regardless of BoardCenter's value — these tests are self-consistent
+    // characterization fixtures, unrelated to (and un-broken by) the
+    // production board placement. Do not retune this geometry to "fix" the
+    // mismatch; that would risk disturbing the pinned Make/Bounce/None
+    // boundary assertions below for no behavioural benefit.
 
     private static readonly Vector3 RimCenter    = new(0f, 3.05f, 0f);
     private const float             RimRadius    = 0.23f;

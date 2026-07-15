@@ -20,6 +20,7 @@ namespace HOOPERGAME.Tests.Integration;
 //   godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=success-lastactive
 //   godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=whiff
 //   godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=control-make
+//   godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=control-make-default-geometry
 //   Exit: 0 = PASS, 1 = FAIL (via GetTree().Quit) — the ADR-0016 exit-code contract.
 //   Omitting --harness-scenario defaults to "success".
 //
@@ -36,7 +37,7 @@ namespace HOOPERGAME.Tests.Integration;
 // The shooter (peer "1", the tipoff holder) begins a REAL JumpShot via the
 // TripleThreatHarnessSeam's BeginJumpShotForHarness (the same BeginCommittedMove
 // path production input reaches). The defender (peer "2") begins a REAL
-// BlockMove via BlockHarnessSeam's BeginBlockForHarness, timed via
+// BlockMove via DefensiveMoveHarnessSeam's BeginMoveForHarness, timed via
 // ComputeDefenderBeginFrame so its Active window's very first tick lands
 // exactly on the shot's release tick (frame arithmetic derived from the LIVE
 // JumpShot/BlockMove frame data and BallController.BlockGraceTicks, not
@@ -83,12 +84,27 @@ namespace HOOPERGAME.Tests.Integration;
 // the score is still 0-0, rather than verdicting the instant the scramble
 // settles.
 //
+// ── Scenario "control-make-default-geometry": proves the raw [Export] default ──
+// Issue #216 finding 3. Identical to "control-make" (no defender, unblocked
+// shot must score) EXCEPT it skips this class's explicit
+// `_ball.BoardCenter = ...` assignment (see Ready()), so it is the ONLY
+// scenario in this file exercising BallController.BoardCenter's raw code
+// default rather than an explicitly-set value. Every other scenario here
+// re-sets BoardCenter to a value identical to the live default, so none of
+// them would notice a regression to the default itself — RimBackboardTests.cs
+// can only pin the pure geometry RELATIONSHIP (RimBackboard.IsBoardBehindRim),
+// since BallController is Node-derived and cannot be constructed in the plain
+// xUnit project. This scenario is what actually proves the live [Export]
+// default still produces a scoring shot: reverting BoardCenter's default to
+// the pre-#217 value (0, 3.5, 0.3) makes this scenario time out at 0-0
+// (verified — see the finding-3 evidence in PR #216's description).
+//
 // ── Self-block (dropped scenario) ──────────────────────────────────────────
 // ADR-0018/BallController.ResolveBlockAttempts excludes the shooter from being
 // their own blocker via the _lastShooterPeerId check. This is NOT reachable
 // through the harness seam (or even a tampered production client) under the
-// current single-CommittedMoveMachine-per-player model: BeginBlockForHarness
-// is exactly _machine.Begin(new BlockMove()), which only succeeds from
+// current single-CommittedMoveMachine-per-player model: BeginMoveForHarness
+// is exactly BeginCommittedMove(new BlockMove()), which only succeeds from
 // Phase == Inactive — but the shooter's OWN machine is occupied by their
 // JumpShot's Active (4 ticks) then Recovery (20 ticks) for the shot's ENTIRE
 // vulnerable window (BlockGraceTicks == 10 ticks after release), so it never
@@ -122,6 +138,16 @@ public partial class BlockTurnoverTest : Node
     private static readonly Vector3 ShooterPosition = new(0f, 0f, 5f);
 
     private string _scenario = "success";
+
+    // "control-make-default-geometry" (issue #216 finding 3) is a
+    // control-make TWIN: same "no defender ever begins a BlockMove, the
+    // unblocked shot must score" logic, differing ONLY in that it leaves
+    // BallController.BoardCenter at its raw code [Export] default instead of
+    // this class's explicit override (see Ready()). Grouping both scenario
+    // names under one predicate keeps every OTHER decision point (defender
+    // scheduling, tick dispatch, verdict dispatch) identical between them —
+    // the board-placement default is the ONLY variable this scenario tests.
+    private bool IsControlMakeScenario => _scenario == "control-make" || _scenario == "control-make-default-geometry";
 
     private BallController _ball;
     private GameManager _gameManager;
@@ -214,28 +240,19 @@ public partial class BlockTurnoverTest : Node
         // the shot, not a lucky miss the block had nothing to do with.
         _ball.ShotScatterEnabled = false;
 
-        // Place the backboard BEHIND the rim, mirroring the production scene's
-        // RELATIVE placement (Main.tscn: board (0, 3.205, 0.03) sits 0.27 m
-        // behind rim (0, 3.05, 0.3), away from the court).
+        // Redundant with BallController's own code default (#217/#218) — kept
+        // explicit anyway so this scenario's dependence on the placement is
+        // self-documenting and immune to future default drift. Full history:
+        // issue #217, RimBackboard.IsBoardBehindRim's doc, RimBackboardTests.cs.
         //
-        // As of issue #217 this now matches BallController's own CODE
-        // default (BoardCenter defaults to RimCenter + (0, 0.155, -0.27)),
-        // so this assignment is redundant with the live default — but it
-        // stays explicit rather than being removed: an explicit set makes
-        // this scenario's dependence on the placement self-documenting and
-        // immune to any future default drift. (Before #217, the code default
-        // was BoardCenter (0, 3.5, 0.3), 0.3 m in FRONT of the code-default
-        // RimCenter (0, 3.05, 0) — a code-built tree with no .tscn override
-        // got that broken default raw. Under it, every make-arc from
-        // ShooterPosition descended through the board face on its way to the
-        // rim (crossing the Z = 0.3 board plane at Y ≈ 3.42, inside the
-        // face's [3.2, 3.8] span) and Bounced Loose — the control-make CI
-        // timeout at 0-0, and a silently vacuous "score unchanged" in the
-        // success scenario. Verified against the pure ShotArc + RimBackboard
-        // classes: raw old default → backboard Bounce at the plane; this
-        // placement → Make. See RimBackboard.IsBoardBehindRim, which now
-        // pins the invariant in tests/Hooper.Ball.Tests/RimBackboardTests.cs.)
-        _ball.BoardCenter = new Vector3(0f, 3.205f, -0.27f);
+        // "control-make-default-geometry" (issue #216 finding 3) is the ONE
+        // exception: it skips this override so it alone exercises the raw
+        // code default, closing the gap where every other scenario here
+        // would never notice a regression to that default.
+        if (_scenario != "control-make-default-geometry")
+        {
+            _ball.BoardCenter = new Vector3(0f, 3.205f, -0.27f);
+        }
 
         _gameManager = new GameManager { Name = "GameManager" };
 
@@ -326,13 +343,13 @@ public partial class BlockTurnoverTest : Node
             int jumpShotStartup = JumpShot.DefaultFrameData.StartupFrames;
             _predictedReleaseFrame = _shooterBeginFrame + (jumpShotStartup - 1);
 
-            // "control-make" never begins a BlockMove at all (that's the
-            // point — it's the counterfactual "what would have happened"
-            // scenario success/success-lastactive are checked against), so
-            // there is nothing to schedule. Leave _defenderBeginFrame at its
-            // default 0, which Step 2 below can never reach (_frame starts
-            // at 1 and only increases).
-            if (_scenario != "control-make")
+            // "control-make"/"control-make-default-geometry" never begin a
+            // BlockMove at all (that's the point — they're the counterfactual
+            // "what would have happened" scenarios success/success-lastactive
+            // are checked against), so there is nothing to schedule. Leave
+            // _defenderBeginFrame at its default 0, which Step 2 below can
+            // never reach (_frame starts at 1 and only increases).
+            if (!IsControlMakeScenario)
             {
                 _defenderBeginFrame = ComputeDefenderBeginFrame(_predictedReleaseFrame);
 
@@ -362,11 +379,11 @@ public partial class BlockTurnoverTest : Node
         // Step 2: begin the defender's REAL BlockMove at the computed frame.
         if (_shooterBegun && !_defenderBegun && _frame == _defenderBeginFrame)
         {
-            bool began = _defender.BeginBlockForHarness();
+            bool began = _defender.BeginMoveForHarness(new BlockMove());
             _defenderBegun = true;
             if (!began)
             {
-                Fail("BeginBlockForHarness returned false — defender's machine was not Inactive at begin.");
+                Fail("BeginMoveForHarness(BlockMove) returned false — defender's machine was not Inactive at begin.");
                 Finish();
                 return;
             }
@@ -414,7 +431,7 @@ public partial class BlockTurnoverTest : Node
             return;
         }
 
-        if (_scenario == "control-make")
+        if (IsControlMakeScenario)
         {
             TickControlMake();
             return;
@@ -544,29 +561,23 @@ public partial class BlockTurnoverTest : Node
 
     // A generous UPPER BOUND (not a guess) on how many ticks an UNBLOCKED
     // clean shot from this exact setup would take to reach the rim and
-    // register a Make, derived from ShotArc's own closed-form flight-time
-    // solve (see ShotArc.SolveInitialVelocity's doc) rather than hardcoded —
-    // so a tuning change to any of these exports doesn't silently stale this
-    // bound out. Release Y is DribbleHandHeight exactly: TickHeld sets the
-    // ball's world-Y to DribbleHandHeight minus the crossover sweep's
-    // mid-transit dip, and this shooter never dribbles or crosses over, so
-    // the dip term is always 0 here. Target Y is RimCenter.Y (ShotTarget ==
-    // RimCenter with ShotScatterEnabled disabled, per this class's doc).
+    // register a Make, calling ShotArc.ComputeFlightTime directly (issue
+    // #216 original body row 6 — this used to hand-re-derive the same t_up +
+    // t_down math, which could silently drift from ShotArc's own solve on a
+    // future change) rather than hardcoding a tick count — so a tuning
+    // change to any of these exports doesn't silently stale this bound out.
+    // Release Y is DribbleHandHeight exactly: TickHeld sets the ball's
+    // world-Y to DribbleHandHeight minus the crossover sweep's mid-transit
+    // dip, and this shooter never dribbles or crosses over, so the dip term
+    // is always 0 here. Target Y is RimCenter.Y (ShotTarget == RimCenter
+    // with ShotScatterEnabled disabled, per this class's doc).
     private int ComputeUnblockedMakeTicks()
     {
-        float apex = _ball.ShotApexHeight;
-        float gravity = _ball.Gravity;
-        float releaseY = _ball.DribbleHandHeight;
-        float targetY = _ball.RimCenter.Y;
-
-        float riseH = Mathf.Max(apex - releaseY, 0f);
-        float vyLaunch = Mathf.Sqrt(2f * gravity * riseH);
-        float tUp = vyLaunch / gravity;
-
-        float fallH = Mathf.Max(apex - targetY, 0f);
-        float tDown = Mathf.Sqrt(2f * fallH / gravity);
-
-        float tTotal = tUp + tDown;
+        float tTotal = ShotArc.ComputeFlightTime(
+            releaseY:   _ball.DribbleHandHeight,
+            targetY:    _ball.RimCenter.Y,
+            apexHeight: _ball.ShotApexHeight,
+            gravity:    _ball.Gravity);
         return Mathf.CeilToInt(tTotal * Engine.PhysicsTicksPerSecond);
     }
 
@@ -663,7 +674,7 @@ public partial class BlockTurnoverTest : Node
             return;
         }
 
-        if (_scenario == "control-make")
+        if (IsControlMakeScenario)
         {
             VerdictControlMake();
             return;
@@ -685,16 +696,19 @@ public partial class BlockTurnoverTest : Node
         // that "success"/"success-lastactive"'s "score unchanged" means the
         // block intercepted a shot that would otherwise have gone in, not that
         // the shot never had a chance to score in the first place.
+        // "control-make-default-geometry" shares this exact assertion — its
+        // only difference is which BoardCenter value produced the geometry
+        // (see Ready()'s doc, issue #216 finding 3).
         bool pass = _gameManager.ScoreOf(1) == 1 && _gameManager.ScoreOf(2) == 0;
 
         if (pass)
         {
-            GD.Print($"[block-turnover] PASS — scenario=control-make, score1={_gameManager.ScoreOf(1)}, " +
+            GD.Print($"[block-turnover] PASS — scenario={_scenario}, score1={_gameManager.ScoreOf(1)}, " +
                      $"score2={_gameManager.ScoreOf(2)}.");
         }
         else
         {
-            Fail($"scenario=control-make expected the unblocked shot to score exactly once, but got " +
+            Fail($"scenario={_scenario} expected the unblocked shot to score exactly once, but got " +
                  $"score1={_gameManager.ScoreOf(1)}, score2={_gameManager.ScoreOf(2)}.");
         }
         Finish(pass ? 0 : 1);

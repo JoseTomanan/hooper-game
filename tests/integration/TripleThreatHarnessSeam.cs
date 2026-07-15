@@ -3,21 +3,22 @@ using Hooper.Moves;
 namespace Hooper.Player;
 
 // Harness-only seam for the triple-threat / dead-dribble integration test
-// (issue #193, ADR-0016). Same pattern and rationale as StealHarnessSeam.cs:
-// a `partial` of PlayerController declared under tests/integration/ (compiled
-// into the game assembly alongside every other engine script), so it can
-// reach the private _machine and the private BeginCommittedMove without
-// polluting the production class with test-only members.
+// (issue #193, ADR-0016). Same pattern and rationale as
+// DefensiveMoveHarnessSeam.cs: a `partial` of PlayerController declared under
+// tests/integration/ (compiled into the game assembly alongside every other
+// engine script), so it can reach the private _machine and the private
+// BeginCommittedMove without polluting the production class with test-only
+// members.
 //
 // WHY BeginJumpShotForHarness calls BeginCommittedMove (not _machine.Begin()
-// directly, the way StealHarnessSeam's BeginStealForHarness does): #193's
-// whole point is the SIDE EFFECT BeginCommittedMove fires on a successful
-// JumpShot begin (cradling a live dribble via BallController.
+// directly): #193's whole point is the SIDE EFFECT BeginCommittedMove fires
+// on a successful JumpShot begin (cradling a live dribble via BallController.
 // CradleForShotStartup — see PlayerController.BeginCommittedMove). Calling
 // _machine.Begin() directly would start the move but skip that side effect
 // entirely, testing nothing this issue actually changed. Going through the
 // real private method is what makes this an integration proof rather than a
-// reimplementation of the fix under test.
+// reimplementation of the fix under test — the same discipline
+// DefensiveMoveHarnessSeam.BeginMoveForHarness follows for steal/block.
 public partial class PlayerController
 {
     /// <summary>

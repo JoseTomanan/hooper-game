@@ -63,7 +63,17 @@ namespace Hooper.Ball;
 ///   BallRadius      — 0.12 m (≈ 4.7 inches, men's regulation ball)
 ///   RimRestitution  — 0.65 (empirical; rim is rigid steel, some energy lost)
 ///   BoardCenter     — world-space centre of the backboard face
-///   BoardNormal     — unit normal pointing toward the court (away from board)
+///   BoardNormal     — unit normal along the ball's approach axis, pointing
+///                     AWAY from the court, from the rim toward the board
+///                     (issue #216 finding 1: this is the convention actually
+///                     load-bearing today — see IsBoardBehindRim below. The
+///                     sign is otherwise collision-neutral: Resolve()/
+///                     ApplyBackboardBounce auto-flip the contact normal by
+///                     sign(signedDist), so BackboardContact/bounce behavior
+///                     is identical either way. Only IsBoardBehindRim's
+///                     verdict depends on this sign, which is why it must be
+///                     pinned by doc, not left to whichever default "looks
+///                     right")
 ///   BoardHalfWidth  — 0.46 m (half of ≈ 0.91 m board width)
 ///   BoardHalfHeight — 0.30 m (half of ≈ 0.61 m board height)
 ///   BoardRestitution— 0.65 (fibreglass/tempered glass; similar to rim)
@@ -95,6 +105,23 @@ namespace Hooper.Ball;
 /// </summary>
 public sealed class RimBackboard
 {
+    // ── Default placement relationship (issue #216 finding 2) ──────────────
+
+    /// <summary>
+    /// Default offset from RimCenter to BoardCenter: BoardCenter =
+    /// RimCenter + DefaultRimToBoardOffset. Matches Main.tscn's relative
+    /// rim/board placement (rim at world Z=0.3, board 0.27 m further along
+    /// the approach axis, 0.155 m higher).
+    ///
+    /// Hoisted here, in the pure layer (ADR-0004 seam discipline - no engine
+    /// calls in pure classes), so RimCenter and BoardCenter can never again
+    /// independently drift the way they did in issue #217: BallController's
+    /// exported defaults derive BoardCenter FROM RimCenter plus this offset
+    /// instead of encoding the relationship as two hand-copied literals that
+    /// nothing enforces agree with each other.
+    /// </summary>
+    public static readonly Vector3 DefaultRimToBoardOffset = new(0f, 0.155f, -0.27f);
+
     // ── Rim tunables ──────────────────────────────────────────────────────
 
     /// <summary>World-space centre of the rim ring at rim height.</summary>
@@ -118,8 +145,14 @@ public sealed class RimBackboard
     public Vector3 BoardCenter { get; }
 
     /// <summary>
-    /// Unit normal of the backboard plane, pointing toward the court
-    /// (i.e., in the direction a ball would bounce off the board toward the basket).
+    /// Unit normal along the ball's approach axis toward the board — i.e.,
+    /// pointing AWAY from the court, from the rim toward the board (NOT
+    /// toward the court; see IsBoardBehindRim, which treats this as the
+    /// approach axis, and the class doc's "Tunables" section, issue #216
+    /// finding 1). The sign is collision-neutral for Resolve()/
+    /// ApplyBackboardBounce — the contact normal is re-derived from
+    /// sign(signedDist) at contact time — so this convention only matters
+    /// for IsBoardBehindRim's placement-sanity check.
     /// </summary>
     public Vector3 BoardNormal { get; }
 

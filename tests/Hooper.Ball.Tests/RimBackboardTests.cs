@@ -684,24 +684,29 @@ public class RimBackboardTests
     }
 
     // ═════════════════════════════════════════════════════════════════════
-    // IsBoardBehindRim — placement invariant (issue #217)
+    // IsBoardBehindRim — placement invariant (issue #217; hoisted per #216
+    // finding 2/3)
     //
-    // BallController's exported RimCenter/BoardCenter/BoardNormal ARE the
-    // defaults RimBackboard's own DefaultXxx fields intentionally do NOT
-    // mirror (see the comment atop the DefaultBoardCenter field above — this
-    // file's fixture uses its own self-consistent local geometry, unrelated
-    // to production values). BallController is a Node-derived class and
-    // cannot be constructed in this plain-xUnit project (no live Godot
-    // instance — hooper-verification-and-qa §1/§2), so the mirrored consts
-    // below are this suite's only way to pin the exported defaults' geometry
-    // as a pure test. If BallController's RimCenter/BoardCenter/BoardNormal
-    // defaults are ever retuned, update these three consts in the same
-    // commit (the ShotScatterCurveCharacterizationTests.cs precedent for
-    // this "must mirror" duplication, hooper-config-and-flags §4).
+    // LiveRimCenter/LiveBoardNormal still mirror BallController's exported
+    // defaults by hand — BallController is a Node-derived class and cannot
+    // be constructed in this plain-xUnit project (no live Godot instance —
+    // hooper-verification-and-qa §1/§2), so a hand-copied literal is the only
+    // way to pin THOSE two here. If BallController's RimCenter/BoardNormal
+    // defaults are ever retuned, update these two consts in the same commit
+    // (the ShotScatterCurveCharacterizationTests.cs precedent for this "must
+    // mirror" duplication, hooper-config-and-flags §4).
+    //
+    // LiveBoardCenter is DIFFERENT: it is no longer a hand-copied literal.
+    // It is computed from RimBackboard.DefaultRimToBoardOffset — the actual
+    // pure const BallController.BoardCenter's own [Export] default derives
+    // from (see BallController.cs) — so this assertion targets the real
+    // hoisted symbol production code uses, not a number that merely happened
+    // to agree with it once (issue #216 finding 3's whole point: nothing
+    // previously pinned this relationship at all).
     // ═════════════════════════════════════════════════════════════════════
 
     private static readonly Vector3 LiveRimCenter   = new(0f, 3.05f, 0f);
-    private static readonly Vector3 LiveBoardCenter = new(0f, 3.205f, -0.27f);
+    private static readonly Vector3 LiveBoardCenter = LiveRimCenter + RimBackboard.DefaultRimToBoardOffset;
     private static readonly Vector3 LiveBoardNormal = new(0f, 0f, -1f);
 
     [Fact]

@@ -138,8 +138,19 @@ public partial class BallController : Node3D
 
 	// ── Basket geometry (must match the hoop node's placement) ────────────
 
+	/// <summary>
+	/// Default RimCenter, hoisted to a static field (issue #216 finding 2) so
+	/// BoardCenter's default can derive from it below instead of duplicating
+	/// the literal. Not itself referenceable from an [Export] property
+	/// initializer if it were an instance member — Godot's source generator
+	/// and C# both require export defaults to be static-evaluable (CS0236) —
+	/// which is exactly why this is `static readonly` rather than inlined on
+	/// RimCenter's own initializer.
+	/// </summary>
+	private static readonly Vector3 DefaultRimCenter = new(0f, 3.05f, 0f);
+
 	/// <summary>World-space centre of the rim ring. Used for collision geometry only.</summary>
-	[Export] public Vector3 RimCenter { get; set; } = new(0f, 3.05f, 0f);
+	[Export] public Vector3 RimCenter { get; set; } = DefaultRimCenter;
 
 	/// <summary>
 	/// World-space point the shot arc aims for. Defaults to RimCenter (a clean make).
@@ -159,19 +170,26 @@ public partial class BallController : Node3D
 	[Export] public float RimRestitution { get; set; } = 0.65f;
 
 	/// <summary>
-	/// World-space centre of the backboard face. Defaults to sit 0.27 m
-	/// BEHIND RimCenter along the approach axis (BoardNormal) — matching
-	/// Main.tscn's relative placement (rim (0,3.05,0.3), board
-	/// (0,3.205,0.03)) so a code-built tree with no .tscn override (headless
-	/// harnesses, unit-adjacent tests) behaves like production instead of
-	/// intercepting every clean make-arc with a board that sits in FRONT of
-	/// the rim. See RimBackboard.IsBoardBehindRim, which pins this invariant
-	/// (issue #217; the old default (0, 3.5, 0.3) was 0.3 m in front of
-	/// RimCenter (0, 3.05, 0)).
+	/// World-space centre of the backboard face. Derived from DefaultRimCenter
+	/// + RimBackboard.DefaultRimToBoardOffset (issue #216 finding 2) instead of
+	/// a hand-copied literal, so a code-built tree with no .tscn override
+	/// (headless harnesses, unit-adjacent tests) behaves like production
+	/// instead of intercepting every clean make-arc with a board that sits in
+	/// FRONT of the rim. See RimBackboard.IsBoardBehindRim, which pins this
+	/// invariant (issue #217; the old default (0, 3.5, 0.3) was 0.3 m in
+	/// front of RimCenter (0, 3.05, 0)). Deriving both defaults from the same
+	/// two static sources — instead of two independent literals that only
+	/// agreed by hand — is what makes this class of regression structurally
+	/// impossible instead of merely fixed.
 	/// </summary>
-	[Export] public Vector3 BoardCenter { get; set; } = new(0f, 3.205f, -0.27f);
+	[Export] public Vector3 BoardCenter { get; set; } = DefaultRimCenter + RimBackboard.DefaultRimToBoardOffset;
 
-	/// <summary>Backboard outward normal, pointing toward the court (unit).</summary>
+	/// <summary>
+	/// Unit normal along the ball's approach axis toward the board — AWAY
+	/// from the court, from the rim toward the board (issue #216 finding 1;
+	/// see RimBackboard.BoardNormal's doc for why this sign, not "toward the
+	/// court", is the load-bearing convention).
+	/// </summary>
 	[Export] public Vector3 BoardNormal { get; set; } = new(0f, 0f, -1f);
 
 	/// <summary>Half-width of the backboard rectangle (metres).</summary>
@@ -478,8 +496,11 @@ public partial class BallController : Node3D
 	/// Default 10 ticks ≈ 0.17 s at 60 Hz — provisional; deferred to #104
 	/// and the per-milestone feel pass (ADR-0015). Must be ≥ BlockMove.ActiveFrames
 	/// (currently 8) per ADR-0018 §3 so a perfectly-timed block can always connect.
+	/// Derives from BlockMove.DefaultBlockGraceTicks (issue #216 original body
+	/// row 7) rather than an independently hand-copied literal, so this and
+	/// the xUnit mirror in BlockMoveTests can't drift.
 	/// </summary>
-	[Export] public int BlockGraceTicks { get; set; } = 10;
+	[Export] public int BlockGraceTicks { get; set; } = BlockMove.DefaultBlockGraceTicks;
 
 	/// <summary>
 	/// Horizontal speed (m/s) of the provisional "swat" velocity a successful
@@ -647,25 +668,49 @@ public partial class BallController : Node3D
 	// ── Block tracking (M10, issue #98) ───────────────────────────────────
 
 	/// <summary>
-	/// Monotonically-increasing physics tick counter — incremented at the
-	/// start of every _PhysicsProcess call. Purely LOCAL: each peer starts
-	/// counting from 0 whenever its own ball node enters the tree, and nothing
-	/// synchronizes it across peers — it is NOT a shared/networked clock.
-	/// That's fine because its only consumer, ResolveBlockAttempts, is gated
-	/// `IsServer`-only: every absolute-tick interval it computes (the
-	/// defender's Active window, the shot's vulnerable window) is compared
-	/// entirely within the server's own counter, so no cross-peer property is
-	/// ever needed.
+	/// Monotonically-increasing physics tick number, used for block
+	/// resolution's absolute-tick interval arithmetic (issue #216 finding —
+	/// original body row 1). Reads the ENGINE's own physics-frame counter
+	/// (<see cref="Engine.GetPhysicsFrames"/>) instead of a hand-rolled
+	/// per-node field: Godot already increments this exactly once per physics
+	/// tick, in lockstep with every node's own _PhysicsProcess call, so a
+	/// second, independently-incremented counter was pure duplication (and a
+	/// latent two-clocks-different-epochs desync risk — see the doubt-cycle
+	/// note below).
 	///
-	/// Why it exists at all: the block uses DefensiveResolution.Succeeds with
-	/// two REAL intervals (the defender's Active window and the shot's
-	/// vulnerable window). The steal reduces to a point-in-time test, so it
-	/// doesn't need an absolute clock. The block check runs every InFlight
-	/// tick, so we need the defender's entry tick (derived from FrameInPhase +
-	/// currentTick) and the shot's InFlight start tick. This counter supplies
-	/// those values.
+	/// Still purely LOCAL in the sense that matters here: each peer's process
+	/// has its own engine instance and its own physics-frame count, and
+	/// nothing synchronizes that VALUE across peers. That's fine because its
+	/// only consumer, ResolveBlockAttempts, is gated `IsServer`-only: every
+	/// absolute-tick interval it computes (the defender's Active window, the
+	/// shot's vulnerable window) is compared entirely within the server's own
+	/// reading of this same property, so no cross-peer property is ever
+	/// needed.
+	///
+	/// (Doubt cycle, issue #216 row 1) The one real risk this substitution
+	/// introduces: Engine.GetPhysicsFrames() returns ulong, narrowed to int
+	/// here to match every existing downstream consumer (_inFlightStartTick,
+	/// DefensiveResolution.Succeeds' int parameters, PlayerController's int
+	/// FrameInPhase). This is NOT a new overflow risk — the OLD hand-rolled
+	/// `_physicsTick++` was already an unbounded int counter with the exact
+	/// same eventual wraparound behaviour (~1.13 years of continuous ticks at
+	/// 60 Hz) — and it is NOT an epoch-mismatch risk either: every use site
+	/// below is a DIFFERENCE or an interval-overlap comparison between two
+	/// readings of THIS SAME property, never a comparison against a literal
+	/// or another clock, so shifting the epoch from "0 at this node's first
+	/// tick" to "whatever the engine's count already was" changes no
+	/// arithmetic outcome. Grep-verified: no test or harness reads this tick
+	/// number directly or assumes it starts near 0.
+	///
+	/// Why the underlying counter exists at all: the block uses
+	/// DefensiveResolution.Succeeds with two REAL intervals (the defender's
+	/// Active window and the shot's vulnerable window). The steal reduces to
+	/// a point-in-time test, so it doesn't need an absolute clock. The block
+	/// check runs every InFlight tick, so we need the defender's entry tick
+	/// (derived from FrameInPhase + currentTick) and the shot's InFlight
+	/// start tick. This property supplies those values.
 	/// </summary>
-	private int _physicsTick;
+	private int PhysicsTick => (int)Engine.GetPhysicsFrames();
 
 	/// <summary>
 	/// The physics tick on which the ball last transitioned to InFlight (a shot
@@ -1045,14 +1090,10 @@ public partial class BallController : Node3D
 			_hasNewState = false;
 		}
 
-		// Monotonic tick counter used by block resolution for absolute-tick
-		// interval arithmetic (ADR-0018 §2, issue #98). Purely local — it is
-		// NOT synchronized with any other peer's counter — which is fine
-		// because its only consumer, ResolveBlockAttempts, is IsServer-gated
-		// and only ever compares ticks drawn from this same counter. Incremented
-		// after reconcile so a reconciled snapshot never itself gets counted as
-		// a tick.
-		_physicsTick++;
+		// PhysicsTick (issue #216 row 1) reads Engine.GetPhysicsFrames()
+		// directly — the engine already increments it once per physics tick,
+		// so there is nothing to increment here anymore (see PhysicsTick's
+		// own doc for why removing the hand-rolled counter is safe).
 
 		// Fixed timestep — NOT the variable wall-clock delta — so the arc is
 		// deterministic and reproducible identically on server and every client.
@@ -1084,22 +1125,12 @@ public partial class BallController : Node3D
 			case BallState.Loose:     TickLoose(dt);     break;
 		}
 
-		// Server-only: release-tick top-up. The pre-switch call above ran while
-		// State was still Held/Dribbling — the shot only becomes InFlight INSIDE
-		// this switch (TickHeld/TickDribbling → CheckJumpShotRelease →
-		// ApplyShootLocally sets _inFlightStartTick = _physicsTick). So the release
-		// tick itself was never evaluated: a defender whose Active window's last
-		// frame is exactly this tick should connect per the half-open interval
-		// semantics (ADR-0018 §2), but without this call the first evaluation
-		// would be next tick, by which time that defender has moved into Recovery.
-		// The `_inFlightStartTick == _physicsTick` guard makes this strictly a
-		// release-tick-only top-up (every later InFlight tick is already covered
-		// by the pre-switch call above). It cannot double-resolve the same shot:
-		// on the tick a block succeeds, ResolveBlockAttempts resets
-		// _inFlightStartTick to -1, and the function's own early-return guards on
-		// `_inFlightStartTick < 0`.
-		if (IsServer && StateMachine.Current == BallState.InFlight && _inFlightStartTick == _physicsTick)
-			ResolveBlockAttempts();
+		// (issue #216 original body row 5) The release-tick top-up call that
+		// used to live here was moved into ApplyShootLocally itself — see that
+		// method's own comment for why. Nothing replaces it at this call
+		// site: the pre-switch call above already covers every OTHER InFlight
+		// tick, and the release tick is now resolved from inside the switch,
+		// the moment the ball actually becomes InFlight.
 
 		// Server-only: assign the tipoff holder once a player node exists but the
 		// ball has none yet (ADR-0007). The broadcast below propagates the holder
@@ -1427,13 +1458,14 @@ public partial class BallController : Node3D
 			if (child is not PlayerController defender) continue;
 			if (defender == holder) continue; // can't steal from yourself
 
-			// ActiveStealTargetHand returns the targeted hand on EVERY tick the
+			// ActiveMove<StealMove>() returns the live move on EVERY tick the
 			// defender's machine is in the Active phase of a StealMove; null on
 			// all other ticks (fast path — no allocation). Reading it each Active
 			// tick is what turns the point sample into the interval overlap the
-			// spec requires (see method doc / issue #96).
-			HandSide? targetHand = defender.ActiveStealTargetHand;
-			if (targetHand == null) continue;
+			// spec requires (see PlayerController.ActiveMove's doc / issue #96).
+			var stealActive = defender.ActiveMove<StealMove>();
+			if (stealActive == null) continue;
+			HandSide targetHand = stealActive.Value.Move.TargetHand;
 
 			// Two-axis steal check (ADR-0018 §2, issue #96), re-evaluated against
 			// the live dribble phase THIS tick: DefensiveResolution.StealSucceeds
@@ -1443,7 +1475,7 @@ public partial class BallController : Node3D
 			bool success = DefensiveResolution.StealSucceeds(
 				_dribble.Phase,
 				StealLoExposed, StealHiExposed,
-				targetHand.Value, holder.HandSide);
+				targetHand, holder.HandSide);
 
 			if (success)
 			{
@@ -1476,11 +1508,10 @@ public partial class BallController : Node3D
 				// SolveInitialVelocity to zero, no divide-by-zero), then
 				// Velocity is overwritten directly — the same seed-then-overwrite
 				// pattern ReconcileFromServer already uses for a client's null _arc.
-				Vector3 toDefender = defender.GlobalPosition - GlobalPosition;
-				toDefender.Y = 0f;
-				Vector3 knockDir = toDefender.LengthSquared() > 0.0001f
-					? toDefender.Normalized()
-					: Vector3.Zero; // degenerate (holder/defender coincident) — rise only
+				// DefensiveKnockDirection.SafeHorizontal (issue #216 row 4) —
+				// shared with the block swat direction math below. Degenerate
+				// (holder/defender coincident) falls back to Zero — rise only.
+				Vector3 knockDir = DefensiveKnockDirection.SafeHorizontal(defender.GlobalPosition - GlobalPosition);
 				_arc = new ShotArc(GlobalPosition, GlobalPosition, GlobalPosition.Y, Gravity);
 				_arc.Velocity = new Vector3(
 					knockDir.X * StealKnockSpeed,
@@ -1531,6 +1562,15 @@ public partial class BallController : Node3D
 	/// <summary>
 	/// Server-only: resolve block attempts by defenders every InFlight tick.
 	///
+	/// Two call sites cover every InFlight tick between them (issue #216
+	/// original body row 5): the pre-switch call in _PhysicsProcess (every
+	/// tick State is ALREADY InFlight going in), and a release-tick-only call
+	/// inside ApplyShootLocally itself (the one tick State BECOMES InFlight,
+	/// which the pre-switch call — running while State was still
+	/// Held/Dribbling — could not observe). Neither call site can double-
+	/// resolve the same tick: on any given tick exactly one of them sees
+	/// State == InFlight.
+	///
 	/// Called BEFORE the per-state switch in _PhysicsProcess so that a successful
 	/// block (GoLoose from InFlight) prevents TickInFlight from running this tick —
 	/// which is the only way to guarantee a blocked shot cannot score. If block
@@ -1541,7 +1581,7 @@ public partial class BallController : Node3D
 	///   DefensiveResolution.Succeeds(blockActiveStart, blockActiveEnd,
 	///                                inFlightStartTick, inFlightStartTick + BlockGraceTicks)
 	///
-	/// where blockActiveStart = _physicsTick − FrameInPhase (the absolute tick the
+	/// where blockActiveStart = PhysicsTick − FrameInPhase (the absolute tick the
 	/// defender entered Active) and blockActiveEnd = blockActiveStart + ActiveFrames.
 	///
 	/// This is the INTERVAL FORM (not the point-in-band form used by steal):
@@ -1604,12 +1644,13 @@ public partial class BallController : Node3D
 			// input gate is UX, this is the rule.
 			if (defenderId == _lastShooterPeerId) continue;
 
-			// BlockMoveActiveInterval is non-null only when the defender is in
+			// ActiveMove<BlockMove>() is non-null only when the defender is in
 			// Active phase on a BlockMove. Most ticks this is null (fast path).
-			var interval = defender.BlockMoveActiveInterval;
-			if (interval == null) continue;
+			var blockActive = defender.ActiveMove<BlockMove>();
+			if (blockActive == null) continue;
 
-			var (frameInPhase, activeFrames) = interval.Value;
+			var (move, frameInPhase) = blockActive.Value;
+			int activeFrames = move.FrameData.ActiveFrames;
 
 			// Compute the defender's Active window as absolute physics ticks.
 			// frameInPhase = 0 means they JUST entered Active this very tick;
@@ -1623,7 +1664,7 @@ public partial class BallController : Node3D
 			// line in this file (see the repo's recorded parent-precedes-child
 			// tick-observation gotcha). The headless harness pins the resulting
 			// end-to-end timing, so a reorder regression would show up there.
-			int defActiveStart = _physicsTick - frameInPhase;
+			int defActiveStart = PhysicsTick - frameInPhase;
 			int defActiveEnd   = defActiveStart + activeFrames;
 
 			// Vulnerable window: [inFlightStart, inFlightStart + BlockGraceTicks).
@@ -1649,23 +1690,21 @@ public partial class BallController : Node3D
 				// is already a valid instance here (Shoot() built it), so unlike
 				// the steal's Dribbling→Loose path no seed-then-overwrite is
 				// needed — overwriting Velocity in place is enough.
-				Vector3 fromRim = GlobalPosition - RimCenter;
-				fromRim.Y = 0f;
-				Vector3 fromDefender = GlobalPosition - defender.GlobalPosition;
-				fromDefender.Y = 0f;
+				// DefensiveKnockDirection.SafeHorizontal (issue #216 row 4) —
+				// shared with the steal knock direction math above.
+				Vector3 fromRim = DefensiveKnockDirection.SafeHorizontal(GlobalPosition - RimCenter);
 				Vector3 swatDir;
-				if (fromRim.LengthSquared() > 0.0001f)
-					swatDir = fromRim.Normalized();
-				else if (fromDefender.LengthSquared() > 0.0001f)
+				if (fromRim != Vector3.Zero)
+					swatDir = fromRim;
+				else
 					// Degenerate case: the ball's XZ coincides with RimCenter's —
 					// release from directly under the rim, the most common block
 					// range. A pure "away from rim" direction is undefined there,
 					// so fall back to "away from the defender's hand" instead: the
 					// swat physically comes off whoever's hand touched the ball,
-					// not a vertical drop through the rim geometry.
-					swatDir = fromDefender.Normalized();
-				else
-					swatDir = Vector3.Zero; // both degenerate — straight-down drop
+					// not a vertical drop through the rim geometry. Also Zero
+					// (straight-down drop) if THIS is degenerate too.
+					swatDir = DefensiveKnockDirection.SafeHorizontal(GlobalPosition - defender.GlobalPosition);
 				_arc.Velocity = new Vector3(
 					swatDir.X * BlockSwatSpeed,
 					-BlockSwatDropSpeed,
@@ -2566,9 +2605,11 @@ public partial class BallController : Node3D
 		// Record the tick the ball entered InFlight so block resolution can
 		// compute the shot's vulnerable window [_inFlightStartTick, _inFlightStartTick +
 		// BlockGraceTicks) each tick while InFlight (ADR-0018 §2, issue #98).
-		// NOTE: _physicsTick was already incremented at the top of _PhysicsProcess
-		// for this tick, so this value is the CURRENT tick (the release tick itself).
-		_inFlightStartTick = _physicsTick;
+		// PhysicsTick reads the engine's own physics-frame counter, stable for
+		// this whole tick regardless of when within _PhysicsProcess it's read
+		// (see its doc) — this value is the CURRENT tick (the release tick
+		// itself).
+		_inFlightStartTick = PhysicsTick;
 
 		_lastShooterPeerId = holderAtShootTime;
 
@@ -2651,6 +2692,34 @@ public partial class BallController : Node3D
 		}
 
 		_arc = new ShotArc(GlobalPosition, aimTarget, ShotApexHeight, Gravity);
+
+		// Server-only: release-tick block top-up (issue #216 original body
+		// row 5 — moved here from a separate conditional in _PhysicsProcess
+		// so the tick-ordering knowledge lives in the one place the release
+		// itself happens, ahead of whiff-punish #100 needing the same
+		// knowledge). _PhysicsProcess's PRE-switch ResolveBlockAttempts()
+		// call ran this same tick while State was still Held/Dribbling — the
+		// shot only becomes InFlight here, INSIDE the TickHeld/TickDribbling
+		// switch that call precedes — so the release tick itself was never
+		// evaluated by that call: a defender whose Active window's last
+		// frame is exactly this tick should connect per the half-open
+		// interval semantics (ADR-0018 §2), but without this call the first
+		// evaluation would be next tick, by which time that defender has
+		// moved into Recovery.
+		//
+		// MUST run AFTER _arc is constructed above, not merely after
+		// _inFlightStartTick is set: on success ResolveBlockAttempts
+		// overwrites _arc.Velocity directly (the swat) — calling it any
+		// earlier in this method would mutate a stale or (on the very first
+		// shot) null arc instead of this shot's own.
+		//
+		// Cannot double-resolve the same shot: StateMachine.Current is now
+		// InFlight (Shoot() already succeeded above), so this call is the
+		// ONLY resolution attempt for this tick — the pre-switch call that
+		// already ran this tick saw Held/Dribbling and no-op'd via its own
+		// `StateMachine.Current != BallState.InFlight` guard.
+		if (IsServer) ResolveBlockAttempts();
+
 		return true;
 	}
 

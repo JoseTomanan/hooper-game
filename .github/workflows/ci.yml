@@ -144,18 +144,27 @@ jobs:
       # stays InFlight), and the defender still pays Recovery for the miss.
       # 'control-make' never begins a BlockMove at all — the counterfactual
       # 'success' is checked against — and asserts the identical, unblocked
-      # shot setup scores exactly once. All scenarios also assert the
-      # ADR-0018 §3 frame-data invariant (BlockMove.ActiveFrames <=
-      # BallController.BlockGraceTicks) against the LIVE ball node's export,
-      # and fail fast (rather than timing out) if a frame-data retune makes a
-      # scenario's computed defender-begin frame unschedulable. Each exits
-      # 0=PASS/1=FAIL (ADR-0016).
+      # shot setup scores exactly once. 'control-make-default-geometry'
+      # (issue #216 finding 3) is a control-make TWIN that skips the class's
+      # explicit BoardCenter override, so it is the only scenario here
+      # exercising BallController.BoardCenter's raw [Export] default rather
+      # than an explicitly-set value — the every-other-scenario override
+      # meant NOTHING in this file could ever notice a regression to that
+      # default (issue #217 recurring undetected). Verified RED against the
+      # pre-#217 default (0, 3.5, 0.3): times out at 0-0 (board intercepts the
+      # make-arc); GREEN on the current derived default. All scenarios also
+      # assert the ADR-0018 §3 frame-data invariant (BlockMove.ActiveFrames
+      # <= BallController.BlockGraceTicks) against the LIVE ball node's
+      # export, and fail fast (rather than timing out) if a frame-data retune
+      # makes a scenario's computed defender-begin frame unschedulable. Each
+      # exits 0=PASS/1=FAIL (ADR-0016).
       - name: Run block-turnover mechanic harness
         run: |
           godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=success
           godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=success-lastactive
           godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=whiff
           godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=control-make
+          godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=control-make-default-geometry
 
       # Held-ball out-of-bounds turnover (issue #179, adjudicating hitl #119).
       # Boots a real BallController + two PlayerControllers headless and walks a
