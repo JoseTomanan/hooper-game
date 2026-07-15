@@ -240,39 +240,15 @@ public partial class BlockTurnoverTest : Node
         // the shot, not a lucky miss the block had nothing to do with.
         _ball.ShotScatterEnabled = false;
 
-        // Place the backboard BEHIND the rim, mirroring the production scene's
-        // RELATIVE placement (Main.tscn: board (0, 3.205, 0.03) sits 0.27 m
-        // behind rim (0, 3.05, 0.3), away from the court).
-        //
-        // As of issue #217 this now matches BallController's own CODE
-        // default (BoardCenter defaults to RimCenter + (0, 0.155, -0.27)),
-        // so this assignment is redundant with the live default — but it
-        // stays explicit rather than being removed: an explicit set makes
-        // this scenario's dependence on the placement self-documenting and
-        // immune to any future default drift. (Before #217, the code default
-        // was BoardCenter (0, 3.5, 0.3), 0.3 m in FRONT of the code-default
-        // RimCenter (0, 3.05, 0) — a code-built tree with no .tscn override
-        // got that broken default raw. Under it, every make-arc from
-        // ShooterPosition descended through the board face on its way to the
-        // rim (crossing the Z = 0.3 board plane at Y ≈ 3.42, inside the
-        // face's [3.2, 3.8] span) and Bounced Loose — the control-make CI
-        // timeout at 0-0, and a silently vacuous "score unchanged" in the
-        // success scenario. Verified against the pure ShotArc + RimBackboard
-        // classes: raw old default → backboard Bounce at the plane; this
-        // placement → Make. See RimBackboard.IsBoardBehindRim, which now
-        // pins the invariant in tests/Hooper.Ball.Tests/RimBackboardTests.cs.)
+        // Redundant with BallController's own code default (#217/#218) — kept
+        // explicit anyway so this scenario's dependence on the placement is
+        // self-documenting and immune to future default drift. Full history:
+        // issue #217, RimBackboard.IsBoardBehindRim's doc, RimBackboardTests.cs.
         //
         // "control-make-default-geometry" (issue #216 finding 3) is the ONE
-        // exception: it deliberately SKIPS this override, so it is the only
-        // scenario in this file that exercises BallController.BoardCenter's
-        // raw code default rather than an explicitly-set value. Every other
-        // scenario here re-sets BoardCenter to an identical value, so none of
-        // them would notice a regression to the code default itself (the gap
-        // finding 3 closes) — RimBackboardTests.cs's pure IsBoardBehindRim
-        // assertions can pin the GEOMETRY relationship, but only a live,
-        // code-built BallController node (unreachable from a plain xUnit
-        // process) can prove the actual [Export] default still produces a
-        // scoring shot.
+        // exception: it skips this override so it alone exercises the raw
+        // code default, closing the gap where every other scenario here
+        // would never notice a regression to that default.
         if (_scenario != "control-make-default-geometry")
         {
             _ball.BoardCenter = new Vector3(0f, 3.205f, -0.27f);
