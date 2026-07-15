@@ -171,7 +171,12 @@ public partial class BallController : Node3D
 	/// </summary>
 	[Export] public Vector3 BoardCenter { get; set; } = new(0f, 3.205f, -0.27f);
 
-	/// <summary>Backboard outward normal, pointing toward the court (unit).</summary>
+	/// <summary>
+	/// Unit normal along the ball's approach axis toward the board — AWAY
+	/// from the court, from the rim toward the board (issue #216 finding 1;
+	/// see RimBackboard.BoardNormal's doc for why this sign, not "toward the
+	/// court", is the load-bearing convention).
+	/// </summary>
 	[Export] public Vector3 BoardNormal { get; set; } = new(0f, 0f, -1f);
 
 	/// <summary>Half-width of the backboard rectangle (metres).</summary>

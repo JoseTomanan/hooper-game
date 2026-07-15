@@ -63,7 +63,17 @@ namespace Hooper.Ball;
 ///   BallRadius      — 0.12 m (≈ 4.7 inches, men's regulation ball)
 ///   RimRestitution  — 0.65 (empirical; rim is rigid steel, some energy lost)
 ///   BoardCenter     — world-space centre of the backboard face
-///   BoardNormal     — unit normal pointing toward the court (away from board)
+///   BoardNormal     — unit normal along the ball's approach axis, pointing
+///                     AWAY from the court, from the rim toward the board
+///                     (issue #216 finding 1: this is the convention actually
+///                     load-bearing today — see IsBoardBehindRim below. The
+///                     sign is otherwise collision-neutral: Resolve()/
+///                     ApplyBackboardBounce auto-flip the contact normal by
+///                     sign(signedDist), so BackboardContact/bounce behavior
+///                     is identical either way. Only IsBoardBehindRim's
+///                     verdict depends on this sign, which is why it must be
+///                     pinned by doc, not left to whichever default "looks
+///                     right")
 ///   BoardHalfWidth  — 0.46 m (half of ≈ 0.91 m board width)
 ///   BoardHalfHeight — 0.30 m (half of ≈ 0.61 m board height)
 ///   BoardRestitution— 0.65 (fibreglass/tempered glass; similar to rim)
@@ -118,8 +128,14 @@ public sealed class RimBackboard
     public Vector3 BoardCenter { get; }
 
     /// <summary>
-    /// Unit normal of the backboard plane, pointing toward the court
-    /// (i.e., in the direction a ball would bounce off the board toward the basket).
+    /// Unit normal along the ball's approach axis toward the board — i.e.,
+    /// pointing AWAY from the court, from the rim toward the board (NOT
+    /// toward the court; see IsBoardBehindRim, which treats this as the
+    /// approach axis, and the class doc's "Tunables" section, issue #216
+    /// finding 1). The sign is collision-neutral for Resolve()/
+    /// ApplyBackboardBounce — the contact normal is re-derived from
+    /// sign(signedDist) at contact time — so this convention only matters
+    /// for IsBoardBehindRim's placement-sanity check.
     /// </summary>
     public Vector3 BoardNormal { get; }
 
