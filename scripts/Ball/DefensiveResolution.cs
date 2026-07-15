@@ -38,8 +38,15 @@ namespace Hooper.Ball;
 /// is produced by the CALLER re-checking it on every Active tick against the
 /// live dribble phase (BallController.ResolveStealAttempts, issue #96) — the
 /// union of those in-band point tests over the Active window IS the overlap.
-/// BlockSucceeds (#98) will instead call the full interval Succeeds form
+/// Block (#98) instead calls the full interval Succeeds form directly,
 /// because the shot's release window has a concrete start tick in InFlight.
+///
+/// ── Block-specific spatial gate (issue #214) ─────────────────────────────
+/// Succeeds alone is timing-only — it says nothing about WHERE the defender
+/// is. WithinBlockReach is the missing spatial axis, composed by the caller
+/// (BallController.ResolveBlockAttempts) alongside Succeeds: BOTH must hold
+/// for a block to connect. See WithinBlockReach's own doc for the ADR-0014
+/// citation and the XZ-only distance rationale.
 /// </summary>
 public static class DefensiveResolution
 {
