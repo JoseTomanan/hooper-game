@@ -1,3 +1,4 @@
+using Godot;
 using Hooper.Ball;
 using Hooper.Moves;
 using Hooper.Player;
@@ -285,5 +286,92 @@ public class DefensiveResolutionTests
             serverPhase: MovePhase.Inactive);
 
         Assert.False(result);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // WithinBlockReach — proximity/reach gate on block resolution (issue #214)
+    //
+    // ADR-0014 real-ball bar: a block only connects within arm's reach of the
+    // ball's release point — DefensiveResolution.Succeeds (the timing overlap
+    // above) is silent on WHERE the defender is, which let a defender anywhere
+    // on the court "block" on timing alone. This predicate is the missing
+    // spatial axis, composed with (not replacing) Succeeds by the caller
+    // (BallController.ResolveBlockAttempts): both must hold for a block to
+    // connect.
+    //
+    // XZ-only distance, mirroring the existing ContestRange/#65 "arm's-length
+    // closeout" proximity term (same physical concept, same codebase
+    // convention) rather than a full 3D distance to the ball — the ball's
+    // height climbs quickly after release while the defender stays grounded,
+    // so a 3D distance would make the gate collapse to near-zero within a
+    // couple of ticks regardless of how close the defender actually is.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void WithinBlockReach_DefenderAtBallPosition_ReturnsTrue()
+    {
+        // Zero distance is trivially within any non-negative reach radius.
+        Assert.True(DefensiveResolution.WithinBlockReach(
+            defenderPosition: new Vector3(0f, 0f, 5f),
+            ballPosition: new Vector3(0f, 0f, 5f),
+            reachRadius: 2.2f));
+    }
+
+    [Fact]
+    public void WithinBlockReach_DistanceInsideRadius_ReturnsTrue()
+    {
+        // 1 m away, well inside a 2.2 m reach.
+        Assert.True(DefensiveResolution.WithinBlockReach(
+            defenderPosition: new Vector3(1f, 0f, 5f),
+            ballPosition: new Vector3(0f, 0f, 5f),
+            reachRadius: 2.2f));
+    }
+
+    [Fact]
+    public void WithinBlockReach_DistanceExactlyAtRadius_ReturnsTrue()
+    {
+        // Boundary is inclusive, matching StealSucceeds' inclusive-bound
+        // convention ([loExposed, hiExposed] — a defender exactly at the
+        // edge of their reach still connects).
+        Assert.True(DefensiveResolution.WithinBlockReach(
+            defenderPosition: new Vector3(2.2f, 0f, 5f),
+            ballPosition: new Vector3(0f, 0f, 5f),
+            reachRadius: 2.2f));
+    }
+
+    [Fact]
+    public void WithinBlockReach_DistanceBeyondRadius_ReturnsFalse()
+    {
+        // 6 m away (e.g. defender at the far baseline, shooter at mid-court) —
+        // the exact "across the court" case issue #214 exists to gate out.
+        Assert.False(DefensiveResolution.WithinBlockReach(
+            defenderPosition: new Vector3(0f, 0f, -1f),
+            ballPosition: new Vector3(0f, 0f, 5f),
+            reachRadius: 2.2f));
+    }
+
+    [Fact]
+    public void WithinBlockReach_JustBeyondRadius_ReturnsFalse()
+    {
+        // A near-miss just past the boundary — pins the strict inequality.
+        Assert.False(DefensiveResolution.WithinBlockReach(
+            defenderPosition: new Vector3(2.21f, 0f, 5f),
+            ballPosition: new Vector3(0f, 0f, 5f),
+            reachRadius: 2.2f));
+    }
+
+    [Fact]
+    public void WithinBlockReach_IgnoresVerticalSeparation_ReturnsTrue()
+    {
+        // XZ-only distance (matching ContestRange's own convention): a large
+        // height difference between a grounded defender and a ball that has
+        // already climbed several metres into its arc must NOT by itself
+        // fail the reach gate — only horizontal distance counts. Without
+        // this the gate would collapse to near-zero within a couple of
+        // ticks of every release, regardless of true proximity.
+        Assert.True(DefensiveResolution.WithinBlockReach(
+            defenderPosition: new Vector3(0f, 0f, 5f),
+            ballPosition: new Vector3(0f, 3f, 5f),
+            reachRadius: 2.2f));
     }
 }

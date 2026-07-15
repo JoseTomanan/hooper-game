@@ -1,3 +1,5 @@
+using System;
+using Godot;
 using Hooper.Player;
 
 namespace Hooper.Ball;
@@ -94,5 +96,44 @@ public static class DefensiveResolution
         // This is equivalent to Succeeds where vulnStart ≤ currentTick < vulnEnd
         // and the current tick happens to be inside the interval.
         return phase >= loExposed && phase <= hiExposed;
+    }
+
+    /// <summary>
+    /// Block-specific spatial gate (issue #214): does the defender's position
+    /// fall within arm's reach of the ball at block-resolution time?
+    ///
+    /// ADR-0018 §2's block success test (<see cref="Succeeds"/>) is
+    /// timing-only — it says nothing about WHERE the defender is, which let a
+    /// defender anywhere on the court "block" a shot on timing alone (a
+    /// spatially unconditioned block deletes the spacing axis from the
+    /// shot/block duel, CLAUDE.md §1). This predicate is the missing spatial
+    /// axis; <see cref="BallController"/>.ResolveBlockAttempts (the sole
+    /// caller) composes it with <see cref="Succeeds"/> — BOTH must hold for a
+    /// block to connect, neither replaces the other.
+    ///
+    /// ADR-0014 citation (real half-court ball, tier 2): a block only
+    /// connects within arm's reach of the release point. Rather than
+    /// invent a new number, the reach default reuses this codebase's own
+    /// already-cited "arm's-length closeout" anchor —
+    /// <see cref="BallController.ContestRange"/> (2.2 m, issue #65) — the
+    /// same physical concept (how close a defender's arm can reach) applied
+    /// to a different defensive move. See <see cref="BallController.BlockReachRadius"/>.
+    ///
+    /// XZ-only distance, matching <see cref="BallController.ContestRange"/>'s
+    /// own XZ-only convention (and <see cref="DefensiveKnockDirection.SafeHorizontal"/>'s):
+    /// a full 3D distance to the ball would collapse this gate almost
+    /// immediately after release, because the ball's height climbs fast while
+    /// the defender stays grounded — the reach that matters is "close enough
+    /// to reach into the shot's lane," not "as tall as the ball is high."
+    /// </summary>
+    /// <param name="defenderPosition">Defender's world position (engine lookup resolved by the caller).</param>
+    /// <param name="ballPosition">Ball's world position at resolution time (engine lookup resolved by the caller).</param>
+    /// <param name="reachRadius">Maximum XZ distance (metres) at which a block can still connect.</param>
+    public static bool WithinBlockReach(Vector3 defenderPosition, Vector3 ballPosition, float reachRadius)
+    {
+        float dx = defenderPosition.X - ballPosition.X;
+        float dz = defenderPosition.Z - ballPosition.Z;
+        float distanceXZ = MathF.Sqrt(dx * dx + dz * dz);
+        return distanceXZ <= reachRadius;
     }
 }
