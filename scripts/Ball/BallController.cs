@@ -1122,22 +1122,12 @@ public partial class BallController : Node3D
 			case BallState.Loose:     TickLoose(dt);     break;
 		}
 
-		// Server-only: release-tick top-up. The pre-switch call above ran while
-		// State was still Held/Dribbling — the shot only becomes InFlight INSIDE
-		// this switch (TickHeld/TickDribbling → CheckJumpShotRelease →
-		// ApplyShootLocally sets _inFlightStartTick = PhysicsTick). So the release
-		// tick itself was never evaluated: a defender whose Active window's last
-		// frame is exactly this tick should connect per the half-open interval
-		// semantics (ADR-0018 §2), but without this call the first evaluation
-		// would be next tick, by which time that defender has moved into Recovery.
-		// The `_inFlightStartTick == PhysicsTick` guard makes this strictly a
-		// release-tick-only top-up (every later InFlight tick is already covered
-		// by the pre-switch call above). It cannot double-resolve the same shot:
-		// on the tick a block succeeds, ResolveBlockAttempts resets
-		// _inFlightStartTick to -1, and the function's own early-return guards on
-		// `_inFlightStartTick < 0`.
-		if (IsServer && StateMachine.Current == BallState.InFlight && _inFlightStartTick == PhysicsTick)
-			ResolveBlockAttempts();
+		// (issue #216 original body row 5) The release-tick top-up call that
+		// used to live here was moved into ApplyShootLocally itself — see that
+		// method's own comment for why. Nothing replaces it at this call
+		// site: the pre-switch call above already covers every OTHER InFlight
+		// tick, and the release tick is now resolved from inside the switch,
+		// the moment the ball actually becomes InFlight.
 
 		// Server-only: assign the tipoff holder once a player node exists but the
 		// ball has none yet (ADR-0007). The broadcast below propagates the holder
@@ -1568,6 +1558,15 @@ public partial class BallController : Node3D
 
 	/// <summary>
 	/// Server-only: resolve block attempts by defenders every InFlight tick.
+	///
+	/// Two call sites cover every InFlight tick between them (issue #216
+	/// original body row 5): the pre-switch call in _PhysicsProcess (every
+	/// tick State is ALREADY InFlight going in), and a release-tick-only call
+	/// inside ApplyShootLocally itself (the one tick State BECOMES InFlight,
+	/// which the pre-switch call — running while State was still
+	/// Held/Dribbling — could not observe). Neither call site can double-
+	/// resolve the same tick: on any given tick exactly one of them sees
+	/// State == InFlight.
 	///
 	/// Called BEFORE the per-state switch in _PhysicsProcess so that a successful
 	/// block (GoLoose from InFlight) prevents TickInFlight from running this tick —
@@ -2690,6 +2689,34 @@ public partial class BallController : Node3D
 		}
 
 		_arc = new ShotArc(GlobalPosition, aimTarget, ShotApexHeight, Gravity);
+
+		// Server-only: release-tick block top-up (issue #216 original body
+		// row 5 — moved here from a separate conditional in _PhysicsProcess
+		// so the tick-ordering knowledge lives in the one place the release
+		// itself happens, ahead of whiff-punish #100 needing the same
+		// knowledge). _PhysicsProcess's PRE-switch ResolveBlockAttempts()
+		// call ran this same tick while State was still Held/Dribbling — the
+		// shot only becomes InFlight here, INSIDE the TickHeld/TickDribbling
+		// switch that call precedes — so the release tick itself was never
+		// evaluated by that call: a defender whose Active window's last
+		// frame is exactly this tick should connect per the half-open
+		// interval semantics (ADR-0018 §2), but without this call the first
+		// evaluation would be next tick, by which time that defender has
+		// moved into Recovery.
+		//
+		// MUST run AFTER _arc is constructed above, not merely after
+		// _inFlightStartTick is set: on success ResolveBlockAttempts
+		// overwrites _arc.Velocity directly (the swat) — calling it any
+		// earlier in this method would mutate a stale or (on the very first
+		// shot) null arc instead of this shot's own.
+		//
+		// Cannot double-resolve the same shot: StateMachine.Current is now
+		// InFlight (Shoot() already succeeded above), so this call is the
+		// ONLY resolution attempt for this tick — the pre-switch call that
+		// already ran this tick saw Held/Dribbling and no-op'd via its own
+		// `StateMachine.Current != BallState.InFlight` guard.
+		if (IsServer) ResolveBlockAttempts();
+
 		return true;
 	}
 
