@@ -86,6 +86,23 @@ public class DefensiveResolutionTests
             activeStart: 7, activeEnd: 10, vulnStart: 5, vulnEnd: 7));
     }
 
+    [Fact]
+    public void Succeeds_ActiveEndsExactlyAtVulnEnd_ReturnsTrue()
+    {
+        // Moved from BlockMoveTests (issue #216 original body row 7, test
+        // dedup) — a distinct boundary configuration none of the cases above
+        // cover: active's END coincides with vuln's END ([15,22) vs [12,22)),
+        // unlike Succeeds_AdjacentIntervals*'s shared START boundary. The
+        // half-open predicate is asymmetric here: sharing a START boundary
+        // excludes (both those tests return false), but sharing an END
+        // boundary while everything else overlaps still succeeds — overlap
+        // [15,22) is non-empty. This is the real "last valid tick" case a
+        // defensive move relies on: connecting on the exact final tick of
+        // the vulnerable window it targets.
+        Assert.True(DefensiveResolution.Succeeds(
+            activeStart: 15, activeEnd: 22, vulnStart: 12, vulnEnd: 22));
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // StealSucceeds — two-axis steal read (ADR-0018 §2)
     //

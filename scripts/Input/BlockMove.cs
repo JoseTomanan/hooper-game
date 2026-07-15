@@ -68,6 +68,21 @@ public sealed class BlockMove : CommittedMove
     public static readonly MoveFrameData DefaultFrameData =
         new(startupFrames: 10, activeFrames: 8, recoveryFrames: 20, feintWindowFrames: 4);
 
+    /// <summary>
+    /// Default value for BallController.BlockGraceTicks — the shot's
+    /// vulnerable-window tail length in ticks (ADR-0018 §2) — hoisted here
+    /// (issue #216 original body row 7) so BallController's [Export] default
+    /// and the xUnit test mirror derive from ONE shared symbol instead of two
+    /// independently hand-copied "10" literals that nothing enforced agreed
+    /// with each other. Same duplicated-constant tripwire class as issue
+    /// #217's BoardCenter/RimCenter (hooper-config-and-flags).
+    ///
+    /// Must be ≥ DefaultFrameData.ActiveFrames (ADR-0018 §3: a defensive
+    /// Active must not be wider than the vulnerable window it targets) -
+    /// BlockMoveTests pins this relationship.
+    /// </summary>
+    public const int DefaultBlockGraceTicks = 10;
+
     /// <param name="frameData">Override frame data; null uses DefaultFrameData.</param>
     public BlockMove(MoveFrameData? frameData = null)
         : base(id: "block", displayName: "Block", frameData: frameData ?? DefaultFrameData)

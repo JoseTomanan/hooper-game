@@ -14,84 +14,15 @@ namespace Hooper.Ball.Tests;
 // A ball knocked Loose while InFlight MUST NOT score (the key correctness requirement).
 public class BlockMoveTests
 {
-    // ═══════════════════════════════════════════════════════════════════════
-    // Block interval overlap — DefensiveResolution.Succeeds used in full
-    // interval form (ADR-0018 §2: block uses the interval form, not point-in-band)
-    //
-    // Vulnerable window: [inFlightStartTick, inFlightStartTick + blockGraceTicks)
-    // Defender Active:   [blockActiveStart, blockActiveStart + activeFrames)
-    // ═══════════════════════════════════════════════════════════════════════
-
-    [Fact]
-    public void BlockSucceeds_ActiveWindowOverlapsVulnWindow_ReturnsTrue()
-    {
-        // Defender entered Active at tick 10, window lasts 8 frames → [10, 18)
-        // Shot went InFlight at tick 12, grace = 10 → vulnerable [12, 22)
-        // Overlap [12, 18) is non-empty → block succeeds.
-        Assert.True(DefensiveResolution.Succeeds(
-            activeStart: 10, activeEnd: 18,
-            vulnStart:   12, vulnEnd:   22));
-    }
-
-    [Fact]
-    public void BlockFails_ActiveEndsBeforeVulnOpens_ReturnsFalse()
-    {
-        // Defender committed too early: Active [5, 11) ends before shot is
-        // even released (vulnStart 12). A pre-shot block attempt always fails.
-        Assert.False(DefensiveResolution.Succeeds(
-            activeStart: 5,  activeEnd: 11,
-            vulnStart:   12, vulnEnd:   22));
-    }
-
-    [Fact]
-    public void BlockFails_ActiveStartsAfterGraceExpires_ReturnsFalse()
-    {
-        // Defender reacted too late: Active [25, 33) starts after the grace
-        // window closes (vulnEnd 22). Ball is already past the defender.
-        Assert.False(DefensiveResolution.Succeeds(
-            activeStart: 25, activeEnd: 33,
-            vulnStart:   12, vulnEnd:   22));
-    }
-
-    [Fact]
-    public void BlockFails_AdjacentWindows_ReturnsFalse()
-    {
-        // Half-open semantics: Active [5, 12) ends exactly where vuln [12, 22) begins.
-        // The overlap is empty — a single-tick miss. Defender was a hair too early.
-        Assert.False(DefensiveResolution.Succeeds(
-            activeStart: 5,  activeEnd: 12,
-            vulnStart:   12, vulnEnd:   22));
-    }
-
-    [Fact]
-    public void BlockSucceeds_ActiveEndsExactlyAtGraceEnd_IsLastValidTick()
-    {
-        // Defender's Active [15, 22) ends exactly when grace closes [12, 22).
-        // The half-open intervals share the boundary 22; overlap is [15, 22) which
-        // is non-empty — this is still a valid block (last tick of grace window).
-        Assert.True(DefensiveResolution.Succeeds(
-            activeStart: 15, activeEnd: 22,
-            vulnStart:   12, vulnEnd:   22));
-    }
-
-    [Fact]
-    public void BlockSucceeds_ActiveFullyContainsVuln_ReturnsTrue()
-    {
-        // Defender timed it perfectly: their window wraps the entire grace period.
-        Assert.True(DefensiveResolution.Succeeds(
-            activeStart: 10, activeEnd: 35,
-            vulnStart:   12, vulnEnd:   22));
-    }
-
-    [Fact]
-    public void BlockSucceeds_VulnFullyContainsActive_ReturnsTrue()
-    {
-        // The shot's grace window is wider than the defender's Active window — the
-        // block still connects because the overlap is non-empty.
-        Assert.True(DefensiveResolution.Succeeds(
-            activeStart: 14, activeEnd: 18,
-            vulnStart:   12, vulnEnd:   22));
-    }
+    // Block's use of DefensiveResolution.Succeeds (the shared half-open
+    // interval overlap predicate, ADR-0018 §1) is exercised generically in
+    // DefensiveResolutionTests.cs — this file no longer re-asserts those
+    // generic cases with block-flavored numbers (issue #216 original body
+    // row 7, test dedup). The one genuinely distinct boundary case this file
+    // used to pin (Active's end exactly at the vulnerable window's end) moved
+    // to DefensiveResolutionTests.Succeeds_ActiveEndsExactlyAtVulnEnd_ReturnsTrue
+    // — it wasn't already covered there and isn't block-specific either, so
+    // it belongs with the predicate's other generic boundary tests, not here.
 
     // ═══════════════════════════════════════════════════════════════════════
     // GoLoose from InFlight — BallStateMachine contract
@@ -243,13 +174,16 @@ public class BlockMoveTests
     public void BlockMove_DefaultFrameData_ActiveFramesLeqDefaultGraceWindow()
     {
         // ADR-0018 §3: a defensive Active is no wider than the offensive
-        // vulnerable window it must hit. BlockGraceTicks is an exported tunable
-        // (default 10); BlockMove.DefaultFrameData.ActiveFrames must not exceed it.
-        // This pins the relationship — the exact values are deferred to #104.
+        // vulnerable window it must hit. BlockMove.DefaultFrameData.ActiveFrames
+        // must not exceed BlockMove.DefaultBlockGraceTicks — the SAME symbol
+        // BallController.BlockGraceTicks' [Export] default now derives from
+        // (issue #216 original body row 7 — this used to be a hand-copied
+        // "10" literal here that nothing enforced agreed with the real
+        // default). This pins the relationship — the exact values are
+        // deferred to #104.
         var fd = BlockMove.DefaultFrameData;
-        const int DefaultBlockGraceTicks = 10; // mirrors BallController.BlockGraceTicks default
-        Assert.True(fd.ActiveFrames <= DefaultBlockGraceTicks,
-            $"BlockMove Active ({fd.ActiveFrames}) must be ≤ grace window ({DefaultBlockGraceTicks}). " +
+        Assert.True(fd.ActiveFrames <= BlockMove.DefaultBlockGraceTicks,
+            $"BlockMove Active ({fd.ActiveFrames}) must be ≤ grace window ({BlockMove.DefaultBlockGraceTicks}). " +
             "ADR-0018 §3: a defensive Active must not be wider than the window it targets.");
     }
 

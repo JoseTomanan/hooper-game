@@ -496,8 +496,11 @@ public partial class BallController : Node3D
 	/// Default 10 ticks ≈ 0.17 s at 60 Hz — provisional; deferred to #104
 	/// and the per-milestone feel pass (ADR-0015). Must be ≥ BlockMove.ActiveFrames
 	/// (currently 8) per ADR-0018 §3 so a perfectly-timed block can always connect.
+	/// Derives from BlockMove.DefaultBlockGraceTicks (issue #216 original body
+	/// row 7) rather than an independently hand-copied literal, so this and
+	/// the xUnit mirror in BlockMoveTests can't drift.
 	/// </summary>
-	[Export] public int BlockGraceTicks { get; set; } = 10;
+	[Export] public int BlockGraceTicks { get; set; } = BlockMove.DefaultBlockGraceTicks;
 
 	/// <summary>
 	/// Horizontal speed (m/s) of the provisional "swat" velocity a successful
