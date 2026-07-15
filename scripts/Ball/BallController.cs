@@ -1465,13 +1465,14 @@ public partial class BallController : Node3D
 			if (child is not PlayerController defender) continue;
 			if (defender == holder) continue; // can't steal from yourself
 
-			// ActiveStealTargetHand returns the targeted hand on EVERY tick the
+			// ActiveMove<StealMove>() returns the live move on EVERY tick the
 			// defender's machine is in the Active phase of a StealMove; null on
 			// all other ticks (fast path — no allocation). Reading it each Active
 			// tick is what turns the point sample into the interval overlap the
-			// spec requires (see method doc / issue #96).
-			HandSide? targetHand = defender.ActiveStealTargetHand;
-			if (targetHand == null) continue;
+			// spec requires (see PlayerController.ActiveMove's doc / issue #96).
+			var stealActive = defender.ActiveMove<StealMove>();
+			if (stealActive == null) continue;
+			HandSide targetHand = stealActive.Value.Move.TargetHand;
 
 			// Two-axis steal check (ADR-0018 §2, issue #96), re-evaluated against
 			// the live dribble phase THIS tick: DefensiveResolution.StealSucceeds
@@ -1481,7 +1482,7 @@ public partial class BallController : Node3D
 			bool success = DefensiveResolution.StealSucceeds(
 				_dribble.Phase,
 				StealLoExposed, StealHiExposed,
-				targetHand.Value, holder.HandSide);
+				targetHand, holder.HandSide);
 
 			if (success)
 			{
@@ -1642,12 +1643,13 @@ public partial class BallController : Node3D
 			// input gate is UX, this is the rule.
 			if (defenderId == _lastShooterPeerId) continue;
 
-			// BlockMoveActiveInterval is non-null only when the defender is in
+			// ActiveMove<BlockMove>() is non-null only when the defender is in
 			// Active phase on a BlockMove. Most ticks this is null (fast path).
-			var interval = defender.BlockMoveActiveInterval;
-			if (interval == null) continue;
+			var blockActive = defender.ActiveMove<BlockMove>();
+			if (blockActive == null) continue;
 
-			var (frameInPhase, activeFrames) = interval.Value;
+			var (move, frameInPhase) = blockActive.Value;
+			int activeFrames = move.FrameData.ActiveFrames;
 
 			// Compute the defender's Active window as absolute physics ticks.
 			// frameInPhase = 0 means they JUST entered Active this very tick;

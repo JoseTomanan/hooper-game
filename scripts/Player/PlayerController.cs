@@ -665,32 +665,41 @@ public partial class PlayerController : CharacterBody3D
 		JumpShotReleaseResolver.ShouldRelease(_machine.JustEnteredActive, _machine.CurrentMove);
 
 	/// <summary>
-	/// While this player's committed-move machine is in the Active phase of a
-	/// StealMove, returns the targeted hand side; null on every other tick.
+	/// Generic Active-phase move read, consolidating what used to be two
+	/// separate copies — ActiveStealTargetHand and BlockMoveActiveInterval —
+	/// of the exact same shape: "is this player's machine Active on move type
+	/// TMove right now?" (issue #216 original body row 2; a future contest
+	/// move, #99, would otherwise have grown a third copy). Returns null on
+	/// any tick this player's machine is not Active, or is Active on a
+	/// DIFFERENT move type; otherwise the live move instance (typed as TMove,
+	/// so a caller can read whatever move-specific payload it needs —
+	/// StealMove.TargetHand, BlockMove's FrameData.ActiveFrames, a future
+	/// ContestMove's own fields) plus the current FrameInPhase (needed for
+	/// absolute-tick interval arithmetic, e.g.
+	/// BallController.ResolveBlockAttempts).
 	///
-	/// BallController.ResolveStealAttempts reads this every physics tick (server-
-	/// only) to resolve steal attempts (ADR-0018 §1–2, issue #96). The null return
-	/// is the fast path — most ticks nobody is stealing — so the caller can do a
-	/// simple null-guard with zero overhead on inactive defenders.
+	/// BallController's steal/block resolvers read this every physics tick
+	/// (server-only). The null return is the fast path — most ticks nobody is
+	/// mid-defensive-move — so callers do a simple null-guard with zero
+	/// overhead on inactive defenders.
 	///
 	/// Why the WHOLE Active phase, not just its entry tick (JustEnteredActive):
-	/// ADR-0018 defines a steal's success as its Active window OVERLAPPING the
-	/// exposed dribble band — an interval relationship. Sampling only the single
-	/// entry tick collapses that interval to a point and makes the Active window's
-	/// width inert, so a defender who enters Active a tick early (band not yet
-	/// open) but whose window fully covers the band would wrongly whiff. Reporting
-	/// the hand on every Active tick lets ResolveStealAttempts re-check the live
-	/// dribble phase each tick and succeed on the first in-band tick — the
-	/// interval model, evaluated against ground-truth phase with no projection.
-	/// (Note: IsActive is the WRONG check — it is true for Startup/Recovery too.)
+	/// ADR-0018 defines both steal and block success as the Active window
+	/// OVERLAPPING another window (the exposed dribble band, or the shot's
+	/// vulnerable window) — an interval relationship. Sampling only the
+	/// single entry tick collapses that interval to a point and makes the
+	/// Active window's width inert, so a defender who enters Active a tick
+	/// early (before the other window opens) but whose window fully covers it
+	/// would wrongly whiff. Reporting the move on every Active tick lets the
+	/// resolver re-check the live opposing state each tick and succeed on the
+	/// first overlapping tick — the interval model, evaluated against
+	/// ground-truth phase with no projection. (Note: IsActive is the WRONG
+	/// check — it is true for Startup/Recovery too.)
 	/// </summary>
-	public HandSide? ActiveStealTargetHand
+	public (TMove Move, int FrameInPhase)? ActiveMove<TMove>() where TMove : CommittedMove
 	{
-		get
-		{
-			if (_machine.Phase != MovePhase.Active) return null;
-			return _machine.CurrentMove is StealMove steal ? steal.TargetHand : (HandSide?)null;
-		}
+		if (_machine.Phase != MovePhase.Active) return null;
+		return _machine.CurrentMove is TMove move ? (move, _machine.FrameInPhase) : ((TMove, int)?)null;
 	}
 
 	/// <summary>
@@ -716,41 +725,6 @@ public partial class PlayerController : CharacterBody3D
 	/// defender is freed to contest that scramble instead of standing planted).
 	/// </summary>
 	public bool EndResolvedDefensiveMove() => _machine.EndActiveEarly();
-
-	/// <summary>
-	/// When this player's committed-move machine is currently in Active phase on
-	/// a BlockMove, returns the FrameInPhase and ActiveFrames so BallController
-	/// can compute the defender's Active interval for the full-interval overlap
-	/// check (ADR-0018 §2, issue #98). Returns null on any other tick / move.
-	///
-	/// Unlike JustEnteredStealActive (which fires only on the single JustEnteredActive
-	/// tick), this property is checked EVERY TICK while the ball is InFlight:
-	///   • A defender who entered Active before the shot can still overlap its
-	///     vulnerable window if their remaining Active ticks extend into the flight.
-	///   • A defender who entered Active after the shot started can still overlap
-	///     if the grace window hasn't closed.
-	/// Both cases need continuous checking, not a single-tick snapshot.
-	///
-	/// BallController.ResolveBlockAttempts reads this from two call sites: once
-	/// before the per-state tick switch (so a successful block prevents
-	/// TickInFlight from running, and thus prevents RegisterBasket from being
-	/// called on the same tick), and once more AFTER the switch but ONLY on
-	/// the shot's own release tick — the ball only becomes InFlight partway
-	/// through that switch (TickHeld/TickDribbling → CheckJumpShotRelease), so
-	/// the pre-switch call still saw Held/Dribbling and returned null on that
-	/// exact tick; the post-switch top-up is what makes the release tick itself
-	/// evaluable without weakening the "blocked shot cannot score" ordering
-	/// guarantee (see the comments at both call sites in _PhysicsProcess).
-	/// </summary>
-	public (int FrameInPhase, int ActiveFrames)? BlockMoveActiveInterval
-	{
-		get
-		{
-			if (_machine.Phase != MovePhase.Active) return null;
-			if (_machine.CurrentMove is not BlockMove) return null;
-			return (_machine.FrameInPhase, _machine.CurrentMove.FrameData.ActiveFrames);
-		}
-	}
 
 	// ── Role helpers ──────────────────────────────────────────────────────────
 
