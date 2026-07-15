@@ -165,6 +165,36 @@ public sealed class RimBackboard
         BoardRestitution = boardRestitution;
     }
 
+    // ── Placement invariant (issue #217) ─────────────────────────────────
+
+    /// <summary>
+    /// True when the backboard plane sits strictly BEHIND the rim plane along
+    /// the approach axis (BoardNormal) — i.e., a ball travelling toward the
+    /// rim from the court reaches the rim opening before it could ever reach
+    /// the board face.
+    ///
+    /// Formalised as (boardCenter − rimCenter) · boardNormal &gt; 0: moving
+    /// from the rim further along +boardNormal lands you at (or past) the
+    /// board, so the board sits downstream of the rim along that axis. When
+    /// this is false or zero, the board plane sits at or in front of the rim
+    /// plane, and a descending make-arc can clip the board before it ever
+    /// reaches the rim opening (issue #217's mutually-inconsistent-defaults
+    /// bug: BoardCenter (0, 3.5, 0.3) sat 0.3 m IN FRONT of RimCenter
+    /// (0, 3.05, 0), so BoardNormal (0, 0, −1) gave a NEGATIVE value here).
+    ///
+    /// Pure geometry check — no engine state, callable from a plain xUnit
+    /// test with no live Godot instance.
+    /// </summary>
+    public static bool IsBoardBehindRim(Vector3 rimCenter, Vector3 boardCenter, Vector3 boardNormal)
+    {
+        Vector3 rimToBoard = boardCenter - rimCenter;
+        float alongApproachAxis =
+            rimToBoard.X * boardNormal.X +
+            rimToBoard.Y * boardNormal.Y +
+            rimToBoard.Z * boardNormal.Z;
+        return alongApproachAxis > 0f;
+    }
+
     // ── Public API ────────────────────────────────────────────────────────
 
     /// <summary>

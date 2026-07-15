@@ -682,4 +682,64 @@ public class RimBackboardTests
 
         Assert.Equal(BallState.InFlight, sm.Current);
     }
+
+    // ═════════════════════════════════════════════════════════════════════
+    // IsBoardBehindRim — placement invariant (issue #217)
+    //
+    // BallController's exported RimCenter/BoardCenter/BoardNormal ARE the
+    // defaults RimBackboard's own DefaultXxx fields intentionally do NOT
+    // mirror (see the comment atop the DefaultBoardCenter field above — this
+    // file's fixture uses its own self-consistent local geometry, unrelated
+    // to production values). BallController is a Node-derived class and
+    // cannot be constructed in this plain-xUnit project (no live Godot
+    // instance — hooper-verification-and-qa §1/§2), so the mirrored consts
+    // below are this suite's only way to pin the exported defaults' geometry
+    // as a pure test. If BallController's RimCenter/BoardCenter/BoardNormal
+    // defaults are ever retuned, update these three consts in the same
+    // commit (the ShotScatterCurveCharacterizationTests.cs precedent for
+    // this "must mirror" duplication, hooper-config-and-flags §4).
+    // ═════════════════════════════════════════════════════════════════════
+
+    private static readonly Vector3 LiveRimCenter   = new(0f, 3.05f, 0f);
+    private static readonly Vector3 LiveBoardCenter = new(0f, 3.205f, -0.27f);
+    private static readonly Vector3 LiveBoardNormal = new(0f, 0f, -1f);
+
+    [Fact]
+    public void IsBoardBehindRim_BallControllerDefaults_IsTrue()
+    {
+        // Pins the fix: a code-built BallController tree (headless harnesses,
+        // future tests — no .tscn override in play) must get a board that
+        // sits behind the rim along the approach axis, matching production
+        // Main.tscn's RELATIVE placement (rim (0,3.05,0.3), board
+        // (0,3.205,0.03) — board 0.27 m behind rim). Before the fix,
+        // BoardCenter (0, 3.5, 0.3) was 0.3 m IN FRONT of RimCenter
+        // (0, 3.05, 0) and this assertion failed.
+        Assert.True(RimBackboard.IsBoardBehindRim(LiveRimCenter, LiveBoardCenter, LiveBoardNormal));
+    }
+
+    [Fact]
+    public void IsBoardBehindRim_BoardInFrontOfRim_IsFalse()
+    {
+        // The pre-fix BallController defaults, verbatim — pins the OLD
+        // (broken) geometry as a genuine negative case so this invariant
+        // check is proven to actually discriminate, not just always return
+        // true for any input.
+        var brokenRimCenter   = new Vector3(0f, 3.05f, 0f);
+        var brokenBoardCenter = new Vector3(0f, 3.5f, 0.3f);
+        var boardNormal       = new Vector3(0f, 0f, -1f);
+
+        Assert.False(RimBackboard.IsBoardBehindRim(brokenRimCenter, brokenBoardCenter, boardNormal));
+    }
+
+    [Fact]
+    public void IsBoardBehindRim_BoardExactlyOnRimPlane_IsFalse()
+    {
+        // Zero along the approach axis is the boundary — not strictly
+        // behind, so it must not count as satisfying the invariant.
+        var rimCenter   = new Vector3(0f, 3.05f, 0f);
+        var boardCenter = new Vector3(0f, 4f, 0f); // same Z as rim
+        var boardNormal = new Vector3(0f, 0f, -1f);
+
+        Assert.False(RimBackboard.IsBoardBehindRim(rimCenter, boardCenter, boardNormal));
+    }
 }
