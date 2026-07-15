@@ -158,8 +158,18 @@ public partial class BallController : Node3D
 	/// <summary>Restitution for rim contact [0..1].</summary>
 	[Export] public float RimRestitution { get; set; } = 0.65f;
 
-	/// <summary>World-space centre of the backboard face.</summary>
-	[Export] public Vector3 BoardCenter { get; set; } = new(0f, 3.5f, 0.3f);
+	/// <summary>
+	/// World-space centre of the backboard face. Defaults to sit 0.27 m
+	/// BEHIND RimCenter along the approach axis (BoardNormal) — matching
+	/// Main.tscn's relative placement (rim (0,3.05,0.3), board
+	/// (0,3.205,0.03)) so a code-built tree with no .tscn override (headless
+	/// harnesses, unit-adjacent tests) behaves like production instead of
+	/// intercepting every clean make-arc with a board that sits in FRONT of
+	/// the rim. See RimBackboard.IsBoardBehindRim, which pins this invariant
+	/// (issue #217; the old default (0, 3.5, 0.3) was 0.3 m in front of
+	/// RimCenter (0, 3.05, 0)).
+	/// </summary>
+	[Export] public Vector3 BoardCenter { get; set; } = new(0f, 3.205f, -0.27f);
 
 	/// <summary>Backboard outward normal, pointing toward the court (unit).</summary>
 	[Export] public Vector3 BoardNormal { get; set; } = new(0f, 0f, -1f);

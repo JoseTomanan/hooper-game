@@ -216,18 +216,25 @@ public partial class BlockTurnoverTest : Node
 
         // Place the backboard BEHIND the rim, mirroring the production scene's
         // RELATIVE placement (Main.tscn: board (0, 3.205, 0.03) sits 0.27 m
-        // behind rim (0, 3.05, 0.3), away from the court). The CODE-default
-        // BoardCenter (0, 3.5, 0.3) is 0.3 m in FRONT of the code-default
-        // RimCenter (0, 3.05, 0) — mutually inconsistent export defaults that
-        // production corrects in the .tscn but this code-built tree inherits
-        // raw. Under the raw defaults, every make-arc from ShooterPosition
-        // descends through the board face on its way to the rim (it crosses
-        // the Z = 0.3 board plane at Y ≈ 3.42, inside the face's [3.2, 3.8]
-        // span) and Bounces Loose — the control-make CI timeout at 0-0, and
-        // a silently vacuous "score unchanged" in the success scenario (an
-        // arc that physically cannot score proves nothing about the block).
-        // Verified against the pure ShotArc + RimBackboard classes: raw
-        // defaults → backboard Bounce at the plane; this placement → Make.
+        // behind rim (0, 3.05, 0.3), away from the court).
+        //
+        // As of issue #217 this now matches BallController's own CODE
+        // default (BoardCenter defaults to RimCenter + (0, 0.155, -0.27)),
+        // so this assignment is redundant with the live default — but it
+        // stays explicit rather than being removed: an explicit set makes
+        // this scenario's dependence on the placement self-documenting and
+        // immune to any future default drift. (Before #217, the code default
+        // was BoardCenter (0, 3.5, 0.3), 0.3 m in FRONT of the code-default
+        // RimCenter (0, 3.05, 0) — a code-built tree with no .tscn override
+        // got that broken default raw. Under it, every make-arc from
+        // ShooterPosition descended through the board face on its way to the
+        // rim (crossing the Z = 0.3 board plane at Y ≈ 3.42, inside the
+        // face's [3.2, 3.8] span) and Bounced Loose — the control-make CI
+        // timeout at 0-0, and a silently vacuous "score unchanged" in the
+        // success scenario. Verified against the pure ShotArc + RimBackboard
+        // classes: raw old default → backboard Bounce at the plane; this
+        // placement → Make. See RimBackboard.IsBoardBehindRim, which now
+        // pins the invariant in tests/Hooper.Ball.Tests/RimBackboardTests.cs.)
         _ball.BoardCenter = new Vector3(0f, 3.205f, -0.27f);
 
         _gameManager = new GameManager { Name = "GameManager" };
