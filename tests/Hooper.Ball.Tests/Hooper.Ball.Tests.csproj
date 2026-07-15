@@ -52,6 +52,8 @@
     <Compile Include="..\..\scripts\Ball\FloorBounce.cs" />
     <!-- M10 defensive resolution helper (issue #96, ADR-0018 §1) -->
     <Compile Include="..\..\scripts\Ball\DefensiveResolution.cs" />
+    <!-- Shared knock/swat direction helper (issue #216 original body row 4) -->
+    <Compile Include="..\..\scripts\Ball\DefensiveKnockDirection.cs" />
     <!-- Triple-threat dead-dribble rule (issue #193, ADR-0008 amendment) -->
     <Compile Include="..\..\scripts\Ball\DeadDribbleRule.cs" />
     <!-- Crossover ball sweep curve (issue #195) -->

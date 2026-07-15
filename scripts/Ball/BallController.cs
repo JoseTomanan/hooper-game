@@ -1515,11 +1515,10 @@ public partial class BallController : Node3D
 				// SolveInitialVelocity to zero, no divide-by-zero), then
 				// Velocity is overwritten directly — the same seed-then-overwrite
 				// pattern ReconcileFromServer already uses for a client's null _arc.
-				Vector3 toDefender = defender.GlobalPosition - GlobalPosition;
-				toDefender.Y = 0f;
-				Vector3 knockDir = toDefender.LengthSquared() > 0.0001f
-					? toDefender.Normalized()
-					: Vector3.Zero; // degenerate (holder/defender coincident) — rise only
+				// DefensiveKnockDirection.SafeHorizontal (issue #216 row 4) —
+				// shared with the block swat direction math below. Degenerate
+				// (holder/defender coincident) falls back to Zero — rise only.
+				Vector3 knockDir = DefensiveKnockDirection.SafeHorizontal(defender.GlobalPosition - GlobalPosition);
 				_arc = new ShotArc(GlobalPosition, GlobalPosition, GlobalPosition.Y, Gravity);
 				_arc.Velocity = new Vector3(
 					knockDir.X * StealKnockSpeed,
@@ -1689,23 +1688,21 @@ public partial class BallController : Node3D
 				// is already a valid instance here (Shoot() built it), so unlike
 				// the steal's Dribbling→Loose path no seed-then-overwrite is
 				// needed — overwriting Velocity in place is enough.
-				Vector3 fromRim = GlobalPosition - RimCenter;
-				fromRim.Y = 0f;
-				Vector3 fromDefender = GlobalPosition - defender.GlobalPosition;
-				fromDefender.Y = 0f;
+				// DefensiveKnockDirection.SafeHorizontal (issue #216 row 4) —
+				// shared with the steal knock direction math above.
+				Vector3 fromRim = DefensiveKnockDirection.SafeHorizontal(GlobalPosition - RimCenter);
 				Vector3 swatDir;
-				if (fromRim.LengthSquared() > 0.0001f)
-					swatDir = fromRim.Normalized();
-				else if (fromDefender.LengthSquared() > 0.0001f)
+				if (fromRim != Vector3.Zero)
+					swatDir = fromRim;
+				else
 					// Degenerate case: the ball's XZ coincides with RimCenter's —
 					// release from directly under the rim, the most common block
 					// range. A pure "away from rim" direction is undefined there,
 					// so fall back to "away from the defender's hand" instead: the
 					// swat physically comes off whoever's hand touched the ball,
-					// not a vertical drop through the rim geometry.
-					swatDir = fromDefender.Normalized();
-				else
-					swatDir = Vector3.Zero; // both degenerate — straight-down drop
+					// not a vertical drop through the rim geometry. Also Zero
+					// (straight-down drop) if THIS is degenerate too.
+					swatDir = DefensiveKnockDirection.SafeHorizontal(GlobalPosition - defender.GlobalPosition);
 				_arc.Velocity = new Vector3(
 					swatDir.X * BlockSwatSpeed,
 					-BlockSwatDropSpeed,
