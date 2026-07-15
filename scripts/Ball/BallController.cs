@@ -138,8 +138,19 @@ public partial class BallController : Node3D
 
 	// ── Basket geometry (must match the hoop node's placement) ────────────
 
+	/// <summary>
+	/// Default RimCenter, hoisted to a static field (issue #216 finding 2) so
+	/// BoardCenter's default can derive from it below instead of duplicating
+	/// the literal. Not itself referenceable from an [Export] property
+	/// initializer if it were an instance member — Godot's source generator
+	/// and C# both require export defaults to be static-evaluable (CS0236) —
+	/// which is exactly why this is `static readonly` rather than inlined on
+	/// RimCenter's own initializer.
+	/// </summary>
+	private static readonly Vector3 DefaultRimCenter = new(0f, 3.05f, 0f);
+
 	/// <summary>World-space centre of the rim ring. Used for collision geometry only.</summary>
-	[Export] public Vector3 RimCenter { get; set; } = new(0f, 3.05f, 0f);
+	[Export] public Vector3 RimCenter { get; set; } = DefaultRimCenter;
 
 	/// <summary>
 	/// World-space point the shot arc aims for. Defaults to RimCenter (a clean make).
@@ -159,17 +170,19 @@ public partial class BallController : Node3D
 	[Export] public float RimRestitution { get; set; } = 0.65f;
 
 	/// <summary>
-	/// World-space centre of the backboard face. Defaults to sit 0.27 m
-	/// BEHIND RimCenter along the approach axis (BoardNormal) — matching
-	/// Main.tscn's relative placement (rim (0,3.05,0.3), board
-	/// (0,3.205,0.03)) so a code-built tree with no .tscn override (headless
-	/// harnesses, unit-adjacent tests) behaves like production instead of
-	/// intercepting every clean make-arc with a board that sits in FRONT of
-	/// the rim. See RimBackboard.IsBoardBehindRim, which pins this invariant
-	/// (issue #217; the old default (0, 3.5, 0.3) was 0.3 m in front of
-	/// RimCenter (0, 3.05, 0)).
+	/// World-space centre of the backboard face. Derived from DefaultRimCenter
+	/// + RimBackboard.DefaultRimToBoardOffset (issue #216 finding 2) instead of
+	/// a hand-copied literal, so a code-built tree with no .tscn override
+	/// (headless harnesses, unit-adjacent tests) behaves like production
+	/// instead of intercepting every clean make-arc with a board that sits in
+	/// FRONT of the rim. See RimBackboard.IsBoardBehindRim, which pins this
+	/// invariant (issue #217; the old default (0, 3.5, 0.3) was 0.3 m in
+	/// front of RimCenter (0, 3.05, 0)). Deriving both defaults from the same
+	/// two static sources — instead of two independent literals that only
+	/// agreed by hand — is what makes this class of regression structurally
+	/// impossible instead of merely fixed.
 	/// </summary>
-	[Export] public Vector3 BoardCenter { get; set; } = new(0f, 3.205f, -0.27f);
+	[Export] public Vector3 BoardCenter { get; set; } = DefaultRimCenter + RimBackboard.DefaultRimToBoardOffset;
 
 	/// <summary>
 	/// Unit normal along the ball's approach axis toward the board — AWAY

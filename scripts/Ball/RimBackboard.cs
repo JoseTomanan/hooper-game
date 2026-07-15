@@ -105,6 +105,23 @@ namespace Hooper.Ball;
 /// </summary>
 public sealed class RimBackboard
 {
+    // ── Default placement relationship (issue #216 finding 2) ──────────────
+
+    /// <summary>
+    /// Default offset from RimCenter to BoardCenter: BoardCenter =
+    /// RimCenter + DefaultRimToBoardOffset. Matches Main.tscn's relative
+    /// rim/board placement (rim at world Z=0.3, board 0.27 m further along
+    /// the approach axis, 0.155 m higher).
+    ///
+    /// Hoisted here, in the pure layer (ADR-0004 seam discipline - no engine
+    /// calls in pure classes), so RimCenter and BoardCenter can never again
+    /// independently drift the way they did in issue #217: BallController's
+    /// exported defaults derive BoardCenter FROM RimCenter plus this offset
+    /// instead of encoding the relationship as two hand-copied literals that
+    /// nothing enforces agree with each other.
+    /// </summary>
+    public static readonly Vector3 DefaultRimToBoardOffset = new(0f, 0.155f, -0.27f);
+
     // ── Rim tunables ──────────────────────────────────────────────────────
 
     /// <summary>World-space centre of the rim ring at rim height.</summary>
