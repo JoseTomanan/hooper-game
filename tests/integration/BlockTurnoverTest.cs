@@ -20,6 +20,7 @@ namespace HOOPERGAME.Tests.Integration;
 //   godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=success-lastactive
 //   godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=whiff
 //   godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=control-make
+//   godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=control-make-default-geometry
 //   Exit: 0 = PASS, 1 = FAIL (via GetTree().Quit) — the ADR-0016 exit-code contract.
 //   Omitting --harness-scenario defaults to "success".
 //
@@ -83,6 +84,21 @@ namespace HOOPERGAME.Tests.Integration;
 // the score is still 0-0, rather than verdicting the instant the scramble
 // settles.
 //
+// ── Scenario "control-make-default-geometry": proves the raw [Export] default ──
+// Issue #216 finding 3. Identical to "control-make" (no defender, unblocked
+// shot must score) EXCEPT it skips this class's explicit
+// `_ball.BoardCenter = ...` assignment (see Ready()), so it is the ONLY
+// scenario in this file exercising BallController.BoardCenter's raw code
+// default rather than an explicitly-set value. Every other scenario here
+// re-sets BoardCenter to a value identical to the live default, so none of
+// them would notice a regression to the default itself — RimBackboardTests.cs
+// can only pin the pure geometry RELATIONSHIP (RimBackboard.IsBoardBehindRim),
+// since BallController is Node-derived and cannot be constructed in the plain
+// xUnit project. This scenario is what actually proves the live [Export]
+// default still produces a scoring shot: reverting BoardCenter's default to
+// the pre-#217 value (0, 3.5, 0.3) makes this scenario time out at 0-0
+// (verified — see the finding-3 evidence in PR #216's description).
+//
 // ── Self-block (dropped scenario) ──────────────────────────────────────────
 // ADR-0018/BallController.ResolveBlockAttempts excludes the shooter from being
 // their own blocker via the _lastShooterPeerId check. This is NOT reachable
@@ -122,6 +138,16 @@ public partial class BlockTurnoverTest : Node
     private static readonly Vector3 ShooterPosition = new(0f, 0f, 5f);
 
     private string _scenario = "success";
+
+    // "control-make-default-geometry" (issue #216 finding 3) is a
+    // control-make TWIN: same "no defender ever begins a BlockMove, the
+    // unblocked shot must score" logic, differing ONLY in that it leaves
+    // BallController.BoardCenter at its raw code [Export] default instead of
+    // this class's explicit override (see Ready()). Grouping both scenario
+    // names under one predicate keeps every OTHER decision point (defender
+    // scheduling, tick dispatch, verdict dispatch) identical between them —
+    // the board-placement default is the ONLY variable this scenario tests.
+    private bool IsControlMakeScenario => _scenario == "control-make" || _scenario == "control-make-default-geometry";
 
     private BallController _ball;
     private GameManager _gameManager;
@@ -235,7 +261,22 @@ public partial class BlockTurnoverTest : Node
         // classes: raw old default → backboard Bounce at the plane; this
         // placement → Make. See RimBackboard.IsBoardBehindRim, which now
         // pins the invariant in tests/Hooper.Ball.Tests/RimBackboardTests.cs.)
-        _ball.BoardCenter = new Vector3(0f, 3.205f, -0.27f);
+        //
+        // "control-make-default-geometry" (issue #216 finding 3) is the ONE
+        // exception: it deliberately SKIPS this override, so it is the only
+        // scenario in this file that exercises BallController.BoardCenter's
+        // raw code default rather than an explicitly-set value. Every other
+        // scenario here re-sets BoardCenter to an identical value, so none of
+        // them would notice a regression to the code default itself (the gap
+        // finding 3 closes) — RimBackboardTests.cs's pure IsBoardBehindRim
+        // assertions can pin the GEOMETRY relationship, but only a live,
+        // code-built BallController node (unreachable from a plain xUnit
+        // process) can prove the actual [Export] default still produces a
+        // scoring shot.
+        if (_scenario != "control-make-default-geometry")
+        {
+            _ball.BoardCenter = new Vector3(0f, 3.205f, -0.27f);
+        }
 
         _gameManager = new GameManager { Name = "GameManager" };
 
@@ -326,13 +367,13 @@ public partial class BlockTurnoverTest : Node
             int jumpShotStartup = JumpShot.DefaultFrameData.StartupFrames;
             _predictedReleaseFrame = _shooterBeginFrame + (jumpShotStartup - 1);
 
-            // "control-make" never begins a BlockMove at all (that's the
-            // point — it's the counterfactual "what would have happened"
-            // scenario success/success-lastactive are checked against), so
-            // there is nothing to schedule. Leave _defenderBeginFrame at its
-            // default 0, which Step 2 below can never reach (_frame starts
-            // at 1 and only increases).
-            if (_scenario != "control-make")
+            // "control-make"/"control-make-default-geometry" never begin a
+            // BlockMove at all (that's the point — they're the counterfactual
+            // "what would have happened" scenarios success/success-lastactive
+            // are checked against), so there is nothing to schedule. Leave
+            // _defenderBeginFrame at its default 0, which Step 2 below can
+            // never reach (_frame starts at 1 and only increases).
+            if (!IsControlMakeScenario)
             {
                 _defenderBeginFrame = ComputeDefenderBeginFrame(_predictedReleaseFrame);
 
@@ -414,7 +455,7 @@ public partial class BlockTurnoverTest : Node
             return;
         }
 
-        if (_scenario == "control-make")
+        if (IsControlMakeScenario)
         {
             TickControlMake();
             return;
@@ -663,7 +704,7 @@ public partial class BlockTurnoverTest : Node
             return;
         }
 
-        if (_scenario == "control-make")
+        if (IsControlMakeScenario)
         {
             VerdictControlMake();
             return;
@@ -685,16 +726,19 @@ public partial class BlockTurnoverTest : Node
         // that "success"/"success-lastactive"'s "score unchanged" means the
         // block intercepted a shot that would otherwise have gone in, not that
         // the shot never had a chance to score in the first place.
+        // "control-make-default-geometry" shares this exact assertion — its
+        // only difference is which BoardCenter value produced the geometry
+        // (see Ready()'s doc, issue #216 finding 3).
         bool pass = _gameManager.ScoreOf(1) == 1 && _gameManager.ScoreOf(2) == 0;
 
         if (pass)
         {
-            GD.Print($"[block-turnover] PASS — scenario=control-make, score1={_gameManager.ScoreOf(1)}, " +
+            GD.Print($"[block-turnover] PASS — scenario={_scenario}, score1={_gameManager.ScoreOf(1)}, " +
                      $"score2={_gameManager.ScoreOf(2)}.");
         }
         else
         {
-            Fail($"scenario=control-make expected the unblocked shot to score exactly once, but got " +
+            Fail($"scenario={_scenario} expected the unblocked shot to score exactly once, but got " +
                  $"score1={_gameManager.ScoreOf(1)}, score2={_gameManager.ScoreOf(2)}.");
         }
         Finish(pass ? 0 : 1);
