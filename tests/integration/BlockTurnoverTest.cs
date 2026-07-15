@@ -37,7 +37,7 @@ namespace HOOPERGAME.Tests.Integration;
 // The shooter (peer "1", the tipoff holder) begins a REAL JumpShot via the
 // TripleThreatHarnessSeam's BeginJumpShotForHarness (the same BeginCommittedMove
 // path production input reaches). The defender (peer "2") begins a REAL
-// BlockMove via BlockHarnessSeam's BeginBlockForHarness, timed via
+// BlockMove via DefensiveMoveHarnessSeam's BeginMoveForHarness, timed via
 // ComputeDefenderBeginFrame so its Active window's very first tick lands
 // exactly on the shot's release tick (frame arithmetic derived from the LIVE
 // JumpShot/BlockMove frame data and BallController.BlockGraceTicks, not
@@ -103,8 +103,8 @@ namespace HOOPERGAME.Tests.Integration;
 // ADR-0018/BallController.ResolveBlockAttempts excludes the shooter from being
 // their own blocker via the _lastShooterPeerId check. This is NOT reachable
 // through the harness seam (or even a tampered production client) under the
-// current single-CommittedMoveMachine-per-player model: BeginBlockForHarness
-// is exactly _machine.Begin(new BlockMove()), which only succeeds from
+// current single-CommittedMoveMachine-per-player model: BeginMoveForHarness
+// is exactly BeginCommittedMove(new BlockMove()), which only succeeds from
 // Phase == Inactive — but the shooter's OWN machine is occupied by their
 // JumpShot's Active (4 ticks) then Recovery (20 ticks) for the shot's ENTIRE
 // vulnerable window (BlockGraceTicks == 10 ticks after release), so it never
@@ -379,11 +379,11 @@ public partial class BlockTurnoverTest : Node
         // Step 2: begin the defender's REAL BlockMove at the computed frame.
         if (_shooterBegun && !_defenderBegun && _frame == _defenderBeginFrame)
         {
-            bool began = _defender.BeginBlockForHarness();
+            bool began = _defender.BeginMoveForHarness(new BlockMove());
             _defenderBegun = true;
             if (!began)
             {
-                Fail("BeginBlockForHarness returned false — defender's machine was not Inactive at begin.");
+                Fail("BeginMoveForHarness(BlockMove) returned false — defender's machine was not Inactive at begin.");
                 Finish();
                 return;
             }

@@ -120,7 +120,7 @@ public partial class StealTurnoverTest : Node
         // BEFORE Ball there) — an earlier version of this harness ticked Ball
         // before Players, which is backwards from production and was flagged by
         // review as making the "mirrors production timing" claim false. Under
-        // this order: Root ticks first (so BeginStealForHarness lands before
+        // this order: Root ticks first (so BeginMoveForHarness lands before
         // anyone moves that frame), then the defender's committed-move machine
         // advances, THEN BallController reads the now-current-frame phase and
         // resolves the steal — see ComputeBeginFrame's doc for how this shifts
@@ -183,7 +183,7 @@ public partial class StealTurnoverTest : Node
                  $"band=[{_ball.StealLoExposed:F2},{_ball.StealHiExposed:F2}]");
     }
 
-    // Where to call BeginStealForHarness so the Active window lands in the wanted
+    // Where to call BeginMoveForHarness so the Active window lands in the wanted
     // relationship to the exposed band. Derived from tunables (not hardcoded) so
     // it survives #104 retuning of the band, period, or frame counts.
     //
@@ -235,11 +235,11 @@ public partial class StealTurnoverTest : Node
             // or a crossover, neither of which the idle holder does), so aiming
             // the steal at Left guarantees the hand axis passes and the test
             // isolates the timing axis.
-            bool begun = _defender.BeginStealForHarness(HandSide.Left);
+            bool begun = _defender.BeginMoveForHarness(new StealMove(HandSide.Left));
             _stealBegun = true;
             if (!begun)
             {
-                Fail("BeginStealForHarness returned false — machine was not Inactive at begin.");
+                Fail("BeginMoveForHarness(StealMove) returned false — machine was not Inactive at begin.");
                 Finish();
                 return;
             }
@@ -339,7 +339,7 @@ public partial class StealTurnoverTest : Node
                 // instant. The phase-reset assertion above is what protects
                 // the moment Recovery DOES elapse and a genuine re-attempt
                 // becomes legal.
-                _reattemptBeganAtRecovery = _defender.BeginStealForHarness(HandSide.Left);
+                _reattemptBeganAtRecovery = _defender.BeginMoveForHarness(new StealMove(HandSide.Left));
 
                 Verdict();
                 return;
