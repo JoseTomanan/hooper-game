@@ -197,3 +197,41 @@ retraction of §1: the *rule* (Active must overlap the vulnerable window) is
 unchanged and still what both moves obey. Only the *mechanism* by which the
 steal proves that overlap differs from `Succeeds`'s direct interval-vs-interval
 form, because its vulnerable window cannot be expressed as one in advance.
+
+## Amendment 2026-07-16 — Block composes the overlap rule with a spatial reach gate (#214)
+
+§1 states the overlap rule as *timing-only* — a block succeeds iff its `Active`
+window overlaps the shot's vulnerable window. Issue #214 adds a **second,
+spatial** term to block success: `ResolveBlockAttempts` now computes
+`success = timingSucceeds && withinReach`, where `withinReach` is the pure
+predicate `DefensiveResolution.WithinBlockReach(defenderPosition, ballPosition,
+BlockReachRadius)` — an XZ-only distance gate. Timing overlap is therefore no
+longer *sufficient* for block; both the timing read **and** arm's-reach
+proximity must hold.
+
+Why: §1's timing-only rule let a defender **anywhere on the court** block a shot
+on a perfect time read alone, deleting the spacing axis from the shot/block duel
+— directly against the design identity (CLAUDE.md §1, "the duel is the space
+between two players"). §2's block window already gestured at this intent ("an
+exported ceiling so a block cannot connect with a ball already past the
+defender"), but expressed it purely *temporally* via `blockGraceTicks`; #214
+makes the spatial constraint explicit as a distance, which `blockGraceTicks`
+alone cannot enforce (a distant defender with perfect timing still passed).
+
+Reference basis (ADR-0014, tier 2 — real half-court ball): a block only connects
+within an arm's reach of the release point. The `BlockReachRadius` default
+(2.2 m) **reuses** `BallController.ContestRange`'s own already-cited
+"arm's-length closeout" anchor (issue #65) rather than inventing a new number
+for the same physical concept; the exact value remains tuning surface deferred
+to #104 + the feel pass, consistent with §2's "more tunables" tradeoff.
+
+Scope — this is **not** a retraction of §1's shared overlap primitive:
+`DefensiveResolution.Succeeds` is still called for block's timing check exactly
+as §1/§2 specify; the reach gate is an *additional per-move term* composed on
+top, structurally identical to how steal already carries its own second axis
+(the ball-hand read, §2). §1's "no per-move divergence" refers to the shared
+timing *primitive*, which block still obeys — it does not forbid a move from
+carrying a move-specific vulnerable-window term (steal's hand, contest's
+compose-with-scatter, block's reach are all such per-move terms under §2).
+Steal is deliberately left timing+hand only for now; a symmetric steal-reach
+term, if wanted, is its own future issue.

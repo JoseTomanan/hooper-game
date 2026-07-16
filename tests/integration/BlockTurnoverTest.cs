@@ -19,6 +19,7 @@ namespace HOOPERGAME.Tests.Integration;
 //   godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=success
 //   godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=success-lastactive
 //   godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=whiff
+//   godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=out-of-range
 //   godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=control-make
 //   godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=control-make-default-geometry
 //   Exit: 0 = PASS, 1 = FAIL (via GetTree().Quit) — the ADR-0016 exit-code contract.
@@ -71,6 +72,35 @@ namespace HOOPERGAME.Tests.Integration;
 // in the production tick arithmetic (e.g. a node-reorder skew) that a
 // one-tick-past placement would silently absorb. The shot must proceed
 // unblocked (state stays InFlight) and the defender still pays Recovery.
+//
+// ── Reach gate positioning (issue #214) ────────────────────────────────────
+// ResolveBlockAttempts now ALSO requires DefensiveResolution.WithinBlockReach
+// (defender within BlockReachRadius of the ball, XZ-only) in addition to the
+// existing timing overlap — a defender's Active window overlapping the
+// vulnerable window is necessary but no longer sufficient. Every scenario
+// that expects the TIMING axis to be the only thing under test ("success",
+// "success-lastactive", "whiff") explicitly positions the defender at
+// DefenderPositionInRange (1 m from the shooter, comfortably inside the
+// default 2.2 m BlockReachRadius) so a reach-gate regression could not
+// silently make them all whiff for the wrong reason — reach is a controlled
+// constant there, not an accidental pass. "out-of-range" is the new scenario
+// that puts reach itself under test.
+//
+// ── Scenario "out-of-range": perfectly-timed block, but too far away ────────
+// Identical scheduling to "success" (ComputeDefenderBeginFrame's default
+// branch places the defender's Active window's FIRST tick exactly on the
+// release tick — the same guaranteed-timing-overlap placement "success"
+// uses), differing ONLY in the defender's position: DefenderPositionOutOfRange
+// sits ~6 m from the shooter, well outside the default 2.2 m BlockReachRadius.
+// This is the control-scenario pair "success" is checked against for the
+// SPATIAL axis specifically (as "control-make" is the pair for the TIMING
+// axis's scoring claim): same perfect timing, only reach differs, so a
+// whiff here can only be explained by the reach gate — never by mistimed
+// scheduling, which "whiff" already covers separately. Reuses "whiff"'s
+// verdict machinery (TickWhiff/VerdictWhiff): the shot must proceed
+// unblocked, the last toucher stays the shooter, and the defender still
+// pays Recovery for the miss (reach failures cost exactly what timing
+// misses cost — no cheaper way to whiff).
 //
 // ── Scenario "control-make": the counterfactual "success" is checked against ──
 // Identical shooter setup to "success" (same ShooterPosition, same clean
@@ -137,6 +167,17 @@ public partial class BlockTurnoverTest : Node
     // alone, without needing exact geometry.
     private static readonly Vector3 ShooterPosition = new(0f, 0f, 5f);
 
+    // Reach-gate positioning (issue #214). "InRange" is 1 m from
+    // ShooterPosition — comfortably inside the default 2.2 m
+    // BlockReachRadius — and is used by every scenario whose point is the
+    // TIMING axis ("success", "success-lastactive", "whiff"), so a reach-gate
+    // regression cannot silently explain their outcomes. "OutOfRange" is ~6 m
+    // from ShooterPosition (the far-baseline case issue #214's own body
+    // names: "far baseline, facing away"), well outside the default radius —
+    // used only by the new "out-of-range" scenario.
+    private static readonly Vector3 DefenderPositionInRange = new(1f, 0f, 5f);
+    private static readonly Vector3 DefenderPositionOutOfRange = new(0f, 0f, -1f);
+
     private string _scenario = "success";
 
     // "control-make-default-geometry" (issue #216 finding 3) is a
@@ -148,6 +189,16 @@ public partial class BlockTurnoverTest : Node
     // scheduling, tick dispatch, verdict dispatch) identical between them —
     // the board-placement default is the ONLY variable this scenario tests.
     private bool IsControlMakeScenario => _scenario == "control-make" || _scenario == "control-make-default-geometry";
+
+    // "out-of-range" (issue #214) shares "whiff"'s entire tick/verdict
+    // machinery: neither ever sees the block resolve, so both wait past the
+    // defender's Active window close and assert the same "shot proceeded
+    // unblocked, defender paid Recovery" outcome. They differ only in WHY
+    // the block never resolves — "whiff" mistimes the Active window against
+    // the vulnerable window (ComputeDefenderBeginFrame's "whiff" branch);
+    // "out-of-range" times it perfectly (the SAME placement "success" uses)
+    // but positions the defender outside BlockReachRadius (see Ready()).
+    private bool IsWhiffLikeScenario => _scenario == "whiff" || _scenario == "out-of-range";
 
     private BallController _ball;
     private GameManager _gameManager;
@@ -229,6 +280,16 @@ public partial class BlockTurnoverTest : Node
         _defender = new PlayerController { Name = "2" };
         players.AddChild(_shooter);
         players.AddChild(_defender);
+
+        // Reach-gate positioning (issue #214) — set once here, not re-derived
+        // per scenario in _PhysicsProcess, because unlike ShooterPosition
+        // (re-applied every tick by TickHeld/TickDribbling re-centring the
+        // ball on the holder) nothing in this harness ever moves the
+        // defender, so a single Ready()-time assignment is sufficient and
+        // stays stable for the whole run.
+        _defender.GlobalPosition = _scenario == "out-of-range"
+            ? DefenderPositionOutOfRange
+            : DefenderPositionInRange;
 
         _ball = new BallController { Name = "Ball", Players = players };
 
@@ -425,7 +486,7 @@ public partial class BlockTurnoverTest : Node
             }
         }
 
-        if (_scenario == "whiff")
+        if (IsWhiffLikeScenario)
         {
             TickWhiff();
             return;
@@ -491,8 +552,11 @@ public partial class BlockTurnoverTest : Node
             return releaseFrame - (blockActive - 1) - (blockStartup - 1);
         }
 
-        // "success": Active entry lands EXACTLY on the release tick itself —
-        // guarantees an overlap (defActiveStart == vulnStart).
+        // "success" (and "out-of-range", issue #214, which reuses this exact
+        // placement — see IsWhiffLikeScenario's doc): Active entry lands
+        // EXACTLY on the release tick itself — guarantees a timing overlap
+        // (defActiveStart == vulnStart). "out-of-range" whiffs anyway, purely
+        // because Ready() positions its defender outside BlockReachRadius.
         return releaseFrame - (blockStartup - 1);
     }
 
@@ -668,7 +732,7 @@ public partial class BlockTurnoverTest : Node
 
     private void Verdict()
     {
-        if (_scenario == "whiff")
+        if (IsWhiffLikeScenario)
         {
             VerdictWhiff();
             return;
@@ -835,13 +899,13 @@ public partial class BlockTurnoverTest : Node
 
         if (pass)
         {
-            GD.Print($"[block-turnover] PASS — scenario=whiff, everLoose={_everLoose}, " +
+            GD.Print($"[block-turnover] PASS — scenario={_scenario}, everLoose={_everLoose}, " +
                      $"finalState={_ball.State}, toucher={_ball.LastToucherPeerIdForHarness}, " +
                      $"defenderPhase={_defender.PhaseForHarness}.");
         }
         else
         {
-            Fail($"scenario=whiff expected everLoose=false, state=InFlight, toucher=1, and defender Recovery, " +
+            Fail($"scenario={_scenario} expected everLoose=false, state=InFlight, toucher=1, and defender Recovery, " +
                  $"but got everLoose={_everLoose}, state={_ball.State}, toucher={_ball.LastToucherPeerIdForHarness}, " +
                  $"defenderPhase={_defender.PhaseForHarness}.");
         }

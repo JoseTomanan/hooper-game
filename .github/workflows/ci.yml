@@ -156,13 +156,29 @@ jobs:
       # assert the ADR-0018 §3 frame-data invariant (BlockMove.ActiveFrames
       # <= BallController.BlockGraceTicks) against the LIVE ball node's
       # export, and fail fast (rather than timing out) if a frame-data retune
-      # makes a scenario's computed defender-begin frame unschedulable. Each
-      # exits 0=PASS/1=FAIL (ADR-0016).
+      # makes a scenario's computed defender-begin frame unschedulable.
+      # 'out-of-range' (issue #214) proves the new proximity/reach gate:
+      # ResolveBlockAttempts now ALSO requires DefensiveResolution.
+      # WithinBlockReach (defender within the new BlockReachRadius export,
+      # default 2.2m, XZ-only) in addition to the pre-existing timing overlap
+      # — a spatially unconditioned block let a defender anywhere on the
+      # court "block" a shot, deleting the spacing axis from the shot/block
+      # duel (CLAUDE.md §1). 'out-of-range' reuses 'success''s EXACT
+      # perfect-timing placement (ComputeDefenderBeginFrame's default branch)
+      # but positions the defender ~6m from the shooter — outside the default
+      # radius — so a whiff here can only be explained by the reach gate,
+      # never by mistiming (which 'whiff' already covers). 'success' and
+      # 'success-lastactive' and 'whiff' all now explicitly position their
+      # defender 1m from the shooter (comfortably inside the default radius)
+      # so the reach gate is a controlled constant for them, not an
+      # accidental pass — the in-range control this new spatial axis is
+      # checked against. Each exits 0=PASS/1=FAIL (ADR-0016).
       - name: Run block-turnover mechanic harness
         run: |
           godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=success
           godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=success-lastactive
           godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=whiff
+          godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=out-of-range
           godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=control-make
           godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=control-make-default-geometry
 

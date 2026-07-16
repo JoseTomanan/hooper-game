@@ -522,6 +522,26 @@ public partial class BallController : Node3D
 	/// </summary>
 	[Export] public float BlockSwatDropSpeed { get; set; } = 1.0f;
 
+	/// <summary>
+	/// Maximum XZ distance (metres) between the defender and the ball at
+	/// block-resolution time for a timing-correct block to still connect
+	/// (issue #214). ResolveBlockAttempts composes this with the existing
+	/// timing-only Succeeds predicate — BOTH must hold; this does not replace
+	/// the timing check, it gates it spatially.
+	///
+	/// Without this gate, a defender anywhere on the court could "block" a
+	/// shot purely on timing, deleting the spacing axis from the shot/block
+	/// duel (CLAUDE.md §1 — "the duel is the space between two players").
+	///
+	/// Default 2.2 m reuses <see cref="ContestRange"/>'s own already-cited
+	/// ADR-0014 real-ball anchor ("roughly an arm's-length closeout", issue
+	/// #65) rather than inventing a new number for the same physical concept
+	/// applied to a different defensive move. Provisional — feel tuning
+	/// deferred to #104 + the per-milestone feel pass (ADR-0015); the number
+	/// is a citable starting point, not a locked balance value.
+	/// </summary>
+	[Export] public float BlockReachRadius { get; set; } = 2.2f;
+
 	// ── Composed pure logic ───────────────────────────────────────────────
 
 	/// <summary>The state machine that tracks which ball moment we're in.</summary>
@@ -1605,11 +1625,15 @@ public partial class BallController : Node3D
 	///
 	/// On a whiff: no action. The defender pays Recovery naturally.
 	///
-	/// Deliberately NO reach/proximity term: success is timing-only, matching
-	/// #98/ADR-0018 §2 exactly — a defender's Active window overlapping the
-	/// vulnerable window blocks regardless of distance to the shooter. A
-	/// positional gate is a real, separate gap, tracked as deferral issue
-	/// #214 (sibling of #196).
+	/// Spatial gate (issue #214, ADR-0014): timing alone (#98/ADR-0018 §2) let
+	/// a defender anywhere on the court "block" a shot, deleting the spacing
+	/// axis from the shot/block duel. Success now ALSO requires
+	/// DefensiveResolution.WithinBlockReach(defender.GlobalPosition,
+	/// GlobalPosition, BlockReachRadius) — a defender's Active window
+	/// overlapping the vulnerable window is necessary but no longer
+	/// sufficient; they must also be within BlockReachRadius (default 2.2 m,
+	/// reusing ContestRange's arm's-length anchor) of the ball at resolution
+	/// time. The sibling positional gap on steal is tracked separately (#196).
 	///
 	/// Not client-predicted: this runs only here, IsServer-gated, so the
 	/// blocking client sees its own swat ~1 RTT late via ReceiveState — the
@@ -1670,9 +1694,24 @@ public partial class BallController : Node3D
 			// Vulnerable window: [inFlightStart, inFlightStart + BlockGraceTicks).
 			// Full interval form of the shared predicate (ADR-0018 §2):
 			//   defActiveStart < vulnEnd  AND  vulnStart < defActiveEnd
-			bool success = DefensiveResolution.Succeeds(
+			bool timingSucceeds = DefensiveResolution.Succeeds(
 				defActiveStart, defActiveEnd,
 				_inFlightStartTick, _inFlightStartTick + BlockGraceTicks);
+
+			// Spatial gate (issue #214): timing alone let a defender anywhere
+			// on the court "block" a shot, deleting the spacing axis from the
+			// shot/block duel (CLAUDE.md §1). Composed with — not a
+			// replacement for — the timing check: BOTH must hold. GlobalPosition
+			// here is the ball's position as of the end of the PREVIOUS
+			// TickInFlight (this method runs before the state switch, see the
+			// class doc's per-tick ordering note), which is exactly where the
+			// existing swat-direction code below already reads it from — close
+			// enough to "the release point" that a short-lived, ~10-tick grace
+			// window cannot have moved the ball far from it.
+			bool withinReach = DefensiveResolution.WithinBlockReach(
+				defender.GlobalPosition, GlobalPosition, BlockReachRadius);
+
+			bool success = timingSucceeds && withinReach;
 
 			if (success)
 			{
