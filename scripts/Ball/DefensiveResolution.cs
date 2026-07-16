@@ -1,4 +1,3 @@
-using System;
 using Godot;
 using Hooper.Player;
 
@@ -47,9 +46,47 @@ namespace Hooper.Ball;
 /// (BallController.ResolveBlockAttempts) alongside Succeeds: BOTH must hold
 /// for a block to connect. See WithinBlockReach's own doc for the ADR-0014
 /// citation and the XZ-only distance rationale.
+///
+/// ── Contest-specific composition (issue #99, ADR-0018 §2) ────────────────
+/// Unlike steal/block, contest never grants a binary succeed/fail — it
+/// applies an ADDITIONAL multiplicative accuracy factor on top of the
+/// existing passive proximity scatter (ADR-0009 / #65) when the defender's
+/// committed contest is Active on the exact tick the shot releases.
+/// ContestAppliesAt/ContestMoveFactor are that composition's pure pieces —
+/// see each method's own doc.
+///
+/// ── Shared XZ-distance helper (issue #99 folded-forward cleanup, PR #220
+/// review comment) ─────────────────────────────────────────────────────────
+/// DistanceXZSquared retires a drift channel: the dx*dx+dz*dz XZ-distance
+/// computation previously existed independently in WithinBlockReach AND in
+/// BallController.ApplyShootLocally's passive contestFactor calc — two
+/// copies of "XZ distance between two positions" with nothing enforcing they
+/// agreed. Both now share this one implementation.
 /// </summary>
 public static class DefensiveResolution
 {
+    /// <summary>
+    /// Shared XZ-plane squared-distance helper. XZ-only for the same reason
+    /// <see cref="WithinBlockReach"/> and <see cref="BallController.ContestRange"/>
+    /// are XZ-only (see WithinBlockReach's own doc): a grounded defender vs. a
+    /// ball that climbs quickly into its arc has a height difference that
+    /// carries no defensive-spacing information in this project.
+    ///
+    /// Squared, not the sqrt distance, so callers that only need a boolean
+    /// "within radius" comparison (WithinBlockReach) can compare against
+    /// <c>radius * radius</c> and skip a per-tick <c>MathF.Sqrt</c> — the same
+    /// pattern <see cref="ReboundContest.Resolve"/> already uses to keep a
+    /// predicted (client) result bit-identical to the server's. A caller that
+    /// needs the actual metric distance (e.g. a linear proximity ratio) takes
+    /// <c>MathF.Sqrt</c> of the result itself.
+    /// </summary>
+    public static float DistanceXZSquared(Vector3 a, Vector3 b)
+    {
+        float dx = a.X - b.X;
+        float dz = a.Z - b.Z;
+        return dx * dx + dz * dz;
+    }
+
     /// <summary>
     /// The shared defensive success predicate (ADR-0018 §1).
     ///
@@ -138,9 +175,58 @@ public static class DefensiveResolution
     /// <param name="reachRadius">Maximum XZ distance (metres) at which a block can still connect.</param>
     public static bool WithinBlockReach(Vector3 defenderPosition, Vector3 ballPosition, float reachRadius)
     {
-        float dx = defenderPosition.X - ballPosition.X;
-        float dz = defenderPosition.Z - ballPosition.Z;
-        float distanceXZ = MathF.Sqrt(dx * dx + dz * dz);
-        return distanceXZ <= reachRadius;
+        // Squared-distance comparison — no per-tick MathF.Sqrt (issue #99
+        // folded-forward cleanup #2 from PR #220 review: block is client-
+        // predicted + reconciled (ADR-0018 §4), so a boundary divergence
+        // already self-heals via reconciliation, and .NET's MathF.Sqrt is
+        // IEEE-754 correctly-rounded anyway — but comparing squared distances
+        // is strictly cheaper and matches ReboundContest.Resolve's own
+        // established pattern for exactly this reason).
+        return DistanceXZSquared(defenderPosition, ballPosition) <= reachRadius * reachRadius;
     }
+
+    /// <summary>
+    /// Contest-specific timing gate (issue #99, ADR-0018 §2): is the
+    /// defender's committed contest Active on the exact tick the shot
+    /// releases?
+    ///
+    /// Contest never grants steal/block's binary succeed/fail overlap — the
+    /// shot's "release window" it composes against collapses to a SINGLE tick,
+    /// because shot scatter (ADR-0009) is computed exactly once, at the moment
+    /// <c>BallController.ApplyShootLocally</c> releases the ball. There is no
+    /// ongoing "shot in flight, keep contesting it" recomputation the way
+    /// block's multi-tick grace window has. So the vulnerable interval handed
+    /// to the shared <see cref="Succeeds"/> predicate is
+    /// <c>[releaseTick, releaseTick + 1)</c> — a single tick — which makes
+    /// this call algebraically equivalent to "is the defender in Active phase
+    /// on a ContestMove right now." Routing it through <see cref="Succeeds"/>
+    /// anyway (rather than inlining that equivalence) keeps contest's
+    /// resolution auditable against the same shared ADR-0018 §1 predicate
+    /// steal and block use, and keeps this method open to a future release
+    /// window that widens past a single tick without a call-site rewrite.
+    /// </summary>
+    /// <param name="contestActiveStart">First tick of the defender's ContestMove Active phase (inclusive).</param>
+    /// <param name="contestActiveEnd">First tick after the defender's ContestMove Active phase (exclusive).</param>
+    /// <param name="releaseTick">The physics tick the shot released (BallController._inFlightStartTick).</param>
+    public static bool ContestAppliesAt(int contestActiveStart, int contestActiveEnd, int releaseTick)
+        => Succeeds(contestActiveStart, contestActiveEnd, releaseTick, releaseTick + 1);
+
+    /// <summary>
+    /// The contest's ADDITIONAL accuracy factor (issue #99, ADR-0018 §2) —
+    /// composed multiplicatively ON TOP OF the existing passive proximity
+    /// scatter (ADR-0009 / #65's <c>contestFactor</c>), never replacing it.
+    /// Returns <c>1 + contestMoveScatterK</c> when the committed contest was
+    /// Active at release (see <see cref="ContestAppliesAt"/>); otherwise
+    /// returns 1 (no effect) so a shot with no active contest behaves exactly
+    /// as it did before #99 existed.
+    /// </summary>
+    /// <param name="contestActiveAtRelease">Result of <see cref="ContestAppliesAt"/>.</param>
+    /// <param name="contestMoveScatterK">
+    /// Balance knob: the extra multiplier strength when a committed contest
+    /// connects. Provisional default lives on
+    /// <see cref="BallController.ContestMoveScatterK"/> — tuning deferred to
+    /// #104 + the per-milestone feel pass (ADR-0015).
+    /// </param>
+    public static float ContestMoveFactor(bool contestActiveAtRelease, float contestMoveScatterK)
+        => contestActiveAtRelease ? 1f + contestMoveScatterK : 1f;
 }

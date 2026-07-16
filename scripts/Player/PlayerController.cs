@@ -1258,6 +1258,16 @@ public partial class PlayerController : CharacterBody3D
 			if (!IsBallHolder)
 				BeginCommittedMove(new BlockMove());
 		}
+		else if (moveId == "contest")
+		{
+			// param = 0f (contest carries no payload, same convention as block —
+			// it's a committed pressure move, not a targeted swipe). Same
+			// "not your own shot" server-side re-assertion as block, for the
+			// same reason (ADR-0002: the client-side !IsBallHolder gate at the
+			// def_contest input site is UX, not authority).
+			if (!IsBallHolder)
+				BeginCommittedMove(new ContestMove());
+		}
 		// Unrecognized moveId: silently ignored. A malformed/forged moveId
 		// from a tampered client simply does nothing.
 	}
@@ -1945,6 +1955,21 @@ public partial class PlayerController : CharacterBody3D
 		{
 			if (BeginCommittedMove(new BlockMove()) && !isServer)
 				RpcId(1, MethodName.RequestBeginMove, "block", 0f);
+		}
+
+		// Contest: defensive committed move (M10, issue #99, ADR-0018 §2).
+		//
+		// Gated on NOT holding the ball — you cannot contest your own shot.
+		// Unlike steal/block, contest never resolves a binary succeed/fail —
+		// it composes an ADDITIONAL accuracy factor on top of the existing
+		// passive proximity scatter (ADR-0009 / #65) when its Active window
+		// overlaps the shot's release tick (BallController.ApplyShootLocally's
+		// contest composition; see DefensiveResolution.ContestAppliesAt).
+		// param = 0f: contest carries no payload, same as block.
+		if (Input.IsActionJustPressed("def_contest") && !IsBallHolder)
+		{
+			if (BeginCommittedMove(new ContestMove()) && !isServer)
+				RpcId(1, MethodName.RequestBeginMove, "contest", 0f);
 		}
 
 		// Feint modifier: abort during the startup window. Two input paths feed
