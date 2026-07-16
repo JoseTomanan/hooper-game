@@ -10,9 +10,21 @@ shader_type spatial;
 // Reused for both the basketball net (fine, white, cloth-like) and the
 // chain-link fence (coarser, metallic) via the uniforms below — same pattern
 // math, different look, so we don't duplicate near-identical shader files.
+// cull_disabled is deliberate for the net (the far side of the cone shows
+// through its own cutout holes, so it reads as a real hanging net) and is
+// accepted, not overlooked, on the three wall BoxMeshes too: render_mode is
+// per-shader, not per-material-use, so the walls pay the same double-sided
+// fragment cost. That's a defensible trade here (back-face strands give the
+// chain-link fence visible depth through its holes) under the ADR-0020
+// low-spec budget; revisit only if profiling shows the walls fragment-bound.
 render_mode cull_disabled, diffuse_burley, specular_schlick_ggx;
 
-uniform vec4 albedo_color : source_color = vec4(1.0, 1.0, 1.0, 1.0);
+// vec3, not vec4: ALPHA is driven entirely by the strand pattern below, never
+// by this uniform's alpha channel. The StandardMaterial3Ds this replaced DID
+// use their albedo alpha to control transparency, so a vec4 source_color here
+// (with an inspector alpha slider that silently does nothing) would be a
+// trap for the next person tuning these materials.
+uniform vec3 albedo_color : source_color = vec3(1.0);
 // How many diamond repeats fit across the mesh's UV space on each axis.
 uniform float uv_scale_u : hint_range(1.0, 64.0) = 24.0;
 uniform float uv_scale_v : hint_range(1.0, 64.0) = 24.0;
@@ -31,7 +43,7 @@ void fragment() {
 		step(diag_b, strand_width) + step(1.0 - strand_width, diag_b)
 	);
 
-	ALBEDO = albedo_color.rgb;
+	ALBEDO = albedo_color;
 	METALLIC = metallic_amount;
 	ROUGHNESS = roughness_amount;
 	// Cutout, not blend: pixels below the threshold are discarded outright
