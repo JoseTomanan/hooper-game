@@ -392,6 +392,27 @@ jobs:
           godot --headless --path . res://tests/integration/BehindTheBackTest.tscn -- --harness-scenario=narrower-exit-cone
           godot --headless --path . res://tests/integration/BehindTheBackTest.tscn -- --harness-scenario=dead-dribble-gate
 
+      # Step-back + retreat dribble (issue #197) — the vertical right-stick
+      # gesture pair. RightStickGestureRecognizerTests/StepBackBurstMathTests/
+      # StepBackTests/RetreatDribbleTests (xUnit) already pin the pure
+      # recognizer, burst math, and frame-data contracts; this drives the LIVE
+      # glue. 'step-back-gathers' begins a real StepBack through
+      # BeginCommittedMove off a live dribble and asserts the Active-entry
+      # gather actually reaches dead Held (state=Held, HasDribbled=true) with
+      # a nonzero backward burst on the holder's Velocity.
+      # 'retreat-dribble-no-gather' is the CONTROL for that assertion — the
+      # SAME live-dribble setup with a RetreatDribble instead, asserting the
+      # ball stays Dribbling and HasDribbled stays false through the move's
+      # ENTIRE lifecycle (guards against a bug that made every committed move
+      # gather). 'retreat-dribble-dead-dribble-gate' proves RetreatDribble
+      # respects the SAME Held-holder gate Crossover/Hesitation/BehindTheBack
+      # use. Each exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run step-back / retreat-dribble harness
+        run: |
+          godot --headless --path . res://tests/integration/StepBackTest.tscn -- --harness-scenario=step-back-gathers
+          godot --headless --path . res://tests/integration/StepBackTest.tscn -- --harness-scenario=retreat-dribble-no-gather
+          godot --headless --path . res://tests/integration/StepBackTest.tscn -- --harness-scenario=retreat-dribble-dead-dribble-gate
+
       # Dual-instance harness, increment 1: two headless Godot processes complete
       # a real ENet handshake over localhost. The orchestrator launches a server
       # and a client of the same scene and reads the client's exit code. This is
