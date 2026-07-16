@@ -391,10 +391,11 @@ re-measure anything numeric even if it isn't listed (closing rule below).
 | `CONTEXT.md` "Sources:" line | Scopes its sources to ADR-0001–0008 | 19 numbered ADRs exist (0001–0019, no gaps; 0000 is the template). CONTEXT.md is incomplete, not exhaustive, for anything past the M6b era | `ls docs/adr/` |
 | `CONTEXT.md` "Cosmetic facing" entry | Facing is velocity-derived, client-local, cosmetic | Predates ADR-0010: `Heading` is now server-authoritative state integrated into `Move()`; `FacingResolver` remains in the codebase but is off the authoritative path (ADR-0018 §4 explicitly forbids reading it for defensive resolution) | Read ADR-0010 and ADR-0018 §4; `grep -rn "FacingResolver" scripts/` |
 | `CONTEXT.md` timing-window entries | Aspirational 2K-style "green window" framing | Predate ADR-0018, which landed a **tick-interval-overlap** model (`DefensiveResolution.Succeeds`, half-open integer-tick intervals `[start, end)`) — a real semantic gap, not just missing detail | Read ADR-0018 §1 |
-| `docs/agents/domain.md` | Describes `TASKS.md` as the living tracker; lists the locked set as "ADRs 0001–0005" | `TASKS.md` does not exist (CLAUDE.md §3 says so explicitly; GitHub Issues is the sole tracker); all 19 ADRs are locked, not 5 | `ls TASKS.md` (absent); `ls docs/adr/` |
-| ADR-0016's body | Quotes test counts (~250 unit / ~459 total) from its writing date | Live counts are materially higher (~669 total as of early July 2026 and climbing). **Any hardcoded test count anywhere — including this row — is unreliable the moment it's written** | `dotnet test tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj --list-tests` for the unit suite; `ls tests/integration/*.cs` for harness scenarios (separate suites — no single command combines them) |
+| `docs/agents/domain.md` | Described `TASKS.md` as the living tracker; listed the locked set as "ADRs 0001–0005" | **Corrected 2026-07-16** — TASKS.md does not exist (CLAUDE.md §3 says so explicitly; GitHub Issues is the sole tracker); the locked set now points at `docs/adr/` directly rather than hardcoding a count | `ls TASKS.md` (absent); `ls docs/adr/` |
+| ADR-0016's body | Quotes test counts (~250 unit / ~459 total) from its writing date | Live counts are materially higher: **682 unit tests (613 `[Fact]` + 15 `[Theory]` expanding) plus 21 integration scenario files, as of 2026-07-16**. **Any hardcoded test count anywhere — including this row — is unreliable the moment it's written** | `dotnet test tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj --list-tests` for the unit suite; `ls tests/integration/*.cs` for harness scenarios (separate suites — no single command combines them) |
 | Any summary claiming "ADR-0010 says 400°/s" | 400°/s was an early documented default | Shipped value is 900°/s with back-turn factor 0.95 after the #172 retunes — recorded in ADR-0010's later Amendment sections, so the ADR is internally consistent *if read to the end*; stale summaries elsewhere are not | Read ADR-0010 including all Amendments; `grep -rn "MaxTurnRateDeg" scripts/` for the shipped constant |
 | Any handoff file's presence in `docs/handoffs/` | Implies in-flight work | Several present handoffs describe long-landed work (deletion convention honored loosely, §4) | `ls -la docs/handoffs/` mtimes + `gh issue view` / `gh pr view` on the topic |
+| ADR-0010's Decision table (before 2026-07-16) | Printed `MaxTurnRateDeg = 530°/s` | **Fixed 2026-07-16** — the table now reads 900°/s, matching the file's own Amendment 2026-07-03 (#172 retune) and shipped code | `grep -n "MaxTurnRateDeg" docs/adr/0010-authoritative-heading.md scripts/Player/*.cs` |
 
 **Closing rule: this registry is a starting list, not a closed one.** Any
 number you're about to state as fact — an ADR count, a test count, a
@@ -439,7 +440,8 @@ picking up work cold. Write accordingly:
 Authored 2026-07-12 (written to disk 2026-07-14 after a session interruption;
 all facts verified against the repo as described); reviewed and corrected
 2026-07-15 (amendment counts: ADR-0003 has no `## Amendment` headings — five
-inline `**Refined:**` bullets; ADR-0008 has nine amendments). Verified against:
+inline `**Refined:**` bullets; ADR-0008 has nine amendments). Registry
+refreshed 2026-07-16 (workflow health-check pass). Verified against:
 `docs/adr/0000-template.md` (full read), `docs/adr/0018-defensive-timing-
 window-model.md` (full read incl. Amendment), heading survey of all 20 ADR
 files (`grep -l "Alternatives considered" docs/adr/*.md` and
