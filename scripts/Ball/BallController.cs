@@ -579,18 +579,30 @@ public partial class BallController : Node3D
 	/// (<see cref="ContestScatterK"/>) are forced to 1.0 in
 	/// <c>ApplyShootLocally</c>.
 	///
-	/// ADR-0014 citation (tier-1 identity, ADR-0018 §3): the default (20
-	/// ticks) deliberately matches <c>StealMove.DefaultFrameData.RecoveryFrames</c>
-	/// — the SAME 20-tick cost the whiffing defender already pays themselves.
-	/// The reaction-tilt rule (ADR-0018 §3) is "a missed defensive commitment
-	/// is more punishable than a missed offensive one, expressed as frame
-	/// data"; sizing the offense's reward to the defender's own Recovery
-	/// length keeps the punish commensurate with the miss rather than an
-	/// arbitrarily separate number. Provisional — tuning deferred to #104 +
-	/// the per-milestone feel pass (ADR-0015), same as every other defensive
-	/// magnitude in this file.
+	/// ADR-0014 citation (tier-1 identity, ADR-0018 §3): the default is
+	/// <c>StealMove.DefaultFrameData.RecoveryFrames</c> (20 — the SAME cost
+	/// the whiffing defender already pays themselves, keeping the reward
+	/// commensurate with the miss rather than an arbitrary separate number)
+	/// PLUS <c>ContestMove.DefaultFrameData.StartupFrames + ActiveFrames</c>
+	/// (6 + 8 = 14) of margin, for 34 total. The margin is load-bearing, not
+	/// decoration: the defender's OWN Recovery from the whiffed steal already
+	/// occupies the first 20 ticks of this window (Begin() is illegal until
+	/// Recovery elapses — CommittedMoveMachine's phase graph), so a window
+	/// exactly equal to RecoveryFrames would close at the SAME tick Recovery
+	/// releases the defender, leaving zero ticks in which a freshly-begun
+	/// ContestMove's Active window could ever land — making the committed-
+	/// ContestMove half of this mechanic (as opposed to the passive proximity
+	/// half, which needs no new move) structurally unreachable in real play,
+	/// only demonstrable by directly forcing the window in a test. The +14
+	/// margin guarantees a ContestMove begun the INSTANT Recovery elapses
+	/// still has its entire Active window fall inside the beaten window.
+	/// Provisional — tuning deferred to #104 + the per-milestone feel pass
+	/// (ADR-0015), same as every other defensive magnitude in this file.
 	/// </summary>
-	[Export] public int BlowByWindowTicks { get; set; } = StealMove.DefaultFrameData.RecoveryFrames;
+	[Export] public int BlowByWindowTicks { get; set; } =
+		StealMove.DefaultFrameData.RecoveryFrames
+		+ ContestMove.DefaultFrameData.StartupFrames
+		+ ContestMove.DefaultFrameData.ActiveFrames;
 
 	// ── Composed pure logic ───────────────────────────────────────────────
 
