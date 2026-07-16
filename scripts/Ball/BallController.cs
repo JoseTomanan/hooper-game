@@ -542,6 +542,30 @@ public partial class BallController : Node3D
 	/// </summary>
 	[Export] public float BlockReachRadius { get; set; } = 2.2f;
 
+	// ── Contest tunables (M10, issue #99, ADR-0018 §2) ────────────────────
+
+	/// <summary>
+	/// Strength of the ADDITIONAL accuracy factor a committed on-ball contest
+	/// applies on top of the existing passive proximity scatter (ADR-0009 /
+	/// #65's <see cref="ContestScatterK"/>) when the contest's Active window
+	/// overlaps the shot's release tick (see
+	/// <see cref="DefensiveResolution.ContestAppliesAt"/>). Composed as
+	/// <c>1 + ContestMoveScatterK</c> multiplied into the existing
+	/// <c>accuracyMultiplier</c> chain in <c>ApplyShootLocally</c> — it never
+	/// replaces the passive <see cref="ContestScatterK"/> term, only stacks
+	/// on top of it (ADR-0018 §2's explicit composition rule).
+	///
+	/// ADR-0014 citation (real half-court ball, tier 2): a defender who
+	/// actively closes out and times their pressure to the release is
+	/// strictly harder to shoot over than one who merely stands nearby — the
+	/// active commitment costs a Recovery window the passive proximity term
+	/// never spends, so it earns a strictly larger penalty. 0.5 (giving an
+	/// extra 1.5× on top of whatever the passive term already contributed) is
+	/// a citable starting point, not a locked balance value — provisional,
+	/// tuning deferred to #104 + the per-milestone feel pass (ADR-0015).
+	/// </summary>
+	[Export(PropertyHint.Range, "0,3,0.05")] public float ContestMoveScatterK { get; set; } = 0.5f;
+
 	// ── Composed pure logic ───────────────────────────────────────────────
 
 	/// <summary>The state machine that tracks which ball moment we're in.</summary>
@@ -903,6 +927,22 @@ public partial class BallController : Node3D
 	/// harness reads the exact same value every peer already reconciles from.
 	/// </summary>
 	internal Vector3 VelocityForHarness => CurrentVelocity();
+
+	/// <summary>
+	/// Test-only: the ADDITIONAL committed-contest accuracy factor computed
+	/// for the most recently resolved shot's scatter (issue #99). 1.0 (no
+	/// effect) whenever no committed contest was Active at release — the same
+	/// value the shot's own accuracyMultiplier composed <c>contestFactor</c>
+	/// (passive proximity, #65) with. Otherwise-observable only indirectly
+	/// through the RNG-influenced landing spot, which is why this exposes the
+	/// live-computed factor directly — the same *ForHarness pattern as
+	/// <see cref="LastToucherPeerIdForHarness"/>/<see cref="VelocityForHarness"/>.
+	/// Set once per shot inside ApplyShootLocally's <c>IsServer &amp;&amp;
+	/// ShotScatterEnabled</c> block; stays at its constructed default (1f) for
+	/// any shot resolved before that block ever runs (e.g. ShotScatterEnabled
+	/// == false, or before the first shot of a harness run).
+	/// </summary>
+	internal float LastContestMoveFactorForHarness { get; private set; } = 1f;
 
 	// ── Shot scatter RNG (issue #62, ADR-0009) ─────────────────────────────
 
@@ -2696,21 +2736,49 @@ public partial class BallController : Node3D
 
 			// #65 — contest penalty: defender within ContestRange → larger factor.
 			// proximity is in [0,1]: 0 = at ContestRange edge, 1 = on top of shooter.
-			float contestFactor   = 1f;
-			int   shooterPeerId   = holderAtShootTime; // captured before Shoot() cleared it
-			int   defenderPeerId  = OtherPlayerPeerId(shooterPeerId);
+			// #99 — committed contest: an ADDITIONAL factor on top of the above
+			// (ADR-0018 §2), applied when the defender's committed ContestMove is
+			// Active on this exact release tick. Both share the same
+			// defenderController lookup and the shared XZ-distance helper (issue
+			// #99 folded-forward cleanup from PR #220 review — one implementation
+			// of "XZ distance between two positions" instead of a second
+			// independent dx/dz/sqrt copy; see DefensiveResolution.DistanceXZSquared).
+			float contestFactor     = 1f;
+			float contestMoveFactor = 1f;
+			int   shooterPeerId     = holderAtShootTime; // captured before Shoot() cleared it
+			int   defenderPeerId    = OtherPlayerPeerId(shooterPeerId);
 			if (defenderPeerId != 0 && Players != null)
 			{
-				var defenderNode = Players.GetNodeOrNull<Node3D>(defenderPeerId.ToString());
-				if (defenderNode != null && ContestRange > 0f)
+				var defenderController = Players.GetNodeOrNull<PlayerController>(defenderPeerId.ToString());
+				if (defenderController != null)
 				{
-					float ddx       = defenderNode.GlobalPosition.X - holder.GlobalPosition.X;
-					float ddz       = defenderNode.GlobalPosition.Z - holder.GlobalPosition.Z;
-					float defDist   = MathF.Sqrt(ddx * ddx + ddz * ddz);
-					float proximity = Math.Clamp(1f - defDist / ContestRange, 0f, 1f);
-					contestFactor   = 1f + ContestScatterK * proximity;
+					if (ContestRange > 0f)
+					{
+						float defDistSq = DefensiveResolution.DistanceXZSquared(
+							defenderController.GlobalPosition, holder.GlobalPosition);
+						float defDist   = MathF.Sqrt(defDistSq);
+						float proximity = Math.Clamp(1f - defDist / ContestRange, 0f, 1f);
+						contestFactor   = 1f + ContestScatterK * proximity;
+					}
+
+					// #99 — is the defender's ContestMove Active on this exact
+					// release tick? DefensiveResolution.ContestAppliesAt's own doc
+					// explains why the shot's "release window" collapses to a
+					// single tick for contest, unlike block's multi-tick grace.
+					var contestActive = defenderController.ActiveMove<ContestMove>();
+					if (contestActive != null)
+					{
+						var (contestMove, frameInPhase) = contestActive.Value;
+						int contestActiveStart = PhysicsTick - frameInPhase;
+						int contestActiveEnd   = contestActiveStart + contestMove.FrameData.ActiveFrames;
+						bool contestAppliesAtRelease = DefensiveResolution.ContestAppliesAt(
+							contestActiveStart, contestActiveEnd, _inFlightStartTick);
+						contestMoveFactor = DefensiveResolution.ContestMoveFactor(
+							contestAppliesAtRelease, ContestMoveScatterK);
+					}
 				}
 			}
+			LastContestMoveFactorForHarness = contestMoveFactor;
 
 			// #81 — facing penalty: back-to-basket shots scatter more.
 			// Reads holder.Heading (server-authoritative, ADR-0010), NOT
@@ -2723,7 +2791,11 @@ public partial class BallController : Node3D
 				ShotTarget,
 				FacingScatterK);
 
-			float accuracyMultiplier = movementFactor * contestFactor * facingFactor;
+			// #99 — contestMoveFactor composes multiplicatively alongside the
+			// existing three factors (ADR-0018 §2: additional, not a
+			// replacement for contestFactor's passive term).
+			float accuracyMultiplier =
+				movementFactor * contestFactor * contestMoveFactor * facingFactor;
 
 			aimTarget = ShotScatter.Scatter(
 				ShotTarget, distance, angle01, radius01,

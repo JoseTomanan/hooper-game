@@ -374,4 +374,146 @@ public class DefensiveResolutionTests
             ballPosition: new Vector3(0f, 3f, 5f),
             reachRadius: 2.2f));
     }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // DistanceXZSquared — shared XZ-distance helper (issue #99 folded-forward
+    // cleanup from PR #220 review: retires the drift channel where this exact
+    // dx*dx+dz*dz computation existed independently in WithinBlockReach and
+    // in BallController.ApplyShootLocally's passive contest-proximity calc).
+    // ═══════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void DistanceXZSquared_SamePosition_ReturnsZero()
+    {
+        Assert.Equal(0f, DefensiveResolution.DistanceXZSquared(
+            new Vector3(1f, 2f, 3f), new Vector3(1f, 2f, 3f)));
+    }
+
+    [Fact]
+    public void DistanceXZSquared_KnownOffset_ReturnsSquaredDistance()
+    {
+        // 3-4-5 triangle in the XZ plane: dx=3, dz=4 -> distance 5 -> squared 25.
+        Assert.Equal(25f, DefensiveResolution.DistanceXZSquared(
+            new Vector3(3f, 0f, 4f), new Vector3(0f, 0f, 0f)));
+    }
+
+    [Fact]
+    public void DistanceXZSquared_IgnoresY_SameAsCoplanarPositions()
+    {
+        // XZ-only: a large Y difference must not change the result — this is
+        // the property WithinBlockReach's ball-height gate depends on.
+        float withHeightGap = DefensiveResolution.DistanceXZSquared(
+            new Vector3(3f, 10f, 4f), new Vector3(0f, 0f, 0f));
+        float coplanar = DefensiveResolution.DistanceXZSquared(
+            new Vector3(3f, 0f, 4f), new Vector3(0f, 0f, 0f));
+        Assert.Equal(coplanar, withHeightGap);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ContestAppliesAt — contest's timing gate (issue #99, ADR-0018 §2)
+    //
+    // Contest's "release window" collapses to a single tick (shot scatter is
+    // computed exactly once, at release — see ContestAppliesAt's own doc).
+    // These mirror Succeeds' boundary tests above but against the collapsed
+    // single-tick vulnerable interval [releaseTick, releaseTick + 1).
+    // ═══════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void ContestAppliesAt_ActiveWindowContainsReleaseTick_ReturnsTrue()
+    {
+        // Defender's Active window [5,10) contains the release tick 7.
+        Assert.True(DefensiveResolution.ContestAppliesAt(
+            contestActiveStart: 5, contestActiveEnd: 10, releaseTick: 7));
+    }
+
+    [Fact]
+    public void ContestAppliesAt_ReleaseTickEqualsActiveStart_ReturnsTrue()
+    {
+        // Entering Active on the exact release tick still connects (the
+        // interval's start bound is inclusive).
+        Assert.True(DefensiveResolution.ContestAppliesAt(
+            contestActiveStart: 7, contestActiveEnd: 15, releaseTick: 7));
+    }
+
+    [Fact]
+    public void ContestAppliesAt_ReleaseTickEqualsActiveEnd_ReturnsFalse()
+    {
+        // Half-open convention: an Active window ending exactly on the
+        // release tick has already closed — adjacent, not overlapping.
+        Assert.False(DefensiveResolution.ContestAppliesAt(
+            contestActiveStart: 0, contestActiveEnd: 7, releaseTick: 7));
+    }
+
+    [Fact]
+    public void ContestAppliesAt_ReleaseTickBeforeActiveStarts_ReturnsFalse()
+    {
+        // Committed too late — the defender's Active hasn't opened yet when
+        // the shot released.
+        Assert.False(DefensiveResolution.ContestAppliesAt(
+            contestActiveStart: 10, contestActiveEnd: 18, releaseTick: 7));
+    }
+
+    [Fact]
+    public void ContestAppliesAt_ReleaseTickAfterActiveEnds_ReturnsFalse()
+    {
+        // Committed too early — the defender's Active already ended before
+        // the shot released.
+        Assert.False(DefensiveResolution.ContestAppliesAt(
+            contestActiveStart: 0, contestActiveEnd: 5, releaseTick: 7));
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ContestMoveFactor — the composed ADDITIONAL accuracy factor
+    // (issue #99, ADR-0018 §2: contest composes on top of the passive
+    // proximity term, ADR-0009 / #65, it never replaces it)
+    // ═══════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void ContestMoveFactor_ContestActiveAtRelease_ReturnsOnePlusK()
+    {
+        Assert.Equal(1.5f, DefensiveResolution.ContestMoveFactor(
+            contestActiveAtRelease: true, contestMoveScatterK: 0.5f));
+    }
+
+    [Fact]
+    public void ContestMoveFactor_ContestNotActiveAtRelease_ReturnsOne()
+    {
+        // No active contest -> factor is exactly 1 (no effect) -> a shot with
+        // no contest behaves identically to before #99 existed.
+        Assert.Equal(1f, DefensiveResolution.ContestMoveFactor(
+            contestActiveAtRelease: false, contestMoveScatterK: 0.5f));
+    }
+
+    [Fact]
+    public void ContestMoveFactor_ComposesMultiplicativelyOnTopOfPassiveProximity()
+    {
+        // ADR-0018 §2: contest composes an ADDITIONAL factor ON TOP OF the
+        // existing passive proximity term (ADR-0009 / #65's contestFactor),
+        // never replacing it. Demonstrate the composition arithmetic directly:
+        // a passive proximity factor of 1.5 (e.g. a defender partway inside
+        // ContestRange) combined with an active contest (K=0.5) must MULTIPLY
+        // to 2.25, not add to 2.0 — guards against a double-counting or
+        // additive-composition regression.
+        const float passiveContestFactor = 1.5f;
+        float contestMoveFactor = DefensiveResolution.ContestMoveFactor(
+            contestActiveAtRelease: true, contestMoveScatterK: 0.5f);
+
+        float composed = passiveContestFactor * contestMoveFactor;
+
+        Assert.Equal(2.25f, composed, precision: 5);
+        Assert.NotEqual(2.0f, composed); // the additive-composition regression this guards against
+    }
+
+    [Fact]
+    public void ContestMoveFactor_NoActiveContest_PassiveTermUnchanged()
+    {
+        // With no active contest, composing with the passive term must be a
+        // no-op — a shot contested only passively (no committed move) sees
+        // exactly the pre-#99 accuracy multiplier.
+        const float passiveContestFactor = 1.5f;
+        float contestMoveFactor = DefensiveResolution.ContestMoveFactor(
+            contestActiveAtRelease: false, contestMoveScatterK: 0.5f);
+
+        Assert.Equal(passiveContestFactor, passiveContestFactor * contestMoveFactor);
+    }
 }

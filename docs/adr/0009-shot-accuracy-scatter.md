@@ -1,6 +1,6 @@
 # ADR-0009 — Shot accuracy — distance-based scatter, server-authoritative
 
-- **Status:** Accepted (amended 2026-06-26 — movement penalty #64, contest penalty #65; design questions resolved 2026-06-27; amended 2026-06-27 — facing penalty #81)
+- **Status:** Accepted (amended 2026-06-26 — movement penalty #64, contest penalty #65; design questions resolved 2026-06-27; amended 2026-06-27 — facing penalty #81; amended 2026-07-16 — committed on-ball contest #99)
 - **Date:** 2026-06-26
 - **Superseded-by:** —
 
@@ -319,3 +319,113 @@ compose: a moving, contested, back-to-basket shot stacks all three factors.
 - Issue #81: this amendment.
 - `ShotScatter` is unchanged; the factor is computed and composed at the call
   site, keeping `ShotScatter` agnostic to the source of the multiplier.
+
+---
+
+## Amendment — committed on-ball contest (#99)
+
+**Date:** 2026-07-16
+
+### What changed
+
+A fourth accuracy factor — `contestMoveFactor` — is added to the
+multiplicative model. The composition becomes:
+
+```
+accuracyMultiplier = movementFactor × contestFactor × contestMoveFactor × facingFactor
+
+contestMoveFactor = 1 + ContestMoveScatterK   if the defender's committed
+                                                ContestMove is Active on the
+                                                exact tick the shot releases
+                     1                          otherwise
+```
+
+This is the concrete factor shape ADR-0018 §2 named but deferred: "a
+committed contest whose Active overlaps the shot's release window applies an
+additional, discrete accuracy penalty on top of the passive distance/contest
+scatter... getting that composition right (no double-counting) is the
+contest issue's explicit job." #99 is that job; this amendment records the
+composition it actually implements, per CLAUDE.md Decision Discipline (a
+change to this ADR's locked accuracy model must be recorded here in the same
+PR as the code, not just referenced from ADR-0018).
+
+Implementation lives in `DefensiveResolution.ContestAppliesAt` (the timing
+gate) and `DefensiveResolution.ContestMoveFactor` (the factor itself) —
+`scripts/Ball/DefensiveResolution.cs` — computed at the call site in
+`BallController.ApplyShootLocally` and multiplied into the existing chain;
+`ShotScatter` itself is unchanged, exactly as the facing-penalty amendment
+above established for this composition pattern.
+
+### Why an ADDITIONAL factor, not a replacement of `contestFactor`
+
+ADR-0018 §2 is explicit that contest composes with — never replaces — the
+existing passive proximity term (#65's `contestFactor`, itself unchanged by
+this amendment). The two factors model genuinely different things: `contestFactor`
+is a continuous, passive consequence of simply standing near the shooter
+(no committed cost); `contestMoveFactor` is the consequence of a defender
+**spending a committed move** (Startup telegraph, Recovery punish window) to
+actively pressure the release. Multiplying them together means a shot that is
+both passively crowded AND actively pressured is harder than either alone —
+matching the real-ball intuition that active pressure is strictly stronger
+than passive proximity (ADR-0014 tier 2), without discarding the proximity
+term #65 already earned.
+
+### Why the composition collapses to a single-tick timing gate
+
+Unlike block (whose vulnerable window spans `BlockGraceTicks` after release,
+because the ball keeps rising near the defender for several ticks after it
+leaves the hand), contest's effect on the shot can only ever be applied at
+ONE moment: shot scatter (this ADR) is computed exactly once, inside
+`ApplyShootLocally`, at the instant of release. There is no later
+recomputation to apply a later-arriving contest to. So the "release window"
+ADR-0018 §2 describes for contest is, in this implementation, the single
+release tick itself:
+`DefensiveResolution.Succeeds(contestActiveStart, contestActiveEnd, releaseTick,
+releaseTick + 1)` — algebraically "is the defender's ContestMove Active right
+now." `ContestAppliesAt` routes through the same shared `Succeeds` overlap
+predicate steal and block use (ADR-0018 §1) rather than inlining that
+equivalence directly, so contest's resolution stays auditable against the one
+shared timing primitive, and stays open to a future multi-tick release
+window without a call-site rewrite.
+
+### Why no spatial reach gate (contrast block's #214 amendment)
+
+Block was separately amended (2026-07-16, ADR-0018) to require
+`BlockReachRadius` proximity in addition to its timing overlap, because block
+grants a binary succeed/fail and a spatially unconditioned block let a
+defender anywhere on the court connect. Contest never grants a binary
+success — it only scales an ALREADY-proximity-gated term (`contestFactor`
+already requires the defender be within `ContestRange` to have any effect).
+Composing a second, independent spatial gate specifically on `contestMoveFactor`
+would double-count proximity with no basis in ADR-0018 §2's text, which
+describes contest's composition as a function of Active-overlaps-release-window
+only. If a future review wants an active contest to ALSO require close-range
+presence independent of the passive term, that is a new decision, not this
+one.
+
+### Balance surface
+
+New export on `BallController`: `ContestMoveScatterK` (default `0.5f`,
+provisional). ADR-0014 citation (real half-court ball, tier 2): a defender
+who actively closes out and times their pressure to the release is strictly
+harder to shoot over than one who merely stands nearby, so the additional
+factor should be strictly greater than 1 whenever it applies — 0.5 (an extra
+1.5× on top of whatever `contestFactor` already contributed) is a citable
+starting point, not a locked balance value. Exact magnitude tuning is
+deferred to #104 + the per-milestone feel pass (ADR-0015), same as every
+other penalty constant in this ADR.
+
+New committed move: `ContestMove` (`scripts/Input/ContestMove.cs`), frame
+data 6/8/20 (Startup/Active/Recovery) — provisional, same tuning deferral.
+
+### Cross-references
+
+- ADR-0018 §2: names contest's composition rule ("additional, on top of
+  passive") — this amendment records the concrete factor shape.
+- ADR-0018's 2026-07-16 amendment (#214): the sibling block-reach gate this
+  amendment's "why no spatial reach gate" section contrasts against.
+- Issue #99: this amendment.
+- Folded-forward cleanup from PR #220's review (issue #99 comment): the
+  shared `DefensiveResolution.DistanceXZSquared` XZ-distance helper, and
+  `WithinBlockReach`'s switch to a squared-distance comparison, both landed
+  in the same PR as this amendment — see `DefensiveResolution.cs`.

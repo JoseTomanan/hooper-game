@@ -182,6 +182,36 @@ jobs:
           godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=control-make
           godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=control-make-default-geometry
 
+      # On-ball contest as a committed move (issue #99, ADR-0018 §2). Unit
+      # tests already pin the pure composition arithmetic
+      # (DefensiveResolutionTests.ContestAppliesAt/ContestMoveFactor) and
+      # ContestMove's frame-data contract (ContestMoveTests); this proves the
+      # LIVE engine glue — BallController.ApplyShootLocally reading a REAL
+      # defender's committed-move Phase/FrameInPhase (via PlayerController.
+      # ActiveMove<ContestMove>()) against a REAL shooter's release tick,
+      # computed with real PhysicsTick arithmetic — actually composes the
+      # ADDITIONAL contest factor on top of the existing passive proximity
+      # scatter (ADR-0009 / #65), rather than replacing it or never firing.
+      # 'contest-active' schedules a REAL ContestMove (begun through the real
+      # BeginCommittedMove choke point, same as block's 'success' placement)
+      # so its Active window's first tick lands exactly on the release tick,
+      # and asserts BallController.LastContestMoveFactorForHarness ==
+      # 1 + ContestMoveScatterK (the live export, not a hardcoded literal, so
+      # this survives #104 retuning). 'no-contest' is the REQUIRED control
+      # (ADR-0016 / hooper-verification-and-qa's "every X-didn't-happen
+      # assertion needs a control"): identical shooter setup, but the
+      # defender never begins a ContestMove, and asserts the factor is
+      # exactly 1.0 — proving 'contest-active''s 1.5 genuinely depends on the
+      # committed move being Active at release, not a hardcoded/always-on
+      # constant. Verified RED against a simulated pre-fix state (the
+      # composition branch disabled): 'contest-active' reports 1.0 instead of
+      # 1.5 and fails; GREEN with the real composition wired. Each exits
+      # 0=PASS/1=FAIL (ADR-0016).
+      - name: Run on-ball contest scatter-composition harness
+        run: |
+          godot --headless --path . res://tests/integration/ContestScatterTest.tscn -- --harness-scenario=contest-active
+          godot --headless --path . res://tests/integration/ContestScatterTest.tscn -- --harness-scenario=no-contest
+
       # Held-ball out-of-bounds turnover (issue #179, adjudicating hitl #119).
       # Boots a real BallController + two PlayerControllers headless and walks a
       # player past the court line, asserting BallController.ResolvePlayerOutOfBounds

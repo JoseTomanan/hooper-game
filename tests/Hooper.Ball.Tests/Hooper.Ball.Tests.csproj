@@ -86,6 +86,8 @@
     <Compile Include="..\..\scripts\Input\StealMove.cs" />
     <!-- M10 block committed move (issue #98, ADR-0018) -->
     <Compile Include="..\..\scripts\Input\BlockMove.cs" />
+    <!-- M10 on-ball contest committed move (issue #99, ADR-0018 §2) -->
+    <Compile Include="..\..\scripts\Input\ContestMove.cs" />
   </ItemGroup>
 
   <!--

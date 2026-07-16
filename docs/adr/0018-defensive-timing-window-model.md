@@ -235,3 +235,25 @@ carrying a move-specific vulnerable-window term (steal's hand, contest's
 compose-with-scatter, block's reach are all such per-move terms under §2).
 Steal is deliberately left timing+hand only for now; a symmetric steal-reach
 term, if wanted, is its own future issue.
+
+## Amendment 2026-07-16 — Contest implements its §2 composition as a single-tick timing gate, no reach term (#99)
+
+§2 named contest's composition rule ("an additional, discrete accuracy
+penalty on top of the passive distance/contest scatter... getting that
+composition right... is the contest issue's explicit job") but deferred the
+concrete shape to #99. The concrete factor shape — `ContestAppliesAt` (the
+timing gate, built on §1's shared `Succeeds` primitive with the shot's
+release window collapsed to the single release tick, since shot scatter is
+computed exactly once) and `ContestMoveFactor` (the `1 + ContestMoveScatterK`
+factor itself) — is now recorded in full in **ADR-0009's own 2026-07-16
+amendment**, since it changes that ADR's `accuracyMultiplier` composition
+formula directly (CLAUDE.md Decision Discipline: a change to a locked ADR's
+model is recorded on that ADR, in the same PR as the code). This entry is a
+pointer, not a duplicate — see ADR-0009 for the full reasoning, including why
+contest carries no spatial reach gate (contrast this file's #214 amendment
+above): contest never grants a binary success, so it never needed one.
+
+`ContestMove` (`scripts/Input/ContestMove.cs`) is the concrete committed move:
+frame data 6/8/20 (Startup/Active/Recovery), Active bounded by
+`BlockGraceTicks` per this ADR's §3, Recovery matching JumpShot's per the same
+reaction-tilt rule block and steal already follow.
