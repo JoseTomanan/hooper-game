@@ -406,6 +406,15 @@ public partial class PlayerController : CharacterBody3D
 	private Node3D _mesh;
 
 	/// <summary>
+	/// (#102) Optional placeholder marker mesh (Player.tscn's "BeatenIndicator"
+	/// child) toggled Visible while <see cref="DisplayBeaten"/> is true.
+	/// Null-guarded — a scene without it (every code-built harness tree, and
+	/// any older scene not yet re-saved) simply displays no cue, same
+	/// degrade-gracefully posture as <see cref="_mesh"/> and <see cref="_animTree"/>.
+	/// </summary>
+	private Node3D _beatenIndicator;
+
+	/// <summary>
 	/// The visual node's authored local position, captured once in _Ready.
 	/// Player.tscn seats the humanoid mesh below the CharacterBody3D origin
 	/// (M7a mesh swap) via CharacterModel's local Position — smooth correction
@@ -561,6 +570,21 @@ public partial class PlayerController : CharacterBody3D
 	/// otherwise never learning the server ended its move early.
 	/// </summary>
 	private bool _serverEndedActiveEarly;
+
+	/// <summary>
+	/// (#102) Authoritative "beaten" (whiff-punish blow-by, issue #100) flag
+	/// from the latest broadcast — display-only, mirroring _serverEndedActiveEarly's
+	/// staging pattern. See <see cref="DisplayBeaten"/> for why every role but
+	/// the server itself must read this instead of the local <c>_beaten</c>
+	/// field: only the server ever judges a whiff (BallController.
+	/// ResolveBeatenWindowTriggers is IsServer-gated), so a client can't
+	/// locally know it was just ruled beaten — not even for its OWN player.
+	/// Level-triggered like _serverEndedActiveEarly: the sender recomputes
+	/// IsBeaten fresh every tick and resends it (even a redundant "still
+	/// true"/"still false"), so a single dropped UnreliableOrdered packet
+	/// can't erase the client's only chance to observe the window.
+	/// </summary>
+	private bool _serverIsBeaten;
 
 	/// <summary>True once ReceiveState has arrived since the last _PhysicsProcess.</summary>
 	private bool _hasNewState;
@@ -806,6 +830,19 @@ public partial class PlayerController : CharacterBody3D
 	private bool IsServer      => Multiplayer.IsServer();
 	private bool IsLocalPlayer => Name == Multiplayer.GetUniqueId().ToString();
 
+	/// <summary>
+	/// The current physics tick, same definition and same underlying engine
+	/// counter as <c>BallController.PhysicsTick</c> (both read
+	/// <c>Engine.GetPhysicsFrames()</c> directly rather than hand-rolling a
+	/// counter). Reading it from either node during the SAME physics tick on
+	/// the SAME process returns the identical value — the engine increments
+	/// this counter once per tick, not per node — which is what makes it safe
+	/// to pass to <see cref="IsBeaten"/> here even though the window itself
+	/// was stamped by <c>BallController.ResolveBeatenWindowTriggers</c> via
+	/// its own <c>PhysicsTick</c> property, not this one.
+	/// </summary>
+	private int PhysicsTick => (int)Engine.GetPhysicsFrames();
+
 	// ── Lifecycle ─────────────────────────────────────────────────────────────
 
 	public override void _Ready()
@@ -858,6 +895,15 @@ public partial class PlayerController : CharacterBody3D
 		_gameManager = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
 		if (_gameManager == null)
 			GD.PrintErr("[PlayerController] No node in group 'game_manager' found. Game-over freeze will not work until GameManager is added to the scene (issue #27).");
+
+		// (#102) Optional placeholder cue for the whiff-punish "beaten" window
+		// (issue #100). Bespoke clips are out of scope (à la #70) — a simple
+		// visibility toggle on an unshaded marker mesh is the minimum readable
+		// cue, matching this codebase's existing "placeholder is fine" bar
+		// (e.g. the made-shot green flash, BallController.OnScoreChanged).
+		// Optional/null-guarded: harness-built trees (StealTurnoverTest et al.)
+		// never instance Player.tscn, so they simply have no indicator to toggle.
+		_beatenIndicator = GetNodeOrNull<Node3D>("BeatenIndicator");
 	}
 
 	// ── Tick loop ─────────────────────────────────────────────────────────────
@@ -908,6 +954,7 @@ public partial class PlayerController : CharacterBody3D
 		ApplySmoothCorrection();
 		ApplyCosmetics();
 		ApplyAnimation();
+		ApplyBeatenCue();
 	}
 
 	// ── Tick roles ────────────────────────────────────────────────────────────
@@ -953,9 +1000,15 @@ public partial class PlayerController : CharacterBody3D
 		// the positional-arg fragility this file's ReceiveState doc already
 		// warns about; keeping them last and together limits the blast radius
 		// of a future edit to one contiguous pair.
+		// (#102) isBeaten appended LAST of all, as its own trailing bool —
+		// same reasoning as endedActiveEarly: a lone bool at the very end
+		// can't be transposed with any neighboring same-typed param. Computed
+		// fresh here (IsBeaten against THIS tick), not read from a cache, so
+		// it always reflects this broadcast's own instant.
 		Rpc(MethodName.ReceiveState, 0, GlobalPosition, Velocity,
 			(int)_machine.Phase, _machine.FrameInPhase, MoveIdOf(_machine.CurrentMove), MoveParamOf(_machine.CurrentMove),
-			Heading, (int)HandSide, _machine.WasRecoveryEnteredEarly, _pivot.HasLatch, _pivot.LatchedYaw);
+			Heading, (int)HandSide, _machine.WasRecoveryEnteredEarly, _pivot.HasLatch, _pivot.LatchedYaw,
+			IsBeaten(PhysicsTick));
 	}
 
 	/// <summary>
@@ -990,9 +1043,15 @@ public partial class PlayerController : CharacterBody3D
 		// (see ReceiveState below for the payload rationale). (#175) Same
 		// trailing WasRecoveryEnteredEarly bool as TickServerOwnPlayer's broadcast.
 		// (#172) Same trailing pivotHasLatch/pivotLatchedYaw pair too.
+		// (#102) Same trailing isBeaten bool too — see TickServerOwnPlayer's
+		// broadcast comment. Both server-side broadcast call sites must stay
+		// in sync on this trailing arg by hand; there is no shared factory
+		// (matching this file's existing two-call-site convention for every
+		// prior trailing-param addition — #175, #172).
 		Rpc(MethodName.ReceiveState, _serverAckedSeq, GlobalPosition, Velocity,
 			(int)_machine.Phase, _machine.FrameInPhase, MoveIdOf(_machine.CurrentMove), MoveParamOf(_machine.CurrentMove),
-			Heading, (int)HandSide, _machine.WasRecoveryEnteredEarly, _pivot.HasLatch, _pivot.LatchedYaw);
+			Heading, (int)HandSide, _machine.WasRecoveryEnteredEarly, _pivot.HasLatch, _pivot.LatchedYaw,
+			IsBeaten(PhysicsTick));
 	}
 
 	/// <summary>
@@ -1447,13 +1506,21 @@ public partial class PlayerController : CharacterBody3D
 	/// (remote copy) — never force-matched every tick, per this file's
 	/// standing snap-then-replay reconciliation law (see that method's
 	/// Heading-snap comment).
+	///
+	/// (#102) isBeaten is the server's own live IsBeaten() read at broadcast
+	/// time (issue #100's whiff-punish window) — display-only, feeding
+	/// DisplayBeaten(). Appended LAST, as its own trailing bool, same
+	/// transposition-safety reasoning as endedActiveEarly. Unlike every other
+	/// field in this payload, this one is NOT read-with-a-fallback-to-local
+	/// for ANY role but the server: see BeatenDisplayResolver's class doc for
+	/// why the beaten window's truth is knowable by only one role, not three.
 	/// </summary>
 	[Rpc(MultiplayerApi.RpcMode.Authority,
 		 CallLocal = false,
 		 TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
 	private void ReceiveState(int ackSeq, Vector3 pos, Vector3 vel,
 		int movePhase, int frameInPhase, string moveId, float moveParam, float heading, int handSide,
-		bool endedActiveEarly, bool pivotHasLatch, float pivotLatchedYaw)
+		bool endedActiveEarly, bool pivotHasLatch, float pivotLatchedYaw, bool isBeaten)
 	{
 		_serverPos       = pos;
 		_serverVel       = vel;
@@ -1478,6 +1545,9 @@ public partial class PlayerController : CharacterBody3D
 		// so overwriting every broadcast (even a redundant "still true") is
 		// correct and required for the packet-loss robustness that field relies on.
 		_serverEndedActiveEarly = endedActiveEarly;
+		// (#102) See _serverIsBeaten's field doc — same level-triggered
+		// overwrite-every-broadcast reasoning.
+		_serverIsBeaten  = isBeaten;
 		_hasNewState     = true;
 	}
 
@@ -1791,6 +1861,19 @@ public partial class PlayerController : CharacterBody3D
 	}
 
 	/// <summary>
+	/// (#102) Toggles the placeholder "beaten" marker's visibility to match
+	/// <see cref="DisplayBeaten"/>. Runs for EVERY role, every tick — same
+	/// "cosmetics apply everywhere" posture as ApplyCosmetics/ApplyAnimation,
+	/// so the cue renders on the client's copy of the opponent too, not just
+	/// locally. No-op if the scene has no BeatenIndicator child.
+	/// </summary>
+	private void ApplyBeatenCue()
+	{
+		if (_beatenIndicator == null) return;
+		_beatenIndicator.Visible = DisplayBeaten();
+	}
+
+	/// <summary>
 	/// The committed-move phase and burst direction this node should DISPLAY this
 	/// frame, resolved by role (M7b, #69). For every role this peer simulates
 	/// (host own, server's remote copy, client own) it reads the live local
@@ -1839,6 +1922,26 @@ public partial class PlayerController : CharacterBody3D
 		DisplayPhaseResolver.LocalMachineDrivesDisplay(IsServer, IsLocalPlayer)
 			? MoveIdOf(_machine.CurrentMove)
 			: _serverMoveId;
+
+	/// <summary>
+	/// Whether this node should DISPLAY the whiff-punish "beaten" cue
+	/// (issue #100's blow-by lane, made visible for #102) this frame.
+	///
+	/// Deliberately NOT gated by <see cref="DisplayPhaseResolver"/>'s
+	/// <c>LocalMachineDrivesDisplay</c> predicate — that predicate answers
+	/// "does this peer simulate the committed-move machine," which is true
+	/// for the client's own player too. The beaten window is different: only
+	/// the SERVER ever judges a whiff (<c>BallController.
+	/// ResolveBeatenWindowTriggers</c> runs solely inside its own
+	/// <c>if (IsServer)</c> block), so a client cannot locally know it was
+	/// just ruled beaten — not even for its own predicted player. See
+	/// <see cref="BeatenDisplayResolver"/>'s class doc for the full
+	/// role-by-role reasoning. Concretely: every role but the server itself
+	/// reads the broadcast <c>_serverIsBeaten</c>, never the local
+	/// <see cref="IsBeaten"/> read.
+	/// </summary>
+	public bool DisplayBeaten() =>
+		BeatenDisplayResolver.Resolve(IsServer, IsBeaten(PhysicsTick), _serverIsBeaten);
 
 	// ── Input (unchanged from M1a) ────────────────────────────────────────────
 

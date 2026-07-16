@@ -46,7 +46,8 @@ public partial class PlayerController
             handSide: (int)handSide,
             endedActiveEarly: false,
             pivotHasLatch: false,
-            pivotLatchedYaw: 0f);
+            pivotLatchedYaw: 0f,
+            isBeaten: false);
 
     /// <summary>
     /// Test-only: runs the REAL, private TickClientRemotePlayer — the exact
