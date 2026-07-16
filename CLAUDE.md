@@ -19,13 +19,16 @@ locked unless explicitly revisited (see Decision Discipline in §4 below).
 | [ADR-0006](docs/adr/0006-renderer-mobile.md) | Renderer: Godot Mobile (D3D12), not Compatibility/Forward+ |
 | [ADR-0007](docs/adr/0007-dedicated-server-topology-discovery.md) | Dedicated-server topology (listen→headless) + LAN discovery wire format |
 | [ADR-0008](docs/adr/0008-possession-rules.md) | Half-court 1v1 possession rules: make-it-take-it, live rebound, take-it-back/clear |
+| [ADR-0009](docs/adr/0009-shot-accuracy-scatter.md) | Shot accuracy: deterministic, server-authoritative distance-based scatter (amended for movement/contest/facing/on-ball-contest penalties) |
 | [ADR-0010](docs/adr/0010-authoritative-heading.md) | Player heading: server-authoritative, bounded non-linear turn rate, integrated into Move() |
 | [ADR-0011](docs/adr/0011-claude-authors-scenes.md) | Claude authors `.tscn`/`.res`/`project.godot` by text-edit; human owns feel + verification only |
+| [ADR-0012](docs/adr/0012-authoritative-ball-hand.md) | Ball-hand-side is server-authoritative state, not cosmetic |
 | [ADR-0013](docs/adr/0013-afk-hitl-separate-issues.md) | AFK build work and HITL editor verification live in separate issues (no dual-labelled issue) |
 | [ADR-0014](docs/adr/0014-reference-game-decision-authority.md) | Reference-game decision authority: ranked references (real half-court ball > Undisputed 3 feel > 2K taxonomy) — self-resolve reference-grounded calls on the record, escalate only genuine design calls |
 | [ADR-0015](docs/adr/0015-autonomous-merge-proven-by-harness.md) | Autonomous merge for the AFK lane + harness-closed `hitl`; "Done means proven" redefined as proven-by-harness (supersedes "human owns merges"); feel batched to one human pass per milestone |
 | [ADR-0016](docs/adr/0016-headless-verification-harness.md) | Headless Godot harness (`tests/integration/`, `--headless`, exit-code pass/fail) is the official verification surface — the automated stand-in for human in-editor verification of state-checkable acceptance criteria |
 | [ADR-0017](docs/adr/0017-autopilot-activates-deferred-milestones.md) | Autopilot may activate DEFERRED milestones in the §2 dependency order without a per-milestone human "go" (supersedes "do not build ahead of the current milestone"); activation gates pickup, not merge |
+| [ADR-0018](docs/adr/0018-defensive-timing-window-model.md) | Defensive timing-window & reaction-tilt model (tick-interval overlap, `DefensiveResolution.Succeeds`) |
 | [ADR-0019](docs/adr/0019-session-driven-orchestration-loop.md) | Session-driven orchestration loop: an Opus `orchestrator` agent runs dispatch→review→merge within a live human-started session (no unattended cron / stored credential — rejected as overengineering for a solo dev) |
 
 ---
@@ -75,23 +78,26 @@ the human.
 
 ## 2. Current milestone
 
-> **M6b — Possession loop (active gameplay spine).** Turn the single shot into a
-> continuous half-court 1v1 playable to any `TargetScore > 1`: make-it-take-it,
-> live loose-ball rebounds, and the take-it-back ("clear") rule. Server-
-> authoritative with client prediction throughout (ADR-0002); the ball stays
-> deterministic mini-physics (ADR-0004). The possession ruleset is being recorded
-> in **ADR-0008** (issue #47) as part of this milestone. Epic: **#46**.
+> **M8b / M9 / M10 — the active set (all umbrellas, as of 2026-07-16).**
 >
-> **M7b — Rigged humanoid animation pass (parallel presentation track).** Un-deferred:
-> M7a (#53) is proven in-editor, so this now proceeds. Makes the committed move
-> honestly commit — feet plant, weight transfers, a visible startup → active →
-> recovery arc — so commitment is visible to BOTH players (ADR-0003). Sub-issues
-> in dependency order: #68 (rig + idle/run locomotion blend) → #41 (committed-move
-> phase → animation, placeholder pose) → #69 (remote-phase display sync, the fix
-> that makes the opponent's commitment actually render on the other client — this
-> was a silent gap even in M7a's burst lean). The bespoke crossover animation clip
-> itself is explicitly OUT of this epic's scope — it's #70 under M8 (#61), so the
-> engineering isn't blocked on art. Epic: **#54**.
+> **M8b — Realism & polish, continued** (epic **#171**): M8's leftover
+> verify/feel work — #153 net/fence visuals (human feel pass FAILED 2026-06-30;
+> awaiting an AFK material fix before re-verify), #154 shot-scatter/floor-bounce
+> feel sign-off, #170 realistic player rig (blocked on a human asset-license
+> pick) and its verify #178.
+>
+> **M9 — Basketball-related controls, offense** (epic **#75**): the dribble-move
+> family has largely landed — crossover/hesi (PR #88), moving crossover (#198),
+> behind-the-back (#194), ball-hand sweep (#195). Remaining: step-back (#197),
+> between-the-legs (#199), jab step (#200), spin (#201), triple-threat input
+> races (#207), crossover netcode hardening (#209/#210).
+>
+> **M10 — Defense & the reactive read** (epic **#89**): the core shipped —
+> foundation ADR-0018 (#95), steal (#96), block (#98, + reach gate #214), input
+> map (#101), on-ball contest (#99, PR #221). Remaining: blow-by punish (#100),
+> telegraph remote sync (#102), tuning dial (#104), spatial steal window (#196),
+> and #206 (held-ball steal vulnerability — an explicit human decision gate).
+> Feel for M9+M10 is batched in **#114** (ADR-0015).
 
 ### Milestone status
 
@@ -104,38 +110,38 @@ the human.
 | M4 — Networked ball + committed moves | Done | #19 |
 | M5 — Win condition + scoring | Done | #23 |
 | M6a — Dedicated server + server browser | Code done; editor verify (#32) trails M6b | #28 |
-| **M6b — Possession loop** | **Active (current)** | #46 |
+| M6b — Possession loop | Done (epic closed 2026-06-24; feel batched in #173) | #46 |
 | M7a — Static readability pass | Done | #53 |
-| **M7b — Rigged humanoid animation** | **Active (parallel presentation track)** | #54 |
+| M7b — Rigged humanoid animation | Done (epic closed 2026-06-26) | #54 |
 | M8 — Realism & polish pass | Done (epic closed; leftover verify/feel/realism work continues under M8b) | #61 |
 | **M8b — Realism & polish pass, continued** | **Active** (umbrella; M8 leftovers — #119 OOB verify, #153 net/fence verify, #154 shot-scatter/floor-bounce feel sign-off, #170 realistic player rig) | #171 |
-| **M9 — Basketball-related controls (offense)** | **Active** (umbrella; crossover/hesi pass landed PR #88, verify #114) | #75 |
-| **M10 — Defense & the reactive read** | **Active** (umbrella; defensive committed reads — steal/block/contest; sub-issues #95–#104, foundation ADR #95 gates the mechanics) | #89 |
+| **M9 — Basketball-related controls (offense)** | **Active** (umbrella; dribble-move family largely landed — PR #88, #194/#195/#198; open: #197/#199/#200/#201/#207/#209/#210; feel batched in #114) | #75 |
+| **M10 — Defense & the reactive read** | **Active** (umbrella; core shipped — ADR-0018 #95, steal #96, block #98/#214, contest #99; open: #100/#102/#104/#196, decision gate #206; feel batched in #114) | #89 |
 | M11 — Stamina & resource economy | DEFERRED (planning epic) | #90 |
 | M12 — Match flow, HUD & session lifecycle | DEFERRED (planning epic) | #91 |
 | M13 — Audio & game feel | DEFERRED (planning epic) | #92 |
-| M14 — Training, onboarding & practice opponent | DEFERRED (planning epic) | #93 |
-| M15 — Mobile, performance & release readiness | DEFERRED (planning epic) | #94 |
+| M14 — Training, onboarding & practice opponent | Closed — `wontfix` (2026-07-04) | #93 |
+| M15 — Mobile, performance & release readiness | Closed — `wontfix` (2026-07-04) | #94 |
 
 GitHub Issues is the source of truth for the live state of each milestone and its
 sub-issues; this table is the at-a-glance map.
 
-**M11–M15 are a forward roadmap, not a work queue.** They are deferred planning
+**M11–M13 are a forward roadmap, not a work queue.** They are deferred planning
 epics that record *what comes next and why*, in dependency order: M9–M10 complete
 the core duel (offense then defense), M11 adds the stamina pillar on top, M12–M13
-turn the loop into a game (flow + feel), M14 makes it learnable, M15 ships it on
-the committed mobile platform (ADR-0006). Their rows are listed here for the
+turn the loop into a game (flow + feel). Their rows are listed here for the
 at-a-glance map; each stays DEFERRED until explicitly activated, at which point its
 "DEFERRED" status flips to "Active" and (for the umbrella epics) it stops merely
-accruing sub-issues. M9 (offense) and M10 (defense) are both now active — M9's
-crossover/hesi pass has landed, and M10 was activated by human design call
-(2026-06-30) ahead of the combined M9+M10 feel pass (#114), which is explicitly
-deferred and batched rather than gating M10. Within M10 the foundation ADR (#95)
-gates all the mechanical sub-issues (steal/block/contest/whiff-punish); both
-epics remain umbrellas that still accrue sub-issues.
+accruing sub-issues. **M14 and M15 were closed `wontfix` on 2026-07-04** — they
+are no longer on the roadmap; their rows remain only so the numbering stays
+legible. M10 was activated by human design call (2026-06-30) ahead of the
+combined M9+M10 feel pass (#114), which is explicitly deferred and batched
+rather than gating M10. Both M9 and M10 remain umbrellas that still accrue
+sub-issues.
 
 **Autopilot exception ([ADR-0017](docs/adr/0017-autopilot-activates-deferred-milestones.md)):**
-the human has pre-authorised driving the full roadmap to M15, so the autopilot
+the human has pre-authorised driving the full roadmap (now ending at M13 — M14/M15
+closed `wontfix` 2026-07-04), so the autopilot
 **may** activate a DEFERRED milestone without a per-milestone human "go" —
 **but only by walking the dependency order documented in this table**, and only
 after each predecessor milestone's epic is genuinely closed (CI + harness +
