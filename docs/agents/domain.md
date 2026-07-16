@@ -14,9 +14,11 @@ gracefully if it is absent, but it is present on purpose — read it.
 /
 ├── CONTEXT.md        ← domain glossary (term → definition → ADR pointer)
 ├── CLAUDE.md         ← combined PRD + ADR index + repo conventions; read first
-├── TASKS.md          ← living task/state tracker (NOT decisions; NOT a backlog tool)
-└── docs/adr/         ← locked architectural decisions (0001–0005 + 0000-template)
+└── docs/adr/         ← locked architectural decisions (see docs/adr/ for the current set + 0000-template)
 ```
+
+`TASKS.md` does not exist in this repo (CLAUDE.md §3 says so explicitly). GitHub
+Issues is the sole task/state tracker — see `docs/agents/issue-tracker.md`.
 
 There is no `CONTEXT-MAP.md` and no per-context `src/<context>/docs/adr/`. Do not
 look for them; this is not a monorepo.
@@ -38,28 +40,27 @@ look for them; this is not a monorepo.
 
 3. **ADRs are LOCKED. This overrides ordinary "improve the architecture"
    instincts.** An ADR with `Status: Accepted` may not be worked around, quietly
-   superseded, or treated as a default to optimize past. The five locked
-   decisions are: Godot 4 .NET/C# engine (0001), server-authoritative + client
-   prediction, NOT rollback (0002), hybrid analog + discrete committed moves, NO
-   flow-cancel (0003), custom deterministic mini-physics ball, NOT Godot
-   Physics/Jolt (0004), self-hosted dedicated servers + server browser (0005).
-   If a proposed change — refactor, deepening, test design, anything — would
+   superseded, or treated as a default to optimize past. Do not hardcode the
+   locked set's numbers or count here — check `docs/adr/` directly
+   (`ls docs/adr/`); as of 2026-07-16 all numbered ADRs on `main` are
+   `Status: Accepted` and locked. If a proposed change — refactor, deepening,
+   test design, anything — would
    contradict a locked ADR, **STOP and flag the contradiction to the human before
    writing code.** Do not silently comply, and do not silently resolve it. This
    is the Decision Discipline rule from CLAUDE.md §3; it binds these skills too.
 
-4. **Decisions are not recorded here, and not in `TASKS.md`.** If work produces or
-   changes an architectural decision, it goes in a new or updated ADR in
+4. **Decisions are not recorded here, and not in GitHub Issues.** If work produces
+   or changes an architectural decision, it goes in a new or updated ADR in
    `docs/adr/`, in the same commit as the code (CLAUDE.md §3). `CONTEXT.md` holds
-   no reasoning — only term/definition/pointer. `TASKS.md` holds state, not
+   no reasoning — only term/definition/pointer. GitHub Issues holds state, not
    decisions. Keep these boundaries; do not fold decisions into the wrong file.
 
-5. **Respect milestone scope.** This project is milestone-gated (see CLAUDE.md §2
-   and GitHub Issues — the live tracker; TASKS.md no longer exists). The status
-   table now maps the full M1–M15 arc, but M8 onward are DEFERRED planning epics:
-   do not propose, scaffold, or build ahead of the current milestone unless the
-   human asks. "Improve the architecture" is bounded by the current milestone,
-   not the whole game.
+5. **Respect milestone scope.** This project is milestone-gated — see CLAUDE.md §2
+   for the live milestone table (read it live, don't cache statuses here) and
+   GitHub Issues for the live tracker. Do not propose, scaffold, or build ahead of
+   the current milestone unless the human asks or ADR-0017's autopilot exception
+   applies. "Improve the architecture" is bounded by the current milestone, not
+   the whole game.
 
 6. **If a referenced file does not exist, proceed silently.** Do not flag absence
    or suggest creating docs upfront.
