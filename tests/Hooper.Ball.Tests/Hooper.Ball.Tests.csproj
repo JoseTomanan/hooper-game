@@ -88,6 +88,9 @@
     <Compile Include="..\..\scripts\Input\BlockMove.cs" />
     <!-- M10 on-ball contest committed move (issue #99, ADR-0018 §2) -->
     <Compile Include="..\..\scripts\Input\ContestMove.cs" />
+    <!-- Vertical right-stick gesture pair: step-back + retreat dribble (issue #197) -->
+    <Compile Include="..\..\scripts\Input\RetreatDribble.cs" />
+    <Compile Include="..\..\scripts\Input\StepBack.cs" />
   </ItemGroup>
 
   <!--
@@ -134,6 +137,8 @@
     <!-- Moving-crossover burst composition (issue #198) -->
     <Compile Include="..\..\scripts\Player\CrossoverBurstMath.cs" />
     <Compile Include="..\..\scripts\Player\BeatenWindow.cs" />
+    <!-- Step-back burst composition, reuses CrossoverBurstMath (issue #197) -->
+    <Compile Include="..\..\scripts\Player\StepBackBurstMath.cs" />
   </ItemGroup>
 
   <ItemGroup>
