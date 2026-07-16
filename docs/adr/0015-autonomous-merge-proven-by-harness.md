@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-06-29
 - **Superseded-by:** —
+- **Amended-by:** ADR-0021 (2026-07-16 — feel pass deferred from per-milestone to a human-scheduled consolidated pass; no longer gates milestone activation)
 
 ---
 

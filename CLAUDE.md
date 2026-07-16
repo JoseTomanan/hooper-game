@@ -31,6 +31,7 @@ locked unless explicitly revisited (see Decision Discipline in §4 below).
 | [ADR-0018](docs/adr/0018-defensive-timing-window-model.md) | Defensive timing-window & reaction-tilt model (tick-interval overlap, `DefensiveResolution.Succeeds`) |
 | [ADR-0019](docs/adr/0019-session-driven-orchestration-loop.md) | Session-driven orchestration loop: an Opus `orchestrator` agent runs dispatch→review→merge within a live human-started session (no unattended cron / stored credential — rejected as overengineering for a solo dev) |
 | [ADR-0020](docs/adr/0020-performance-target-low-spec.md) | Performance & asset target: low-to-mid-spec devices, calibrated to NBA 2K14 old-gen (Xbox 360/PS3) as the fidelity ceiling — human external commitment, does not reopen M15 |
+| [ADR-0021](docs/adr/0021-feel-taste-deferred-indefinitely.md) | Feel passes and taste checks deferred until the human judges the game "sufficiently built"; amends ADR-0015 (per-milestone pass → human-scheduled consolidated pass in #173) and ADR-0017 (activation gate drops the feel-pass requirement) |
 
 ---
 
@@ -98,7 +99,9 @@ the human.
 > map (#101), on-ball contest (#99, PR #221). Remaining: blow-by punish (#100),
 > telegraph remote sync (#102), tuning dial (#104), spatial steal window (#196),
 > and #206 (held-ball steal vulnerability — an explicit human decision gate).
-> Feel for M9+M10 is batched in **#114** (ADR-0015).
+> Feel for M9+M10 is deferred to the consolidated human feel pass **#173**
+> (#114 is the M9+M10 checklist folded into it), per ADR-0021 — it no longer
+> gates milestone activation.
 
 ### Milestone status
 
@@ -111,13 +114,13 @@ the human.
 | M4 — Networked ball + committed moves | Done | #19 |
 | M5 — Win condition + scoring | Done | #23 |
 | M6a — Dedicated server + server browser | Code done; editor verify (#32) trails M6b | #28 |
-| M6b — Possession loop | Done (epic closed 2026-06-24; feel batched in #173) | #46 |
+| M6b — Possession loop | Done (epic closed 2026-06-24; feel deferred to #173 per ADR-0021) | #46 |
 | M7a — Static readability pass | Done | #53 |
 | M7b — Rigged humanoid animation | Done (epic closed 2026-06-26) | #54 |
 | M8 — Realism & polish pass | Done (epic closed; leftover verify/feel/realism work continues under M8b) | #61 |
-| **M8b — Realism & polish pass, continued** | **Active** (umbrella; M8 leftovers — #119 OOB verify, #153 net/fence verify, #154 shot-scatter/floor-bounce feel sign-off, #170 realistic player rig) | #171 |
-| **M9 — Basketball-related controls (offense)** | **Active** (umbrella; dribble-move family largely landed — PR #88, #194/#195/#198; open: #197/#199/#200/#201/#207/#209/#210; feel batched in #114) | #75 |
-| **M10 — Defense & the reactive read** | **Active** (umbrella; core shipped — ADR-0018 #95, steal #96, block #98/#214, contest #99; open: #100/#102/#104/#196, decision gate #206; feel batched in #114) | #89 |
+| **M8b — Realism & polish pass, continued** | **Active** (umbrella; M8 leftovers — #119 OOB verify, #153 net/fence verify, #154 shot-scatter/floor-bounce feel sign-off (deferred per ADR-0021), #170 realistic player rig — sourcing now bounded by ADR-0020) | #171 |
+| **M9 — Basketball-related controls (offense)** | **Active** (umbrella; dribble-move family largely landed — PR #88, #194/#195/#198; open: #197/#199/#200/#201/#207/#209/#210; feel deferred to #173 per ADR-0021, #114 folded in) | #75 |
+| **M10 — Defense & the reactive read** | **Active** (umbrella; core shipped — ADR-0018 #95, steal #96, block #98/#214, contest #99; open: #100/#102/#104/#196, decision gate #206; feel deferred to #173 per ADR-0021, #114 folded in) | #89 |
 | M11 — Stamina & resource economy | DEFERRED (planning epic) | #90 |
 | M12 — Match flow, HUD & session lifecycle | DEFERRED (planning epic) | #91 |
 | M13 — Audio & game feel | DEFERRED (planning epic) | #92 |
@@ -136,9 +139,10 @@ at-a-glance map; each stays DEFERRED until explicitly activated, at which point 
 accruing sub-issues. **M14 and M15 were closed `wontfix` on 2026-07-04** — they
 are no longer on the roadmap; their rows remain only so the numbering stays
 legible. M10 was activated by human design call (2026-06-30) ahead of the
-combined M9+M10 feel pass (#114), which is explicitly deferred and batched
-rather than gating M10. Both M9 and M10 remain umbrellas that still accrue
-sub-issues.
+combined M9+M10 feel pass (#114, folded into the consolidated #173 pass), which
+per [ADR-0021](docs/adr/0021-feel-taste-deferred-indefinitely.md) is deferred
+indefinitely rather than gating M10. Both M9 and M10 remain umbrellas that
+still accrue sub-issues.
 
 **Autopilot exception ([ADR-0017](docs/adr/0017-autopilot-activates-deferred-milestones.md)):**
 the human has pre-authorised driving the full roadmap (now ending at M13 — M14/M15
@@ -146,7 +150,9 @@ closed `wontfix` 2026-07-04), so the autopilot
 **may** activate a DEFERRED milestone without a per-milestone human "go" —
 **but only by walking the dependency order documented in this table**, and only
 after each predecessor milestone's epic is genuinely closed (CI + harness +
-code-review + its one feel pass) under [ADR-0015](docs/adr/0015-autonomous-merge-proven-by-harness.md).
+code-review + epic closed — the feel pass is **not** part of this gate; see
+[ADR-0021](docs/adr/0021-feel-taste-deferred-indefinitely.md), which deferred it
+to a human-scheduled consolidated pass) under [ADR-0015](docs/adr/0015-autonomous-merge-proven-by-harness.md).
 Activation flips DEFERRED → Active in this table and gates *pickup*, not *merge*.
 Outside that autopilot walk, the old rule still holds: do not build ahead of the
 current milestone unless asked.
@@ -197,9 +203,9 @@ current milestone unless asked.
 GitHub Issues is the sole task tracker. TASKS.md no longer exists.
 
 - Issues labeled `afk` are Claude Code's to implement.
-- Issues labeled `hitl` require an editor-level verification step (see EDITOR_TASKS.md) before they can close. Under autopilot ([ADR-0016](docs/adr/0016-headless-verification-harness.md)) that verification is performed by the **headless harness** wherever the acceptance criterion is state-checkable; only irreducibly *feel* criteria still need a human (batched per milestone, [ADR-0015](docs/adr/0015-autonomous-merge-proven-by-harness.md)).
+- Issues labeled `hitl` require an editor-level verification step (see EDITOR_TASKS.md) before they can close. Under autopilot ([ADR-0016](docs/adr/0016-headless-verification-harness.md)) that verification is performed by the **headless harness** wherever the acceptance criterion is state-checkable; only irreducibly *feel* criteria still need a human (deferred to the consolidated human-scheduled pass, [ADR-0021](docs/adr/0021-feel-taste-deferred-indefinitely.md)).
 - **AFK build and HITL verify are separate issues** ([ADR-0013](docs/adr/0013-afk-hitl-separate-issues.md)). An issue is single-purpose: either an `afk` build issue (closes on merge) or a `hitl` verify issue (closes only when proven in-engine) — **do not file or leave an issue carrying both labels.** If work has a build half and a verification half, split it; the `afk` issue merges and a separate `hitl` issue holds the dual-instance verify. When a legacy dual-labelled `afk` issue's code merges, close it and move the verify into a `hitl` issue (name the destination in the closing comment, name the sources in the verify issue — the #83–#86 → #114 pattern). One `hitl` issue may consolidate several AFK features proven in the same editor session.
-- **Done means proven, not written** — *proven* now means **proven by the harness** ([ADR-0015](docs/adr/0015-autonomous-merge-proven-by-harness.md)/[ADR-0016](docs/adr/0016-headless-verification-harness.md)). A `hitl` issue whose acceptance criteria are state-checkable is closed when the headless harness asserts them green in CI; a criterion that is irreducibly *feel* is closed at the per-milestone human feel pass. The bar (proof before close) is unchanged — the prover moved from a human to the harness. Never close on code/compile alone.
+- **Done means proven, not written** — *proven* now means **proven by the harness** ([ADR-0015](docs/adr/0015-autonomous-merge-proven-by-harness.md)/[ADR-0016](docs/adr/0016-headless-verification-harness.md)). A `hitl` issue whose acceptance criteria are state-checkable is closed when the headless harness asserts them green in CI; a criterion that is irreducibly *feel* stays open until the deferred, human-scheduled consolidated pass ([ADR-0021](docs/adr/0021-feel-taste-deferred-indefinitely.md)). The bar (proof before close) is unchanged — the prover moved from a human to the harness. Never close on code/compile alone.
 - When finishing a unit of work, tell the human which issue(s) to close and which EDITOR_TASKS steps (if any) they must complete first.
 - **Closing keyword placement.** Exactly one artifact closes an issue, and it carries `Closes #X` in its *description/body* (never the subject line), so GitHub auto-closes the issue and the close is traceable:
   - **Single-commit fix → straight to `main`:** that commit's body carries `Closes #X` (the M1a pattern).
@@ -249,15 +255,17 @@ gives the change a single review surface.
   state-checkable criteria ([ADR-0016](docs/adr/0016-headless-verification-harness.md)):
   a `hitl` issue's `Closes #X` may ride the PR when its acceptance is asserted by
   a green integration test in CI. Where proof is irreducibly *feel*, omit `Closes`
-  and let the per-milestone human feel pass close it. `Done means proven`
-  (now proven-by-harness) still overrides bare auto-close.
+  and leave it for the deferred, human-scheduled consolidated pass
+  ([ADR-0021](docs/adr/0021-feel-taste-deferred-indefinitely.md)) to close.
+  `Done means proven` (now proven-by-harness) still overrides bare auto-close.
 - **Merges are autonomous on green ([ADR-0015](docs/adr/0015-autonomous-merge-proven-by-harness.md)).**
   The orchestrator opens the PR with `gh` and merges it (merge-commit, not squash)
   once ALL gates are green: game build, full `dotnet test`, the headless harness
   (ADR-0016) for harness-checkable issues, and `/code-review` with no unresolved
   correctness findings. **No merge on red, ever.** Feel is never auto-accepted as
-  feel — it is the per-milestone human pass. (Pre-autopilot default, still valid
-  when not running the autopilot: the human owns the merge.)
+  feel — it is the deferred, human-scheduled consolidated pass
+  ([ADR-0021](docs/adr/0021-feel-taste-deferred-indefinitely.md)). (Pre-autopilot
+  default, still valid when not running the autopilot: the human owns the merge.)
 
 ### Decision Discipline
 
