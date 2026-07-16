@@ -292,6 +292,41 @@ public partial class PlayerController : CharacterBody3D
 	/// </summary>
 	[Export] public float BehindTheBackExitConeDegrees { get; set; } = 50.0f;
 
+	// ── Step-back / retreat-dribble tuning (issue #197) ───────────────────────
+	// The vertical-gesture counterpart to the crossover/hesitation horizontal
+	// pair (#85/#86); frame data lives on RetreatDribble/StepBack's own
+	// DefaultFrameData, not here.
+
+	/// <summary>
+	/// Backward speed of the retreat dribble's Active-phase hop (m/s).
+	/// Deliberately modest — "a light, hesi-shaped move" per the spec, not a
+	/// separation burst on the order of Crossover's BurstSpeed. Bare feel
+	/// default, deferred to the per-milestone human pass (ADR-0015/CLAUDE.md).
+	/// </summary>
+	[Export] public float RetreatDribbleBurstSpeed { get; set; } = 4.0f;
+
+	/// <summary>
+	/// Backward speed of step-back's Active-phase burst (m/s) — shared for
+	/// both the straight-back and back-lateral components
+	/// (StepBackBurstMath passes this as both burstSpeed and
+	/// forwardBurstScale). Higher than Crossover's BurstSpeed (9): the spec
+	/// calls step-back "the biggest separation of any move in the
+	/// taxonomy." Bare feel default, deferred sign-off.
+	/// </summary>
+	[Export] public float StepBackBurstSpeed { get; set; } = 10.0f;
+
+	/// <summary>
+	/// Step-back's exit-cone half-angle (degrees) — the left-stick exit
+	/// vector is clamped to within this many degrees of TRUE BACKWARD (not
+	/// forward, unlike every other exit-cone tunable in this file) before
+	/// StepBackBurstMath composes the burst. "Back / back-left / back-right
+	/// side-steps only" per the spec — comparable to BehindTheBack's 50°
+	/// narrow cone, not Crossover's effectively unclamped one, since a
+	/// step-back that could exit sideways-only or forward would no longer
+	/// read as a retreat. Bare feel default, deferred sign-off.
+	/// </summary>
+	[Export] public float StepBackExitConeDegrees { get; set; } = 60.0f;
+
 	// ── Authoritative heading (issue #80) ────────────────────────────────────
 
 	/// <summary>
@@ -1201,8 +1236,18 @@ public partial class PlayerController : CharacterBody3D
 		// BehindTheBack (#194) is gated the same way — it is ALSO a dribble
 		// move in real ball (the hand-swap only makes sense off a live
 		// dribble), so the dead-dribble rule must apply to it identically.
-		if ((move is Crossover || move is Hesitation || move is BehindTheBack) && IsBallHolder
-			&& GetBall()?.State == BallState.Held)
+		//
+		// RetreatDribble (#197) joins the same gate for the same reason:
+		// "the ball stays Dribbling" only makes sense starting FROM a live
+		// dribble — you cannot retreat-dribble a ball you haven't started
+		// bouncing. StepBack is deliberately NOT in this list: like
+		// JumpShot, it may begin from a live OR dead Held possession (its
+		// own Active-entry gather call safely no-ops if the ball isn't
+		// Dribbling — see BallController.CradleForShotStartup's doc), so
+		// gating its Begin() on ball state would only add a spurious
+		// restriction, not close a real bypass.
+		if ((move is Crossover || move is Hesitation || move is BehindTheBack || move is RetreatDribble)
+			&& IsBallHolder && GetBall()?.State == BallState.Held)
 			return false;
 
 		if (!_machine.Begin(move)) return false;
@@ -1300,6 +1345,13 @@ public partial class PlayerController : CharacterBody3D
 			BeginCommittedMove(new BehindTheBack(burstDirection: param));
 		else if (moveId == "hesitation")
 			BeginCommittedMove(new Hesitation());
+		else if (moveId == "stepback")
+			// param = 0f — step-back carries no payload; its exit direction
+			// is read from the left stick at Active-entry, not the RPC.
+			BeginCommittedMove(new StepBack());
+		else if (moveId == "retreatdribble")
+			// param = 0f — retreat dribble carries no payload (issue #197).
+			BeginCommittedMove(new RetreatDribble());
 		else if (moveId == "jumpshot")
 		{
 			// Capture the server-authoritative pre-plant speed at begin for the
@@ -1964,6 +2016,30 @@ public partial class PlayerController : CharacterBody3D
 				RpcId(1, MethodName.RequestBeginMove, "hesitation", 0f);
 			}
 		}
+		else if (gesture.Kind == GestureKind.StepBack)
+		{
+			// Step-back (M9, issue #197): the "hold" half of the new vertical
+			// gesture pair. Gated to the ball holder (an off-ball defender
+			// retreating has no ball to gather); BeginCommittedMove itself
+			// imposes NO Held-vs-Dribbling gate for StepBack (unlike
+			// Crossover/Hesitation/BehindTheBack/RetreatDribble) — see that
+			// method's comment for why the move's own Active-entry gather
+			// call safely no-ops from either starting state.
+			if (IsBallHolder && BeginCommittedMove(new StepBack()) && !isServer)
+				RpcId(1, MethodName.RequestBeginMove, "stepback", 0f);
+		}
+		else if (gesture.Kind == GestureKind.RetreatDribble)
+		{
+			// Retreat dribble (M9, issue #197): the "quick" half of the
+			// vertical pair. The gesture's own quick-return timing IS the
+			// feint (RetreatDribble.FeintWindowFrames=0 — see its class doc
+			// for why a SECOND free-abort would make this a zero-cost bait
+			// tool). Requires an actual live dribble (BeginCommittedMove's
+			// dead-dribble gate, extended for this move, refuses it from
+			// Held exactly like Crossover/Hesitation/BehindTheBack).
+			if (IsBallHolder && BeginCommittedMove(new RetreatDribble()) && !isServer)
+				RpcId(1, MethodName.RequestBeginMove, "retreatdribble", 0f);
+		}
 
 		// Shoot: begin a JumpShot (M7b, issue #74) — this REPLACES the old
 		// instant "ball leaves hand on press" trigger that used to live in
@@ -2191,6 +2267,37 @@ public partial class PlayerController : CharacterBody3D
 					// the burst; a Hesitation is neither of these, so it never
 					// reaches here and the hand stays put.
 					HandSide = HandStateResolver.Opposite(HandSide);
+				}
+				else if (_machine.JustEnteredActive && _machine.CurrentMove is RetreatDribble)
+				{
+					// Retreat dribble (#197): a modest, fixed hop straight back
+					// along Heading — no left-stick exit shaping (unlike
+					// StepBack below), no hand swap, no gather. Ball stays
+					// Dribbling throughout; nothing here touches BallController.
+					Vector2 backward = -HeadingMath.Forward(Heading);
+					Velocity = new Vector3(backward.X, 0f, backward.Y) * RetreatDribbleBurstSpeed;
+				}
+				else if (_machine.JustEnteredActive && _machine.CurrentMove is StepBack)
+				{
+					// Step-back (#197): full backward burst, shaped by the
+					// left-stick exit vector within a backward-only cone —
+					// composed via #198's shared burst math (see
+					// StepBackBurstMath's doc for why "flip the heading" is a
+					// safe reuse rather than a second hand-rolled cone-clamp).
+					Velocity = StepBackBurstMath.ComposeActiveVelocity(
+						Heading, exitVectorSample, StepBackBurstSpeed, ExitDeadzone,
+						Mathf.DegToRad(StepBackExitConeDegrees));
+
+					// The gather: cradles a live dribble exactly like a
+					// JumpShot's pump-fake does (#193's "dead Held" pattern),
+					// but at ACTIVE-entry rather than Startup-entry — the
+					// separation burst IS the gather motion here, per the
+					// issue spec. CradleForShotStartup's guard logic (no-ops
+					// unless the ball is Dribbling AND this player is the
+					// holder) is generic enough to reuse verbatim despite its
+					// shot-specific name; see its own doc for the exact
+					// no-op conditions this relies on.
+					GetBall()?.CradleForShotStartup(OwnPeerId);
 				}
 				MoveAndSlide();
 				break;
