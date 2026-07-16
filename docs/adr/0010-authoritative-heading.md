@@ -91,8 +91,8 @@ backTurnSlowFactor, |diff|/π)`. Default values:
 
 | Export | Default | Reasoning |
 |--------|---------|-----------|
-| `MaxTurnRateDeg` | 530 °/s | At `BackTurnSlowFactor` 0.35, a 180° back-turn takes ≈ 0.55 s (integrated time of the non-linear schedule — the constant-rate 180/(rate×f) estimate overestimates because the rate accelerates as the diff closes). A 20° correction takes ≈ 0.05 s — effectively instant to a human player. **Retuned 400 → 530 (#134, 2026-06-30): "snappier is better" — see amendment below.** |
-| `BackTurnSlowFactor` | 0.35 | The back-turn is ~3× slower than a micro-correction. Chosen so the pivot is legibly slow without being so slow it feels broken. Designer-tuneable via Inspector export. |
+| `MaxTurnRateDeg` | 900 °/s (see Amendment 2026-07-03 — #172 retune) | At `BackTurnSlowFactor` 0.95, integrated 180° back-turn time is `(180/900)·ln(1/0.95)/(1−0.95) ≈ 0.205 s` — near-linear, the back-turn tax now almost negligible. **Retuned 400 → 530 (#134, 2026-06-30), then 530 → 900 (#172 follow-up feel pass, 2026-07-03) — see amendments below.** |
+| `BackTurnSlowFactor` | 0.95 (see Amendment 2026-07-03 — #172 retune) | The back-turn is now only mildly slower than a micro-correction — a near-linear finishing touch. Chosen so the pivot is legibly slow without being so slow it feels broken. Designer-tuneable via Inspector export. |
 
 ## Consequences
 
