@@ -29,6 +29,11 @@ build/
 # backing for that uid and MUST ship, or the library fails to resolve off this
 # machine (humanoid stuck in bind pose).
 !assets/locomotion.res.uid
+# Exception: grid_cutout.gdshader is a hand-authored (non-editor-saved) shader
+# (#223) — nothing regenerates this sidecar off this machine either, and
+# Main.tscn's ext_resource references it by uid, so it must ship the same way
+# locomotion.res.uid does (#153/#223).
+!scenes/shaders/grid_cutout.gdshader.uid
 
 # Cross-session handoffs are scratch (in-flight state, not durable docs).
 # Keep the folder + its README in the repo so the convention is discoverable,

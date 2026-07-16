@@ -10,7 +10,7 @@
 [ext_resource type="PackedScene" uid="uid://cb04swbq2ivnx" path="res://scenes/ServerBrowser.tscn" id="8_srbrw"]
 [ext_resource type="Script" uid="uid://de27yy5y4j6vq" path="res://scripts/Systems/PossessionHud.cs" id="9_q8u5g"]
 [ext_resource type="Script" uid="uid://ncidr0vku6ft" path="res://scripts/Systems/CourtVisuals.cs" id="10_courtvisuals"]
-[ext_resource type="Shader" path="res://scenes/shaders/grid_cutout.gdshader" id="11_gridcutout"]
+[ext_resource type="Shader" uid="uid://br0fgfdlgucs4" path="res://scenes/shaders/grid_cutout.gdshader" id="11_gridcutout"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
 
