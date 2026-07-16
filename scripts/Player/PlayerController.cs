@@ -726,6 +726,81 @@ public partial class PlayerController : CharacterBody3D
 	/// </summary>
 	public bool EndResolvedDefensiveMove() => _machine.EndActiveEarly();
 
+	// ── Beaten window / blow-by lane (issue #100, ADR-0018 Amendment 2026-07-16) ──
+
+	/// <summary>
+	/// Server-authoritative: this defender's current beaten window, if any.
+	/// See <see cref="BeatenWindow"/>'s class doc for the full mechanic. Only
+	/// ever mutated by <see cref="TriggerBeatenWindow"/> (never ticked down
+	/// itself — <see cref="IsBeaten"/> is a pure comparison against a tick
+	/// the caller already knows, so there is nothing to advance per-frame).
+	/// </summary>
+	private BeatenWindow _beaten = BeatenWindow.None;
+
+	/// <summary>
+	/// Puts this defender into a beaten window through
+	/// <paramref name="currentTick"/> + <paramref name="windowTicks"/>
+	/// (exclusive) — the whiff-punish blow-by lane. While active, this
+	/// defender's contest (both the committed <c>ContestMove</c> factor and
+	/// the passive proximity scatter factor, ADR-0009) is suppressed against
+	/// whichever handler is shooting (BallController.ApplyShootLocally reads
+	/// <see cref="IsBeaten"/> for the defending peer).
+	///
+	/// Deliberately generic — this is the ONE choke point any caller uses to
+	/// grant the blow-by, not a private detail of the steal-whiff path. A
+	/// failed steal (this issue) is the first caller;
+	/// <c>ResolveStealAttempts</c>'s whiff detection calls this exactly like
+	/// a future failed crossover-transit steal (#196) is expected to.
+	/// </summary>
+	/// <param name="currentTick">The current physics tick (caller's single source of truth — see BeatenWindow's doc on why this struct never reads engine time itself).</param>
+	/// <param name="windowTicks">Window length in ticks. Feel-only tunable; see BallController.BlowByWindowTicks.</param>
+	public void TriggerBeatenWindow(int currentTick, int windowTicks) =>
+		_beaten = BeatenWindow.Trigger(currentTick, windowTicks);
+
+	/// <summary>
+	/// True while this defender is inside a beaten window at
+	/// <paramref name="currentTick"/>. See <see cref="TriggerBeatenWindow"/>.
+	/// </summary>
+	public bool IsBeaten(int currentTick) => _beaten.IsActive(currentTick);
+
+	/// <summary>
+	/// Test-only observability hook (issue #100): the raw tick the current
+	/// beaten window expires on (exclusive), or <c>int.MinValue</c> if none
+	/// is active. Exposed as the raw boundary rather than a bool so the
+	/// harness (and later #102's telegraph remote sync) can assert the
+	/// window's exact length against the live BlowByWindowTicks export,
+	/// instead of only its presence/absence.
+	/// </summary>
+	internal int BeatenUntilTickForHarness => _beaten.UntilTick;
+
+	/// <summary>
+	/// True for exactly the one tick this defender's committed move of type
+	/// <typeparamref name="TMove"/> naturally expired from Active into
+	/// Recovery WITHOUT ever resolving early via
+	/// <see cref="EndResolvedDefensiveMove"/> — i.e. a genuine whiff, not a
+	/// per-tick miss that the move might still recover from on a later
+	/// Active tick (see StealMove's own per-Active-tick re-check, ADR-0018
+	/// Amendment 2026-07-01).
+	///
+	/// Built from the SAME <c>WasRecoveryEnteredEarly</c> level-triggered bit
+	/// reconciliation already relies on (issue #175) — a successful
+	/// resolution calls <c>EndActiveEarly()</c>, which sets that bit true, so
+	/// "Recovery entered AND NOT early" is exactly "the whole Active window
+	/// ran out with no success." One-shot like <c>JustEnteredActive</c>: true
+	/// only on the tick FrameInPhase resets to 0 entering Recovery, false on
+	/// every later Recovery tick.
+	///
+	/// Generic over <typeparamref name="TMove"/> so a future caller (#196's
+	/// transit-steal whiff, or any other defensive move that wants to grant
+	/// the same punish) can reuse this detector for its own move type without
+	/// duplicating the CommittedMoveMachine field-reading logic.
+	/// </summary>
+	public bool JustWhiffedDefensiveMove<TMove>() where TMove : CommittedMove =>
+		_machine.Phase == MovePhase.Recovery
+		&& _machine.FrameInPhase == 0
+		&& !_machine.WasRecoveryEnteredEarly
+		&& _machine.CurrentMove is TMove;
+
 	// ── Role helpers ──────────────────────────────────────────────────────────
 
 	private bool IsServer      => Multiplayer.IsServer();
