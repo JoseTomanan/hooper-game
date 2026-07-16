@@ -212,6 +212,40 @@ jobs:
           godot --headless --path . res://tests/integration/ContestScatterTest.tscn -- --harness-scenario=contest-active
           godot --headless --path . res://tests/integration/ContestScatterTest.tscn -- --harness-scenario=no-contest
 
+      # Whiff-punish blow-by lane (issue #100, ADR-0018 Amendment 2026-07-16).
+      # Unit tests already pin the pure BeatenWindow clock (BeatenWindowTests)
+      # and the natural-whiff bit it's built from (CommittedMoveMachineTests'
+      # WasRecoveryEnteredEarly suite); this proves the LIVE engine glue: a
+      # REAL failed StealMove actually reaching BallController.
+      # ResolveBeatenWindowTriggers, and a REAL shot actually reading
+      # PlayerController.IsBeaten to suppress BOTH accuracy terms.
+      # 'whiff-triggers' places a REAL StealMove (same "whiff" placement math
+      # StealTurnoverTest's own whiff scenario uses) so it whiffs by
+      # construction, then asserts PlayerController.BeatenUntilTickForHarness
+      # equals the observed natural-Recovery-entry tick plus the LIVE
+      # BlowByWindowTicks export (not a hardcoded literal) — with the
+      # documented "-1" tree-order correction (Root observes a child's write
+      # one tick later; see StealTurnoverTest's ComputeBeginFrame doc for the
+      # same correction). 'suppressed' places a REAL shooter + REAL
+      # ContestMove exactly as ContestScatterTest's 'contest-active' does,
+      # then directly calls the SAME public TriggerBeatenWindow API
+      # ResolveBeatenWindowTriggers itself calls (not a bypass — the
+      # production choke point itself), and asserts BOTH
+      # LastContestFactorForHarness AND LastContestMoveFactorForHarness read
+      # exactly 1.0. 'control' is the REQUIRED counterpart (identical setup,
+      # no beaten window triggered) asserting BOTH factors read their normal
+      # non-1.0 values — proving 'suppressed''s 1.0/1.0 is a real effect of
+      # the beaten state, not a setup that always reads 1.0 vacuously.
+      # Verified RED against a simulated pre-fix state (the beaten check
+      # forced false): 'suppressed' reports the unsuppressed 1.5/1.5 and
+      # fails; GREEN with the real suppression wired. Each exits 0=PASS/1=FAIL
+      # (ADR-0016).
+      - name: Run whiff-punish blow-by lane harness
+        run: |
+          godot --headless --path . res://tests/integration/BlowByWindowTest.tscn -- --harness-scenario=whiff-triggers
+          godot --headless --path . res://tests/integration/BlowByWindowTest.tscn -- --harness-scenario=suppressed
+          godot --headless --path . res://tests/integration/BlowByWindowTest.tscn -- --harness-scenario=control
+
       # Held-ball out-of-bounds turnover (issue #179, adjudicating hitl #119).
       # Boots a real BallController + two PlayerControllers headless and walks a
       # player past the court line, asserting BallController.ResolvePlayerOutOfBounds

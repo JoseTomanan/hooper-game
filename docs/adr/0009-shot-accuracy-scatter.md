@@ -429,3 +429,54 @@ data 6/8/20 (Startup/Active/Recovery) — provisional, same tuning deferral.
   shared `DefensiveResolution.DistanceXZSquared` XZ-distance helper, and
   `WithinBlockReach`'s switch to a squared-distance comparison, both landed
   in the same PR as this amendment — see `DefensiveResolution.cs`.
+
+## Amendment — beaten-window suppression of contestFactor / contestMoveFactor (#100)
+
+**Date:** 2026-07-16
+
+### What changed
+
+The `accuracyMultiplier` composition itself is unchanged — still
+`movementFactor × contestFactor × contestMoveFactor × facingFactor` — but
+issue #100 adds a **conditional zeroing** of two of its four terms:
+
+```
+if defenderController.IsBeaten(currentTick):
+    contestFactor     = 1   (skip the #65 passive-proximity computation entirely)
+    contestMoveFactor = 1   (skip the #99 ContestAppliesAt/ContestMoveFactor computation entirely)
+```
+
+evaluated in `BallController.ApplyShootLocally` BEFORE either term is
+computed (not computed-then-overridden), so a beaten defender's position and
+any concurrent `ContestMove` genuinely contribute nothing to this shot's
+scatter — `movementFactor` and `facingFactor` are unaffected; they have
+nothing to do with the defender.
+
+This is the ADR-0009 half of the #100 pointer pair described in ADR-0018's own
+2026-07-16 "whiff-punish blow-by lane" amendment — that entry records the
+MECHANISM (the `BeatenWindow` struct, the reusable
+`PlayerController.TriggerBeatenWindow`/`JustWhiffedDefensiveMove` API, and the
+reaction-tilt rationale); this entry records exactly which terms of THIS
+ADR's locked composition formula the mechanism zeroes and why, per CLAUDE.md
+Decision Discipline (a change to this ADR's model is recorded here, in the
+same PR as the code, not only referenced from the sibling ADR).
+
+### Why both terms, not just the committed one
+
+The issue is explicit that a beaten defender is suppressed on BOTH axes: the
+committed `ContestMove` factor this ADR's #99 amendment added, AND the
+passive proximity term #65 added — not merely "the committed contest doesn't
+re-fire." Suppressing only the committed term would leave a beaten defender
+who happens to still be standing close to the shooter contributing the SAME
+passive penalty a healthy, un-beaten defender would — silently
+under-punishing the whiff relative to what "cannot contest the handler's next
+burst at all" (the issue's own words) describes. Both terms model contest
+pressure from the same defender; a defender who just got blown by contributes
+neither.
+
+### No new balance surface
+
+This amendment adds no new export — it gates the EXISTING `ContestScatterK`/
+`ContestRange` (#65) and `ContestMoveScatterK` (#99) terms on
+`PlayerController.IsBeaten`, itself driven by `BallController.
+BlowByWindowTicks` (ADR-0018's amendment covers that export's own citation).

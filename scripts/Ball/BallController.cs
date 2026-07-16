@@ -566,6 +566,44 @@ public partial class BallController : Node3D
 	/// </summary>
 	[Export(PropertyHint.Range, "0,3,0.05")] public float ContestMoveScatterK { get; set; } = 0.5f;
 
+	// ── Blow-by lane / whiff-punish tunables (issue #100, ADR-0018 Amendment 2026-07-16) ──
+
+	/// <summary>
+	/// Length, in physics ticks, of the beaten window a whiffed defensive
+	/// committed move (a failed steal today; #196's failed transit steal is
+	/// the next planned caller) grants the offense — see
+	/// <see cref="PlayerController.TriggerBeatenWindow"/>. While active, the
+	/// beaten defender's contest is suppressed against the handler's shot:
+	/// both the committed <c>ContestMove</c> factor (<see
+	/// cref="ContestMoveScatterK"/>) and the passive proximity scatter factor
+	/// (<see cref="ContestScatterK"/>) are forced to 1.0 in
+	/// <c>ApplyShootLocally</c>.
+	///
+	/// ADR-0014 citation (tier-1 identity, ADR-0018 §3): the default is
+	/// <c>StealMove.DefaultFrameData.RecoveryFrames</c> (20 — the SAME cost
+	/// the whiffing defender already pays themselves, keeping the reward
+	/// commensurate with the miss rather than an arbitrary separate number)
+	/// PLUS <c>ContestMove.DefaultFrameData.StartupFrames + ActiveFrames</c>
+	/// (6 + 8 = 14) of margin, for 34 total. The margin is load-bearing, not
+	/// decoration: the defender's OWN Recovery from the whiffed steal already
+	/// occupies the first 20 ticks of this window (Begin() is illegal until
+	/// Recovery elapses — CommittedMoveMachine's phase graph), so a window
+	/// exactly equal to RecoveryFrames would close at the SAME tick Recovery
+	/// releases the defender, leaving zero ticks in which a freshly-begun
+	/// ContestMove's Active window could ever land — making the committed-
+	/// ContestMove half of this mechanic (as opposed to the passive proximity
+	/// half, which needs no new move) structurally unreachable in real play,
+	/// only demonstrable by directly forcing the window in a test. The +14
+	/// margin guarantees a ContestMove begun the INSTANT Recovery elapses
+	/// still has its entire Active window fall inside the beaten window.
+	/// Provisional — tuning deferred to #104 + the per-milestone feel pass
+	/// (ADR-0015), same as every other defensive magnitude in this file.
+	/// </summary>
+	[Export] public int BlowByWindowTicks { get; set; } =
+		StealMove.DefaultFrameData.RecoveryFrames
+		+ ContestMove.DefaultFrameData.StartupFrames
+		+ ContestMove.DefaultFrameData.ActiveFrames;
+
 	// ── Composed pure logic ───────────────────────────────────────────────
 
 	/// <summary>The state machine that tracks which ball moment we're in.</summary>
@@ -944,6 +982,18 @@ public partial class BallController : Node3D
 	/// </summary>
 	internal float LastContestMoveFactorForHarness { get; private set; } = 1f;
 
+	/// <summary>
+	/// Test-only: the PASSIVE proximity contest factor (ADR-0009 / #65,
+	/// exported as <see cref="ContestScatterK"/>/<see cref="ContestRange"/>)
+	/// computed for the most recently resolved shot — the sibling to
+	/// <see cref="LastContestMoveFactorForHarness"/>, added for issue #100 so
+	/// the harness can prove a beaten window suppresses BOTH the passive
+	/// scatter term AND the committed ContestMove term, not just one of the
+	/// two the issue is explicit about. 1.0 whenever no defender was in
+	/// range (or a beaten window forced it), exactly like the sibling.
+	/// </summary>
+	internal float LastContestFactorForHarness { get; private set; } = 1f;
+
 	// ── Shot scatter RNG (issue #62, ADR-0009) ─────────────────────────────
 
 	/// <summary>
@@ -1217,6 +1267,17 @@ public partial class BallController : Node3D
 			// existing TickLoose scramble awards possession next tick (ADR-0008
 			// §Amendment 2026-06-30).
 			ResolveStealAttempts();
+
+			// Resolve the whiff-punish blow-by lane (issue #100, ADR-0018
+			// Amendment 2026-07-16). Deliberately its OWN call, not folded into
+			// ResolveStealAttempts: that method early-returns unless the ball is
+			// currently Dribbling, but a defender's committed move can whiff on
+			// ANY tick regardless of what the ball is doing right now (e.g. the
+			// holder released a shot mid-attempt) — the beaten window is a
+			// property of the DEFENDER's own machine, not the ball's state, so
+			// its detection must not inherit ResolveStealAttempts's ball-state
+			// guard. Runs every server tick, independent of ball state.
+			ResolveBeatenWindowTriggers();
 
 			// Clear the possession once the handler carries the ball back behind
 			// the clear line (#50). Clients receive the flag in the broadcast
@@ -1616,6 +1677,41 @@ public partial class BallController : Node3D
 			// Whiff this tick: keep checking subsequent Active ticks (the loop
 			// re-enters next physics tick). Recovery is the natural punishment for
 			// a fully-missed window; not wired here.
+		}
+	}
+
+	/// <summary>
+	/// Server-only: grants the whiff-punish blow-by lane (issue #100,
+	/// ADR-0018 Amendment 2026-07-16) — a bounded contest-free window for the
+	/// offense — the tick a defender's committed StealMove naturally expires
+	/// from Active into Recovery without ever having succeeded.
+	///
+	/// This is intentionally the ONLY caller of
+	/// <see cref="PlayerController.TriggerBeatenWindow"/> today, but the API
+	/// itself is generic (see that method's doc) — a future caller (#196's
+	/// failed crossover-transit steal) is expected to call the SAME method
+	/// from its own resolution site, not invent a parallel mechanism. This
+	/// method's job is narrowly "detect a natural StealMove whiff and trigger
+	/// the reusable lane," not "own the lane."
+	///
+	/// Runs over every player every tick regardless of ball state — see the
+	/// call site's comment for why this cannot share ResolveStealAttempts's
+	/// Dribbling-only guard.
+	/// </summary>
+	private void ResolveBeatenWindowTriggers()
+	{
+		if (Players == null) return;
+
+		foreach (Node child in Players.GetChildren())
+		{
+			if (child is not PlayerController defender) continue;
+
+			if (defender.JustWhiffedDefensiveMove<StealMove>())
+			{
+				defender.TriggerBeatenWindow(PhysicsTick, BlowByWindowTicks);
+				GD.Print($"[BallController] Blow-by lane granted: defender {defender.Name} whiffed a steal, " +
+						 $"beaten through tick {PhysicsTick + BlowByWindowTicks}.");
+			}
 		}
 	}
 
@@ -2752,7 +2848,19 @@ public partial class BallController : Node3D
 				var defenderController = Players.GetNodeOrNull<PlayerController>(defenderPeerId.ToString());
 				if (defenderController != null)
 				{
-					if (ContestRange > 0f)
+					// #100 — whiff-punish blow-by lane (ADR-0018 Amendment
+					// 2026-07-16): a defender inside a beaten window (granted by
+					// ResolveBeatenWindowTriggers on a whiffed StealMove) contests
+					// this shot with NEITHER of its two terms — both the passive
+					// proximity scatter below AND the committed ContestMove factor
+					// stay forced to their neutral 1.0. This is checked BEFORE
+					// either term is computed (not after, then overridden) so a
+					// beaten defender genuinely contributes nothing, matching the
+					// issue's "suppresses BOTH" requirement exactly rather than
+					// computing then discarding.
+					bool defenderBeaten = defenderController.IsBeaten(PhysicsTick);
+
+					if (!defenderBeaten && ContestRange > 0f)
 					{
 						float defDistSq = DefensiveResolution.DistanceXZSquared(
 							defenderController.GlobalPosition, holder.GlobalPosition);
@@ -2766,7 +2874,7 @@ public partial class BallController : Node3D
 					// explains why the shot's "release window" collapses to a
 					// single tick for contest, unlike block's multi-tick grace.
 					var contestActive = defenderController.ActiveMove<ContestMove>();
-					if (contestActive != null)
+					if (!defenderBeaten && contestActive != null)
 					{
 						var (contestMove, frameInPhase) = contestActive.Value;
 						int contestActiveStart = PhysicsTick - frameInPhase;
@@ -2779,6 +2887,7 @@ public partial class BallController : Node3D
 				}
 			}
 			LastContestMoveFactorForHarness = contestMoveFactor;
+			LastContestFactorForHarness = contestFactor;
 
 			// #81 — facing penalty: back-to-basket shots scatter more.
 			// Reads holder.Heading (server-authoritative, ADR-0010), NOT

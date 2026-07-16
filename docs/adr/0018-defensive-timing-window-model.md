@@ -257,3 +257,72 @@ above): contest never grants a binary success, so it never needed one.
 frame data 6/8/20 (Startup/Active/Recovery), Active bounded by
 `BlockGraceTicks` per this ADR's §3, Recovery matching JumpShot's per the same
 reaction-tilt rule block and steal already follow.
+
+## Amendment 2026-07-16 — The whiff-punish blow-by lane (#100): a beaten window that suppresses contest
+
+§3 named the reaction-tilt's payoff ("a missed defensive commitment is more
+punishable than a missed offensive one — this is the blow-by the whiff-punish
+issue (#100) cashes in") but left the mechanism itself unbuilt. #100 makes it
+concrete: on a whiffed `StealMove` — its `Active` phase expiring naturally
+into `Recovery` (`WasRecoveryEnteredEarly == false`, §"Amendment 2026-07-01"'s
+own natural-vs-early distinction, extended here to detect a NATURAL Recovery
+entry rather than an early one), not a resolved success — the defender enters
+a server-authoritative, time-boxed **beaten window**
+(`scripts/Player/BeatenWindow.cs`, a pure struct: `UntilTick`, `IsActive`,
+`Trigger`). While a defender is beaten, `BallController.ApplyShootLocally`
+forces BOTH of that defender's accuracy contributions to their neutral
+values against the handler's next shot — the committed `ContestMove` factor
+(this ADR's own §2/2026-07-16 amendment above) AND the passive proximity
+scatter factor. **The suppressed-factor list is recorded here as a pointer;
+the authoritative composition-model text lives in ADR-0009's own 2026-07-16
+amendment**, per CLAUDE.md Decision Discipline (a change to that ADR's locked
+`accuracyMultiplier` formula is recorded on that ADR, in the same PR as the
+code) — this entry is this ADR's record of the mechanism and the reaction-tilt
+rationale; ADR-0009 is the record of exactly which multiplier terms it zeroes.
+
+### Why this is the offense's reward, not the defender's cost
+
+Recovery frames already gate the defender (they cannot act again until
+Recovery elapses) — that is the defender's OWN cost, unrelated to this
+mechanism and explicitly out of scope (confirmed in the issue's own planning
+grill: "cooldown/spam is NOT in scope — recovery frames already gate that").
+The beaten window is a SEPARATE, asymmetric advantage handed to the
+**offense**: the ball-handler gets a burst window in which the SAME defender
+who just whiffed cannot contest them, even once Recovery ends and they are
+technically free to act again (see `BallController.BlowByWindowTicks`'s own
+doc for why the window default deliberately outlasts `StealMove`'s Recovery
+by a margin, not merely matches it — an exactly-matching window would make
+the committed-`ContestMove` half of the suppression structurally unreachable
+in real play, since the defender cannot begin ANY new move, including a
+fresh contest, before their own Recovery elapses).
+
+### Reusable by construction, not hardwired to steal (#196)
+
+`PlayerController.TriggerBeatenWindow(currentTick, windowTicks)` is the ONE
+choke point that grants the window — it has no idea a steal exists; it only
+knows "beaten until tick N." `BallController.ResolveBeatenWindowTriggers`
+(today's sole caller) merely detects a natural `StealMove` whiff via the
+generic `PlayerController.JustWhiffedDefensiveMove<TMove>()` and calls the
+trigger. Per the human's own planning note on #100 (recorded 2026-07-04),
+issue #196 (a defender caught in Recovery mid-crossover-transit steal
+attempt) is expected to reuse this SAME lane for its own whiff path — calling
+`TriggerBeatenWindow` from its own resolution site — rather than inventing a
+parallel mechanism. This mirrors how `DefensiveResolution.Succeeds` is this
+ADR's one shared success predicate (§1): one shared punish mechanism, reused
+by every future whiff path, not one per move.
+
+### Server-authoritative; no new prediction/reconciliation channel
+
+The beaten state is consumed ENTIRELY inside `ApplyShootLocally`'s existing
+`IsServer && ShotScatterEnabled` guard (ADR-0002/0004 §1's only-server-mutates
+list — the shot-scatter RNG draw already lives here) — no client ever
+predicts or reconciles it directly, because no client-side shot-accuracy
+prediction exists to reconcile against in the first place (clients always
+predict dead-centre and are corrected by the next `ReceiveState`, exactly as
+every other accuracy factor in this file already works). A harness
+observability hook (`PlayerController.BeatenUntilTickForHarness`,
+`BallController.LastContestFactorForHarness` alongside the existing
+`LastContestMoveFactorForHarness`) exists for proof and for issue #102's
+future telegraph remote sync to read from — #102 owns making the beaten
+state visibly legible to both players (ADR-0003); this issue's scope is the
+mechanic only, no animation/display.
