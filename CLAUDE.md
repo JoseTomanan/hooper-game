@@ -30,6 +30,7 @@ locked unless explicitly revisited (see Decision Discipline in §4 below).
 | [ADR-0017](docs/adr/0017-autopilot-activates-deferred-milestones.md) | Autopilot may activate DEFERRED milestones in the §2 dependency order without a per-milestone human "go" (supersedes "do not build ahead of the current milestone"); activation gates pickup, not merge |
 | [ADR-0018](docs/adr/0018-defensive-timing-window-model.md) | Defensive timing-window & reaction-tilt model (tick-interval overlap, `DefensiveResolution.Succeeds`) |
 | [ADR-0019](docs/adr/0019-session-driven-orchestration-loop.md) | Session-driven orchestration loop: an Opus `orchestrator` agent runs dispatch→review→merge within a live human-started session (no unattended cron / stored credential — rejected as overengineering for a solo dev) |
+| [ADR-0020](docs/adr/0020-performance-target-low-spec.md) | Performance & asset target: low-to-mid-spec devices, calibrated to NBA 2K14 old-gen (Xbox 360/PS3) as the fidelity ceiling — human external commitment, does not reopen M15 |
 
 ---
 
