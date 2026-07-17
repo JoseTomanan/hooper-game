@@ -32,6 +32,7 @@ locked unless explicitly revisited (see Decision Discipline in §4 below).
 | [ADR-0019](docs/adr/0019-session-driven-orchestration-loop.md) | Session-driven orchestration loop: an Opus `orchestrator` agent runs dispatch→review→merge within a live human-started session (no unattended cron / stored credential — rejected as overengineering for a solo dev) |
 | [ADR-0020](docs/adr/0020-performance-target-low-spec.md) | Performance & asset target: low-to-mid-spec devices, calibrated to NBA 2K14 old-gen (Xbox 360/PS3) as the fidelity ceiling — human external commitment, does not reopen M15 |
 | [ADR-0021](docs/adr/0021-feel-taste-deferred-indefinitely.md) | Feel passes and taste checks deferred until the human judges the game "sufficiently built"; amends ADR-0015 (per-milestone pass → human-scheduled consolidated pass in #173) and ADR-0017 (activation gate drops the feel-pass requirement) |
+| [ADR-0022](docs/adr/0022-rim-finishing-offensive-vertical.md) | Rim-finishing offensive vertical (un-defer of #203): a new ADR, not an ADR-0009 amendment — the layup reuses the existing shot-accuracy model verbatim, the drive-gather reuses the hybrid-gather momentum model, the euro-step reuses the exit-cone precedent |
 
 ---
 
@@ -92,7 +93,10 @@ the human.
 > family has largely landed — crossover/hesi (PR #88), moving crossover (#198),
 > behind-the-back (#194), ball-hand sweep (#195). Remaining: step-back (#197),
 > between-the-legs (#199), jab step (#200), spin (#201), triple-threat input
-> races (#207), crossover netcode hardening (#209/#210).
+> races (#207), crossover netcode hardening (#209/#210). The rim-finishing
+> vertical (**#203** umbrella, un-deferred 2026-07-17, ADR-0022) is now active:
+> layup/rim-finish shot type (#229) → drive-gather (#230) → euro-step (#231,
+> gated on the first two), plus this decision record/taxonomy leaf (#232).
 >
 > **M10 — Defense & the reactive read** (epic **#89**): the core shipped —
 > foundation ADR-0018 (#95), steal (#96), block (#98, + reach gate #214), input
@@ -119,7 +123,7 @@ the human.
 | M7b — Rigged humanoid animation | Done (epic closed 2026-06-26) | #54 |
 | M8 — Realism & polish pass | Done (epic closed; leftover verify/feel/realism work continues under M8b) | #61 |
 | **M8b — Realism & polish pass, continued** | **Active** (umbrella; M8 leftovers — #119 OOB verify, #153 net/fence verify, #154 shot-scatter/floor-bounce feel sign-off (deferred per ADR-0021), #170 realistic player rig — sourcing now bounded by ADR-0020) | #171 |
-| **M9 — Basketball-related controls (offense)** | **Active** (umbrella; dribble-move family largely landed — PR #88, #194/#195/#198; open: #197/#199/#200/#201/#207/#209/#210; feel deferred to #173 per ADR-0021, #114 folded in) | #75 |
+| **M9 — Basketball-related controls (offense)** | **Active** (umbrella; dribble-move family largely landed — PR #88, #194/#195/#198; open: #197/#199/#200/#201/#207/#209/#210; rim-finishing vertical #203 (ADR-0022) un-deferred 2026-07-17 — open: #229/#230/#231/#232; feel deferred to #173 per ADR-0021, #114 folded in) | #75 |
 | **M10 — Defense & the reactive read** | **Active** (umbrella; core shipped — ADR-0018 #95, steal #96, block #98/#214, contest #99; open: #100/#102/#104/#196, decision gate #206; feel deferred to #173 per ADR-0021, #114 folded in) | #89 |
 | M11 — Stamina & resource economy | DEFERRED (planning epic) | #90 |
 | M12 — Match flow, HUD & session lifecycle | DEFERRED (planning epic) | #91 |
