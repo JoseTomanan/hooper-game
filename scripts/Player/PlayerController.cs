@@ -1492,6 +1492,32 @@ public partial class PlayerController : CharacterBody3D
 			return;
 		}
 
+		ApplyRequestedMove(moveId, param);
+	}
+
+	/// <summary>
+	/// The authoritative move-dispatch body of <see cref="RequestBeginMove"/>,
+	/// split out from its sender-id authorization check (issue #236) so the two
+	/// concerns are separable: this method answers "given that peer N legitimately
+	/// asked for moveId, what does the server begin?", and knows nothing about
+	/// WHO asked. Authorization stays entirely in the RPC entry point above.
+	///
+	/// Why the split exists: the server-side gates in here (the layup's range
+	/// check, block/contest's "not your own shot") are real authority, but they
+	/// were unreachable by the headless harness (ADR-0016) — RequestBeginMove is
+	/// [Rpc(AnyPeer, CallLocal = false)] and sender-gated, so a single offline
+	/// instance can neither deliver it remotely nor pass its authorization
+	/// check. The alternative was for a harness to re-implement the gate, which
+	/// would prove a copy rather than the shipped path — precisely the failure
+	/// DefensiveMoveHarnessSeam's own doc documents as a cautionary tale. This
+	/// keeps the seam (LayupRangeHarnessSeam) pointed at the REAL dispatch,
+	/// bypassing only the RPC/authorization layer that no gate under test uses.
+	///
+	/// Every branch here still routes through BeginCommittedMove — the one
+	/// production choke point (architecture-contract invariant #11).
+	/// </summary>
+	private void ApplyRequestedMove(string moveId, float param)
+	{
 		if (moveId == "crossover")
 			// param is the body-relative flick sign (M9, #85) — the world burst
 			// direction is derived from Heading when the move reaches Active.
