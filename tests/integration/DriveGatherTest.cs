@@ -23,10 +23,16 @@ namespace HOOPERGAME.Tests.Integration;
 //      the player on a forward line that brings them into #229's Layup range
 //      — and a REAL Layup, begun through the SAME BeginCommittedMove choke
 //      point production input reaches, actually launches from there.
+//   4. DriveGather respects the SAME #193 dead-dribble gate Crossover/
+//      Hesitation/BehindTheBack/BetweenTheLegs/RetreatDribble already do
+//      (code-review fix): it cannot legally begin from a dead Held
+//      possession, since "the gather" IS the act of picking up a live
+//      dribble (ADR-0014 tier 1) — there is nothing left to pick up twice.
 //
 //   godot --headless --path . res://tests/integration/DriveGatherTest.tscn -- --harness-scenario=gather-bleed
 //   godot --headless --path . res://tests/integration/DriveGatherTest.tscn -- --harness-scenario=heading-turn
 //   godot --headless --path . res://tests/integration/DriveGatherTest.tscn -- --harness-scenario=gather-to-layup-chain
+//   godot --headless --path . res://tests/integration/DriveGatherTest.tscn -- --harness-scenario=dead-dribble-gate
 //   Exit: 0 = PASS, 1 = FAIL (via GetTree().Quit) — the ADR-0016 exit-code contract.
 //   Omitting --harness-scenario defaults to "gather-bleed".
 //
@@ -71,6 +77,14 @@ namespace HOOPERGAME.Tests.Integration;
 // (Begin() returns true, the machine reports Startup/"layup") — proving the
 // gather is a genuine launch point for #229's finish, not merely that the
 // gather itself runs.
+//
+// ── Scenario "dead-dribble-gate" ─────────────────────────────────────────
+// Mirrors BetweenTheLegsTest's/LayupTest's own "the SAME Held-holder gate
+// Crossover/Hesitation/BehindTheBack use" scenario, applied to DriveGather.
+// A fresh tipoff lands the holder in dead Held (#193) — no drive, no live
+// dribble. Attempting BeginMoveForHarness(DriveGather) here must be refused
+// by BeginCommittedMove's dead-dribble gate: asserts began==false AND the
+// machine stayed Inactive (never even entered Startup).
 public partial class DriveGatherTest : Node
 {
     private const double TimeoutSeconds = 10.0;
@@ -98,6 +112,10 @@ public partial class DriveGatherTest : Node
     private static readonly Vector3 ChainStartPosition = new(0f, 0f, -5.3f); // 5.3m, outside default 4.0m LayupRange
     private enum ChainStep { AwaitTipoff, DriveBegun, AwaitInactive, LayupAttempted }
     private ChainStep _chainStep = ChainStep.AwaitTipoff;
+
+    // ── "dead-dribble-gate" state ────────────────────────────────────────
+    private enum GateStep { AwaitTipoff, Attempted }
+    private GateStep _gateStep = GateStep.AwaitTipoff;
 
     public override void _Ready()
     {
@@ -129,6 +147,7 @@ public partial class DriveGatherTest : Node
         {
             case "heading-turn":            TickHeadingTurn(); break;
             case "gather-to-layup-chain":   TickChain(); break;
+            case "dead-dribble-gate":       TickDeadDribbleGate(); break;
             default:                        TickGatherBleed(); break;
         }
 
@@ -146,6 +165,11 @@ public partial class DriveGatherTest : Node
 
         if (!_gatherBegun)
         {
+            // DriveGather now respects the #193 dead-dribble gate
+            // (code-review fix) — a fresh tipoff lands the holder in dead
+            // Held, so a live dribble must be started first, exactly like
+            // every other gated burst-family move's own harness setup.
+            _ball.TryStartDribble(1);
             _holder.GlobalPosition = new Vector3(0f, 0f, -6f); // faces rim by default Heading=0 -> no confounding turn
             _holder.Velocity = LateralVelocity;
 
@@ -198,6 +222,9 @@ public partial class DriveGatherTest : Node
 
         if (!_headingTurnBegun)
         {
+            // Same dead-dribble gate as "gather-bleed" above — start a live
+            // dribble before attempting Begin.
+            _ball.TryStartDribble(1);
             _holder.GlobalPosition = HeadingTurnHolderPosition;
             bool began = _holder.BeginMoveForHarness(new DriveGather());
             _headingTurnBegun = true;
@@ -324,6 +351,49 @@ public partial class DriveGatherTest : Node
                     Finish();
                 }
                 _chainStep = ChainStep.LayupAttempted;
+                return;
+        }
+    }
+
+    // ── Scenario: "dead-dribble-gate" ────────────────────────────────────────
+    private void TickDeadDribbleGate()
+    {
+        switch (_gateStep)
+        {
+            case GateStep.AwaitTipoff:
+                if (_frame < ArmFrames) break;
+                if (_ball.StateMachine.HolderPeerId != 1)
+                {
+                    Fail($"expected the tipoff to award peer 1 (this code-built tree's first child); got {_ball.StateMachine.HolderPeerId}.");
+                    Finish();
+                    return;
+                }
+
+                // Fresh tipoff already lands the holder in dead Held (#193) —
+                // no drive, no dribble. Attempting DriveGather here must be
+                // refused by the SAME Held-holder gate Crossover/Hesitation/
+                // BehindTheBack/BetweenTheLegs/RetreatDribble use
+                // (PlayerController.BeginCommittedMove).
+                if (_ball.State != BallState.Held)
+                {
+                    Fail($"expected a fresh tipoff to land the holder in Held; got state={_ball.State}.");
+                    Finish();
+                    return;
+                }
+
+                bool began = _holder.BeginMoveForHarness(new DriveGather());
+                bool stayedInactive = _holder.PhaseForHarness == MovePhase.Inactive;
+
+                if (began || !stayedInactive)
+                {
+                    Fail($"expected BeginMoveForHarness(DriveGather) to be REFUSED from a dead-Held possession; began={began}, phase={_holder.PhaseForHarness}.");
+                    Finish();
+                    return;
+                }
+                GD.Print("[drive-gather] PASS dead-dribble-gate — DriveGather refused from a dead-Held possession, machine stayed Inactive.");
+                GD.Print("[drive-gather] RESULT: PASS (exit 0)");
+                Finish(0);
+                _gateStep = GateStep.Attempted;
                 return;
         }
     }
