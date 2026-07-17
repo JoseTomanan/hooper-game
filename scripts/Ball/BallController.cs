@@ -274,6 +274,32 @@ public partial class BallController : Node3D
 	/// </summary>
 	[Export] public float LayupRange { get; set; } = 4.0f;
 
+	/// <summary>
+	/// Extra floor-plane (XZ) slack, in metres, that the SERVER adds to
+	/// <see cref="LayupRange"/> when re-asserting the layup gate against its own
+	/// authoritative position (issue #236, ADR-0023). Clients gate at the bare
+	/// LayupRange; this is the server's allowance for its own uncertainty about
+	/// where the client actually was at press time, not a widening of the move.
+	///
+	/// Why it exists: the client presses at its predicted position, but the RPC
+	/// only reaches the server one-way-latency later, by which time the server's
+	/// copy of a driving player has travelled further. Without slack the two
+	/// disagree across the boundary and the server rejects an honest layup —
+	/// eating the press in exactly the at-the-rim zone the layup exists for.
+	///
+	/// Why the server must not instead substitute a JumpShot (the intuitive
+	/// fix, and the one #236 originally prescribed): that would make the two
+	/// sides' moveIds disagree, which NEITHER reconciliation gate can repair —
+	/// ShouldForceInactive needs serverPhase == Inactive, ShouldForceRecovery
+	/// needs matching moveIds. See ADR-0023 for the full derivation.
+	///
+	/// Default 0.5m is derived, not guessed: PlayerController.MoveSpeed
+	/// (6.0 m/s) × ~83ms one-way ≈ 0.5m, matching #236's own cited divergence.
+	/// The VALUE is #238's to dial (it interacts with LayupRange); ADR-0023
+	/// fixes only that a tolerance exists and what it is for.
+	/// </summary>
+	[Export] public float LayupRangeNetTolerance { get; set; } = 0.5f;
+
 	// ── Possession tunables (M6b, ADR-0008) ───────────────────────────────
 
 	/// <summary>
