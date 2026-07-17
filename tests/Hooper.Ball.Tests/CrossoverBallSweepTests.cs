@@ -158,19 +158,36 @@ public class CrossoverBallSweepTests
 
     // #211 code-review fix: CrossoverBallSweep.ForwardOffset was previously a
     // private BallController method (SweepForwardOffset) with zero xUnit
-    // coverage, and survived a sign-flip mutation as a result. These three
-    // cases pin the formula directly: Crossover's in-front sweep never
-    // touches the forward axis (isBehindBody=false is baseline-only,
-    // regardless of dip), and BehindTheBack's behind-body sweep pulls the
-    // ball back along the dip curve, going negative (genuinely behind the
-    // holder) once behindDepth exceeds baseline at the dip's peak.
+    // coverage, and survived a sign-flip mutation as a result. These cases
+    // pin the formula directly: Crossover's in-front sweep never touches the
+    // forward axis (InFront is baseline-only, regardless of dip), and
+    // BehindTheBack's behind-body sweep pulls the ball back along the dip
+    // curve, going negative (genuinely behind the holder) once behindDepth
+    // exceeds baseline at the dip's peak. #199 added BallSweepPath.ThroughLegs
+    // (BetweenTheLegs) — its forward offset behaves identically to InFront
+    // (the through-the-legs distinguishing depth is a separate VERTICAL dip
+    // BallController applies, not a forward pull-back), pinned below too.
     [Theory]
     [InlineData(0f)]
     [InlineData(0.5f)]
     [InlineData(1f)]
     public void ForwardOffset_InFrontSweep_ReturnsBaselineRegardlessOfDip(float verticalDip)
     {
-        float result = CrossoverBallSweep.ForwardOffset(baseline: 0.5f, verticalDip, behindDepth: 0.7f, isBehindBody: false);
+        float result = CrossoverBallSweep.ForwardOffset(baseline: 0.5f, verticalDip, behindDepth: 0.7f, path: BallSweepPath.InFront);
+
+        Assert.Equal(0.5f, result, precision: 5);
+    }
+
+    [Theory]
+    [InlineData(0f)]
+    [InlineData(0.5f)]
+    [InlineData(1f)]
+    public void ForwardOffset_ThroughLegsSweep_ReturnsBaselineRegardlessOfDip(float verticalDip)
+    {
+        // BetweenTheLegs (#199): the forward axis is untouched, exactly like
+        // InFront — the distinguishing depth is a separate vertical dip term
+        // the caller (BallController) applies on top, not this method.
+        float result = CrossoverBallSweep.ForwardOffset(baseline: 0.5f, verticalDip, behindDepth: 0.7f, path: BallSweepPath.ThroughLegs);
 
         Assert.Equal(0.5f, result, precision: 5);
     }
@@ -181,7 +198,7 @@ public class CrossoverBallSweepTests
         // Peak dip (t=0.5, verticalDip=1.0): baseline 0.5 - depth 0.7 = -0.2,
         // genuinely behind the holder's centerline — the "shielded, away
         // from the defender" transit issue #194 calls for.
-        float result = CrossoverBallSweep.ForwardOffset(baseline: 0.5f, verticalDip: 1.0f, behindDepth: 0.7f, isBehindBody: true);
+        float result = CrossoverBallSweep.ForwardOffset(baseline: 0.5f, verticalDip: 1.0f, behindDepth: 0.7f, path: BallSweepPath.BehindBody);
 
         Assert.Equal(-0.2f, result, precision: 5);
     }
@@ -192,7 +209,7 @@ public class CrossoverBallSweepTests
         // At either endpoint of the transit (verticalDip=0), the sweep
         // hasn't pulled back at all yet — the ball sits at the plain
         // baseline in front of the holder, same as Crossover.
-        float result = CrossoverBallSweep.ForwardOffset(baseline: 0.5f, verticalDip: 0f, behindDepth: 0.7f, isBehindBody: true);
+        float result = CrossoverBallSweep.ForwardOffset(baseline: 0.5f, verticalDip: 0f, behindDepth: 0.7f, path: BallSweepPath.BehindBody);
 
         Assert.Equal(0.5f, result, precision: 5);
     }
