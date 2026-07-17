@@ -182,6 +182,26 @@ jobs:
           godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=control-make
           godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=control-make-default-geometry
 
+      # Layup / rim-finish committed move (issue #229, ADR-0022 — M9's
+      # rim-finishing vertical, first leaf). LayupTests/LayupRangeResolverTests/
+      # JumpShotReleaseResolverTests (xUnit) already pin the pure frame-data
+      # contract, the range-selection decision, and the release-resolver
+      # extension; this drives the LIVE glue: a real Layup, begun through the
+      # SAME BeginCommittedMove path production input reaches, actually
+      # releases and scores through the UNCHANGED ShotScatter -> ShotArc ->
+      # RimBackboard chain (no parallel accuracy formula, ADR-0022's own
+      # claim). 'uncontested-make' proves that end to end with clean geometry.
+      # 'block-success' proves the EXISTING block timing window (#98/#214)
+      # resolves against a Layup's Active window exactly as it already does
+      # against a JumpShot — no new defensive primitive. 'block-whiff' is the
+      # control 'block-success' is checked against: a mistimed block leaves
+      # the layup completely unaffected. Each exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run layup / rim-finish harness
+        run: |
+          godot --headless --path . res://tests/integration/LayupTest.tscn -- --harness-scenario=uncontested-make
+          godot --headless --path . res://tests/integration/LayupTest.tscn -- --harness-scenario=block-success
+          godot --headless --path . res://tests/integration/LayupTest.tscn -- --harness-scenario=block-whiff
+
       # On-ball contest as a committed move (issue #99, ADR-0018 §2). Unit
       # tests already pin the pure composition arithmetic
       # (DefensiveResolutionTests.ContestAppliesAt/ContestMoveFactor) and

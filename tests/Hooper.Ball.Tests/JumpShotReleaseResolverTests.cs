@@ -40,6 +40,22 @@ public class JumpShotReleaseResolverTests
         Assert.False(JumpShotReleaseResolver.ShouldRelease(justEnteredActive: true, currentMove: null));
     }
 
+    // ── Layup (issue #229, ADR-0022) ──────────────────────────────────────────
+
+    [Fact]
+    public void ShouldRelease_JustEnteredActiveWithLayup_True()
+    {
+        // The layup is a distinct committed move from JumpShot, but releases
+        // on the exact same JustEnteredActive convention (ADR-0022).
+        Assert.True(JumpShotReleaseResolver.ShouldRelease(justEnteredActive: true, currentMove: new Layup()));
+    }
+
+    [Fact]
+    public void ShouldRelease_NotJustEnteredActiveWithLayup_False()
+    {
+        Assert.False(JumpShotReleaseResolver.ShouldRelease(justEnteredActive: false, currentMove: new Layup()));
+    }
+
     [Fact]
     public void ShouldRelease_ViaMachine_FiresExactlyOnceAcrossFullLifecycle()
     {
