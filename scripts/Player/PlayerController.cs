@@ -1372,7 +1372,23 @@ public partial class PlayerController : CharacterBody3D
 		// Dribbling — see BallController.CradleForShotStartup's doc), so
 		// gating its Begin() on ball state would only add a spurious
 		// restriction, not close a real bypass.
-		if ((move is Crossover || move is Hesitation || move is BehindTheBack || move is BetweenTheLegs || move is RetreatDribble)
+		//
+		// DriveGather (#230, ADR-0022) joins this gate too — code-review fix,
+		// NOT the same reasoning as StepBack's exemption above. Real ball
+		// (ADR-0014 tier 1): "the gather" IS the act of picking up a live
+		// dribble to commit toward the rim — once you've already gathered
+		// (dead Held), there is no dribble left to pick up, so a second
+		// drive-gather is not a real basketball action, it is free movement.
+		// Without this gate, CradleForShotStartup's no-op-if-not-Dribbling
+		// guard would silently let a dead-Held holder spam move_drive for a
+		// repeatable free DriveGatherBurstSpeed burst toward the rim — larger
+		// than any other burst-family move's impulse, with no travel rule
+		// (#206, known gap) to catch it. Unlike StepBack, DriveGather's own
+		// Active-entry effect does NOT no-op from a dead Held possession (the
+		// burst fires regardless of ball state), so gating Begin() here is
+		// what actually closes the bypass.
+		if ((move is Crossover || move is Hesitation || move is BehindTheBack || move is BetweenTheLegs
+			 || move is RetreatDribble || move is DriveGather)
 			&& IsBallHolder && GetBall()?.State == BallState.Held)
 			return false;
 
@@ -2287,10 +2303,10 @@ public partial class PlayerController : CharacterBody3D
 		// gesture-driven crossover/step-back grammar. Gated to the ball
 		// holder (an off-ball defender has no dribble to gather from), same
 		// discipline StepBack/RetreatDribble already use. BeginCommittedMove's
-		// dead-dribble gate does NOT include DriveGather (same reasoning as
-		// StepBack: its own Startup-entry cradle call safely no-ops from a
-		// dead Held possession, so gating Begin() itself would only add a
-		// spurious restriction).
+		// dead-dribble gate DOES include DriveGather (code-review fix) — the
+		// gather IS the act of picking up a live dribble (ADR-0014 tier 1
+		// real-ball fact), so it cannot legally begin from a dead Held
+		// possession; see that method's comment for the full reasoning.
 		if (Input.IsActionJustPressed("move_drive") && IsBallHolder)
 		{
 			if (BeginCommittedMove(new DriveGather()) && !isServer)
