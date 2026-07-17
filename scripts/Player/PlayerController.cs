@@ -1367,7 +1367,12 @@ public partial class PlayerController : CharacterBody3D
 		// cost the issue calls for. BallController.CradleForShotStartup no-ops
 		// on its own if the ball isn't Dribbling for this exact peer, so this
 		// call is safe to fire unconditionally whenever a JumpShot begins.
-		if (move is JumpShot && OwnPeerId != 0)
+		//
+		// Layup (#229, ADR-0022) joins the same gate: it is a second "shot"
+		// whose gather is exactly as inherent to its finishing motion as
+		// JumpShot's is to the set shot's — the same real-ball fact, applied
+		// to a second committed move.
+		if ((move is JumpShot || move is Layup) && OwnPeerId != 0)
 			GetBall()?.CradleForShotStartup(OwnPeerId);
 
 		return true;
@@ -1464,6 +1469,33 @@ public partial class PlayerController : CharacterBody3D
 			// movement scatter penalty (#137) — see ShotInitiationSpeed.
 			if (BeginCommittedMove(new JumpShot()))
 				CaptureShotInitiationSpeed();
+		}
+		else if (moveId == "layup")
+		{
+			// Layup / rim-finish (issue #229, ADR-0022). param = 0f — carries
+			// no payload, same convention as jumpshot.
+			//
+			// Server-authoritative range gate (ADR-0002): the client-side
+			// LayupRangeResolver check in SampleMoveInput is UX only — a
+			// tampered client could send moveId="layup" from anywhere on the
+			// court to get the layup's shorter frame data with none of its
+			// range restriction (nothing else here would otherwise stop it,
+			// since ApplyShootLocally's distance-scatter is computed from
+			// GlobalPosition regardless of which move triggered the release).
+			// Re-assert the SAME distance check here using the server's own
+			// authoritative GlobalPosition/RimCenter — mirrors block/contest's
+			// "not your own shot" dual-gate pattern (client UX + server
+			// authority) below.
+			BallController layupBall = GetBall();
+			if (layupBall != null)
+			{
+				float dx = GlobalPosition.X - layupBall.RimCenter.X;
+				float dz = GlobalPosition.Z - layupBall.RimCenter.Z;
+				float distanceToRim = Mathf.Sqrt(dx * dx + dz * dz);
+				if (LayupRangeResolver.IsLayupRange(distanceToRim, layupBall.LayupRange)
+					&& BeginCommittedMove(new Layup()))
+					CaptureShotInitiationSpeed();
+			}
 		}
 		else if (moveId == "steal")
 		{
@@ -2209,25 +2241,47 @@ public partial class PlayerController : CharacterBody3D
 				RpcId(1, MethodName.RequestBeginMove, "retreatdribble", 0f);
 		}
 
-		// Shoot: begin a JumpShot (M7b, issue #74) — this REPLACES the old
-		// instant "ball leaves hand on press" trigger that used to live in
-		// BallController.TryShoot. Holder-gated the same way that old trigger
-		// was (IsBallHolder mirrors its IsLocalHolder check); Begin() itself
-		// enforces Inactive-only legality, so a shot attempt mid-crossover (or
-		// mid-shot) silently no-ops exactly like a second crossover attempt
-		// would. The actual ball release is NOT requested here — it fires
-		// several ticks later, on this machine's own JustEnteredActive, which
-		// BallController.CheckJumpShotRelease reads via JustReleasedJumpShot.
+		// Shoot: begin a JumpShot or a Layup (M7b #74; layup added #229,
+		// ADR-0022) — this REPLACES the old instant "ball leaves hand on
+		// press" trigger that used to live in BallController.TryShoot.
+		// Holder-gated the same way that old trigger was (IsBallHolder mirrors
+		// its IsLocalHolder check); Begin() itself enforces Inactive-only
+		// legality, so a shot attempt mid-crossover (or mid-shot) silently
+		// no-ops exactly like a second crossover attempt would. The actual
+		// ball release is NOT requested here — it fires several ticks later,
+		// on this machine's own JustEnteredActive, which BallController.
+		// CheckJumpShotRelease reads via JustReleasedJumpShot.
+		//
+		// Which move begins is decided HERE, at press time, by
+		// LayupRangeResolver reading this player's live distance to the rim
+		// (#229): reusing the SAME shoot input rather than adding a second
+		// button or a drive mechanic (explicitly out of #229's scope; #230's
+		// job). The chosen move's id rides the RequestBeginMove RPC exactly
+		// like every other move already does — the server does not
+		// re-derive the choice, but DOES re-assert the range gate for
+		// "layup" specifically (see RequestBeginMove's "layup" branch) since
+		// a client's choice of WHICH move to request is not itself
+		// authoritative.
 		BallController ball = GetBall();
-		if (ball != null && Input.IsActionJustPressed(ball.ShootAction) && IsBallHolder
-			&& BeginCommittedMove(new JumpShot()))
+		if (ball != null && Input.IsActionJustPressed(ball.ShootAction) && IsBallHolder)
 		{
-			// Capture the pre-plant locomotion speed NOW — Startup zeroes Velocity,
-			// so the movement scatter penalty must read speed at shot initiation,
-			// not at release (#137). Only the server's value feeds the outcome.
-			CaptureShotInitiationSpeed();
-			if (!isServer)
-				RpcId(1, MethodName.RequestBeginMove, "jumpshot", 0f);
+			float dx = GlobalPosition.X - ball.RimCenter.X;
+			float dz = GlobalPosition.Z - ball.RimCenter.Z;
+			float distanceToRim = Mathf.Sqrt(dx * dx + dz * dz);
+			bool isLayup = LayupRangeResolver.IsLayupRange(distanceToRim, ball.LayupRange);
+
+			CommittedMove shot = isLayup ? new Layup() : new JumpShot();
+			if (BeginCommittedMove(shot))
+			{
+				// Capture the pre-plant locomotion speed NOW — Startup zeroes
+				// Velocity, so the movement scatter penalty must read speed at
+				// shot initiation, not at release (#137). Only the server's
+				// value feeds the outcome. Applies identically to both shot
+				// types (ADR-0022: the layup feeds the same accuracy model).
+				CaptureShotInitiationSpeed();
+				if (!isServer)
+					RpcId(1, MethodName.RequestBeginMove, isLayup ? "layup" : "jumpshot", 0f);
+			}
 		}
 
 		// Steal: defensive committed move (M10, issue #96, ADR-0018).

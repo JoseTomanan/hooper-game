@@ -262,6 +262,18 @@ public partial class BallController : Node3D
 	/// </summary>
 	[Export] public string ShootAction { get; set; } = "ball_shoot";
 
+	/// <summary>
+	/// Floor-plane (XZ) distance (metres) from RimCenter within which pressing
+	/// ShootAction begins a Layup instead of a JumpShot (issue #229, ADR-0022;
+	/// see LayupRangeResolver, the pure decision PlayerController.
+	/// SampleMoveInput reads this into). 4.0m matches this issue's own
+	/// acceptance text ("&lt;4m ≈ automatic") and sits between ADR-0009's
+	/// ≤3m≈100%-open and 5m≈67%-open anchors — the same real-ball fact the
+	/// layup's frame data is grounded in, not an independently guessed number.
+	/// Editor-tunable balance surface, not an architectural constant.
+	/// </summary>
+	[Export] public float LayupRange { get; set; } = 4.0f;
+
 	// ── Possession tunables (M6b, ADR-0008) ───────────────────────────────
 
 	/// <summary>
