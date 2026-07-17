@@ -132,6 +132,8 @@
     <Compile Include="..\..\scripts\Player\MoveAnimState.cs" />
     <Compile Include="..\..\scripts\Player\MoveAnimResolver.cs" />
     <Compile Include="..\..\scripts\Player\DisplayPhaseResolver.cs" />
+    <!-- Whiff-punish beaten-cue remote-display resolver (issue #102) -->
+    <Compile Include="..\..\scripts\Player\BeatenDisplayResolver.cs" />
     <Compile Include="..\..\scripts\Player\HandSide.cs" />
     <Compile Include="..\..\scripts\Player\HandStateResolver.cs" />
     <!-- Moving-crossover burst composition (issue #198) -->

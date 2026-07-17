@@ -465,3 +465,32 @@ jobs:
         run: |
           chmod +x tests/integration/run-net-behindtheback-sweep.sh
           tests/integration/run-net-behindtheback-sweep.sh godot
+
+      # Dual-instance harness: defensive move telegraph + whiff-punish "beaten"
+      # cue remote-display sync (issue #102). Proves TWO things the single-
+      # instance StealTurnoverTest/BlowByWindowTest structurally cannot: (1)
+      # the #69 remote-display fix (DisplayPhaseResolver) also covers a
+      # DEFENSIVE committed move — a StealMove's Startup→Active→Recovery arc
+      # rendering on a genuine remote client via DisplayMove(), not just the
+      # dribble-move family already proven by the BehindTheBack sweep harness
+      # above; and (2) the NEW BeatenDisplayResolver/isBeaten broadcast field
+      # actually reaches a true remote client's DisplayBeaten() — a narrower
+      # predicate than DisplayPhaseResolver's (only the server ever judges a
+      # whiff, so even the CLIENT's OWN player must read the broadcast, not
+      # just the opponent's). "telegraph": server begins a real StealMove on
+      # its own player 1 (ball left Held, so ResolveStealAttempts never runs —
+      # a guaranteed natural whiff) and the client must observe the full
+      # ordered arc plus the beaten flag, all broadcast-derived, on a process
+      # where Multiplayer.IsServer() is false. "control": identical topology,
+      # no move ever begun — the client must NEVER observe a non-Inactive
+      # phase or DisplayBeaten()==true, the counterfactual proving
+      # "telegraph"'s positives are a real effect of the committed move.
+      - name: Run dual-instance defensive telegraph harness (telegraph)
+        run: |
+          chmod +x tests/integration/run-net-defensive-telegraph.sh
+          tests/integration/run-net-defensive-telegraph.sh godot telegraph
+
+      - name: Run dual-instance defensive telegraph harness (control)
+        run: |
+          chmod +x tests/integration/run-net-defensive-telegraph.sh
+          tests/integration/run-net-defensive-telegraph.sh godot control
