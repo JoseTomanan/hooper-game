@@ -1545,9 +1545,8 @@ public partial class PlayerController : CharacterBody3D
 			BallController layupBall = GetBall();
 			if (layupBall != null)
 			{
-				float dx = GlobalPosition.X - layupBall.RimCenter.X;
-				float dz = GlobalPosition.Z - layupBall.RimCenter.Z;
-				float distanceToRim = Mathf.Sqrt(dx * dx + dz * dz);
+				float distanceToRim = Mathf.Sqrt(DefensiveResolution.DistanceXZSquared(
+					GlobalPosition, layupBall.RimCenter));
 				if (LayupRangeResolver.IsLayupRange(distanceToRim, layupBall.LayupRange)
 					&& BeginCommittedMove(new Layup()))
 					CaptureShotInitiationSpeed();
@@ -2337,9 +2336,13 @@ public partial class PlayerController : CharacterBody3D
 		BallController ball = GetBall();
 		if (ball != null && Input.IsActionJustPressed(ball.ShootAction) && IsBallHolder)
 		{
-			float dx = GlobalPosition.X - ball.RimCenter.X;
-			float dz = GlobalPosition.Z - ball.RimCenter.Z;
-			float distanceToRim = Mathf.Sqrt(dx * dx + dz * dz);
+			// Shares DefensiveResolution.DistanceXZSquared with the server's
+			// re-assertion in RequestBeginMove (issue #236) so the two ends of
+			// the same gate cannot drift apart in their arithmetic. NOT shared
+			// with ApplyShootLocally's shot-distance calc, which measures a
+			// different pair of points entirely — see LayupRangeResolver's doc.
+			float distanceToRim = Mathf.Sqrt(DefensiveResolution.DistanceXZSquared(
+				GlobalPosition, ball.RimCenter));
 			bool isLayup = LayupRangeResolver.IsLayupRange(distanceToRim, ball.LayupRange);
 
 			CommittedMove shot = isLayup ? new Layup() : new JumpShot();

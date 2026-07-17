@@ -23,10 +23,28 @@ namespace Hooper.Moves;
 /// "automatic when open," so the layup's range and its make-rate floor are
 /// the same real-ball fact, not two independently guessed numbers.
 ///
-/// Distance is XZ-plane only, matching BallController.ApplyShootLocally's
-/// own shot-distance calculation (ADR-0009: scatter grows with court
-/// distance, not arc length — a tall and short player at the same floor
-/// position get the same treatment).
+/// Distance is XZ-plane only for the SAME reason ADR-0009 gives for the shot
+/// scatter's own distance (scatter grows with court distance, not arc length —
+/// a tall and short player at the same floor position get the same treatment).
+///
+/// ── What this distance is NOT (issue #236 review finding) ────────────────
+/// An earlier version of this comment claimed the gate's distance "matches
+/// BallController.ApplyShootLocally's own shot-distance calculation." It does
+/// not, and the claim was load-bearing enough that #236 proposed deduplicating
+/// the two into one helper on the strength of it. They measure different
+/// things:
+///
+///   this gate            PLAYER GlobalPosition -> BallController.RimCenter
+///   ApplyShootLocally    BALL   GlobalPosition -> BallController.ShotTarget
+///
+/// Both operands differ. RimCenter and ShotTarget are independent [Export]s
+/// that merely happen to be equal today (scenes/Main.tscn sets both to
+/// (0, 3.05, 0.3)) — ShotTarget's own doc explicitly invites offsetting it
+/// away from the rim to test rim bounces, at which point folding these two
+/// call sites together would silently re-anchor ADR-0009's scatter magnitude.
+/// They share a FORMULA (XZ euclidean distance, via
+/// DefensiveResolution.DistanceXZSquared), not a MEASUREMENT. Keep them
+/// separate.
 /// </summary>
 public static class LayupRangeResolver
 {
