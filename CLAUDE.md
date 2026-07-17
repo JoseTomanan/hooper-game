@@ -93,7 +93,10 @@ the human.
 > family has largely landed — crossover/hesi (PR #88), moving crossover (#198),
 > behind-the-back (#194), ball-hand sweep (#195). Remaining: step-back (#197),
 > between-the-legs (#199), jab step (#200), spin (#201), triple-threat input
-> races (#207), crossover netcode hardening (#209/#210).
+> races (#207), crossover netcode hardening (#209/#210). The rim-finishing
+> vertical (**#203** umbrella, un-deferred 2026-07-17, ADR-0022) is now active:
+> layup/rim-finish shot type (#229) → drive-gather (#230) → euro-step (#231,
+> gated on the first two), plus this decision record/taxonomy leaf (#232).
 >
 > **M10 — Defense & the reactive read** (epic **#89**): the core shipped —
 > foundation ADR-0018 (#95), steal (#96), block (#98, + reach gate #214), input
@@ -120,7 +123,7 @@ the human.
 | M7b — Rigged humanoid animation | Done (epic closed 2026-06-26) | #54 |
 | M8 — Realism & polish pass | Done (epic closed; leftover verify/feel/realism work continues under M8b) | #61 |
 | **M8b — Realism & polish pass, continued** | **Active** (umbrella; M8 leftovers — #119 OOB verify, #153 net/fence verify, #154 shot-scatter/floor-bounce feel sign-off (deferred per ADR-0021), #170 realistic player rig — sourcing now bounded by ADR-0020) | #171 |
-| **M9 — Basketball-related controls (offense)** | **Active** (umbrella; dribble-move family largely landed — PR #88, #194/#195/#198; open: #197/#199/#200/#201/#207/#209/#210; feel deferred to #173 per ADR-0021, #114 folded in) | #75 |
+| **M9 — Basketball-related controls (offense)** | **Active** (umbrella; dribble-move family largely landed — PR #88, #194/#195/#198; open: #197/#199/#200/#201/#207/#209/#210; rim-finishing vertical #203 (ADR-0022) un-deferred 2026-07-17 — open: #229/#230/#231/#232; feel deferred to #173 per ADR-0021, #114 folded in) | #75 |
 | **M10 — Defense & the reactive read** | **Active** (umbrella; core shipped — ADR-0018 #95, steal #96, block #98/#214, contest #99; open: #100/#102/#104/#196, decision gate #206; feel deferred to #173 per ADR-0021, #114 folded in) | #89 |
 | M11 — Stamina & resource economy | DEFERRED (planning epic) | #90 |
 | M12 — Match flow, HUD & session lifecycle | DEFERRED (planning epic) | #91 |
