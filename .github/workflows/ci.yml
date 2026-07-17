@@ -472,12 +472,16 @@ jobs:
       # production function. 'gather-to-layup-chain' proves the completed
       # drive-gather plants the holder inside #229's LayupRange and that a
       # REAL Layup, begun through the SAME BeginCommittedMove choke point,
-      # actually launches from there. Each exits 0=PASS/1=FAIL (ADR-0016).
+      # actually launches from there. 'dead-dribble-gate' proves DriveGather
+      # respects the SAME #193 Held-holder gate Crossover/Hesitation/
+      # BehindTheBack/BetweenTheLegs/RetreatDribble already do (code-review
+      # fix). Each exits 0=PASS/1=FAIL (ADR-0016).
       - name: Run drive-gather harness
         run: |
           godot --headless --path . res://tests/integration/DriveGatherTest.tscn -- --harness-scenario=gather-bleed
           godot --headless --path . res://tests/integration/DriveGatherTest.tscn -- --harness-scenario=heading-turn
           godot --headless --path . res://tests/integration/DriveGatherTest.tscn -- --harness-scenario=gather-to-layup-chain
+          godot --headless --path . res://tests/integration/DriveGatherTest.tscn -- --harness-scenario=dead-dribble-gate
 
       # Dual-instance harness, increment 1: two headless Godot processes complete
       # a real ENet handshake over localhost. The orchestrator launches a server
