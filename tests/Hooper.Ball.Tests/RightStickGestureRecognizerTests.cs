@@ -213,25 +213,150 @@ public class RightStickGestureRecognizerTests
     }
 
     // ═════════════════════════════════════════════════════════════════════════
-    // 10. Vertical deflection ignored
+    // 10. Vertical gestures — single-sample still returns None (window not
+    //     closed on the very first tick, same as a fresh horizontal flick)
     // ═════════════════════════════════════════════════════════════════════════
 
     [Fact]
-    public void Sample_PureVerticalPush_ReturnsNone()
+    public void Sample_PureVerticalPush_SingleTickReturnsNone()
     {
-        // X=0, Y=1.0: horizontal component is zero, well below FlickThreshold.
+        // X=0, Y=1.0: a fresh downward flick starts timing on this tick but
+        // does not commit until FeintWindowTicks+1 ticks have elapsed (#197 —
+        // same one-tick-not-enough timing model as a fresh horizontal flick).
         var r = NewRecognizer();
         GestureResult result = r.Sample(new Vector2(0f, 1.0f));
         Assert.Equal(GestureKind.None, result.Kind);
     }
 
     [Fact]
-    public void Sample_LargeVerticalWithSmallHorizontal_ReturnsNone()
+    public void Sample_LargeVerticalWithSmallHorizontal_SingleTickReturnsNone()
     {
-        // X=0.3 (below threshold=0.6), Y=0.95 — recognition checks only horizontal.
+        // X=0.3 (below threshold=0.6), Y=0.95 (above) — vertical is the only
+        // axis clearing threshold, so this starts a VERTICAL gesture (#197),
+        // still None on the very first tick.
         var r = NewRecognizer();
         GestureResult result = r.Sample(new Vector2(0.3f, 0.95f));
         Assert.Equal(GestureKind.None, result.Kind);
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // 11. Vertical gesture pair (#197) — StepBack (hold) / RetreatDribble (quick)
+    // ═════════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void Sample_DownHeldPastWindow_FiresStepBack()
+    {
+        var r = NewRecognizer();
+        GestureResult result = SampleN(r, new Vector2(0f, 0.9f), 5);
+        Assert.Equal(GestureKind.StepBack, result.Kind);
+    }
+
+    [Fact]
+    public void Sample_DownQuickReturnToDeadzoneWithinWindow_FiresRetreatDribble()
+    {
+        var r = NewRecognizer();
+        r.Sample(new Vector2(0f, 0.9f)); // tick 1 above threshold — starts timing
+        GestureResult result = r.Sample(Vector2.Zero); // returns to deadzone within window
+        Assert.Equal(GestureKind.RetreatDribble, result.Kind);
+    }
+
+    [Fact]
+    public void Sample_UpwardPush_NeverStartsVerticalGesture()
+    {
+        // Only DOWNWARD vertical motion is recognized (this project's
+        // GetVector convention — aim_down is the positive-Y binding).
+        var r = NewRecognizer();
+        GestureResult result = SampleN(r, new Vector2(0f, -0.9f), 5);
+        Assert.Equal(GestureKind.None, result.Kind);
+    }
+
+    [Fact]
+    public void Sample_StepBackAndRetreatDribble_CarryZeroDirection()
+    {
+        // The vertical pair has no left/right payload — Direction stays 0
+        // regardless of Kind (#197).
+        var r1 = NewRecognizer();
+        GestureResult stepBack = SampleN(r1, new Vector2(0f, 0.9f), 5);
+        Assert.Equal(0f, stepBack.Direction);
+
+        var r2 = NewRecognizer();
+        r2.Sample(new Vector2(0f, 0.9f));
+        GestureResult retreat = r2.Sample(Vector2.Zero);
+        Assert.Equal(0f, retreat.Direction);
+    }
+
+    [Fact]
+    public void Sample_VerticalGestureDebounce_NoRefireWithoutDeadzone()
+    {
+        var r = NewRecognizer();
+        SampleN(r, new Vector2(0f, 0.9f), 5); // fires StepBack
+        for (int i = 0; i < 10; i++)
+        {
+            GestureResult result = r.Sample(new Vector2(0f, 0.9f));
+            Assert.Equal(GestureKind.None, result.Kind);
+        }
+    }
+
+    [Fact]
+    public void Sample_VerticalGestureReturnToDeadzoneThenFlick_FiresAgain()
+    {
+        var r = NewRecognizer();
+        SampleN(r, new Vector2(0f, 0.9f), 5); // fires StepBack
+        r.Sample(Vector2.Zero); // re-arm
+        GestureResult second = SampleN(r, new Vector2(0f, 0.9f), 5);
+        Assert.Equal(GestureKind.StepBack, second.Kind);
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // 12. Axis disambiguation (#197) — dominant-axis-wins with hysteresis
+    // ═════════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void Sample_HorizontalClearlyDominant_ResolvesHorizontal()
+    {
+        // X=0.9 vs Y=0.65 — horizontal exceeds vertical well past the default
+        // 0.1 hysteresis band, so the gesture is Horizontal (Crossover).
+        var r = NewRecognizer();
+        GestureResult result = SampleN(r, new Vector2(0.9f, 0.65f), 5);
+        Assert.Equal(GestureKind.Crossover, result.Kind);
+    }
+
+    [Fact]
+    public void Sample_VerticalClearlyDominant_ResolvesVertical()
+    {
+        // Y=0.9 vs X=0.65 — vertical exceeds horizontal well past the
+        // hysteresis band, so the gesture is Vertical (StepBack).
+        var r = NewRecognizer();
+        GestureResult result = SampleN(r, new Vector2(0.65f, 0.9f), 5);
+        Assert.Equal(GestureKind.StepBack, result.Kind);
+    }
+
+    [Fact]
+    public void Sample_AxesWithinHysteresisBand_TieBreaksToHorizontal()
+    {
+        // X=0.7, Y=0.72 — both clear FlickThreshold(0.6), and the gap (0.02)
+        // is inside the default 0.1 hysteresis band: a near-45° flick.
+        // Deterministic fixed tie-break favors Horizontal (see the
+        // recognizer's "Axis disambiguation" doc).
+        var r = NewRecognizer();
+        GestureResult result = SampleN(r, new Vector2(0.7f, 0.72f), 5);
+        Assert.Equal(GestureKind.Crossover, result.Kind);
+    }
+
+    [Fact]
+    public void Sample_AxisLockedAtStart_DoesNotSwitchMidGesture()
+    {
+        // Gesture starts purely vertical (X=0), then the player's stick
+        // drifts to also clear the horizontal threshold. The axis decided at
+        // gesture START stays locked — this must still resolve as the
+        // vertical gesture (StepBack), never flip to Crossover mid-flight.
+        var r = NewRecognizer();
+        r.Sample(new Vector2(0f, 0.9f));   // tick 1: vertical-only start, axis locked to Vertical
+        r.Sample(new Vector2(0.9f, 0.9f)); // tick 2: horizontal now also clears threshold
+        r.Sample(new Vector2(0.9f, 0.9f)); // tick 3
+        r.Sample(new Vector2(0.9f, 0.9f)); // tick 4
+        GestureResult result = r.Sample(new Vector2(0.9f, 0.9f)); // tick 5 (FeintWindowTicks+1)
+        Assert.Equal(GestureKind.StepBack, result.Kind);
     }
 
     // ═════════════════════════════════════════════════════════════════════════
