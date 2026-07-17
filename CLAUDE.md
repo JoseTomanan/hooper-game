@@ -32,6 +32,7 @@ locked unless explicitly revisited (see Decision Discipline in §4 below).
 | [ADR-0019](docs/adr/0019-session-driven-orchestration-loop.md) | Session-driven orchestration loop: an Opus `orchestrator` agent runs dispatch→review→merge within a live human-started session (no unattended cron / stored credential — rejected as overengineering for a solo dev) |
 | [ADR-0020](docs/adr/0020-performance-target-low-spec.md) | Performance & asset target: low-to-mid-spec devices, calibrated to NBA 2K14 old-gen (Xbox 360/PS3) as the fidelity ceiling — human external commitment, does not reopen M15 |
 | [ADR-0021](docs/adr/0021-feel-taste-deferred-indefinitely.md) | Feel passes and taste checks deferred until the human judges the game "sufficiently built"; amends ADR-0015 (per-milestone pass → human-scheduled consolidated pass in #173) and ADR-0017 (activation gate drops the feel-pass requirement) |
+| [ADR-0022](docs/adr/0022-rim-finishing-offensive-vertical.md) | Rim-finishing offensive vertical (un-defer of #203): a new ADR, not an ADR-0009 amendment — the layup reuses the existing shot-accuracy model verbatim, the drive-gather reuses the hybrid-gather momentum model, the euro-step reuses the exit-cone precedent |
 
 ---
 
