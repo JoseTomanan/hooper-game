@@ -1595,6 +1595,11 @@ public partial class PlayerController : CharacterBody3D
 			// ShouldForceInactive already reconciles — the client's predicted
 			// layup reverts within ~1 RTT. A tamperer at 8m therefore still
 			// gets nothing, and the anti-tamper property above survives intact.
+			// A null ball is dropped deliberately, not incidentally (issue #236):
+			// with no ball there is no shot to gate, and dropping leaves us
+			// Inactive — the same SAFE outcome as an out-of-range reject above,
+			// which ShouldForceInactive reconciles. Falling back to any move here
+			// would be the very moveId-invariant break ADR-0023 rejects.
 			BallController layupBall = GetBall();
 			if (layupBall != null)
 			{
