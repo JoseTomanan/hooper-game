@@ -10,6 +10,7 @@
 [ext_resource type="PackedScene" uid="uid://cb04swbq2ivnx" path="res://scenes/ServerBrowser.tscn" id="8_srbrw"]
 [ext_resource type="Script" uid="uid://de27yy5y4j6vq" path="res://scripts/Systems/PossessionHud.cs" id="9_q8u5g"]
 [ext_resource type="Script" uid="uid://ncidr0vku6ft" path="res://scripts/Systems/CourtVisuals.cs" id="10_courtvisuals"]
+[ext_resource type="Shader" uid="uid://br0fgfdlgucs4" path="res://scenes/shaders/grid_cutout.gdshader" id="11_gridcutout"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
 
@@ -33,11 +34,14 @@ size = Vector3(10, 1, 14)
 [sub_resource type="BoxMesh" id="BoxMesh_backwall"]
 size = Vector3(20.542, 5, 0.240625)
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wall"]
-transparency = 1
-albedo_color = Color(0.55, 0.58, 0.6, 0.4)
-metallic = 0.6
-roughness = 0.5
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_wall"]
+shader = ExtResource("11_gridcutout")
+shader_parameter/albedo_color = Vector3(0.62, 0.64, 0.66)
+shader_parameter/uv_scale_u = 28.0
+shader_parameter/uv_scale_v = 7.0
+shader_parameter/strand_width = 0.09
+shader_parameter/metallic_amount = 0.75
+shader_parameter/roughness_amount = 0.3
 
 [sub_resource type="BoxMesh" id="BoxMesh_wall"]
 size = Vector3(0.240625, 5, 14)
@@ -81,9 +85,14 @@ top_radius = 0.2
 bottom_radius = 0.1
 height = 0.4
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_net"]
-transparency = 1
-albedo_color = Color(0.9, 0.9, 0.9, 0.55)
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_net"]
+shader = ExtResource("11_gridcutout")
+shader_parameter/albedo_color = Vector3(0.93, 0.93, 0.93)
+shader_parameter/uv_scale_u = 14.0
+shader_parameter/uv_scale_v = 9.0
+shader_parameter/strand_width = 0.17
+shader_parameter/metallic_amount = 0.0
+shader_parameter/roughness_amount = 0.75
 
 [node name="Main" type="Node3D" unique_id=1204416892]
 
@@ -107,17 +116,17 @@ shape = SubResource("BoxShape3D_floor")
 [node name="WallMeshBack" type="MeshInstance3D" parent="Walls" unique_id=2101000004]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.4630556, -2.1203125)
 mesh = SubResource("BoxMesh_backwall")
-surface_material_override/0 = SubResource("StandardMaterial3D_wall")
+surface_material_override/0 = SubResource("ShaderMaterial_wall")
 
 [node name="WallMeshLeft" type="MeshInstance3D" parent="Walls" unique_id=2101000002]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.142146, 2.493558, 5.111066)
 mesh = SubResource("BoxMesh_wall")
-surface_material_override/0 = SubResource("StandardMaterial3D_wall")
+surface_material_override/0 = SubResource("ShaderMaterial_wall")
 
 [node name="WallMeshRight" type="MeshInstance3D" parent="Walls" unique_id=2101000001]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10.150881, 2.4630556, 4.96599)
 mesh = SubResource("BoxMesh_wall")
-surface_material_override/0 = SubResource("StandardMaterial3D_wall")
+surface_material_override/0 = SubResource("ShaderMaterial_wall")
 
 [node name="WallCollisionBack" type="CollisionShape3D" parent="Walls" unique_id=2101000003]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.4630556, -2.1203125)
@@ -152,7 +161,7 @@ surface_material_override/0 = SubResource("StandardMaterial3D_0bbpv")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
 cast_shadow = 0
 mesh = SubResource("CylinderMesh_net")
-surface_material_override/0 = SubResource("StandardMaterial3D_net")
+surface_material_override/0 = SubResource("ShaderMaterial_net")
 
 [node name="Backboard" type="MeshInstance3D" parent="." unique_id=1730119088]
 transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1, 0, 3.361642, 0.03)
