@@ -1542,12 +1542,40 @@ public partial class PlayerController : CharacterBody3D
 			// authoritative GlobalPosition/RimCenter — mirrors block/contest's
 			// "not your own shot" dual-gate pattern (client UX + server
 			// authority) below.
+			//
+			// ── Why the threshold is widened, and why a reject is still a
+			//    reject (issue #236, ADR-0023) ────────────────────────────────
+			// The client pressed at its PREDICTED position; this RPC only
+			// arrived one-way-latency later, by which time our authoritative
+			// copy of a driving player has moved on. Around the boundary the
+			// two positions disagree, and gating on the bare LayupRange
+			// rejected honest layups — the press was eaten at the rim.
+			// LayupRangeNetTolerance is this side's allowance for that
+			// uncertainty (see its doc for the derivation of 0.5m).
+			//
+			// What we deliberately DO NOT do is fall back to a JumpShot when
+			// out of range, which is the intuitive fix and the one #236
+			// originally prescribed. Beginning a move the client did not
+			// request breaks the invariant documented in ReconcileFromServer
+			// (~line 1800): the server only ever leaves Inactive by echoing the
+			// client's own moveId back. Break it and NEITHER correction gate
+			// can repair the split — ShouldForceInactive fires only on
+			// serverPhase == Inactive (we'd be mid-JumpShot), and
+			// ShouldForceRecovery requires matching moveIds ("layup" is not
+			// "jumpshot"). The client would run its 8-tick Layup to completion
+			// against our 18-tick JumpShot, with nothing to reconcile them.
+			//
+			// Rejecting is SAFE precisely because it leaves us Inactive, which
+			// ShouldForceInactive already reconciles — the client's predicted
+			// layup reverts within ~1 RTT. A tamperer at 8m therefore still
+			// gets nothing, and the anti-tamper property above survives intact.
 			BallController layupBall = GetBall();
 			if (layupBall != null)
 			{
 				float distanceToRim = Mathf.Sqrt(DefensiveResolution.DistanceXZSquared(
 					GlobalPosition, layupBall.RimCenter));
-				if (LayupRangeResolver.IsLayupRange(distanceToRim, layupBall.LayupRange)
+				float serverGate = layupBall.LayupRange + layupBall.LayupRangeNetTolerance;
+				if (LayupRangeResolver.IsLayupRange(distanceToRim, serverGate)
 					&& BeginCommittedMove(new Layup()))
 					CaptureShotInitiationSpeed();
 			}
@@ -1797,7 +1825,8 @@ public partial class PlayerController : CharacterBody3D
 		//     rest of this prediction system already assumes.
 		//
 		// Multiple move types exist now (crossover, behindtheback,
-		// betweenthelegs, hesitation, jumpshot, steal, block, contest), but a
+		// betweenthelegs, hesitation, stepback, retreatdribble, drivegather,
+		// jumpshot, layup, steal, block, contest), but a
 		// "different move Id while both sides are active" case is still
 		// structurally unreachable: the
 		// server only ever moves out of Inactive by echoing back the EXACT
@@ -1807,6 +1836,17 @@ public partial class PlayerController : CharacterBody3D
 		// differs from what this client itself asked to begin — so the two
 		// sides' move Ids can never disagree while both are non-Inactive,
 		// regardless of how many move types the game has.
+		//
+		// This invariant is LOAD-BEARING, not incidental — it is why the two
+		// gates below are the only correction machinery this system needs.
+		// Issue #236 proposed having the server substitute a JumpShot for an
+		// out-of-range "layup" request, which would have made it the first code
+		// to violate this, producing a split neither gate can repair
+		// (ShouldForceInactive needs serverPhase == Inactive;
+		// ShouldForceRecovery needs matching moveIds). ADR-0023 rejected that
+		// in favour of widening the gate's threshold instead. Any future
+		// server-side "begin a different move than requested" idea lands here
+		// first: read ADR-0023 before writing it.
 		//
 		// (#21 doubt cycle 2, finding #1) Known bounded gap: if the client begins
 		// a SECOND move right as its own local Recovery from a FIRST move
