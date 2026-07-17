@@ -392,6 +392,32 @@ jobs:
           godot --headless --path . res://tests/integration/BehindTheBackTest.tscn -- --harness-scenario=narrower-exit-cone
           godot --headless --path . res://tests/integration/BehindTheBackTest.tscn -- --harness-scenario=dead-dribble-gate
 
+      # Between-the-legs (issue #199) — own CommittedMove subclass, the
+      # "balanced midpoint" of the crossover family. BetweenTheLegsTests/
+      # CrossoverBallSweepTests (xUnit) already pin the pure frame-data
+      # contract and the ThroughLegs forward-offset formula; this drives the
+      # LIVE glue. 'through-legs-dip' boots a real BallController + two
+      # PlayerControllers, begins a real BetweenTheLegs through
+      # BeginCommittedMove, and asserts the ball's world-space Y drops close
+      # to the floor (BetweenTheLegsDipDepth) with
+      # BallController.SweepPathForHarness == ThroughLegs, WHILE the forward
+      # offset stays >= 0 throughout — the discriminator against
+      # BehindTheBack's sweep, which goes negative instead.
+      # 'finesse-selects-betweenthelegs' drives the REAL SampleMoveInput ->
+      # RequestBeginMove("betweenthelegs") -> TickCommittedMoveBehavior path
+      # holding "move_finesse" (not "move_size_up") during the flick, and
+      # asserts DisplayMoveId() reports "betweenthelegs" once Active begins —
+      # proving the move_finesse modifier and RPC dispatch are wired
+      # end-to-end, distinct from both Crossover and BehindTheBack.
+      # 'dead-dribble-gate' proves BetweenTheLegs respects the SAME
+      # Held-holder dead-dribble gate (#193) Crossover/Hesitation/
+      # BehindTheBack use. Each exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run between-the-legs harness
+        run: |
+          godot --headless --path . res://tests/integration/BetweenTheLegsTest.tscn -- --harness-scenario=through-legs-dip
+          godot --headless --path . res://tests/integration/BetweenTheLegsTest.tscn -- --harness-scenario=finesse-selects-betweenthelegs
+          godot --headless --path . res://tests/integration/BetweenTheLegsTest.tscn -- --harness-scenario=dead-dribble-gate
+
       # Step-back + retreat dribble (issue #197) — the vertical right-stick
       # gesture pair. RightStickGestureRecognizerTests/StepBackBurstMathTests/
       # StepBackTests/RetreatDribbleTests (xUnit) already pin the pure
