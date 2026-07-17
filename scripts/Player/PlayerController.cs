@@ -367,6 +367,30 @@ public partial class PlayerController : CharacterBody3D
 	/// </summary>
 	[Export] public float BetweenTheLegsExitConeDegrees { get; set; } = 115.0f;
 
+	/// <summary>
+	/// Hard-decel rate (m/s²) DriveGather's Startup plant bleeds pre-existing
+	/// (lateral) momentum at — the SAME hybrid-gather model #198 introduced
+	/// for Crossover, per ADR-0022's explicit "reuse the existing model, do
+	/// not invent a second one" instruction. Own tunable, not a shared
+	/// constant, following the same "own [Export] per opted-in move" pattern
+	/// as GatherDecel/BehindTheBackGatherDecel/BetweenTheLegsGatherDecel.
+	/// Default sits within that established 40-55 range: a drive-gather's
+	/// plant is a comparably fast commit, not a slower or harder one. Bare
+	/// feel default, deferred to the per-milestone human pass like every
+	/// other burst-family tunable (ADR-0015/CLAUDE.md).
+	/// </summary>
+	[Export] public float DriveGatherDecel { get; set; } = 45.0f;
+
+	/// <summary>
+	/// Forward drive-line burst magnitude (m/s), applied once on
+	/// JustEnteredActive via DriveGatherMath.ComposeActiveVelocity. Matches
+	/// Crossover's own BurstSpeed/ForwardBurstScale (9.0) — the fastest
+	/// existing burst-family tunable — because a drive toward the rim is an
+	/// explosive attacking commitment, not a shallower separation move. Bare
+	/// feel default, deferred sign-off.
+	/// </summary>
+	[Export] public float DriveGatherBurstSpeed { get; set; } = 9.0f;
+
 	// ── Authoritative heading (issue #80) ────────────────────────────────────
 
 	/// <summary>
@@ -1372,7 +1396,17 @@ public partial class PlayerController : CharacterBody3D
 		// whose gather is exactly as inherent to its finishing motion as
 		// JumpShot's is to the set shot's — the same real-ball fact, applied
 		// to a second committed move.
-		if ((move is JumpShot || move is Layup) && OwnPeerId != 0)
+		//
+		// DriveGather (#230, ADR-0022) joins here too, but for a slightly
+		// different reason: unlike StepBack (which cradles at ACTIVE-entry,
+		// because its separation burst IS the gather motion), the
+		// drive-gather's entire identity IS "the gather" — ADR-0022's own
+		// taxonomy entry frames it as "the moment a driving ball-handler
+		// picks up their dribble," which real ball places at the INSTANT the
+		// move begins, not after a later burst. CradleForShotStartup's
+		// no-op-if-not-Dribbling guard makes this call safe from a dead-Held
+		// possession exactly as it already is for JumpShot/Layup.
+		if ((move is JumpShot || move is Layup || move is DriveGather) && OwnPeerId != 0)
 			GetBall()?.CradleForShotStartup(OwnPeerId);
 
 		return true;
@@ -1463,6 +1497,12 @@ public partial class PlayerController : CharacterBody3D
 		else if (moveId == "retreatdribble")
 			// param = 0f — retreat dribble carries no payload (issue #197).
 			BeginCommittedMove(new RetreatDribble());
+		else if (moveId == "drivegather")
+			// param = 0f — drive-gather carries no payload (issue #230): its
+			// drive line is resolved server-side from live GlobalPosition/
+			// RimCenter during Startup (TickCommittedMoveBehavior), not from
+			// anything the client sends.
+			BeginCommittedMove(new DriveGather());
 		else if (moveId == "jumpshot")
 		{
 			// Capture the server-authoritative pre-plant speed at begin for the
@@ -2241,6 +2281,22 @@ public partial class PlayerController : CharacterBody3D
 				RpcId(1, MethodName.RequestBeginMove, "retreatdribble", 0f);
 		}
 
+		// Drive-gather (M9, issue #230, ADR-0022): a discrete button, not a
+		// right-stick gesture — the gather commits toward the rim, so it
+		// needs its own dedicated input rather than overloading the
+		// gesture-driven crossover/step-back grammar. Gated to the ball
+		// holder (an off-ball defender has no dribble to gather from), same
+		// discipline StepBack/RetreatDribble already use. BeginCommittedMove's
+		// dead-dribble gate does NOT include DriveGather (same reasoning as
+		// StepBack: its own Startup-entry cradle call safely no-ops from a
+		// dead Held possession, so gating Begin() itself would only add a
+		// spurious restriction).
+		if (Input.IsActionJustPressed("move_drive") && IsBallHolder)
+		{
+			if (BeginCommittedMove(new DriveGather()) && !isServer)
+				RpcId(1, MethodName.RequestBeginMove, "drivegather", 0f);
+		}
+
 		// Shoot: begin a JumpShot or a Layup (M7b #74; layup added #229,
 		// ADR-0022) — this REPLACES the old instant "ball leaves hand on
 		// press" trigger that used to live in BallController.TryShoot.
@@ -2427,8 +2483,36 @@ public partial class PlayerController : CharacterBody3D
 					Crossover      => Velocity.MoveToward(Vector3.Zero, GatherDecel * (float)delta),
 					BehindTheBack  => Velocity.MoveToward(Vector3.Zero, BehindTheBackGatherDecel * (float)delta),
 					BetweenTheLegs => Velocity.MoveToward(Vector3.Zero, BetweenTheLegsGatherDecel * (float)delta),
+					DriveGather    => Velocity.MoveToward(Vector3.Zero, DriveGatherDecel * (float)delta),
 					_              => Vector3.Zero,
 				};
+
+				// Drive-gather (#230, ADR-0022) also resolves its drive line
+				// during Startup, via the SAME bounded turn-rate heading path
+				// Move() itself uses (HeadingMath.RotateToward, ADR-0010) —
+				// NOT an instant snap to the rim. Every OTHER committed move
+				// freezes Heading for its whole duration (this method
+				// replaces Move() entirely while a move IsActive); DriveGather
+				// is the first exception, because "commit your body toward
+				// the rim" (ADR-0022's own taxonomy entry) is itself a
+				// gradual plant, not an instant re-aim — an instant snap-turn
+				// would be exactly the arcade decoupling ADR-0003 rules out.
+				// Confined to Startup only: by Active-entry the drive line is
+				// locked in and read once (below), matching every other
+				// burst move's "SET once on JustEnteredActive, never
+				// re-derived mid-Active" rule.
+				if (_machine.CurrentMove is DriveGather)
+				{
+					BallController driveBall = GetBall();
+					if (driveBall != null)
+					{
+						Vector2 fromXZ = new(GlobalPosition.X, GlobalPosition.Z);
+						Vector2 targetXZ = new(driveBall.RimCenter.X, driveBall.RimCenter.Z);
+						Vector2 wishDir = DriveGatherMath.WishDirToward(fromXZ, targetXZ);
+						Heading = HeadingMath.RotateToward(Heading, wishDir, delta, MaxTurnRateDeg, BackTurnSlowFactor);
+					}
+				}
+
 				MoveAndSlide();
 				break;
 
@@ -2537,6 +2621,26 @@ public partial class PlayerController : CharacterBody3D
 					// shot-specific name; see its own doc for the exact
 					// no-op conditions this relies on.
 					GetBall()?.CradleForShotStartup(OwnPeerId);
+				}
+				else if (_machine.JustEnteredActive && _machine.CurrentMove is DriveGather)
+				{
+					// Drive-gather (#230, ADR-0022): plant onto the forward
+					// drive line resolved during Startup (Heading has already
+					// bent toward the rim, bounded by turn rate — see the
+					// Startup case above). SET once here, never re-derived on
+					// later Active ticks — the same "SET not +=" rule every
+					// burst-family move follows (see CrossoverBurstMath's
+					// class doc: additive velocity would overshoot on
+					// reconcile replay). Carries whatever momentum survived
+					// Startup's gather bleed (DriveGatherMath.ComposeActiveVelocity
+					// adds, never re-zeroes it) rather than a second momentum
+					// scheme — no exit-vector/exit-cone steering here by
+					// design: this is a straight-line attack, the euro-step's
+					// (#231) job is the lateral evasive variant. The gather
+					// itself already happened at Startup-begin (see
+					// BeginCommittedMove's cradle gate) — nothing to cradle
+					// again here.
+					Velocity = DriveGatherMath.ComposeActiveVelocity(Velocity, Heading, DriveGatherBurstSpeed);
 				}
 				MoveAndSlide();
 				break;
