@@ -459,6 +459,26 @@ jobs:
           godot --headless --path . res://tests/integration/StepBackTest.tscn -- --harness-scenario=retreat-dribble-no-gather
           godot --headless --path . res://tests/integration/StepBackTest.tscn -- --harness-scenario=retreat-dribble-dead-dribble-gate
 
+      # Drive-gather (issue #230, ADR-0022 — M9's rim-finishing vertical,
+      # second leaf). DriveGatherTests/DriveGatherMathTests (xUnit) already
+      # pin the pure frame-data contract and the steering/burst math; this
+      # drives the LIVE glue. 'gather-bleed' proves Startup bleeds
+      # pre-existing LATERAL velocity via the SAME hybrid-gather model the
+      # burst family already uses (#198), not an instant stop — a
+      # harness-asserted momentum profile matched against the exact
+      # production formula. 'heading-turn' proves the drive line resolves via
+      # the bounded turn-rate HeadingMath.RotateToward path (ADR-0010) — NOT
+      # an instant snap to the rim — matched tick-for-tick against the SAME
+      # production function. 'gather-to-layup-chain' proves the completed
+      # drive-gather plants the holder inside #229's LayupRange and that a
+      # REAL Layup, begun through the SAME BeginCommittedMove choke point,
+      # actually launches from there. Each exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run drive-gather harness
+        run: |
+          godot --headless --path . res://tests/integration/DriveGatherTest.tscn -- --harness-scenario=gather-bleed
+          godot --headless --path . res://tests/integration/DriveGatherTest.tscn -- --harness-scenario=heading-turn
+          godot --headless --path . res://tests/integration/DriveGatherTest.tscn -- --harness-scenario=gather-to-layup-chain
+
       # Dual-instance harness, increment 1: two headless Godot processes complete
       # a real ENet handshake over localhost. The orchestrator launches a server
       # and a client of the same scene and reads the client's exit code. This is
