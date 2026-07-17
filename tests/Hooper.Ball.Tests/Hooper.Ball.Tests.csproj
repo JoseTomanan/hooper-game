@@ -95,6 +95,8 @@
     <!-- Vertical right-stick gesture pair: step-back + retreat dribble (issue #197) -->
     <Compile Include="..\..\scripts\Input\RetreatDribble.cs" />
     <Compile Include="..\..\scripts\Input\StepBack.cs" />
+    <!-- Drive-gather — rim-finishing vertical, second leaf (issue #230, ADR-0022) -->
+    <Compile Include="..\..\scripts\Input\DriveGather.cs" />
   </ItemGroup>
 
   <!--
@@ -145,6 +147,8 @@
     <Compile Include="..\..\scripts\Player\BeatenWindow.cs" />
     <!-- Step-back burst composition, reuses CrossoverBurstMath (issue #197) -->
     <Compile Include="..\..\scripts\Player\StepBackBurstMath.cs" />
+    <!-- Drive-gather steering/burst math (issue #230, ADR-0022) -->
+    <Compile Include="..\..\scripts\Player\DriveGatherMath.cs" />
   </ItemGroup>
 
   <ItemGroup>
