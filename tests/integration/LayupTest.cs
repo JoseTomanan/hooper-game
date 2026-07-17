@@ -27,6 +27,9 @@ namespace HOOPERGAME.Tests.Integration;
 //   godot --headless --path . res://tests/integration/LayupTest.tscn -- --harness-scenario=uncontested-make
 //   godot --headless --path . res://tests/integration/LayupTest.tscn -- --harness-scenario=block-success
 //   godot --headless --path . res://tests/integration/LayupTest.tscn -- --harness-scenario=block-whiff
+//   godot --headless --path . res://tests/integration/LayupTest.tscn -- --harness-scenario=range-gate-inside
+//   godot --headless --path . res://tests/integration/LayupTest.tscn -- --harness-scenario=range-gate-tolerated
+//   godot --headless --path . res://tests/integration/LayupTest.tscn -- --harness-scenario=range-gate-rejected
 //   Exit: 0 = PASS, 1 = FAIL (via GetTree().Quit) — the ADR-0016 exit-code contract.
 //   Omitting --harness-scenario defaults to "uncontested-make".
 //
@@ -81,6 +84,54 @@ namespace HOOPERGAME.Tests.Integration;
 // entry exactly on the vulnerable window's exclusive end). The layup must
 // proceed completely unaffected and score — proving "block-success" isn't a
 // vacuous pass (e.g. every Layup happens to whiff regardless of timing).
+//
+// ── The three range-gate scenarios (issue #236, ADR-0023) ────────────────
+// The three scenarios above all prove what a Layup DOES once begun, and all
+// begin it via BeginMoveForHarness — i.e. downstream of the server's range
+// gate. These three prove the gate itself: WHETHER a client's "layup" request
+// begins a Layup at all, given where the server thinks that client is.
+//
+// They drive PlayerController.RequestMoveForHarness (LayupRangeHarnessSeam),
+// which lands on the real ApplyRequestedMove dispatch — the shipped path a
+// client's RequestBeginMove RPC reaches, minus only the sender-id
+// authorization an offline instance cannot satisfy. BeginMoveForHarness would
+// be WRONG here: it calls BeginCommittedMove directly, sailing straight past
+// the gate under test and passing vacuously.
+//
+//   range-gate-inside     server position INSIDE LayupRange
+//                         -> Layup begins. The baseline: the gate says yes
+//                            when it plainly should.
+//   range-gate-tolerated  server position OUTSIDE LayupRange but inside
+//                         LayupRange + LayupRangeNetTolerance
+//                         -> Layup begins. THIS IS #236's FIX. Before it, the
+//                            gate returned false here and NOTHING began — the
+//                            shoot press silently eaten at the rim, which is
+//                            what the issue was filed about.
+//   range-gate-rejected   server position OUTSIDE LayupRange + tolerance
+//                         -> NOTHING begins. The control the other two are
+//                            checked against: without it, "a Layup began"
+//                            would equally be satisfied by a gate that had
+//                            been deleted outright. This is also the
+//                            anti-tamper property itself (ADR-0002) — a client
+//                            claiming a layup from across the court gets
+//                            nothing, and that reject is SAFE because leaving
+//                            the server Inactive is exactly what
+//                            ShouldForceInactive reconciles against (ADR-0023).
+//
+// Note what is deliberately NOT asserted: that an out-of-range request begins
+// a JumpShot. #236 originally prescribed exactly that, and ADR-0023 rejected
+// it — the server beginning a move the client did not request breaks the
+// moveId invariant both reconciliation gates depend on. "Nothing begins" is
+// the correct, load-bearing outcome, so range-gate-rejected pins it as such
+// rather than treating it as an absence of behavior.
+//
+// Distances are derived from the LIVE _ball.LayupRange /
+// _ball.LayupRangeNetTolerance exports, never hardcoded — this is a code-built
+// tree, so it gets the raw C# defaults, NOT scenes/Main.tscn's overrides
+// (the #217 trap: Main.tscn's RimCenter is (0, 3.05, 0.3) while the code
+// default is (0, 3.05, 0)). Positions are built off _ball.RimCenter for the
+// same reason. A tuning pass on either export (#238's job) re-derives these
+// scenarios instead of silently invalidating them.
 public partial class LayupTest : Node
 {
     private const double TimeoutSeconds = 15.0;
@@ -110,6 +161,10 @@ public partial class LayupTest : Node
 
     private string _scenario = "uncontested-make";
     private bool IsBlockScenario => _scenario == "block-success" || _scenario == "block-whiff";
+    private bool IsRangeGateScenario =>
+        _scenario == "range-gate-inside"
+        || _scenario == "range-gate-tolerated"
+        || _scenario == "range-gate-rejected";
 
     private BallController _ball;
     private GameManager _gameManager;
@@ -125,6 +180,12 @@ public partial class LayupTest : Node
     private int _shooterBeginFrame;
     private int _predictedReleaseFrame = -1;
     private int _defenderBeginFrame;
+
+    // Frame the range-gate scenarios drove RequestMoveForHarness on. The verdict
+    // reads the shooter's real machine a few ticks later (VerdictMarginFrames) so
+    // the observation cannot be a process-order artifact — the harness memory's
+    // "parent observes child +1" trap (see class doc's #217 note).
+    private int _requestFrame = -1;
 
     private bool _everLoose;
     private int _toucherAtBlock = -1;
@@ -214,10 +275,66 @@ public partial class LayupTest : Node
             GD.Print($"[layup] frame {_frame}: defender begun BlockMove.");
         }
 
+        // Step 1b (range-gate scenarios only): the make/block scenarios above
+        // begin the Layup via BeginMoveForHarness — downstream of the gate. These
+        // instead position the shooter at a distance derived from the LIVE exports
+        // and drive RequestMoveForHarness, hitting the REAL ApplyRequestedMove
+        // dispatch (the gate under test). Position is set BEFORE the request
+        // because the gate reads GlobalPosition at request time — the inverse of
+        // Step 1's order, where the shooter is moved after it has already begun.
+        if (IsRangeGateScenario && !_shooterBegun && _frame >= ArmFrames)
+        {
+            if (_ball.StateMachine.HolderPeerId != 1)
+            {
+                Fail($"expected the tipoff to award peer 1 (this code-built tree's first child); got {_ball.StateMachine.HolderPeerId}.");
+                Finish();
+                return;
+            }
+
+            // Same premise-guard as Step 1 / BlockTurnoverTest: an uncleared
+            // possession would route a make to the take-it-back branch — and,
+            // more to the point here, holder+cleared are the ONLY preconditions
+            // BeginCommittedMove(Layup) has besides the range gate. Fixing them
+            // identical across all three range-gate scenarios makes the distance
+            // the ONLY thing that differs, so a rejected "" is attributable to
+            // the gate alone and not to some incidental possession failure.
+            if (!_ball.IsCleared)
+            {
+                Fail($"the tipoff possession is not cleared (IsCleared=false) at request time — " +
+                     $"BeginCommittedMove would fail for a reason other than the range gate, so a " +
+                     $"'nothing began' verdict could not be attributed to the gate.");
+                Finish();
+                return;
+            }
+
+            // The tolerated band is (LayupRange, LayupRange+tolerance). If #238
+            // ever dials the tolerance to 0 that band is empty and this scenario
+            // is unschedulable — fail loudly rather than silently pinning a
+            // position that is really just "inside" or "rejected".
+            if (_scenario == "range-gate-tolerated" && _ball.LayupRangeNetTolerance <= 0f)
+            {
+                Fail($"LayupRangeNetTolerance={_ball.LayupRangeNetTolerance} leaves an empty tolerance band — " +
+                     $"range-gate-tolerated cannot be scheduled. Re-derive against the new tunable (#238).");
+                Finish();
+                return;
+            }
+
+            _shooter.GlobalPosition = RangeGateShooterPosition();
+            _shooter.RequestMoveForHarness("layup");
+            _shooterBegun = true;
+            _requestFrame = _frame;
+            GD.Print($"[layup] frame {_frame}: requested 'layup' at XZ distance " +
+                     $"{Mathf.Sqrt(DefensiveResolution.DistanceXZSquared(_shooter.GlobalPosition, _ball.RimCenter)):0.###}m " +
+                     $"(LayupRange={_ball.LayupRange}, tolerance={_ball.LayupRangeNetTolerance}).");
+
+            TickRangeGate();
+            return;
+        }
+
         // Step 1: once the tipoff has assigned a holder, begin the shooter's
         // REAL Layup through the SAME BeginCommittedMove path production
         // input uses.
-        if (!_shooterBegun && _frame >= ArmFrames)
+        if (!IsRangeGateScenario && !_shooterBegun && _frame >= ArmFrames)
         {
             if (_ball.StateMachine.HolderPeerId != 1)
             {
@@ -295,6 +412,11 @@ public partial class LayupTest : Node
                 return;
             case "block-whiff":
                 TickBlockWhiff();
+                return;
+            case "range-gate-inside":
+            case "range-gate-tolerated":
+            case "range-gate-rejected":
+                TickRangeGate();
                 return;
             default:
                 Fail($"unknown scenario '{_scenario}'.");
@@ -464,6 +586,93 @@ public partial class LayupTest : Node
             Fail($"scenario=block-whiff expected the layup to score unaffected, but got everLoose={_everLoose}, " +
                  $"score1={_gameManager.ScoreOf(1)}, score2={_gameManager.ScoreOf(2)}, " +
                  $"defenderPhase={_defender.PhaseForHarness}.");
+        }
+        Finish(pass ? 0 : 1);
+    }
+
+    // The shooter's XZ position for a range-gate scenario, derived entirely from
+    // the LIVE _ball exports (never a hardcoded 4.0/0.5) so a #238 retune of
+    // either LayupRange or LayupRangeNetTolerance re-derives these positions
+    // instead of silently pinning stale distances (the #217 code-defaults trap).
+    // The offset is placed purely along +Z from RimCenter, so the resulting XZ
+    // distance the gate measures equals `distance` exactly (Y is ignored by
+    // DefensiveResolution.DistanceXZSquared, so the shooter stays on the floor).
+    private Vector3 RangeGateShooterPosition()
+    {
+        float range = _ball.LayupRange;
+        float tol = _ball.LayupRangeNetTolerance;
+        float distance = _scenario switch
+        {
+            // Midpoint of [0, LayupRange) — plainly inside, so a boundary
+            // off-by-one in the resolver (LayupRangeResolverTests' job) cannot
+            // masquerade as a gate bug here.
+            "range-gate-inside"    => range * 0.5f,
+            // Midpoint of the tolerance band (LayupRange, LayupRange+tolerance):
+            // strictly outside LayupRange, strictly inside the widened gate.
+            // This is the exact region #236 was dropping.
+            "range-gate-tolerated" => range + tol * 0.5f,
+            // A full metre past the widened gate — unambiguously rejected even
+            // if the tolerance is later grown somewhat.
+            "range-gate-rejected"  => range + tol + 1.0f,
+            _ => 0f,
+        };
+        return new Vector3(_ball.RimCenter.X, 0f, _ball.RimCenter.Z + distance);
+    }
+
+    private void TickRangeGate()
+    {
+        if (!_shooterBegun)
+        {
+            if (_elapsed > TimeoutSeconds)
+            {
+                Fail($"timed out at frame {_frame} before the range-gate request could be driven " +
+                     $"(holder={_ball.StateMachine.HolderPeerId}, cleared={_ball.IsCleared}).");
+                Finish();
+            }
+            return;
+        }
+
+        // Read the real machine only after a settle margin, so the observed
+        // moveId is a stable consequence of the gate's decision, not a
+        // same-frame process-order coincidence. VerdictMarginFrames (6) is
+        // deliberately shorter than Layup.Startup (8): a begun Layup is still
+        // in Startup — moveId "layup" — and has NOT yet released, keeping the
+        // gate's begin/no-begin decision cleanly separated from what the move
+        // later does (which the make/block scenarios already cover).
+        if (_frame >= _requestFrame + VerdictMarginFrames)
+        {
+            VerdictRangeGate();
+            return;
+        }
+        if (_elapsed > TimeoutSeconds)
+        {
+            Fail($"timed out at frame {_frame} waiting out the range-gate settle margin.");
+            Finish();
+        }
+    }
+
+    private void VerdictRangeGate()
+    {
+        // range-gate-inside / -tolerated must have BEGUN a Layup (moveId
+        // "layup"); range-gate-rejected must have begun NOTHING (moveId "").
+        // The last is both the control the first two are meaningful against and
+        // the anti-tamper property itself (ADR-0002/ADR-0023) — see class doc.
+        bool shouldBegin = _scenario != "range-gate-rejected";
+        string expected = shouldBegin ? "layup" : "";
+        string actual = _shooter.CurrentMoveIdForHarness;
+        bool pass = actual == expected;
+
+        if (pass)
+        {
+            GD.Print($"[layup] PASS — scenario={_scenario}, currentMoveId=\"{actual}\" " +
+                     $"(expected \"{expected}\").");
+        }
+        else
+        {
+            Fail($"scenario={_scenario} expected currentMoveId=\"{expected}\" but got \"{actual}\". " +
+                 $"For range-gate-tolerated this is the #236 regression (an in-tolerance layup dropped); " +
+                 $"for range-gate-rejected a non-empty id means the gate began an out-of-tolerance move " +
+                 $"(ADR-0023 anti-tamper violation).");
         }
         Finish(pass ? 0 : 1);
     }

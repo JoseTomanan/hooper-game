@@ -195,12 +195,31 @@ jobs:
       # resolves against a Layup's Active window exactly as it already does
       # against a JumpShot — no new defensive primitive. 'block-whiff' is the
       # control 'block-success' is checked against: a mistimed block leaves
-      # the layup completely unaffected. Each exits 0=PASS/1=FAIL (ADR-0016).
+      # the layup completely unaffected.
+      #
+      # The three 'range-gate-*' scenarios (issue #236, ADR-0023) prove the
+      # SERVER-SIDE range gate that decides WHETHER a client's "layup" request
+      # begins a Layup at all — upstream of the moves the other three exercise.
+      # They drive PlayerController.RequestMoveForHarness (the shipped
+      # ApplyRequestedMove RPC dispatch, minus only sender-id authorization).
+      # 'range-gate-inside' (inside LayupRange) and 'range-gate-tolerated'
+      # (outside LayupRange but inside LayupRange+LayupRangeNetTolerance — the
+      # exact band #236 was dropping) must BEGIN a layup; 'range-gate-rejected'
+      # (past the widened gate) must begin NOTHING — the REQUIRED control and
+      # the anti-tamper property itself (a client claiming a layup from across
+      # the court gets nothing, and that reject is safe because it leaves the
+      # server Inactive for ShouldForceInactive to reconcile). Distances are
+      # derived from the LIVE LayupRange/tolerance exports, so #238's retune
+      # re-derives them rather than pinning a stale 4.0. Each exits
+      # 0=PASS/1=FAIL (ADR-0016).
       - name: Run layup / rim-finish harness
         run: |
           godot --headless --path . res://tests/integration/LayupTest.tscn -- --harness-scenario=uncontested-make
           godot --headless --path . res://tests/integration/LayupTest.tscn -- --harness-scenario=block-success
           godot --headless --path . res://tests/integration/LayupTest.tscn -- --harness-scenario=block-whiff
+          godot --headless --path . res://tests/integration/LayupTest.tscn -- --harness-scenario=range-gate-inside
+          godot --headless --path . res://tests/integration/LayupTest.tscn -- --harness-scenario=range-gate-tolerated
+          godot --headless --path . res://tests/integration/LayupTest.tscn -- --harness-scenario=range-gate-rejected
 
       # On-ball contest as a committed move (issue #99, ADR-0018 §2). Unit
       # tests already pin the pure composition arithmetic
