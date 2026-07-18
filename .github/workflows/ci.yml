@@ -221,6 +221,35 @@ jobs:
           godot --headless --path . res://tests/integration/LayupTest.tscn -- --harness-scenario=range-gate-tolerated
           godot --headless --path . res://tests/integration/LayupTest.tscn -- --harness-scenario=range-gate-rejected
 
+      # Euro-step lateral gather (issue #231, ADR-0022). Proves the euro-step
+      # as a distinct server-authoritative committed move that laterally
+      # displaces the drive-gather launch point, then chains into #229's Layup
+      # (the euro-step itself never releases the ball — the finish is a
+      # separate, client-predicted/server-gated Layup, per the proven
+      # gather-to-layup-chain precedent and the ADR-0023 moveId invariant).
+      # 'euro-step-beats-committed-defender' plants a REAL BlockMove defender
+      # out-of-reach of the laterally displaced launch but in-reach of the
+      # ORIGINAL straight-drive line (both distances derived from the LIVE
+      # BlockReachRadius export, not a hardcoded literal), timed so the block's
+      # Active window overlaps the chained layup's release — and asserts the
+      # score lands AND the reach premises held (the defender genuinely
+      # committed to the line the euro-step evaded). 'euro-step-read-still-
+      # contests' is the REQUIRED control (ADR-0016 / "every X-didn't-happen
+      # assertion needs a control"): a defender that READS the hop and
+      # repositions into reach of the displaced launch, with timing held
+      # identical — position is the sole discriminator — turns the ball over,
+      # proving the make in the first scenario is a real evasion, not an
+      # always-open layup. 'euro-step-whiff-recovery' begins the euro-step and
+      # attempts to chain the Layup during its Recovery phase: the finish must
+      # be REFUSED (a committed move can't cancel out of Recovery), proving the
+      # displacement is a real committed-move body, not a free dodge (ADR-0003).
+      # Each exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run euro-step harness
+        run: |
+          godot --headless --path . res://tests/integration/EuroStepTest.tscn -- --harness-scenario=euro-step-beats-committed-defender
+          godot --headless --path . res://tests/integration/EuroStepTest.tscn -- --harness-scenario=euro-step-read-still-contests
+          godot --headless --path . res://tests/integration/EuroStepTest.tscn -- --harness-scenario=euro-step-whiff-recovery
+
       # On-ball contest as a committed move (issue #99, ADR-0018 §2). Unit
       # tests already pin the pure composition arithmetic
       # (DefensiveResolutionTests.ContestAppliesAt/ContestMoveFactor) and
