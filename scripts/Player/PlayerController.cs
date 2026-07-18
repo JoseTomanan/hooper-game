@@ -391,6 +391,32 @@ public partial class PlayerController : CharacterBody3D
 	/// </summary>
 	[Export] public float DriveGatherBurstSpeed { get; set; } = 9.0f;
 
+	/// <summary>
+	/// Forward-toward-rim burst magnitude (m/s) for the euro-step (#231,
+	/// ADR-0022), applied once on JustEnteredActive via
+	/// EuroStepMath.ComposeActiveVelocity. Its OWN [Export] rather than sharing
+	/// DriveGatherBurstSpeed — same "own tunable per move" pattern as
+	/// BehindTheBack/BetweenTheLegs vs Crossover — so #238 can dial the
+	/// euro-step's rim attack independently of the straight drive-gather's.
+	/// Defaults equal to DriveGatherBurstSpeed (9.0): the euro-step's forward
+	/// beat IS a drive, so the same explosive commitment is the natural starting
+	/// point. Candidate, not final — catalogued in #238's consolidated pass.
+	/// </summary>
+	[Export] public float EuroStepForwardDriveSpeed { get; set; } = 9.0f;
+
+	/// <summary>
+	/// Fixed lateral hop magnitude (m/s) for the euro-step's evade (#231,
+	/// ADR-0022), applied once on JustEnteredActive alongside the forward drive.
+	/// A FIXED magnitude (the left stick chooses only the step's direction, not
+	/// its size), mirroring RetreatDribbleBurstSpeed's fixed-hop precedent — a
+	/// known displacement the defender can anticipate keeps the euro-step "a
+	/// read, not a free dodge" (ADR-0003). Deliberately smaller than the forward
+	/// drive: the step slides PAST the defender, it does not out-sprint them
+	/// sideways. Candidate, not final — #238 owns the magnitude (and whether it
+	/// ever becomes a stick-scaled cone instead).
+	/// </summary>
+	[Export] public float EuroStepLateralHopSpeed { get; set; } = 5.0f;
+
 	// ── Authoritative heading (issue #80) ────────────────────────────────────
 
 	/// <summary>
@@ -1387,8 +1413,14 @@ public partial class PlayerController : CharacterBody3D
 		// Active-entry effect does NOT no-op from a dead Held possession (the
 		// burst fires regardless of ball state), so gating Begin() here is
 		// what actually closes the bypass.
+		// EuroStep (#231, ADR-0022) joins for the SAME reason as DriveGather: it
+		// is a lateral variant of the gather, so its identity is likewise "pick
+		// up a live dribble to commit toward the rim" — illegal from a dead Held
+		// possession, and (like DriveGather, unlike StepBack) its Active-entry
+		// burst fires regardless of ball state, so gating Begin() here is what
+		// closes the free-movement bypass.
 		if ((move is Crossover || move is Hesitation || move is BehindTheBack || move is BetweenTheLegs
-			 || move is RetreatDribble || move is DriveGather)
+			 || move is RetreatDribble || move is DriveGather || move is EuroStep)
 			&& IsBallHolder && GetBall()?.State == BallState.Held)
 			return false;
 
@@ -1422,7 +1454,10 @@ public partial class PlayerController : CharacterBody3D
 		// move begins, not after a later burst. CradleForShotStartup's
 		// no-op-if-not-Dribbling guard makes this call safe from a dead-Held
 		// possession exactly as it already is for JumpShot/Layup.
-		if ((move is JumpShot || move is Layup || move is DriveGather) && OwnPeerId != 0)
+		// EuroStep (#231, ADR-0022) cradles at Startup-begin exactly like
+		// DriveGather: beat 1 of the two-beat euro-step IS the gather, and the
+		// gather is inherent to the move beginning, not a later burst.
+		if ((move is JumpShot || move is Layup || move is DriveGather || move is EuroStep) && OwnPeerId != 0)
 			GetBall()?.CradleForShotStartup(OwnPeerId);
 
 		return true;
@@ -1545,6 +1580,16 @@ public partial class PlayerController : CharacterBody3D
 			// RimCenter during Startup (TickCommittedMoveBehavior), not from
 			// anything the client sends.
 			BeginCommittedMove(new DriveGather());
+		else if (moveId == "eurostep")
+			// Euro-step (#231, ADR-0022): param is the body-relative lateral read
+			// sign (+1 = step right, -1 = left), the SAME reconstruction-payload
+			// convention "crossover" uses — the world step direction is re-derived
+			// from Heading when the move reaches Active (EuroStepMath). The move
+			// itself carries NO range gate: it is a displacement, not a shot. The
+			// finish is a SEPARATE "layup" request begun from the displaced
+			// position, which crosses the ADR-0023 range gate above verbatim at
+			// that displaced GlobalPosition (the chain — see EuroStep's class doc).
+			BeginCommittedMove(new EuroStep(lateralDirection: param));
 		else if (moveId == "jumpshot")
 		{
 			// Capture the server-authoritative pre-plant speed at begin for the
@@ -2377,9 +2422,28 @@ public partial class PlayerController : CharacterBody3D
 		// gather IS the act of picking up a live dribble (ADR-0014 tier 1
 		// real-ball fact), so it cannot legally begin from a dead Held
 		// possession; see that method's comment for the full reasoning.
+		//
+		// Euro-step (#231, ADR-0022) shares this SAME button: the left stick's
+		// lateral tilt at press decides which move begins. A lateral push
+		// promotes the drive into a euro-step and picks the step side
+		// (EuroStepReadResolver, decomposing the movement stick against the
+		// body-right axis exactly as the crossover family reads its exit
+		// vector); a forward/neutral push stays a straight drive-gather. The read
+		// sign rides the RequestBeginMove RPC param the same way
+		// Crossover.BurstDirection does — the server reconstructs the move from
+		// the payload (ApplyRequestedMove), it does not re-derive the read. Both
+		// branches funnel through the SAME dead-dribble gate in BeginCommittedMove
+		// (EuroStep joins it alongside DriveGather).
 		if (Input.IsActionJustPressed("move_drive") && IsBallHolder)
 		{
-			if (BeginCommittedMove(new DriveGather()) && !isServer)
+			int lateralSign = EuroStepReadResolver.ResolveLateralSign(
+				ReadInput(), HandStateResolver.BurstWorldDir(Heading, +1), ExitDeadzone);
+			if (lateralSign != 0)
+			{
+				if (BeginCommittedMove(new EuroStep(lateralDirection: lateralSign)) && !isServer)
+					RpcId(1, MethodName.RequestBeginMove, "eurostep", (float)lateralSign);
+			}
+			else if (BeginCommittedMove(new DriveGather()) && !isServer)
 				RpcId(1, MethodName.RequestBeginMove, "drivegather", 0f);
 		}
 
@@ -2574,6 +2638,10 @@ public partial class PlayerController : CharacterBody3D
 					BehindTheBack  => Velocity.MoveToward(Vector3.Zero, BehindTheBackGatherDecel * (float)delta),
 					BetweenTheLegs => Velocity.MoveToward(Vector3.Zero, BetweenTheLegsGatherDecel * (float)delta),
 					DriveGather    => Velocity.MoveToward(Vector3.Zero, DriveGatherDecel * (float)delta),
+					// EuroStep (#231) reuses DriveGather's gather bleed — beat 1 of
+					// the euro-step is the same gather motion, so it shares the
+					// same decel budget rather than inventing a second rate.
+					EuroStep       => Velocity.MoveToward(Vector3.Zero, DriveGatherDecel * (float)delta),
 					_              => Vector3.Zero,
 				};
 
@@ -2591,7 +2659,14 @@ public partial class PlayerController : CharacterBody3D
 				// locked in and read once (below), matching every other
 				// burst move's "SET once on JustEnteredActive, never
 				// re-derived mid-Active" rule.
-				if (_machine.CurrentMove is DriveGather)
+				//
+				// EuroStep (#231) bends toward the rim during Startup identically:
+				// beat 1 (the gather) commits the body toward the rim exactly as
+				// DriveGather's does — the euro-step's lateral read is a beat-2
+				// (Active) concern, not a beat-1 re-aim. Sharing this branch keeps
+				// the rim-bent Heading that EuroStepMath's Active composition then
+				// reads as its forward/right basis.
+				if (_machine.CurrentMove is DriveGather or EuroStep)
 				{
 					BallController driveBall = GetBall();
 					if (driveBall != null)
@@ -2731,6 +2806,27 @@ public partial class PlayerController : CharacterBody3D
 					// BeginCommittedMove's cradle gate) — nothing to cradle
 					// again here.
 					Velocity = DriveGatherMath.ComposeActiveVelocity(Velocity, Heading, DriveGatherBurstSpeed);
+				}
+				else if (_machine.JustEnteredActive && _machine.CurrentMove is EuroStep euroStep)
+				{
+					// Euro-step (#231, ADR-0022) — beat 2: plant off the drive
+					// line (Heading already rim-bent during Startup, same as
+					// DriveGather) with a forward drive PLUS a fixed lateral hop in
+					// the read direction. SET once here, never re-derived — the
+					// same "SET not +=" rule (EuroStepMath adds to the surviving
+					// momentum, never re-zeroes it; additive velocity would
+					// overshoot on reconcile replay). The lateral sign is the
+					// body-relative read carried on the move (LateralDirection);
+					// EuroStepMath re-derives its world direction from the rim-bent
+					// Heading. This move does NOT release the ball — the finish is
+					// a separate Layup begun from this displaced position (the
+					// chain; see EuroStep's class doc). The gather already fired at
+					// Startup-begin (BeginCommittedMove's cradle gate), so nothing
+					// to cradle again here.
+					int lateralSign = System.Math.Sign(euroStep.LateralDirection);
+					Velocity = EuroStepMath.ComposeActiveVelocity(
+						Velocity, Heading, lateralSign,
+						EuroStepForwardDriveSpeed, EuroStepLateralHopSpeed);
 				}
 				MoveAndSlide();
 				break;
