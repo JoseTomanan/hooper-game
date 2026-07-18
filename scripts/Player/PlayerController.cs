@@ -404,6 +404,49 @@ public partial class PlayerController : CharacterBody3D
 	// distinguishing its value from GatherDecel/BehindTheBackGatherDecel/
 	// BetweenTheLegsGatherDecel.
 
+	// ── Spin tuning (issue #201) ───────────────────────────────────────────────
+	// The family's last leaf: a full-body rotation, hand swap at the END of
+	// Active (not JustEnteredActive — see Spin's own class doc). Shares
+	// CrossoverBurstMath.ComposeActiveVelocity with the rest of the family
+	// (composition, not inheritance), composed against the ENTRY heading/exit-
+	// vector captured once at JustEnteredActive — see
+	// TickCommittedMoveBehavior's Spin branch. Frame data lives on
+	// Spin.DefaultFrameData, not here. The heading arc itself has NO tunable
+	// magnitude here (it is always a full ~180°, scripted — see
+	// SpinHeadingMath) — only the exit burst and the Startup plant are feel
+	// knobs.
+
+	/// <summary>
+	/// Lateral speed of Spin's exit burst (m/s), applied once on the LAST
+	/// Active tick (not JustEnteredActive). Defaults equal to Crossover's own
+	/// BurstSpeed (9.0): a spin is a genuine separation move with the SAME
+	/// explosive payoff as a crossover — it is not a safer/lesser variant the
+	/// way BehindTheBack/BetweenTheLegs/InAndOut are (their reduced burst pays
+	/// for a real safety/speed advantage a spin does not get: the largest
+	/// pre-move exposure in the taxonomy, per the issue spec). Bare feel
+	/// default, deferred to the consolidated human pass #173 (ADR-0021).
+	/// </summary>
+	[Export] public float SpinBurstSpeed { get; set; } = 9.0f;
+
+	/// <summary>
+	/// Forward speed of Spin's exit burst (m/s). Matches SpinBurstSpeed by
+	/// default for the same symmetric-feel reasoning as the rest of the
+	/// family's ForwardBurstScale twins. Bare feel default, deferred sign-off.
+	/// </summary>
+	[Export] public float SpinForwardBurstScale { get; set; } = 9.0f;
+
+	/// <summary>
+	/// Hard-decel rate (m/s²) Spin's Startup plant bleeds pre-existing
+	/// momentum at — the SAME hybrid-gather model #198 introduced for
+	/// Crossover. Own tunable (not shared with GatherDecel/
+	/// BehindTheBackGatherDecel/BetweenTheLegsGatherDecel), following the
+	/// established "own [Export] per opted-in move" pattern — Spin's 8-tick
+	/// Startup (longer than Crossover's 6, per its own class doc's "bigger
+	/// commitment" reasoning) has more time to bleed, so it is not simply a
+	/// copy of an existing value. Bare feel default, deferred sign-off.
+	/// </summary>
+	[Export] public float SpinGatherDecel { get; set; } = 40.0f;
+
 	/// <summary>
 	/// Hard-decel rate (m/s²) DriveGather's Startup plant bleeds pre-existing
 	/// (lateral) momentum at — the SAME hybrid-gather model #198 introduced
@@ -663,6 +706,62 @@ public partial class PlayerController : CharacterBody3D
 	/// new one-shot RPC fired at Active-entry would (doubt cycle, #198).
 	/// </summary>
 	private Vector2 _pendingRawStick;
+
+	/// <summary>
+	/// Spin's heading-arc anchor (issue #201) — the authoritative Heading at
+	/// the instant this role's OWN local machine entered Active, captured
+	/// ONCE (see TickCommittedMoveBehavior's Spin branch, gated on
+	/// JustEnteredActive) and reused every subsequent Active tick as
+	/// SpinHeadingMath.ArcHeading's anchor. Never re-read from the live
+	/// Heading field mid-arc — by the second Active tick, Heading itself has
+	/// already been overwritten by the previous tick's arc value, so re-
+	/// reading it would compound rounding drift and — far more importantly —
+	/// would reintroduce exactly the live-state dependency SpinHeadingMath's
+	/// class doc explains this move must NOT have for cross-role determinism.
+	///
+	/// Bounded, documented, ACCEPTED trade-off (doubt-driven-development pass,
+	/// #201): on the CLIENT'S OWN predicted player only, ReconcileFromServer
+	/// unconditionally snaps `Heading = authHeading` (a ~1-RTT-stale value)
+	/// every tick a broadcast lands, BEFORE this field's JustEnteredActive
+	/// capture runs later that same tick. If a broadcast happens to land on
+	/// the exact tick the client's own local prediction enters Active, this
+	/// field captures that stale snap rather than the client's own smoothly-
+	/// evolved pre-move heading — a bounded, self-correcting, SINGLE-INSTANCE
+	/// visual artifact on the predicting client's OWN screen of its OWN spin.
+	/// This can never desync the AUTHORITATIVE outcome or the REMOTE
+	/// opponent's view: the server's own tick (whether for its own player or
+	/// its copy of a remote player) never runs ReconcileFromServer at all, and
+	/// TickClientRemotePlayer (the opponent's copy on this client) never runs
+	/// this arc locally — it just displays the server's broadcast Heading
+	/// directly every tick. Same class of accepted, bounded trade-off as the
+	/// pre-M4 positional-smoothing artifact and the burst's own #210
+	/// exitVectorSample divergence — documented on the record here rather
+	/// than engineered around, per this issue's doubt-driven pass.
+	/// </summary>
+	private float _spinEntryHeading;
+
+	/// <summary>
+	/// Spin's exit-vector anchor (issue #201) — the left-stick reading
+	/// captured ONCE at JustEnteredActive, alongside <see cref="_spinEntryHeading"/>,
+	/// and reused for the exit-burst composition on the LAST Active tick.
+	///
+	/// Doubt-driven-development finding (#201): an earlier draft read the
+	/// live exitVectorSample parameter directly on the final Active tick
+	/// instead of capturing it here. That would have let a player keep
+	/// steering the ENTIRE multi-tick rotation and have the LAST-instant
+	/// stick position decide the exit direction — reading the defender's
+	/// real-time reaction throughout the whole spin before committing, unlike
+	/// every sibling move (Crossover/BehindTheBack/BetweenTheLegs/InAndOut),
+	/// which all lock their burst direction in at Active-ENTRY and are immune
+	/// to post-commit stick movement (ADR-0003: a committed move's parameters
+	/// lock at commitment, not at whatever is convenient once the outcome is
+	/// visible). Capturing here, once, at the SAME tick and from the SAME
+	/// per-role source (ReadInput()/_pendingRawStick/rawStick) every sibling
+	/// move already snapshots from, closes that hole AND makes Spin's per-role
+	/// snapshot divergence properties identical to Crossover's own (inherits
+	/// the SAME already-accepted, already-open #210 gap — not a wider one).
+	/// </summary>
+	private Vector2 _spinEntryExitVector;
 
 	/// <summary>
 	/// Records the client's own predicted inputs and drains them once the
@@ -1465,8 +1564,17 @@ public partial class PlayerController : CharacterBody3D
 		// this hardcoded type list would silently escape the dead-dribble rule
 		// (the #193 bug class) even though its Active-entry burst fires
 		// regardless of ball state, exactly like Crossover's does.
+		//
+		// Spin (#201) joins for the SAME reason as the rest of the family: a
+		// spin shields a LIVE dribble with the body — there is no dribble to
+		// shield once the ball is dead-Held, and (like Crossover/BehindTheBack/
+		// BetweenTheLegs/InAndOut) its Active-phase hand swap and exit burst
+		// fire regardless of ball state, so omitting it here would let a
+		// dead-Held holder spin the ball to the other hand for free — the
+		// same #193 bug class this whole gate exists to close.
 		if ((move is Crossover || move is Hesitation || move is BehindTheBack || move is BetweenTheLegs
-			 || move is RetreatDribble || move is DriveGather || move is EuroStep || move is InAndOut)
+			 || move is RetreatDribble || move is DriveGather || move is EuroStep || move is InAndOut
+			 || move is Spin)
 			&& IsBallHolder && GetBall()?.State == BallState.Held)
 			return false;
 
@@ -2756,6 +2864,13 @@ public partial class PlayerController : CharacterBody3D
 					// separate tunable — see PlayerController's field doc): it
 					// is an ordinary plant, just a shorter one (4 ticks vs. 6).
 					InAndOut       => Velocity.MoveToward(Vector3.Zero, GatherDecel * (float)delta),
+					// Spin (#201) opts into the SAME hybrid-gather model with
+					// its own rate — see SpinGatherDecel's doc. Without this,
+					// Spin would fall into the default instant-zero plant
+					// below and NEVER carry any surviving momentum into
+					// Active, making its exit burst's "continues the original
+					// drive line" identity vacuous (doubt-cycle finding, #201).
+					Spin           => Velocity.MoveToward(Vector3.Zero, SpinGatherDecel * (float)delta),
 					_              => Vector3.Zero,
 				};
 
@@ -2964,6 +3079,78 @@ public partial class PlayerController : CharacterBody3D
 					Velocity = EuroStepMath.ComposeActiveVelocity(
 						Velocity, Heading, lateralSign,
 						EuroStepForwardDriveSpeed, EuroStepLateralHopSpeed);
+				}
+				else if (_machine.CurrentMove is Spin spin)
+				{
+					// Spin (#201) is the ONLY branch in this switch NOT gated
+					// on JustEnteredActive — its heading arc must advance
+					// EVERY Active tick (contrast every sibling move, which
+					// fires a one-shot effect once and never touches Velocity/
+					// Heading again for the rest of Active). Mutually
+					// exclusive with every other branch above by construction
+					// (_machine.CurrentMove is exactly one concrete type), so
+					// this is safe as the ladder's final, unconditional arm.
+					if (_machine.JustEnteredActive)
+					{
+						// Captured ONCE, at the SAME tick and from the SAME
+						// per-role source every sibling move already locks its
+						// own burst read from — see _spinEntryHeading's and
+						// _spinEntryExitVector's field docs for the full
+						// doubt-driven-development reasoning (both the
+						// bounded, accepted ReconcileFromServer-timing trade-
+						// off and the fixed live-input-steering hole).
+						_spinEntryHeading    = Heading;
+						_spinEntryExitVector = exitVectorSample;
+					}
+
+					int spinSign = System.Math.Sign(spin.SpinDirection);
+					MoveFrameData spinFd = spin.FrameData;
+
+					// ── ADR-0010 SANCTIONED EXCEPTION ───────────────────────
+					// Directly overwrites Heading, bypassing HeadingMath.
+					// RotateToward's bounded non-linear turn-rate cap, for
+					// THIS move's Active phase only — see the ADR-0010
+					// amendment (docs/adr/0010-authoritative-heading.md, same
+					// commit as this branch) for the full record. SpinHeadingMath.
+					// ArcHeading is a PURE function of (entry heading,
+					// direction, tick index, total Active ticks) — it reads
+					// NO live per-tick input — so it reproduces bit-
+					// identically on every role that runs this method: the
+					// server's own tick, the server's copy of a remote
+					// player, and the predicting client's own tick. See
+					// SpinHeadingMath's class doc for why this is safe where
+					// the burst's per-role exitVectorSample (below) is not.
+					Heading = SpinHeadingMath.ArcHeading(
+						_spinEntryHeading, spinSign, _machine.FrameInPhase, spinFd.ActiveFrames);
+
+					// Hand swap + exit burst fire on the LAST Active tick —
+					// "at the END of the rotation" (contrast Crossover/
+					// BehindTheBack/BetweenTheLegs, which swap on
+					// JustEnteredActive, the FIRST tick — see Spin's own class
+					// doc for why this move's identity requires the opposite
+					// timing). SpinHeadingMath.ArcHeading reaches EXACTLY the
+					// full ~180° arc on this same tick (frameInPhase ==
+					// activeFrames - 1 ⇒ progress == 1.0), so "the rotation
+					// completes" and "the hand swaps" are structurally the
+					// same event, never two that could drift apart.
+					if (_machine.FrameInPhase == spinFd.ActiveFrames - 1)
+					{
+						// Composed against the ENTRY heading/exit-vector, NOT
+						// the just-rotated Heading above — the translational
+						// exit line continues the ORIGINAL drive direction;
+						// only the player's authoritative FACING has spun
+						// around. Using the rotated Heading here would clamp
+						// away the forward contribution entirely (Compose
+						// ActiveVelocity's "never backward" rule), since the
+						// original drive direction is now ~180° BEHIND the
+						// new facing — see Spin's class doc "Exit composition"
+						// section.
+						Velocity = CrossoverBurstMath.ComposeActiveVelocity(
+							Velocity, _spinEntryHeading, spinSign, _spinEntryExitVector,
+							SpinBurstSpeed, SpinForwardBurstScale, ExitDeadzone);
+
+						HandSide = HandStateResolver.Opposite(HandSide);
+					}
 				}
 				MoveAndSlide();
 				break;
