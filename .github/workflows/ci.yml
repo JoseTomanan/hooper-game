@@ -250,6 +250,34 @@ jobs:
           godot --headless --path . res://tests/integration/EuroStepTest.tscn -- --harness-scenario=euro-step-read-still-contests
           godot --headless --path . res://tests/integration/EuroStepTest.tscn -- --harness-scenario=euro-step-whiff-recovery
 
+      # Jab step — triple threat's stance bait (issue #200). Unit tests
+      # already pin the pure legality gate (JabStepLegalityResolverTests.cs)
+      # and the frame-data/lifecycle contract (JabStepTests.cs); this proves
+      # the LIVE engine glue: a real jab, begun through the SAME
+      # BeginCommittedMove choke point production input reaches, actually
+      # leaves HasDribbled/BallState/HandSide/GlobalPosition untouched across
+      # its full lifecycle, and is refused outright while Dribbling.
+      # 'legal-held' begins the jab from a FRESH live Held possession and
+      # proves the full lifecycle produces no state change / no hand swap /
+      # no burst displacement, THEN begins a control JumpShot from the same
+      # (now Inactive) state that DOES flip HasDribbled true — the required
+      # control proving the earlier "stayed false" was a real observation,
+      # not a harness premise that could never fail. 'legal-dead-held' cradles
+      # a dribble first (JumpShot begin -> feint away -> wait for Recovery to
+      # elapse, same setup as the triple-threat harness's dead-dribble step),
+      # then proves the jab ALSO begins from that DEAD Held possession and
+      # leaves HasDribbled untouched (still true, not reset). 'illegal-
+      # dribbling' proves a jab is refused outright from a live Dribbling
+      # possession, then begins a control Hesitation (legal from Dribbling,
+      # #86) from the SAME state — the control proving the refusal is
+      # jab-specific, not "nothing can begin while Dribbling." Each exits
+      # 0=PASS/1=FAIL (ADR-0016).
+      - name: Run jab-step harness
+        run: |
+          godot --headless --path . res://tests/integration/JabStepTest.tscn -- --harness-scenario=legal-held
+          godot --headless --path . res://tests/integration/JabStepTest.tscn -- --harness-scenario=legal-dead-held
+          godot --headless --path . res://tests/integration/JabStepTest.tscn -- --harness-scenario=illegal-dribbling
+
       # On-ball contest as a committed move (issue #99, ADR-0018 §2). Unit
       # tests already pin the pure composition arithmetic
       # (DefensiveResolutionTests.ContestAppliesAt/ContestMoveFactor) and

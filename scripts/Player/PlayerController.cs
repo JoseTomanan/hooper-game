@@ -1424,6 +1424,15 @@ public partial class PlayerController : CharacterBody3D
 			&& IsBallHolder && GetBall()?.State == BallState.Held)
 			return false;
 
+		// JabStep (#200) is the INVERSE gate: triple threat's own stance bait
+		// must be legal FROM Held (dead or live) and illegal FROM Dribbling —
+		// see JabStepLegalityResolver's class doc for why this is not a
+		// contradiction of the gate immediately above, but a taxonomy (a jab
+		// is thrown from a stationary stance; Hesitation/hand-fake, #86,
+		// already covers the equivalent bait off a live dribble).
+		if (move is JabStep && IsBallHolder && !JabStepLegalityResolver.IsLegal(GetBall()?.State))
+			return false;
+
 		if (!_machine.Begin(move)) return false;
 		_pivot = HeadingMath.PivotState.None;
 
@@ -1590,6 +1599,10 @@ public partial class PlayerController : CharacterBody3D
 			// position, which crosses the ADR-0023 range gate above verbatim at
 			// that displaced GlobalPosition (the chain — see EuroStep's class doc).
 			BeginCommittedMove(new EuroStep(lateralDirection: param));
+		else if (moveId == "jab")
+			// Jab step (#200): param = 0f — no payload, no burst, purely
+			// informational (the telegraph itself is the whole effect).
+			BeginCommittedMove(new JabStep());
 		else if (moveId == "jumpshot")
 		{
 			// Capture the server-authoritative pre-plant speed at begin for the
@@ -2445,6 +2458,19 @@ public partial class PlayerController : CharacterBody3D
 			}
 			else if (BeginCommittedMove(new DriveGather()) && !isServer)
 				RpcId(1, MethodName.RequestBeginMove, "drivegather", 0f);
+		}
+
+		// Jab step (M9, issue #200): triple threat's stance bait. Its own
+		// dedicated button, not a gesture — the jab has no directional
+		// payload and no exit-vector to read, so overloading the crossover
+		// gesture grammar would add nothing. Gated to the ball holder, same
+		// discipline every other Held/Dribbling-sensitive move already uses;
+		// BeginCommittedMove's JabStepLegalityResolver gate is the real
+		// authority (legal from Held, dead or live; illegal from Dribbling).
+		if (Input.IsActionJustPressed("move_jab") && IsBallHolder)
+		{
+			if (BeginCommittedMove(new JabStep()) && !isServer)
+				RpcId(1, MethodName.RequestBeginMove, "jab", 0f);
 		}
 
 		// Shoot: begin a JumpShot or a Layup (M7b #74; layup added #229,
