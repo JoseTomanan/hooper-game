@@ -97,6 +97,8 @@
     <Compile Include="..\..\scripts\Input\StepBack.cs" />
     <!-- Drive-gather — rim-finishing vertical, second leaf (issue #230, ADR-0022) -->
     <Compile Include="..\..\scripts\Input\DriveGather.cs" />
+    <!-- Euro-step — rim-finishing vertical, third leaf (issue #231, ADR-0022) -->
+    <Compile Include="..\..\scripts\Input\EuroStep.cs" />
   </ItemGroup>
 
   <!--
