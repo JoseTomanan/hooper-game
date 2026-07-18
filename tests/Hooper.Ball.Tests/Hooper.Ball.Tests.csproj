@@ -149,6 +149,8 @@
     <Compile Include="..\..\scripts\Player\StepBackBurstMath.cs" />
     <!-- Drive-gather steering/burst math (issue #230, ADR-0022) -->
     <Compile Include="..\..\scripts\Player\DriveGatherMath.cs" />
+    <!-- Euro-step lateral displacement math (issue #231, ADR-0022) -->
+    <Compile Include="..\..\scripts\Player\EuroStepMath.cs" />
   </ItemGroup>
 
   <ItemGroup>
