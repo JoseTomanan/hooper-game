@@ -102,6 +102,9 @@
     <Compile Include="..\..\scripts\Input\JabStepLegalityResolver.cs" />
     <!-- In-and-out — the crossover's twin, no hand swap (issue #202, ADR-0003 amendment) -->
     <Compile Include="..\..\scripts\Input\InAndOut.cs" />
+    <!-- Spin — the dribble-move family's last leaf, full-body rotation with a
+         hand swap at the END of Active (issue #201, ADR-0010 amendment) -->
+    <Compile Include="..\..\scripts\Input\Spin.cs" />
   </ItemGroup>
 
   <!--
@@ -156,6 +159,9 @@
     <Compile Include="..\..\scripts\Player\DriveGatherMath.cs" />
     <!-- Euro-step lateral displacement math (issue #231, ADR-0022) -->
     <Compile Include="..\..\scripts\Player\EuroStepMath.cs" />
+    <!-- Spin's scripted heading-arc, the ADR-0010 sanctioned Active-phase
+         exception (issue #201) -->
+    <Compile Include="..\..\scripts\Player\SpinHeadingMath.cs" />
   </ItemGroup>
 
   <ItemGroup>
