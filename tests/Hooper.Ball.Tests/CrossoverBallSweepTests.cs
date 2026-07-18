@@ -173,7 +173,7 @@ public class CrossoverBallSweepTests
     [InlineData(1f)]
     public void ForwardOffset_InFrontSweep_ReturnsBaselineRegardlessOfDip(float verticalDip)
     {
-        float result = CrossoverBallSweep.ForwardOffset(baseline: 0.5f, verticalDip, behindDepth: 0.7f, path: BallSweepPath.InFront);
+        float result = CrossoverBallSweep.ForwardOffset(baseline: 0.5f, verticalDip, behindDepth: 0.7f, shieldDepth: 0.45f, path: BallSweepPath.InFront);
 
         Assert.Equal(0.5f, result, precision: 5);
     }
@@ -187,7 +187,7 @@ public class CrossoverBallSweepTests
         // BetweenTheLegs (#199): the forward axis is untouched, exactly like
         // InFront — the distinguishing depth is a separate vertical dip term
         // the caller (BallController) applies on top, not this method.
-        float result = CrossoverBallSweep.ForwardOffset(baseline: 0.5f, verticalDip, behindDepth: 0.7f, path: BallSweepPath.ThroughLegs);
+        float result = CrossoverBallSweep.ForwardOffset(baseline: 0.5f, verticalDip, behindDepth: 0.7f, shieldDepth: 0.45f, path: BallSweepPath.ThroughLegs);
 
         Assert.Equal(0.5f, result, precision: 5);
     }
@@ -198,7 +198,7 @@ public class CrossoverBallSweepTests
         // Peak dip (t=0.5, verticalDip=1.0): baseline 0.5 - depth 0.7 = -0.2,
         // genuinely behind the holder's centerline — the "shielded, away
         // from the defender" transit issue #194 calls for.
-        float result = CrossoverBallSweep.ForwardOffset(baseline: 0.5f, verticalDip: 1.0f, behindDepth: 0.7f, path: BallSweepPath.BehindBody);
+        float result = CrossoverBallSweep.ForwardOffset(baseline: 0.5f, verticalDip: 1.0f, behindDepth: 0.7f, shieldDepth: 0.45f, path: BallSweepPath.BehindBody);
 
         Assert.Equal(-0.2f, result, precision: 5);
     }
@@ -209,8 +209,44 @@ public class CrossoverBallSweepTests
         // At either endpoint of the transit (verticalDip=0), the sweep
         // hasn't pulled back at all yet — the ball sits at the plain
         // baseline in front of the holder, same as Crossover.
-        float result = CrossoverBallSweep.ForwardOffset(baseline: 0.5f, verticalDip: 0f, behindDepth: 0.7f, path: BallSweepPath.BehindBody);
+        float result = CrossoverBallSweep.ForwardOffset(baseline: 0.5f, verticalDip: 0f, behindDepth: 0.7f, shieldDepth: 0.45f, path: BallSweepPath.BehindBody);
 
         Assert.Equal(0.5f, result, precision: 5);
+    }
+
+    // ── BodyShield (#201, ADR-0010/ADR-0014 tier-1 real-ball citation — see
+    // BallSweepPath.BodyShield's own doc) ────────────────────────────────────
+    [Fact]
+    public void ForwardOffset_BodyShieldSweep_AtPeakDip_PullsTightButStaysPositive()
+    {
+        // Peak dip (t=0.5, verticalDip=1.0): baseline 0.5 - shieldDepth 0.45
+        // = 0.05 — pulled in tight against the body's centerline, but
+        // deliberately NOT negative (contrast BehindBody's -0.2 at the same
+        // dip depth): a spin's body IS the shield, so the ball tucks close
+        // rather than swinging fully behind.
+        float result = CrossoverBallSweep.ForwardOffset(baseline: 0.5f, verticalDip: 1.0f, behindDepth: 0.7f, shieldDepth: 0.45f, path: BallSweepPath.BodyShield);
+
+        Assert.Equal(0.05f, result, precision: 5);
+        Assert.True(result > 0f, "BodyShield's forward offset must stay positive — the body itself is the shield, not a behind-the-back pull.");
+    }
+
+    [Fact]
+    public void ForwardOffset_BodyShieldSweep_AtSweepEndpoints_ReturnsBaseline()
+    {
+        float result = CrossoverBallSweep.ForwardOffset(baseline: 0.5f, verticalDip: 0f, behindDepth: 0.7f, shieldDepth: 0.45f, path: BallSweepPath.BodyShield);
+
+        Assert.Equal(0.5f, result, precision: 5);
+    }
+
+    [Fact]
+    public void ForwardOffset_BodyShieldSweep_PullsInLessThanBehindBodySweep()
+    {
+        // At identical peak dip, BodyShield must pull in LESS aggressively
+        // than BehindBody — tucked tight to the centerline, not swung all
+        // the way behind it.
+        float shieldResult = CrossoverBallSweep.ForwardOffset(baseline: 0.5f, verticalDip: 1.0f, behindDepth: 0.7f, shieldDepth: 0.45f, path: BallSweepPath.BodyShield);
+        float behindResult = CrossoverBallSweep.ForwardOffset(baseline: 0.5f, verticalDip: 1.0f, behindDepth: 0.7f, shieldDepth: 0.45f, path: BallSweepPath.BehindBody);
+
+        Assert.True(shieldResult > behindResult, $"expected BodyShield ({shieldResult}) to pull in LESS than BehindBody ({behindResult}).");
     }
 }

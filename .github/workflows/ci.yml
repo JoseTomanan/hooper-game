@@ -350,13 +350,19 @@ jobs:
       # by comparing a baseline trial (stick held constant) against a switched
       # trial (stick changes right after Active begins) on a FRESH player
       # instance each, isolating the one variable under test from the
-      # rotation's own heading change. Each exits 0=PASS/1=FAIL (ADR-0016).
+      # rotation's own heading change. 'sweep-path' proves the spin's
+      # ball-sweep resolves to the NEW BallSweepPath.BodyShield (the ball
+      # pulled tight to the rotating body, #201's "third option on #195's
+      # sweep geometry"), THEN proves a control Crossover under identical
+      # Dribbling conditions resolves to InFront, the pre-existing default —
+      # proving BodyShield is spin-specific. Each exits 0=PASS/1=FAIL (ADR-0016).
       - name: Run spin harness
         run: |
           godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=rotation
           godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=handside-swap-timing
           godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=dead-dribble-gate
           godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=exit-burst-continues-entry-line
+          godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=sweep-path
 
       # On-ball contest as a committed move (issue #99, ADR-0018 §2). Unit
       # tests already pin the pure composition arithmetic

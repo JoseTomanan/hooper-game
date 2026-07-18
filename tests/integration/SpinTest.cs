@@ -35,10 +35,17 @@ namespace HOOPERGAME.Tests.Integration;
 //      (see Spin's/SpinHeadingMath's class docs) — RELATIVE direction only;
 //      the burst MAGNITUDE is feel, deferred to #173 (ADR-0021).
 //
+//   5. The spin's ball-sweep path resolves to BodyShield (#201's "third
+//      option on #195's sweep geometry" — the ball pulled in tight against
+//      the rotating body, not extended in front and not swung fully behind)
+//      — CONTROL: a real Crossover resolves to InFront, the pre-existing
+//      default every non-special-cased move-id already gets.
+//
 //   godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=rotation
 //   godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=handside-swap-timing
 //   godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=dead-dribble-gate
 //   godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=exit-burst-continues-entry-line
+//   godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=sweep-path
 //   Exit: 0 = PASS, 1 = FAIL (via GetTree().Quit) — the ADR-0016 exit-code contract.
 //   Omitting --harness-scenario defaults to "rotation".
 //
@@ -84,7 +91,7 @@ public partial class SpinTest : Node
         _scenario = HarnessArgs.ReadArg(args, "--harness-scenario", "rotation");
         GD.Print($"[spin] scenario={_scenario} booting headless…");
 
-        if (_scenario is "dead-dribble-gate")
+        if (_scenario is "dead-dribble-gate" or "sweep-path")
         {
             // Needs a real BallController + tipoff for possession-state
             // scenarios (mirrors InAndOutTest/JabStepTest/BehindTheBackTest's
@@ -123,6 +130,7 @@ public partial class SpinTest : Node
             case "handside-swap-timing":               TickHandSideSwapTiming();          break;
             case "dead-dribble-gate":                   TickDeadDribbleGate();             break;
             case "exit-burst-continues-entry-line":     TickExitBurstContinuesEntryLine(); break;
+            case "sweep-path":                          TickSweepPath();                   break;
             default:
                 Fail($"unknown scenario '{_scenario}'.");
                 Finish();
@@ -145,6 +153,7 @@ public partial class SpinTest : Node
         CradleIssued, AwaitDeadHeld, RefusedFromDeadHeld,
         BaselineAwaitFirstActive, BaselineAwaitRecovery, BaselineAwaitInactive,
         ReplacePlayerAwait, SwitchedAwaitFirstActive, SwitchedAwaitRecovery,
+        SweepAwaitDribbling, SweepAwaitSwapped, SweepAwaitInactive, SweepControlAwaitSwapped,
     }
     private Step _step = Step.Start;
     private int _stepDeadlineFrame;
@@ -580,6 +589,128 @@ public partial class SpinTest : Node
                 GD.Print("[spin] RESULT: PASS (exit 0)");
                 Finish(0);
                 return;
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Scenario: "sweep-path"
+    // The spin's ball-sweep path resolves to BodyShield (#201's "third option
+    // on #195's sweep geometry") — pulled tight to the rotating body, not
+    // InFront's default. Control: a real Crossover under identical
+    // (Dribbling, then a hand-swap) conditions resolves to InFront, the
+    // pre-existing default every non-special-cased move-id already gets.
+    // Needs a real BallController + tipoff + a live Dribbling possession —
+    // the ball-sweep machinery (AdvanceHandSweep) only runs from
+    // TickHeld/TickDribbling, and Spin itself is refused from Held (see the
+    // "dead-dribble-gate" scenario), so the holder must actually be
+    // Dribbling before either move can begin.
+    // ═══════════════════════════════════════════════════════════════════════
+    private void TickSweepPath()
+    {
+        switch (_step)
+        {
+            case Step.AwaitTipoff:
+                if (_frame < ArmFrames) return;
+                if (_ball.StateMachine.HolderPeerId == 0)
+                {
+                    Fail("sweep-path: tipoff never assigned a holder.");
+                    Finish();
+                    return;
+                }
+                _holderId = _ball.StateMachine.HolderPeerId;
+                _ball.TryStartDribble(_holderId);
+                _step = Step.SweepAwaitDribbling;
+                _stepDeadlineFrame = _frame + ActionMarginFrames;
+                return;
+
+            case Step.SweepAwaitDribbling:
+            {
+                if (_frame < _stepDeadlineFrame) return;
+                if (_ball.State != BallState.Dribbling)
+                {
+                    Fail($"sweep-path: expected TryStartDribble to reach Dribbling; got state={_ball.State}.");
+                    Finish();
+                    return;
+                }
+                PlayerController holder = NodeForPeer(_holderId);
+                bool began = holder.BeginMoveForHarness(new Spin(spinDirection: 1f));
+                if (!began)
+                {
+                    Fail("sweep-path: BeginMoveForHarness(Spin) returned false.");
+                    Finish();
+                    return;
+                }
+                _step = Step.SweepAwaitSwapped;
+                return;
+            }
+
+            case Step.SweepAwaitSwapped:
+            {
+                // Wait until at least Recovery — the HandSide flip (and the
+                // AdvanceHandSweep-driven _sweepPath resolution it triggers)
+                // fires on the LAST Active tick (Spin's own timing contract,
+                // see "handside-swap-timing"), one tick before Phase leaves
+                // Active, so Recovery guarantees the flip has already been
+                // observed by the ball.
+                PlayerController holder = NodeForPeer(_holderId);
+                if (holder.PhaseForHarness != MovePhase.Recovery && holder.PhaseForHarness != MovePhase.Inactive) return;
+
+                if (_ball.SweepPathForHarness != BallSweepPath.BodyShield)
+                {
+                    Fail($"sweep-path: expected Spin's sweep to resolve to BallSweepPath.BodyShield, got {_ball.SweepPathForHarness}.");
+                    Finish();
+                    return;
+                }
+                GD.Print("[spin] PASS sweep-path — Spin's ball sweep resolved to BodyShield.");
+                _step = Step.SweepAwaitInactive;
+                return;
+            }
+
+            case Step.SweepAwaitInactive:
+            {
+                if (NodeForPeer(_holderId).PhaseForHarness != MovePhase.Inactive) return;
+                if (_ball.State != BallState.Dribbling)
+                {
+                    Fail($"sweep-path: expected the ball to still be Dribbling after Spin's full lifecycle; got state={_ball.State}.");
+                    Finish();
+                    return;
+                }
+
+                // Control: a REAL Crossover under identical (Dribbling)
+                // conditions resolves to InFront — proving BodyShield above
+                // is spin-specific, not some blanket effect of a hand swap.
+                PlayerController holder = NodeForPeer(_holderId);
+                bool controlBegan = holder.BeginMoveForHarness(new Crossover(1f));
+                if (!controlBegan)
+                {
+                    Fail("sweep-path: control BeginMoveForHarness(Crossover) returned false.");
+                    Finish();
+                    return;
+                }
+                _step = Step.SweepControlAwaitSwapped;
+                return;
+            }
+
+            case Step.SweepControlAwaitSwapped:
+            {
+                PlayerController holder = NodeForPeer(_holderId);
+                // Crossover's hand swap fires on JustEnteredActive (its FIRST
+                // Active tick) — Active itself is enough to have observed it.
+                if (holder.PhaseForHarness != MovePhase.Active
+                    && holder.PhaseForHarness != MovePhase.Recovery
+                    && holder.PhaseForHarness != MovePhase.Inactive) return;
+
+                if (_ball.SweepPathForHarness != BallSweepPath.InFront)
+                {
+                    Fail($"sweep-path: control Crossover expected BallSweepPath.InFront, got {_ball.SweepPathForHarness}.");
+                    Finish();
+                    return;
+                }
+                GD.Print("[spin] PASS control — a real Crossover resolves to InFront, proving BodyShield is spin-specific.");
+                GD.Print("[spin] RESULT: PASS (exit 0)");
+                Finish(0);
+                return;
+            }
         }
     }
 
