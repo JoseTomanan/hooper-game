@@ -100,6 +100,9 @@
     <!-- Euro-step — rim-finishing vertical, third leaf (issue #231, ADR-0022) -->
     <Compile Include="..\..\scripts\Input\EuroStep.cs" />
     <Compile Include="..\..\scripts\Input\EuroStepReadResolver.cs" />
+    <!-- Jab step — triple threat's stance bait (issue #200) -->
+    <Compile Include="..\..\scripts\Input\JabStep.cs" />
+    <Compile Include="..\..\scripts\Input\JabStepLegalityResolver.cs" />
   </ItemGroup>
 
   <!--
