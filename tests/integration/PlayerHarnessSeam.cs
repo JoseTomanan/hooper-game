@@ -21,6 +21,15 @@ public partial class PlayerController
     internal MovePhase PhaseForHarness => _machine.Phase;
 
     /// <summary>
+    /// Test-only (issue #201): exposes CommittedMoveMachine.FrameInPhase so a
+    /// harness can assert a move's one-shot Active-phase effect fires on the
+    /// EXACT tick its own frame-data contract promises (e.g. Spin's hand swap
+    /// on FrameInPhase == ActiveFrames - 1, the LAST Active tick) rather than
+    /// inferring timing indirectly from wall-clock frame counting.
+    /// </summary>
+    internal int FrameInPhaseForHarness => _machine.FrameInPhase;
+
+    /// <summary>
     /// Test-only (issue #175): exposes CommittedMoveMachine.WasRecoveryEnteredEarly
     /// — the level-triggered signal that gets piggybacked on ReceiveState and
     /// drives ShouldForceRecovery client-side. Proving THIS flag flips true at
