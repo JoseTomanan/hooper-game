@@ -32,6 +32,16 @@ not-yet-automated residue. The historical per-milestone dual-instance checklists
 below are the spec the harness scenes encode; read them as "what the integration
 test asserts," not "what you must click."
 
+**Scope narrowed a third time under [ADR-0024](docs/adr/0024-hitl-async-evidence-restructure.md)
+(2026-07-18, Proposed).** Once accepted: remaining `hitl` verifies decompose —
+state-checkable criteria become harness scenarios (`afk`), and visual/audio
+"does it read" judgments convert to **async artifact review** (CI-captured
+screenshots/clips attached to the issue; you judge from any device, whenever
+you choose — no live editor session, no dual-instance setup). What is left of
+this file's live duty is: async evidence review, optional vetoes on posted
+decision briefs, the consolidated deferred feel pass (#173, ADR-0021), and the
+one structural exclusion (editor import-dialog settings).
+
 The historical steps below are kept as a record of scene structure. New steps
 should be written as *verification* steps, not wiring steps — the wiring now ships
 in Claude's PR. Defer everything visual (materials, polish) until much later —
