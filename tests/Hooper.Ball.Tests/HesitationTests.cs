@@ -109,10 +109,12 @@ public class HesitationTests
     /// Asserts that Feint() returns false on the very first startup tick of a
     /// Hesitation, documenting that a hesitation has NO recall window.
     ///
-    /// This is the contrast case: a Crossover with feintWindowFrames=4 allows
-    /// a feint on its first 4 startup ticks; a Hesitation with feintWindowFrames=0
-    /// never allows a feint. The test pins this explicitly so any accidental
-    /// change to DefaultFrameData.FeintWindowFrames is caught immediately.
+    /// (Updated #202): Hesitation was ALWAYS unfeintable — this pins that this
+    /// stays true even now that Crossover/BehindTheBack have JOINED it
+    /// (feintWindowFrames: 0 for the whole dribble-move family, ADR-0003
+    /// amendment) rather than being the sole contrast case. The test still
+    /// pins DefaultFrameData.FeintWindowFrames == 0 explicitly so an
+    /// accidental change is caught immediately.
     /// </summary>
     [Fact]
     public void Hesitation_FeintOnFirstStartupTick_ReturnsFalse()

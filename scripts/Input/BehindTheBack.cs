@@ -34,19 +34,28 @@ namespace Hooper.Moves;
 ///     recover from, and cooldowns are a 2K-taxonomy anti-pattern under
 ///     ADR-0014's reference ranking).
 ///
+/// ── Structurally unfeintable (ADR-0003 amendment, issue #202) ──────────────
+/// feintWindowFrames was 4 (same feint-legal window as Crossover). #202
+/// closes ADR-0003's flagged feint reconsideration for the WHOLE dribble-move
+/// family, not just Crossover: the in-and-out (a Crossover-family sibling) is
+/// now the realistic replacement for the recall model, so BehindTheBack loses
+/// its feint window too — see Crossover's own class doc and docs/adr/
+/// 0003-input-model-hybrid.md's amendment for the full reasoning.
+///
 /// Default frame data mirrors Crossover's Startup/Active (the same
 /// telegraph + transit-swap duration) with a SHORTER Recovery — "comparable
 /// to, or slightly shorter than, Crossover's" per the spec, never longer:
 ///   Startup:  6 ticks  — same visible wind-up as Crossover
 ///   Active:   3 ticks  — same swap-transit window
 ///   Recovery: 10 ticks — slightly shorter than Crossover's 12
-///   Feint:    4 ticks  — same feint-legal window as Crossover
+///   Feint:    0 ticks  — a design constant, NOT a placeholder (#202): see
+///             the "Structurally unfeintable" section above.
 /// </summary>
 public sealed class BehindTheBack : CommittedMove
 {
     /// <summary>Default behind-the-back frame data. Tunable per instance if needed.</summary>
     public static readonly MoveFrameData DefaultFrameData =
-        new(startupFrames: 6, activeFrames: 3, recoveryFrames: 10, feintWindowFrames: 4);
+        new(startupFrames: 6, activeFrames: 3, recoveryFrames: 10, feintWindowFrames: 0);
 
     /// <summary>
     /// Direction of the lateral burst: +1 = right, -1 = left. Same

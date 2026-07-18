@@ -2370,8 +2370,12 @@ public partial class PlayerController : CharacterBody3D
 	/// Right-stick gestures: routed through RightStickGestureRecognizer. Both
 	/// input devices feed it via the aim_* actions — gamepad right stick, or
 	/// the IJKL keys (#191); the recognizer is hardware-agnostic, so keyboard
-	/// gets the same crossover/hesitation/feint semantics as the stick.
-	/// Feint modifier (E key / L1): aborts a crossover during its startup window.
+	/// gets the same crossover/hesitation/in-and-out semantics as the stick.
+	/// Feint modifier (E key / L1): pump-fakes a JumpShot during its startup
+	/// window (#202 closed the crossover-family recall model — see the
+	/// ADR-0003 amendment — so this key's ONLY remaining live effect is the
+	/// JumpShot pump-fake; Crossover/BehindTheBack are now structurally
+	/// unfeintable, feintWindowFrames: 0).
 	///
 	/// Note: Input.GetVector / IsActionJustPressed read the local machine's hardware.
 	/// This is correct for listen-server (the host IS the local player). If a
@@ -2447,6 +2451,32 @@ public partial class PlayerController : CharacterBody3D
 				{
 					RpcId(1, MethodName.RequestBeginMove, "crossover", flickSign);
 				}
+			}
+			else if (BeginCommittedMove(new Hesitation()) && !isServer)
+			{
+				RpcId(1, MethodName.RequestBeginMove, "hesitation", 0f);
+			}
+		}
+		else if (gesture.Kind == GestureKind.QuickReturn)
+		{
+			// In-and-out (M9, issue #202) — the quick-return retarget. The
+			// SAME hand-state disambiguation as the held Crossover branch
+			// above: flick toward the empty hand -> in-and-out (the fast,
+			// safe, small twin of the crossover — same telegraph, no hand
+			// swap); flick toward the ball hand -> hesitation, IDENTICAL to
+			// the held gesture (AC-8) — the flick DIRECTION picks the move
+			// family, hold-vs-quick-return only disambiguates WITHIN the
+			// empty-hand column. This gesture used to unconditionally feint
+			// whatever move was in Startup (GestureKind was named "Feint");
+			// #202 retargets it to BEGIN a move instead — see GestureKind's
+			// own doc for the rename, and the ADR-0003 amendment (docs/adr/
+			// 0003-input-model-hybrid.md) for why the old recall model is
+			// closed rather than kept alongside this.
+			int flickSign = System.Math.Sign(gesture.Direction);
+			if (HandStateResolver.IsCrossover(HandSide, flickSign))
+			{
+				if (BeginCommittedMove(new InAndOut(flickSign)) && !isServer)
+					RpcId(1, MethodName.RequestBeginMove, "inandout", flickSign);
 			}
 			else if (BeginCommittedMove(new Hesitation()) && !isServer)
 			{
@@ -2634,27 +2664,28 @@ public partial class PlayerController : CharacterBody3D
 				RpcId(1, MethodName.RequestBeginMove, "contest", 0f);
 		}
 
-		// Feint modifier: abort during the startup window. Two input paths feed
-		// the SAME Feint() call (#139): the discrete "move_feint" key, and the
-		// right-stick quick-return gesture the recognizer reports as
-		// GestureKind.Feint (its own doc says the caller must map it). A single
-		// flick is exactly one GestureKind, so this never double-fires with the
-		// crossover branch above. The machine enforces the feint-window guard;
-		// false return is silent.
+		// Feint modifier (#202 closed the ambiguous-gesture path): the ONLY
+		// input that can still call CommittedMoveMachine.Feint() is the
+		// explicit discrete "move_feint" key (E / L1) — a direct pump-fake
+		// request for whatever move is running. The machine enforces the
+		// feint-window guard itself (Startup only, within FeintWindowFrames);
+		// a false return is silent.
 		//
-		// Routed through FeintGateResolver (bug fix, /diagnose 2026-07-03): the
-		// gesture-sourced Feint is ambiguous — it fires from ANY quick aim-stick
-		// flick-and-return, unrelated to which move is running. For Crossover/
-		// Hesitation that free abort is harmless, but a JumpShot's feint is a
-		// pump-fake that SILENTLY consumes the ball release (Feint() never sets
-		// JustEnteredActive), while the windup animation plays regardless
-		// (MoveAnimResolver reads Phase alone) — so an incidental stick flick
-		// while shooting read as "I pressed shoot and nothing happened." The
-		// gate withholds the gesture (but never the explicit key) from an
-		// in-progress JumpShot; see FeintGateResolver's doc for the full reasoning.
-		bool shouldFeint = FeintGateResolver.ShouldFeint(
-			Input.IsActionJustPressed("move_feint"), gesture.Kind, _machine.CurrentMove);
-		if (shouldFeint && _machine.Feint() && !isServer)
+		// Before #202 this ALSO fired from the right-stick quick-return
+		// gesture (then GestureKind.Feint), routed through FeintGateResolver
+		// to withhold it from an in-progress JumpShot (bug fix, /diagnose
+		// 2026-07-03: an incidental aim-stick flick was silently eating the
+		// shot's release, since Feint() never sets JustEnteredActive while the
+		// windup animation plays regardless). #202 retargets that SAME
+		// gesture kind (renamed QuickReturn) to BEGIN a move instead (see the
+		// branch above) — a gesture reaching CommittedMoveMachine.Begin() while
+		// a JumpShot is Startup-ing is already a silent no-op (Begin() only
+		// succeeds from Inactive), so FeintGateResolver's whole reason to
+		// exist — withholding an AMBIGUOUS gesture-sourced Feint() call from
+		// JumpShot — is now structurally moot: there is no other gesture-
+		// sourced Feint() call left to withhold it from. FeintGateResolver
+		// was removed (doubt-driven pass, #202) rather than kept as dead code.
+		if (Input.IsActionJustPressed("move_feint") && _machine.Feint() && !isServer)
 			RpcId(1, MethodName.RequestFeint);
 
 		_machine.Tick(); // advance one frame — always called, including Inactive (no-op)

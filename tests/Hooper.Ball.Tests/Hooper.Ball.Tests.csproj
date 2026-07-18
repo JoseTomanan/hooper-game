@@ -83,9 +83,6 @@
     <!-- Layup / rim-finish committed move (issue #229, ADR-0022) -->
     <Compile Include="..\..\scripts\Input\Layup.cs" />
     <Compile Include="..\..\scripts\Input\LayupRangeResolver.cs" />
-    <!-- Bug fix (/diagnose, 2026-07-03): gates the ambiguous right-stick feint
-         gesture off JumpShot so it can't silently eat the ball release. -->
-    <Compile Include="..\..\scripts\Input\FeintGateResolver.cs" />
     <!-- M10 steal committed move (issue #96, ADR-0018) -->
     <Compile Include="..\..\scripts\Input\StealMove.cs" />
     <!-- M10 block committed move (issue #98, ADR-0018) -->
