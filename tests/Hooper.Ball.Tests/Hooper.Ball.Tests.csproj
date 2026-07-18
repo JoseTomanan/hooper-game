@@ -103,6 +103,8 @@
     <!-- Jab step — triple threat's stance bait (issue #200) -->
     <Compile Include="..\..\scripts\Input\JabStep.cs" />
     <Compile Include="..\..\scripts\Input\JabStepLegalityResolver.cs" />
+    <!-- In-and-out — the crossover's twin, no hand swap (issue #202, ADR-0003 amendment) -->
+    <Compile Include="..\..\scripts\Input\InAndOut.cs" />
   </ItemGroup>
 
   <!--
