@@ -40,12 +40,24 @@ namespace HOOPERGAME.Tests.Integration;
 //      the rotating body, not extended in front and not swung fully behind)
 //      — CONTROL: a real Crossover resolves to InFront, the pre-existing
 //      default every non-special-cased move-id already gets.
+//   6. A real player CAN trigger a spin: holding BOTH "move_size_up" and
+//      "move_finesse" together during a held crossover flick begins a real
+//      Spin through the ACTUAL RightStickGestureRecognizer -> SampleMoveInput
+//      dispatch (real synthetic Input.ActionPress, no harness seam) — CONTROL:
+//      "move_size_up" alone under the SAME flick still begins BehindTheBack,
+//      proving the modifier-combo is additive, not a silent reassignment of
+//      the existing single-modifier dispatch.
+//   7. A client-initiated "spin" RequestBeginMove payload reconstructs
+//      correctly server-side through the SAME ApplyRequestedMove dispatch a
+//      real RPC would drive (the flick sign survives as SpinDirection).
 //
 //   godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=rotation
 //   godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=handside-swap-timing
 //   godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=dead-dribble-gate
 //   godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=exit-burst-continues-entry-line
 //   godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=sweep-path
+//   godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=real-input-trigger
+//   godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=reconstruct
 //   Exit: 0 = PASS, 1 = FAIL (via GetTree().Quit) — the ADR-0016 exit-code contract.
 //   Omitting --harness-scenario defaults to "rotation".
 //
@@ -57,15 +69,16 @@ namespace HOOPERGAME.Tests.Integration;
 // physics frame, the free clock every other Begin*ForHarness-driven harness
 // in this repo relies on.
 //
-// ── Why BeginMoveForHarness, not real gesture/RPC dispatch ────────────────
-// Spin has no assigned right-stick gesture or input action yet (a real input
-// trigger for it is untouched — flagged as adjacent, out-of-scope follow-up
-// work for this issue, not silently done here). BeginMoveForHarness routes
-// through the SAME production choke point (BeginCommittedMove) every gesture-
-// driven move already uses (DefensiveMoveHarnessSeam's own doc), so every
-// assertion below proves the real move machinery — only the input-selection
-// layer is bypassed, exactly like every other harness in this repo that
-// exercises a move via this seam.
+// ── Why most scenarios use BeginMoveForHarness, not real gesture/RPC dispatch ──
+// Scenarios 1-5 above use BeginMoveForHarness — same as every sibling move's
+// mechanics harness (DefensiveMoveHarnessSeam's own doc) — because the thing
+// under test there is what Spin DOES once begun, not how it gets begun.
+// Scenarios 6-7 exist specifically to prove Spin CAN be begun through the real
+// input/RPC surface (move_size_up + move_finesse held together during a
+// crossover flick — see SampleMoveInput's Spin branch for the full ADR-0014
+// tier-3 citation and the circuit-breaker reasoning for NOT building a new
+// stick-rotation gesture primitive) and through ApplyRequestedMove's "spin"
+// reconstruction case.
 public partial class SpinTest : Node
 {
     private const double TimeoutSeconds = 10.0;
@@ -73,6 +86,7 @@ public partial class SpinTest : Node
     private const int ActionMarginFrames = 3; // ticks to let an action's effect settle
     private const float HeadingTolerance = 0.01f;
     private const float VelocityTolerance = 0.05f;
+    private const int FlickHoldTicks = 7;     // > the recognizer's feint window — commits the HELD gesture (mirrors InAndOutTest)
 
     private static readonly int ActiveFrames = Spin.DefaultFrameData.ActiveFrames;
 
@@ -131,6 +145,8 @@ public partial class SpinTest : Node
             case "dead-dribble-gate":                   TickDeadDribbleGate();             break;
             case "exit-burst-continues-entry-line":     TickExitBurstContinuesEntryLine(); break;
             case "sweep-path":                          TickSweepPath();                   break;
+            case "real-input-trigger":                   TickRealInputTrigger();            break;
+            case "reconstruct":                          TickReconstruct();                 break;
             default:
                 Fail($"unknown scenario '{_scenario}'.");
                 Finish();
@@ -154,6 +170,7 @@ public partial class SpinTest : Node
         BaselineAwaitFirstActive, BaselineAwaitRecovery, BaselineAwaitInactive,
         ReplacePlayerAwait, SwitchedAwaitFirstActive, SwitchedAwaitRecovery,
         SweepAwaitDribbling, SweepAwaitSwapped, SweepAwaitInactive, SweepControlAwaitSwapped,
+        RealInputFlickStarted, RealInputAwaitInactive, RealInputControlFlickStarted,
     }
     private Step _step = Step.Start;
     private int _stepDeadlineFrame;
@@ -711,6 +728,150 @@ public partial class SpinTest : Node
                 Finish(0);
                 return;
             }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Scenario: "real-input-trigger"
+    // A real player CAN trigger a spin: holding BOTH "move_size_up" and
+    // "move_finesse" during a held crossover flick begins a real Spin through
+    // the ACTUAL RightStickGestureRecognizer -> SampleMoveInput dispatch (real
+    // synthetic Input.ActionPress, no harness seam). Control: "move_size_up"
+    // ALONE under the SAME flick still begins BehindTheBack — proving the
+    // modifier-combo is additive (a NEW selection), not a silent reassignment
+    // of the pre-existing single-modifier dispatch.
+    // ═══════════════════════════════════════════════════════════════════════
+    private int _flickStartFrame = -1;
+
+    private void TickRealInputTrigger()
+    {
+        switch (_step)
+        {
+            case Step.Start:
+                Input.ActionPress("move_size_up", 1.0f);
+                Input.ActionPress("move_finesse", 1.0f);
+                Input.ActionPress("aim_right", 1.0f); // flickSign +1: empty hand (HandSide.Left default)
+                _flickStartFrame = _frame;
+                _step = Step.RealInputFlickStarted;
+                return;
+
+            case Step.RealInputFlickStarted:
+                if (_p1.CurrentMoveIdForHarness == "spin")
+                {
+                    // Release NOW, not on a fixed frame offset — the gesture
+                    // may commit (FeintWindowTicks+1 ticks) well before a
+                    // fixed FlickHoldTicks deadline, and this case is left the
+                    // very same tick the move commits, so a frame-counted
+                    // release scheduled for later would never fire (the bug
+                    // an earlier draft of this scenario had: aim_right stayed
+                    // HELD through the whole rest of the scenario, corrupting
+                    // the later control flick's stick reading).
+                    Input.ActionRelease("aim_right");
+                    GD.Print($"[spin] PASS real-input-trigger — holding move_size_up+move_finesse during a real flick began Spin at frame {_frame}.");
+                    _step = Step.RealInputAwaitInactive;
+                }
+                else if (_p1.CurrentMoveIdForHarness is "behindtheback" or "betweenthelegs" or "crossover")
+                {
+                    Input.ActionRelease("aim_right");
+                    Fail($"real-input-trigger: expected Spin, got '{_p1.CurrentMoveIdForHarness}' — the modifier-combo dispatch did not fire correctly.");
+                    Finish();
+                    return;
+                }
+                else if (_frame > _flickStartFrame + FlickHoldTicks + ActionMarginFrames)
+                {
+                    // Safety valve: the gesture never committed at all within
+                    // a generous margin past FlickHoldTicks — fail loudly
+                    // instead of relying on the outer timeout to explain why.
+                    Input.ActionRelease("aim_right");
+                    Fail($"real-input-trigger: the flick never committed to any move within {FlickHoldTicks + ActionMarginFrames} ticks (moveId='{_p1.CurrentMoveIdForHarness}').");
+                    Finish();
+                    return;
+                }
+                return;
+
+            case Step.RealInputAwaitInactive:
+                if (_p1.PhaseForHarness != MovePhase.Inactive) return;
+                GD.Print("[spin] PASS lifecycle — the real-input Spin ran its full Startup->Active->Recovery->Inactive cycle.");
+                Input.ActionRelease("move_size_up");
+                Input.ActionRelease("move_finesse");
+
+                // Control: the SAME kind of flick with ONLY move_size_up held
+                // must still begin a BehindTheBack — the pre-existing
+                // single-modifier dispatch is unaffected by adding the
+                // modifier-combo branch above it. Spin's own effect swapped
+                // HandSide (Left -> Right), so the EMPTY hand is now on the
+                // LEFT (HandStateResolver.EmptyHandSign(Right) == -1) — the
+                // "toward the empty hand" flick that reads as a held crossover
+                // gesture is therefore aim_LEFT this time, not aim_right
+                // (using the stale sign here would silently resolve to
+                // Hesitation instead, since the flick would read as "toward
+                // the ball hand" against the NEW HandSide).
+                Input.ActionPress("move_size_up", 1.0f);
+                Input.ActionPress("aim_left", 1.0f);
+                _flickStartFrame = _frame;
+                _step = Step.RealInputControlFlickStarted;
+                return;
+
+            case Step.RealInputControlFlickStarted:
+                if (_p1.CurrentMoveIdForHarness == "behindtheback")
+                {
+                    // Release NOW — see RealInputFlickStarted's identical
+                    // reasoning: a frame-counted release scheduled past the
+                    // tick this case is left on would never fire.
+                    Input.ActionRelease("aim_left");
+                    Input.ActionRelease("move_size_up");
+                    GD.Print("[spin] PASS control — move_size_up ALONE under the same flick still begins BehindTheBack, unaffected by the new modifier-combo branch.");
+                    GD.Print("[spin] RESULT: PASS (exit 0)");
+                    Finish(0);
+                }
+                else if (_p1.CurrentMoveIdForHarness == "spin")
+                {
+                    Input.ActionRelease("aim_left");
+                    Fail("real-input-trigger: control move_size_up-alone wrongly began Spin instead of BehindTheBack.");
+                    Finish();
+                    return;
+                }
+                else if (_frame > _flickStartFrame + FlickHoldTicks + ActionMarginFrames)
+                {
+                    Input.ActionRelease("aim_left");
+                    Fail($"real-input-trigger: control flick never committed to any move within {FlickHoldTicks + ActionMarginFrames} ticks (moveId='{_p1.CurrentMoveIdForHarness}').");
+                    Finish();
+                    return;
+                }
+                return;
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Scenario: "reconstruct"
+    // A client-initiated "spin" RequestBeginMove payload reconstructs
+    // correctly server-side (SpinDirection intact) through the SAME
+    // ApplyRequestedMove dispatch a real RPC would drive — bypassing only the
+    // sender-authorization/RPC layer headless cannot exercise (see
+    // RequestMoveForHarness/LayupRangeHarnessSeam's identical rationale).
+    // ═══════════════════════════════════════════════════════════════════════
+    private void TickReconstruct()
+    {
+        switch (_step)
+        {
+            case Step.Start:
+                _p1.RequestMoveForHarness("spin", 1f);
+                if (_p1.CurrentMoveIdForHarness != "spin")
+                {
+                    Fail($"reconstruct: expected 'spin' to reconstruct and begin; got CurrentMoveIdForHarness='{_p1.CurrentMoveIdForHarness}'.");
+                    Finish();
+                    return;
+                }
+                GD.Print("[spin] PASS reconstruct-begin — the 'spin' wire payload reconstructed and began through ApplyRequestedMove.");
+                _step = Step.AwaitInactive;
+                return;
+
+            case Step.AwaitInactive:
+                if (_p1.PhaseForHarness != MovePhase.Inactive) return;
+                GD.Print("[spin] PASS reconstruct-lifecycle — the reconstructed Spin ran to Inactive.");
+                GD.Print("[spin] RESULT: PASS (exit 0)");
+                Finish(0);
+                return;
         }
     }
 

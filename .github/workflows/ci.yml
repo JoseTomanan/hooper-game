@@ -355,7 +355,19 @@ jobs:
       # pulled tight to the rotating body, #201's "third option on #195's
       # sweep geometry"), THEN proves a control Crossover under identical
       # Dribbling conditions resolves to InFront, the pre-existing default —
-      # proving BodyShield is spin-specific. Each exits 0=PASS/1=FAIL (ADR-0016).
+      # proving BodyShield is spin-specific. 'real-input-trigger' proves a
+      # real player CAN trigger a spin: holding "move_size_up" + "move_finesse"
+      # together during a held crossover flick begins a real Spin through the
+      # ACTUAL RightStickGestureRecognizer -> SampleMoveInput dispatch (real
+      # synthetic Input.ActionPress, no harness seam), THEN proves the control
+      # — "move_size_up" alone under the same kind of flick still begins
+      # BehindTheBack, unaffected by the new modifier-combo branch (see
+      # SampleMoveInput's Spin branch for the ADR-0014 tier-3 citation and the
+      # circuit-breaker reasoning against a new gesture-recognition
+      # primitive). 'reconstruct' proves a client-initiated "spin"
+      # RequestBeginMove payload reconstructs correctly server-side through
+      # the SAME ApplyRequestedMove dispatch a real RPC would drive. Each
+      # exits 0=PASS/1=FAIL (ADR-0016).
       - name: Run spin harness
         run: |
           godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=rotation
@@ -363,6 +375,8 @@ jobs:
           godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=dead-dribble-gate
           godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=exit-burst-continues-entry-line
           godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=sweep-path
+          godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=real-input-trigger
+          godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=reconstruct
 
       # On-ball contest as a committed move (issue #99, ADR-0018 §2). Unit
       # tests already pin the pure composition arithmetic
