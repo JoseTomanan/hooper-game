@@ -138,9 +138,92 @@ reaction), **not** "a crossover you cancelled." The hesitation is therefore a
 distinct committed move (no hand-swap, no scripted burst; the player drives the
 exit with the left stick), *not* a `Feint()` of a crossover.
 
-`Feint()` is **kept for now** (it is wired and harmless) but is flagged here as
-**non-realistic and slated for reconsideration** — do not build new dribble
-mechanics on top of the recall model.
+`Feint()` was **kept for now** (it was wired and harmless) but was flagged here
+as **non-realistic and slated for reconsideration** — do not build new dribble
+mechanics on top of the recall model. **That reconsideration is closed by the
+amendment immediately below (M9, #202).**
+
+### The in-and-out closes the dribble-move feint reconsideration (M9, #202)
+
+The reconsideration flagged above is now resolved: the **in-and-out** is the
+realistic replacement for the recall model, and `Feint()` on a dribble move
+(Crossover, BehindTheBack) is removed rather than kept alongside it.
+
+**Why the in-and-out, and not merely "keep the recall around" (ADR-0014 tier-2
+citation — real half-court ball):** the reason a combat-sport feint doesn't
+apply to a dribble move is stated two paragraphs up — "once the ball is headed
+to the floor you physically cannot pull it back." That reasoning does **not**
+bite the in-and-out: in a real in-and-out dribble, the ball **never crosses
+over**. The hand rides the outside of the ball, pushes it out toward the fake,
+and the **same** hand recovers it inside on one continuous dribble cadence —
+there is no ball-in-flight to "pull back," because nothing was ever released
+toward the other hand. It is the one dribble fake that is physically honest,
+and therefore the realistic **replacement** for the recall model this ADR
+already said was coming, not a new mechanic bolted on top of it.
+
+Mechanically, `InAndOut` (`scripts/Input/InAndOut.cs`) is Crossover's burst
+composed through the SAME `CrossoverBurstMath.ComposeActiveVelocity` at a
+reduced magnitude, plus Hesitation's "no hand swap" rule — no new burst math,
+no new wire state, no new committed-move machinery. The right-stick quick-return
+gesture (`GestureKind`, renamed from `Feint` to `QuickReturn` — a pure rename,
+not a new grammar cell) now BEGINS this move (or a Hesitation, by the same
+`HandStateResolver.IsCrossover` hand-state read the held gesture already uses)
+instead of aborting whatever move was in Startup.
+
+**What changed:**
+- `Crossover.DefaultFrameData` and `BehindTheBack.DefaultFrameData`:
+  `feintWindowFrames` 4 → **0**. Both dribble moves are now **structurally
+  unfeintable** — `CommittedMoveMachine.Feint()`'s own window guard already
+  refuses everything when `feintWindowFrames == 0` (no special case added).
+- `FeintGateResolver` (the /diagnose 2026-07-03 bug-fix class that withheld the
+  ambiguous gesture-sourced feint from an in-progress `JumpShot`) is **deleted**,
+  not kept as dead code. Its whole reason to exist was gating an AMBIGUOUS
+  gesture that could reach either a harmless dribble-move abort or a
+  shot-eating `JumpShot` pump-fake. Once the gesture no longer calls `Feint()`
+  at all (it calls `Begin()` on an `InAndOut`/`Hesitation` instead), there is
+  no ambiguity left to gate: an incidental aim-stick flick during an
+  in-progress `JumpShot`'s Startup now attempts `Begin(InAndOut)` against a
+  non-`Inactive` machine, which `CommittedMoveMachine.Begin()` already refuses
+  as a silent no-op (its documented contract, unrelated to this issue) — the
+  exact bug class `FeintGateResolver` existed to prevent is now prevented
+  structurally, by the same mechanism that already refuses a second `Begin()`
+  on any in-progress move, not by a gate someone has to remember to keep
+  calling. `CommittedMoveMachine.Feint()` itself is UNCHANGED and still serves
+  `JumpShot`'s pump-fake (#77) via the explicit `move_feint` key — the only
+  input path left that ever calls it.
+
+**Rejected alternatives (recorded so a future session does not silently
+re-open this):**
+- **Treat the crossover's existing feint as already being the in-and-out.**
+  This was the ORIGINAL (2026-07-04) deferral rationale for issue #202 itself,
+  and it is wrong on the facts: `Crossover`'s `feintRecoveryFrames` is 0, so
+  `Feint()` routes Startup → Inactive with **zero** separation, zero recovery,
+  zero cost — that is the size-up (a free abort), not a move that beats a
+  defender. Equating the two would equate a scoring move with a no-op.
+  Rejected 2026-07-16 (see issue #202's un-deferral).
+- **Keep `Feint()` available on Crossover/BehindTheBack alongside the new
+  in-and-out** (belt-and-suspenders). Rejected: this ADR already named the
+  recall non-realistic; now that a realistic, honest replacement exists,
+  keeping the unrealistic one alongside it serves no design purpose and
+  re-opens the exact "free zero-cost abort" hole the in-and-out was filed to
+  close. A dribble move's only legitimate "I didn't mean that" tool is now the
+  in-and-out itself (which is not free — it pays a real Startup→Active→Recovery
+  cost) or the Hesitation it forks into from the ball-hand side of the flick.
+- **Build `InAndOut` as a parameter/flag on `Crossover`** rather than its own
+  `CommittedMove` subclass. Rejected for the same reason `BehindTheBack` (#194)
+  and `BetweenTheLegs` (#199) already were: composition over hierarchy — all
+  three share the SAME `CrossoverBurstMath` composition with different
+  tunables/behavior flags, rather than one subclassing another or a shared
+  base carrying move-specific behavior (`docs/handoffs/M9-move-taxonomy.md`).
+- **Give `InAndOut` its own feint window.** Rejected: a fake of a fake is
+  incoherent, and this ADR's own dribble-move recall ban (closed above) rules
+  it out on the same grounds a Crossover/BehindTheBack feint window now is.
+  `InAndOut.DefaultFrameData` sets `feintWindowFrames: 0` as a design constant,
+  mirroring `Hesitation`/`JabStep`'s identical reasoning.
+
+A request to re-add a feint window to any dribble move, or to reintroduce
+`FeintGateResolver` as a gate on some future ambiguous gesture, contradicts
+this closed reconsideration; it does not refine it.
 
 ### Back-turn legibility relaxed for the movement-stick pivot (#172)
 

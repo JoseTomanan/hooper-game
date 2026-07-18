@@ -278,6 +278,55 @@ jobs:
           godot --headless --path . res://tests/integration/JabStepTest.tscn -- --harness-scenario=legal-dead-held
           godot --headless --path . res://tests/integration/JabStepTest.tscn -- --harness-scenario=illegal-dribbling
 
+      # In-and-out — the crossover's twin, same telegraph, no hand swap
+      # (issue #202, ADR-0003 amendment). Unit tests already pin the pure
+      # frame-data/identity contract (InAndOutTests.cs), the gesture-meaning
+      # composition, and the GestureKind rename
+      # (RightStickGestureRecognizerTests.cs); this proves the LIVE engine
+      # glue. 'quick-return-empty-hand' drives REAL synthetic aim-stick input
+      # (Input.ActionPress, no harness seam) through the actual
+      # RightStickGestureRecognizer -> SampleMoveInput dispatch: a quick
+      # flick-and-return toward the empty hand begins a real InAndOut, runs
+      # its full lifecycle, THEN drives the SAME flick HELD past the window —
+      # the required control proving a Crossover begins instead, so the
+      # retarget is quick-return-specific, not a change to the held gesture.
+      # 'quick-return-ball-hand' is the AC-8 twin: flick toward the BALL hand
+      # begins a Hesitation via the quick-return gesture, then proves the
+      # SAME flick HELD ALSO begins a Hesitation — identical outcome either
+      # way, per the issue's 2x2 gesture table. 'handside-unchanged' proves
+      # InAndOut leaves HandSide untouched across its full lifecycle, THEN
+      # begins a control Crossover from the same hand that DOES flip it — the
+      # required control proving the "unchanged" observation isn't vacuous.
+      # 'fallback-toward-ball-hand' proves the stationary+neutral-exit
+      # fallback burst travels toward the BALL hand (the negated flick sign),
+      # THEN proves a control Crossover under IDENTICAL conditions bursts the
+      # OPPOSITE way (toward the empty hand) — pinning the negation is
+      # InAndOut-specific. 'dead-dribble-gate' proves InAndOut is refused from
+      # both a fresh LIVE Held possession and a DEAD Held possession
+      # (HasDribbled=true, post-cradle), with the required control proving it
+      # IS permitted from a live Dribbling possession — the specific check
+      # that catches a hardcoded-type-list omission (the brief's named single
+      # most likely defect for this issue). 'feint-refused' proves Crossover
+      # and BehindTheBack are now structurally unfeintable at Startup frame 0
+      # (feintWindowFrames: 0, the ADR-0003 amendment), with the required
+      # control proving JumpShot's pump-fake still succeeds inside its legal
+      # [3, 12) window and NEVER reaches Active (no ball release) — proving
+      # the dribble-move refusal is move-specific, not a global feint break.
+      # 'reconstruct' proves a client-initiated "inandout" wire payload
+      # reconstructs correctly server-side through the SAME ApplyRequestedMove
+      # dispatch a real RPC would drive (flick sign intact, HandSide
+      # untouched across the reconstructed lifecycle). Each exits
+      # 0=PASS/1=FAIL (ADR-0016).
+      - name: Run in-and-out harness
+        run: |
+          godot --headless --path . res://tests/integration/InAndOutTest.tscn -- --harness-scenario=quick-return-empty-hand
+          godot --headless --path . res://tests/integration/InAndOutTest.tscn -- --harness-scenario=quick-return-ball-hand
+          godot --headless --path . res://tests/integration/InAndOutTest.tscn -- --harness-scenario=handside-unchanged
+          godot --headless --path . res://tests/integration/InAndOutTest.tscn -- --harness-scenario=fallback-toward-ball-hand
+          godot --headless --path . res://tests/integration/InAndOutTest.tscn -- --harness-scenario=dead-dribble-gate
+          godot --headless --path . res://tests/integration/InAndOutTest.tscn -- --harness-scenario=feint-refused
+          godot --headless --path . res://tests/integration/InAndOutTest.tscn -- --harness-scenario=reconstruct
+
       # On-ball contest as a committed move (issue #99, ADR-0018 §2). Unit
       # tests already pin the pure composition arithmetic
       # (DefensiveResolutionTests.ContestAppliesAt/ContestMoveFactor) and

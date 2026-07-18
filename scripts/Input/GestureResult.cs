@@ -6,22 +6,39 @@ namespace Hooper.Moves;
 /// Discriminates the outcome of a single RightStickGestureRecognizer.Sample() call.
 ///
 /// StepBack/RetreatDribble (issue #197) are the VERTICAL (downward-only)
-/// counterpart to the Crossover/Feint horizontal pair — same "quick
+/// counterpart to the Crossover/QuickReturn horizontal pair — same "quick
 /// flick-and-release vs. flick-and-hold" grammar, disambiguated from the
 /// horizontal pair by dominant-axis-wins (see RightStickGestureRecognizer's
-/// doc). There is deliberately no vertical "Feint" kind: each vertical
+/// doc). There is deliberately no vertical "QuickReturn" kind: each vertical
 /// gesture IS its own complete committed move (RetreatDribble = quick,
-/// StepBack = held) rather than one move plus a separate abort signal.
+/// StepBack = held) rather than one move plus a separate disambiguation.
+///
+/// ── Rename history (issue #202) ──────────────────────────────────────────
+/// This kind was originally named "Feint": every quick flick-and-return used
+/// to abort whatever move was Startup-ing (CommittedMoveMachine.Feint()).
+/// #202 retargets it — the quick-return horizontal gesture now BEGINS a move
+/// of its own (InAndOut when the flick is toward the empty hand, Hesitation
+/// when toward the ball hand — see HandStateResolver.IsCrossover, which the
+/// caller now consults for THIS kind exactly as it already does for the held
+/// Crossover kind) rather than cancelling one. "QuickReturn" names what the
+/// STICK did, leaving "which move begins" to the caller's hand-state read —
+/// the same split the "Crossover" kind name already models (a completed hold
+/// gesture, disambiguated into Crossover-or-Hesitation by the caller).
 /// </summary>
-public enum GestureKind { None, Crossover, Feint, StepBack, RetreatDribble }
+public enum GestureKind { None, Crossover, QuickReturn, StepBack, RetreatDribble }
 
 /// <summary>
 /// Carries the result of one gesture-recognizer tick.
 ///
 /// Kind == None          → no gesture completed this tick.
-/// Kind == Crossover      → a committed crossover flick was confirmed (direction ±1).
-/// Kind == Feint          → the player pushed past the threshold and pulled back quickly,
-///                          signalling a fake-out (direction ±1 = direction of the initial flick).
+/// Kind == Crossover      → a completed HOLD gesture (direction ±1) — the
+///                          caller disambiguates Crossover vs Hesitation via
+///                          HandStateResolver.IsCrossover.
+/// Kind == QuickReturn    → the player pushed past the threshold and pulled
+///                          back quickly (direction ±1 = direction of the
+///                          initial flick) — the caller disambiguates
+///                          InAndOut vs Hesitation via the SAME
+///                          HandStateResolver.IsCrossover call (issue #202).
 /// Kind == StepBack       → a vertical (downward) flick was held past the feint
 ///                          window — the step-back's "hold" commitment (#197).
 /// Kind == RetreatDribble → a vertical (downward) flick quick-returned to the
@@ -32,8 +49,8 @@ public enum GestureKind { None, Crossover, Feint, StepBack, RetreatDribble }
 /// vertical pair carries no left/right payload (there is only one downward
 /// direction to recognize); otherwise +1 (right) or -1 (left) for the
 /// horizontal pair.
-/// The caller is responsible for mapping this to a CommittedMove or a Feint() call
-/// on CommittedMoveMachine — the recognizer is pattern-only.
+/// The caller is responsible for mapping this to a CommittedMove — the
+/// recognizer is pattern-only.
 /// </summary>
 public readonly struct GestureResult
 {

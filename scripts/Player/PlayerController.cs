@@ -367,6 +367,43 @@ public partial class PlayerController : CharacterBody3D
 	/// </summary>
 	[Export] public float BetweenTheLegsExitConeDegrees { get; set; } = 115.0f;
 
+	// ── In-and-out tuning (issue #202) ────────────────────────────────────────
+	// The crossover's twin — same telegraph, no hand swap. Shares
+	// CrossoverBurstMath.ComposeActiveVelocity with Crossover/BehindTheBack/
+	// BetweenTheLegs (composition, not inheritance — see InAndOut's own class
+	// doc), but at a REDUCED burst magnitude: the design call from the #202
+	// grilling session is that an in-and-out is "fast, safe, small" (shorter
+	// Startup, no transit-steal exposure, no hand-swap side-read invalidation)
+	// against the crossover's "slow, risky, big" — the smaller burst is what
+	// pays for the combined speed/safety advantage. Frame data lives on
+	// InAndOut.DefaultFrameData, not here.
+
+	/// <summary>
+	/// Lateral speed of InAndOut's Active-phase burst (m/s). ~0.6x Crossover's
+	/// BurstSpeed (9.0) per the #202 design session's locked relative-direction
+	/// call ("in-and-out bursts LESS than crossover") — the EXACT scalar is
+	/// feel, deferred to the consolidated human pass #173 (ADR-0021); do not
+	/// tune this default without that pass. Only the relative comparison
+	/// (InAndOutBurstSpeed &lt; BurstSpeed) is a locked, harness-assertable
+	/// design call, not this specific magnitude.
+	/// </summary>
+	[Export] public float InAndOutBurstSpeed { get; set; } = 5.4f;
+
+	/// <summary>
+	/// Forward speed of InAndOut's Active-phase burst (m/s). Matches
+	/// InAndOutBurstSpeed by default for the same symmetric-feel reasoning as
+	/// Crossover's ForwardBurstScale. Bare feel default, deferred sign-off.
+	/// </summary>
+	[Export] public float InAndOutForwardBurstScale { get; set; } = 5.4f;
+
+	// No separate InAndOutGatherDecel: InAndOut's Startup plant reuses
+	// Crossover's own GatherDecel value directly (TickCommittedMoveBehavior's
+	// Startup switch) — its Startup is shorter (4 ticks vs. Crossover's 6)
+	// but otherwise an ordinary plant, not a heavier/lighter one by design, so
+	// it doesn't need a fourth near-duplicate [Export] with nothing
+	// distinguishing its value from GatherDecel/BehindTheBackGatherDecel/
+	// BetweenTheLegsGatherDecel.
+
 	/// <summary>
 	/// Hard-decel rate (m/s²) DriveGather's Startup plant bleeds pre-existing
 	/// (lateral) momentum at — the SAME hybrid-gather model #198 introduced
@@ -1419,8 +1456,17 @@ public partial class PlayerController : CharacterBody3D
 		// possession, and (like DriveGather, unlike StepBack) its Active-entry
 		// burst fires regardless of ball state, so gating Begin() here is what
 		// closes the free-movement bypass.
+		//
+		// InAndOut (#202) joins for the SAME reason as Crossover/BehindTheBack:
+		// it is ALSO a dribble move in real ball (the fake-out only makes sense
+		// off a live dribble cadence — see InAndOut's own class doc), so the
+		// dead-dribble rule must apply to it identically. This is the single
+		// most likely defect the #202 brief calls out: an InAndOut omitted from
+		// this hardcoded type list would silently escape the dead-dribble rule
+		// (the #193 bug class) even though its Active-entry burst fires
+		// regardless of ball state, exactly like Crossover's does.
 		if ((move is Crossover || move is Hesitation || move is BehindTheBack || move is BetweenTheLegs
-			 || move is RetreatDribble || move is DriveGather || move is EuroStep)
+			 || move is RetreatDribble || move is DriveGather || move is EuroStep || move is InAndOut)
 			&& IsBallHolder && GetBall()?.State == BallState.Held)
 			return false;
 
@@ -1576,6 +1622,12 @@ public partial class PlayerController : CharacterBody3D
 			BeginCommittedMove(new BetweenTheLegs(burstDirection: param));
 		else if (moveId == "hesitation")
 			BeginCommittedMove(new Hesitation());
+		else if (moveId == "inandout")
+			// In-and-out (#202): same reconstruction payload as "crossover" —
+			// param is the body-relative flick sign (toward the empty hand).
+			// The world burst direction and the negated-sign fallback are both
+			// derived at Active-entry (TickCommittedMoveBehavior), not here.
+			BeginCommittedMove(new InAndOut(burstDirection: param));
 		else if (moveId == "stepback")
 			// param = 0f — step-back carries no payload; its exit direction
 			// is read from the left stick at Active-entry, not the RPC.
@@ -2217,9 +2269,10 @@ public partial class PlayerController : CharacterBody3D
 				(_machine.CurrentMove as Crossover)?.BurstDirection
 				?? (_machine.CurrentMove as BehindTheBack)?.BurstDirection
 				?? (_machine.CurrentMove as BetweenTheLegs)?.BurstDirection
+				?? (_machine.CurrentMove as InAndOut)?.BurstDirection
 				?? 0f);
 
-		float burstDir = _serverMoveId is "crossover" or "behindtheback" or "betweenthelegs" ? _serverMoveParam : 0f;
+		float burstDir = _serverMoveId is "crossover" or "behindtheback" or "betweenthelegs" or "inandout" ? _serverMoveParam : 0f;
 		return (_serverMovePhase, burstDir);
 	}
 
@@ -2317,8 +2370,12 @@ public partial class PlayerController : CharacterBody3D
 	/// Right-stick gestures: routed through RightStickGestureRecognizer. Both
 	/// input devices feed it via the aim_* actions — gamepad right stick, or
 	/// the IJKL keys (#191); the recognizer is hardware-agnostic, so keyboard
-	/// gets the same crossover/hesitation/feint semantics as the stick.
-	/// Feint modifier (E key / L1): aborts a crossover during its startup window.
+	/// gets the same crossover/hesitation/in-and-out semantics as the stick.
+	/// Feint modifier (E key / L1): pump-fakes a JumpShot during its startup
+	/// window (#202 closed the crossover-family recall model — see the
+	/// ADR-0003 amendment — so this key's ONLY remaining live effect is the
+	/// JumpShot pump-fake; Crossover/BehindTheBack are now structurally
+	/// unfeintable, feintWindowFrames: 0).
 	///
 	/// Note: Input.GetVector / IsActionJustPressed read the local machine's hardware.
 	/// This is correct for listen-server (the host IS the local player). If a
@@ -2394,6 +2451,32 @@ public partial class PlayerController : CharacterBody3D
 				{
 					RpcId(1, MethodName.RequestBeginMove, "crossover", flickSign);
 				}
+			}
+			else if (BeginCommittedMove(new Hesitation()) && !isServer)
+			{
+				RpcId(1, MethodName.RequestBeginMove, "hesitation", 0f);
+			}
+		}
+		else if (gesture.Kind == GestureKind.QuickReturn)
+		{
+			// In-and-out (M9, issue #202) — the quick-return retarget. The
+			// SAME hand-state disambiguation as the held Crossover branch
+			// above: flick toward the empty hand -> in-and-out (the fast,
+			// safe, small twin of the crossover — same telegraph, no hand
+			// swap); flick toward the ball hand -> hesitation, IDENTICAL to
+			// the held gesture (AC-8) — the flick DIRECTION picks the move
+			// family, hold-vs-quick-return only disambiguates WITHIN the
+			// empty-hand column. This gesture used to unconditionally feint
+			// whatever move was in Startup (GestureKind was named "Feint");
+			// #202 retargets it to BEGIN a move instead — see GestureKind's
+			// own doc for the rename, and the ADR-0003 amendment (docs/adr/
+			// 0003-input-model-hybrid.md) for why the old recall model is
+			// closed rather than kept alongside this.
+			int flickSign = System.Math.Sign(gesture.Direction);
+			if (HandStateResolver.IsCrossover(HandSide, flickSign))
+			{
+				if (BeginCommittedMove(new InAndOut(flickSign)) && !isServer)
+					RpcId(1, MethodName.RequestBeginMove, "inandout", flickSign);
 			}
 			else if (BeginCommittedMove(new Hesitation()) && !isServer)
 			{
@@ -2581,27 +2664,28 @@ public partial class PlayerController : CharacterBody3D
 				RpcId(1, MethodName.RequestBeginMove, "contest", 0f);
 		}
 
-		// Feint modifier: abort during the startup window. Two input paths feed
-		// the SAME Feint() call (#139): the discrete "move_feint" key, and the
-		// right-stick quick-return gesture the recognizer reports as
-		// GestureKind.Feint (its own doc says the caller must map it). A single
-		// flick is exactly one GestureKind, so this never double-fires with the
-		// crossover branch above. The machine enforces the feint-window guard;
-		// false return is silent.
+		// Feint modifier (#202 closed the ambiguous-gesture path): the ONLY
+		// input that can still call CommittedMoveMachine.Feint() is the
+		// explicit discrete "move_feint" key (E / L1) — a direct pump-fake
+		// request for whatever move is running. The machine enforces the
+		// feint-window guard itself (Startup only, within FeintWindowFrames);
+		// a false return is silent.
 		//
-		// Routed through FeintGateResolver (bug fix, /diagnose 2026-07-03): the
-		// gesture-sourced Feint is ambiguous — it fires from ANY quick aim-stick
-		// flick-and-return, unrelated to which move is running. For Crossover/
-		// Hesitation that free abort is harmless, but a JumpShot's feint is a
-		// pump-fake that SILENTLY consumes the ball release (Feint() never sets
-		// JustEnteredActive), while the windup animation plays regardless
-		// (MoveAnimResolver reads Phase alone) — so an incidental stick flick
-		// while shooting read as "I pressed shoot and nothing happened." The
-		// gate withholds the gesture (but never the explicit key) from an
-		// in-progress JumpShot; see FeintGateResolver's doc for the full reasoning.
-		bool shouldFeint = FeintGateResolver.ShouldFeint(
-			Input.IsActionJustPressed("move_feint"), gesture.Kind, _machine.CurrentMove);
-		if (shouldFeint && _machine.Feint() && !isServer)
+		// Before #202 this ALSO fired from the right-stick quick-return
+		// gesture (then GestureKind.Feint), routed through FeintGateResolver
+		// to withhold it from an in-progress JumpShot (bug fix, /diagnose
+		// 2026-07-03: an incidental aim-stick flick was silently eating the
+		// shot's release, since Feint() never sets JustEnteredActive while the
+		// windup animation plays regardless). #202 retargets that SAME
+		// gesture kind (renamed QuickReturn) to BEGIN a move instead (see the
+		// branch above) — a gesture reaching CommittedMoveMachine.Begin() while
+		// a JumpShot is Startup-ing is already a silent no-op (Begin() only
+		// succeeds from Inactive), so FeintGateResolver's whole reason to
+		// exist — withholding an AMBIGUOUS gesture-sourced Feint() call from
+		// JumpShot — is now structurally moot: there is no other gesture-
+		// sourced Feint() call left to withhold it from. FeintGateResolver
+		// was removed (doubt-driven pass, #202) rather than kept as dead code.
+		if (Input.IsActionJustPressed("move_feint") && _machine.Feint() && !isServer)
 			RpcId(1, MethodName.RequestFeint);
 
 		_machine.Tick(); // advance one frame — always called, including Inactive (no-op)
@@ -2668,6 +2752,10 @@ public partial class PlayerController : CharacterBody3D
 					// the euro-step is the same gather motion, so it shares the
 					// same decel budget rather than inventing a second rate.
 					EuroStep       => Velocity.MoveToward(Vector3.Zero, DriveGatherDecel * (float)delta),
+					// InAndOut (#202) reuses Crossover's OWN GatherDecel (not a
+					// separate tunable — see PlayerController's field doc): it
+					// is an ordinary plant, just a shorter one (4 ticks vs. 6).
+					InAndOut       => Velocity.MoveToward(Vector3.Zero, GatherDecel * (float)delta),
 					_              => Vector3.Zero,
 				};
 
@@ -2719,15 +2807,17 @@ public partial class PlayerController : CharacterBody3D
 				// same tick — that is a SEPARATE node's read of this machine's
 				// state, not a side effect this switch needs to produce.
 				//
-				// Crossover, BehindTheBack (#194), and BetweenTheLegs (#199)
-				// share the SAME CrossoverBurstMath composition (composition,
-				// not inheritance — see BehindTheBack's doc) with different
-				// tunables: BehindTheBack passes its own (smaller) burst
-				// speeds and a NARROWER exit cone (BehindTheBackExitConeDegrees,
+				// Crossover, BehindTheBack (#194), BetweenTheLegs (#199), and
+				// InAndOut (#202) share the SAME CrossoverBurstMath composition
+				// (composition, not inheritance — see BehindTheBack's doc) with
+				// different tunables: BehindTheBack passes its own (smaller)
+				// burst speeds and a NARROWER exit cone (BehindTheBackExitConeDegrees,
 				// "fewer follow-ups" per the M9 taxonomy handoff — never a
 				// recovery/cooldown penalty); BetweenTheLegs passes its own
-				// MIDPOINT tunables between Crossover's and BehindTheBack's.
-				if (_machine.JustEnteredActive && _machine.CurrentMove is Crossover or BehindTheBack or BetweenTheLegs)
+				// MIDPOINT tunables between Crossover's and BehindTheBack's;
+				// InAndOut passes its own REDUCED tunables (~0.6x Crossover's,
+				// #202's "fast, safe, small" design call).
+				if (_machine.JustEnteredActive && _machine.CurrentMove is Crossover or BehindTheBack or BetweenTheLegs or InAndOut)
 				{
 					// #198: CrossoverBurstMath composes the surviving Startup
 					// momentum with the exit-vector-driven burst impulse — see
@@ -2744,17 +2834,33 @@ public partial class PlayerController : CharacterBody3D
 					// loss/jitter they can genuinely diverge for a tick or two —
 					// an accepted gap, corrected by the existing prediction/
 					// reconciliation path rather than closed here. Tracked as
-					// issue #210; not this issue's scope to fix — BehindTheBack
-					// and BetweenTheLegs ride the SAME composition path, so
-					// #210's eventual fix covers both for free.
+					// issue #210; not this issue's scope to fix — BehindTheBack,
+					// BetweenTheLegs, and InAndOut all ride the SAME composition
+					// path, so #210's eventual fix covers all of them for free.
 					float burstSign = _machine.CurrentMove switch
 					{
 						Crossover c      => c.BurstDirection,
 						BehindTheBack b  => b.BurstDirection,
 						BetweenTheLegs g => g.BurstDirection,
+						InAndOut i       => i.BurstDirection,
 						_                => 0f,
 					};
 					int sign = System.Math.Sign(burstSign);
+
+					// InAndOut (#202) passes the NEGATED sign into the shared
+					// composition. ComposeActiveVelocity's own flickSign
+					// parameter is used ONLY as (a) the stationary+neutral-exit
+					// fallback lateral direction and (b) the exact-backward-pole
+					// tiebreak — for Crossover/BehindTheBack/BetweenTheLegs both
+					// must point toward the EMPTY hand (where the ball is
+					// headed), which is exactly what BurstDirection already
+					// encodes. An in-and-out's ball never crosses, so those same
+					// two fallback paths must instead point toward the BALL
+					// hand — the direction of the sell, not the empty hand — see
+					// InAndOut's class doc "Negated flick sign" section and
+					// AC-4's control (a Crossover under identical conditions
+					// bursts toward the empty hand).
+					int composeSign = _machine.CurrentMove is InAndOut ? -sign : sign;
 
 					// Per-move tunable triple, resolved with a switch so this
 					// stays a single ComposeActiveVelocity call site rather than
@@ -2762,25 +2868,30 @@ public partial class PlayerController : CharacterBody3D
 					// (#199 code-review self-check). Crossover's own 180° falls
 					// back to CrossoverBurstMath's own FullExitCone default via
 					// an explicit 180 here — Mathf.DegToRad(180) is exactly PI,
-					// bit-identical to omitting the parameter.
+					// bit-identical to omitting the parameter. InAndOut is not
+					// given a narrower cone (#202's brief only locks the burst
+					// MAGNITUDE as reduced, not the exit cone).
 					(float burstSpeed, float forwardBurstScale, float exitConeDegrees) = _machine.CurrentMove switch
 					{
 						BehindTheBack  => (BehindTheBackBurstSpeed, BehindTheBackForwardBurstScale, BehindTheBackExitConeDegrees),
 						BetweenTheLegs => (BetweenTheLegsBurstSpeed, BetweenTheLegsForwardBurstScale, BetweenTheLegsExitConeDegrees),
+						InAndOut       => (InAndOutBurstSpeed, InAndOutForwardBurstScale, 180f),
 						_              => (BurstSpeed, ForwardBurstScale, 180f),
 					};
 
 					Velocity = CrossoverBurstMath.ComposeActiveVelocity(
-						Velocity, Heading, sign, exitVectorSample,
+						Velocity, Heading, composeSign, exitVectorSample,
 						burstSpeed, forwardBurstScale, ExitDeadzone,
 						Mathf.DegToRad(exitConeDegrees));
 
-					// All three moves swap the ball to the (now near) empty
-					// hand — the authoritative hand-state change (M9, #83). It
-					// rides this same predicted + reconciled Active-entry event
-					// as the burst; a Hesitation is neither of these, so it
-					// never reaches here and the hand stays put.
-					HandSide = HandStateResolver.Opposite(HandSide);
+					// Crossover/BehindTheBack/BetweenTheLegs swap the ball to
+					// the (now near) empty hand — the authoritative hand-state
+					// change (M9, #83). InAndOut does NOT (AC-2): the ball
+					// never crosses, mirroring Hesitation's identical
+					// no-swap rule — it rides this same predicted + reconciled
+					// Active-entry event for its BURST only, never the hand.
+					if (_machine.CurrentMove is not InAndOut)
+						HandSide = HandStateResolver.Opposite(HandSide);
 				}
 				else if (_machine.JustEnteredActive && _machine.CurrentMove is RetreatDribble)
 				{
@@ -2892,6 +3003,7 @@ public partial class PlayerController : CharacterBody3D
 		move is Crossover crossover         ? crossover.BurstDirection :
 		move is BehindTheBack behindTheBack ? behindTheBack.BurstDirection :
 		move is BetweenTheLegs betweenLegs  ? betweenLegs.BurstDirection :
+		move is InAndOut inAndOut           ? inAndOut.BurstDirection :
 		move is StealMove steal             ? (float)(int)steal.TargetHand :
 		// BlockMove, JumpShot, Hesitation, and all future no-payload moves → 0f.
 		0f;
