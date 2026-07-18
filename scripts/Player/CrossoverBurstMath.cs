@@ -239,6 +239,22 @@ public static class CrossoverBurstMath
             // (t→0, exact dead-back) it meets the full flick. The endpoints are
             // identical to the old snap; only the transition is now smooth.
             //
+            // ACCEPTED TRADE (do not "fix" without reading this): on the side
+            // of dead-back where the composed impulse points OPPOSITE the flick
+            // (anti-flick side), the segment from flick to composed passes
+            // through ~0 magnitude, so a STANDING (surviving≈0) plain Crossover
+            // held ~3° off straight-back there gets a near-dead-stop — the very
+            // no-op this fallback guards against. It is mathematically forced:
+            // a continuous path from a small +X composed vector to a large −X
+            // flick MUST cross zero; the only escape (slerp AROUND through ±Y)
+            // picks its rotation side from the sign-of-zero of two near-
+            // antiparallel vectors, the exact ADR-0004 hazard the Atan2-pole
+            // code above already fights. Continuity (this issue's acceptance
+            // bar) wins over the no-op guarantee in this degenerate backward
+            // cone; the band is narrow, only plain Crossover reaches it (the
+            // narrower BehindTheBack/BetweenTheLegs cones clamp away), and the
+            // feel there is deferred to the tuning pass (#238).
+            //
             // Magnitude bound preserved: lerp(a, b) lies on the segment between
             // a and b, so |result| ≤ max(|flick|, |composed|) = burstSpeed ≤
             // the orthonormal-basis bound — the composed impulse can never
