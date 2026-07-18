@@ -327,6 +327,57 @@ jobs:
           godot --headless --path . res://tests/integration/InAndOutTest.tscn -- --harness-scenario=feint-refused
           godot --headless --path . res://tests/integration/InAndOutTest.tscn -- --harness-scenario=reconstruct
 
+      # Spin — the dribble-move family's last leaf (issue #201, ADR-0010
+      # amendment). Unit tests already pin the pure heading-arc contract
+      # (SpinHeadingMathTests.cs); this proves the LIVE engine glue.
+      # 'rotation' proves a real spin rotates the holder's authoritative
+      # Heading ~180 degrees (exactly pi radians) from entry to Inactive,
+      # THEN proves a control Crossover leaves Heading completely unrotated
+      # across its own full lifecycle — the rotation is spin-specific, not an
+      # incidental side effect of committed-move ticking. 'handside-swap-timing'
+      # proves HandSide swaps EXACTLY ONCE, on the LAST Active tick
+      # (FrameInPhase == ActiveFrames - 1), with the paired control baked into
+      # the same lifecycle: HandSide is UNCHANGED on the FIRST Active tick and
+      # every tick before the last one. 'dead-dribble-gate' proves Spin is
+      # refused from both a fresh LIVE Held possession and a DEAD Held
+      # possession (HasDribbled=true, post-cradle), with the required control
+      # proving it IS permitted from a live Dribbling possession — the
+      # specific check that catches a hardcoded-type-list omission (the same
+      # #193 bug class every sibling move's dead-dribble gate guards against).
+      # 'exit-burst-continues-entry-line' proves the exit burst composes
+      # against the ENTRY exit-vector snapshot (captured once at
+      # JustEnteredActive), not a live re-read on the last Active tick — proven
+      # by comparing a baseline trial (stick held constant) against a switched
+      # trial (stick changes right after Active begins) on a FRESH player
+      # instance each, isolating the one variable under test from the
+      # rotation's own heading change. 'sweep-path' proves the spin's
+      # ball-sweep resolves to the NEW BallSweepPath.BodyShield (the ball
+      # pulled tight to the rotating body, #201's "third option on #195's
+      # sweep geometry"), THEN proves a control Crossover under identical
+      # Dribbling conditions resolves to InFront, the pre-existing default —
+      # proving BodyShield is spin-specific. 'real-input-trigger' proves a
+      # real player CAN trigger a spin: holding "move_size_up" + "move_finesse"
+      # together during a held crossover flick begins a real Spin through the
+      # ACTUAL RightStickGestureRecognizer -> SampleMoveInput dispatch (real
+      # synthetic Input.ActionPress, no harness seam), THEN proves the control
+      # — "move_size_up" alone under the same kind of flick still begins
+      # BehindTheBack, unaffected by the new modifier-combo branch (see
+      # SampleMoveInput's Spin branch for the ADR-0014 tier-3 citation and the
+      # circuit-breaker reasoning against a new gesture-recognition
+      # primitive). 'reconstruct' proves a client-initiated "spin"
+      # RequestBeginMove payload reconstructs correctly server-side through
+      # the SAME ApplyRequestedMove dispatch a real RPC would drive. Each
+      # exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run spin harness
+        run: |
+          godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=rotation
+          godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=handside-swap-timing
+          godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=dead-dribble-gate
+          godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=exit-burst-continues-entry-line
+          godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=sweep-path
+          godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=real-input-trigger
+          godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=reconstruct
+
       # On-ball contest as a committed move (issue #99, ADR-0018 §2). Unit
       # tests already pin the pure composition arithmetic
       # (DefensiveResolutionTests.ContestAppliesAt/ContestMoveFactor) and

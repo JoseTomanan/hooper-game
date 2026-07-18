@@ -246,3 +246,68 @@ values and the resulting ≈0.20 s reversal are pinned in CI by
 scenarios). Human in-motion feel sign-off on the 900/0.95 pair is still
 pending (a #172 follow-up feel pass, to be batched with the other pending
 feel judgments per ADR-0015). Status remains **Accepted**.
+
+### 2026-07-18 — Sanctioned Active-phase exception: the spin's scripted heading arc (#201)
+
+The Consequences section above already anticipated this exact case: *"If a
+future move requires heading updates during Active/Recovery, `RotateToward`
+can be called explicitly in `TickCommittedMoveBehavior` for that phase."* The
+spin move (`scripts/Input/Spin.cs`, M9/#75) is that future move — this
+amendment is the "call it out on the record" the issue itself demanded rather
+than a silent bypass.
+
+**The exception, precisely scoped:** during a `Spin`'s **Active phase only**,
+`TickCommittedMoveBehavior`'s Spin branch directly overwrites `Heading` with
+`SpinHeadingMath.ArcHeading(entryHeading, direction, frameInPhase,
+activeFrames)` — a scripted ~180° arc — instead of advancing it through
+`HeadingMath.RotateToward`'s bounded, non-linear turn-rate cap (the model
+this ADR's Decision section establishes for `Move()`). `ArcHeading` is a
+**pure function** of exactly four inputs, all already-deterministic
+same-tick state:
+
+1. `entryHeading` — the authoritative `Heading` captured ONCE, at the instant
+   this role's own machine entered Active (`JustEnteredActive`), never
+   re-read mid-arc;
+2. `direction` — `Spin.SpinDirection`'s sign, part of the `CommittedMove`
+   instance itself, reconstructed identically on every role from the same
+   wire payload;
+3. `frameInPhase` — `CommittedMoveMachine.FrameInPhase`, which the machine
+   keeps deterministic and identical across roles by construction;
+4. `activeFrames` — `MoveFrameData.ActiveFrames`, a compile-time constant on
+   `Spin.DefaultFrameData`.
+
+It reads **no live per-tick input** — no `Vector2`, no `Input` singleton, no
+Godot node state — so it replays bit-identically on the server's own tick,
+the server's copy of a remote player, and a predicting client's own tick.
+Outside the Active phase (Startup, Recovery, or any other move), `Move()`'s
+`RotateToward` path is completely unchanged; the exception is bounded to
+exactly this one move's exactly one phase.
+
+**ADR-0014 reference-tier grounding (tier-1, real half-court ball):** a real
+spin is a committed, explosive, full-body rotation around a shielded ball —
+it is deliberately, categorically **faster** than a player steering an
+ordinary turn with their eyes on the defender, precisely because the whole
+point of the move is to beat the defender's reaction before they can adjust.
+Forcing the arc through `RotateToward`'s bounded rate (tuned in the #172/#172-
+follow-up amendments above for *steerable* turning) would either take the
+spin many multiples of its intended Active window to complete, or require
+retuning the general turn-rate cap around one move's needs — neither serves
+the real-ball fact this move exists to model.
+
+**Rejected alternative: make the spin obey `RotateToward`'s cap.** Rejected
+because it defeats the committed-rotation identity a spin needs: `RotateToward`
+is built for player-*steerable* turning (Forces #2 in this ADR's own Context —
+"micro-aim must stay fluid"), and a spin is the opposite of steerable — it is
+a locked-in commitment the player cannot redirect once begun (ADR-0003's
+committed-move contract), resolving over a fixed, short Active window
+regardless of the entry/exit heading delta. Routing it through the bounded
+non-linear rate would either silently violate the "committed, not steered"
+identity (if the rate happened to complete the rotation anyway) or leave the
+rotation visibly incomplete when Active ends (if it didn't) — both worse than
+an explicit, narrow, on-the-record exception.
+
+This amendment does not reverse the Decision or weaken the general
+`RotateToward` model for ordinary movement-stick turning — it adds one
+narrowly-scoped, pure-function exception for one move's one phase, exactly as
+the original Consequences section already contemplated. Status remains
+**Accepted**.
