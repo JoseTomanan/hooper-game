@@ -199,4 +199,103 @@ public class CrossoverBurstMathTests
             $"exit angle {exitAngleDegrees}deg composed a {magnitude:F3} m/s impulse, exceeding the " +
             $"orthonormal-basis bound {bound:F3} m/s.");
     }
+
+    // ── Issue #209: exit velocity must be a CONTINUOUS function of the inputs ──
+    // The design identity (ADR-0003) wants a legible, continuous relationship
+    // between commitment and result. A bit-exact input boundary that produces a
+    // huge jump in exit velocity is the opposite of that — it makes the move
+    // unreadable. The two tests below pin continuity across the two former
+    // cliffs; a single adjacent-input step must never leap by an appreciable
+    // fraction of the burst speed.
+
+    // Helper: the maximum magnitude by which the composed exit velocity may
+    // change between two neighbouring inputs. Well below the ~9 m/s pre-fix
+    // cliffs, well above the real continuous per-step delta (~0.25 m/s), so it
+    // cleanly separates a smooth blend from a discontinuous branch.
+    private const float MaxContinuousStep = 1.0f;
+
+    // Cliff A — the surviving-speed boundary (issue title). Because
+    // ComposeActiveVelocity takes the post-bleed survivor directly, we feed it
+    // survivor values straddling zero WITHOUT simulating Startup. The exit
+    // vector is held neutral so the surviving-momentum branch (the one that used
+    // to hard-switch on `survivingXZ.LengthSquared() < 0.0001f`) is exercised.
+    // Pre-fix: survivor 0.0 → full ±9 flick, survivor 0.1 → zero impulse — a
+    // ~9 m/s leap. Post-fix: continuous.
+    [Fact]
+    public void CliffA_SurvivingSpeedBoundary_ExitVelocityIsContinuous()
+    {
+        Vector3 At(float survivingSpeed) => CrossoverBurstMath.ComposeActiveVelocity(
+            survivingVelocity: new Vector3(0f, 0f, survivingSpeed), // forward momentum, neutral exit
+            heading: 0f,
+            flickSign: +1,
+            exitVector: Vector2.Zero, // neutral — drives the surviving-momentum branch
+            burstSpeed: BurstSpeed,
+            forwardBurstScale: ForwardBurstScale,
+            exitDeadzone: ExitDeadzone);
+
+        // The exact boundary pair the issue names (0.0 vs 0.1 m/s surviving).
+        float boundaryJump = (At(0.1f) - At(0.0f)).Length();
+        Assert.True(boundaryJump <= MaxContinuousStep,
+            $"surviving 0.0 vs 0.1 m/s jumped {boundaryJump:F3} m/s (pre-fix ~9) — discontinuous.");
+
+        // And the whole realistic surviving range [0, 6] in fine steps: no
+        // single 0.1 m/s step may leap. Sweeping past the old boundary (and
+        // past the blend's upper threshold) proves there is no residual step
+        // anywhere, not just at one probe point.
+        Vector3 prev = At(0f);
+        for (float s = 0.1f; s <= 6.0f + 1e-4f; s += 0.1f)
+        {
+            Vector3 cur = At(s);
+            float step = (cur - prev).Length();
+            Assert.True(step <= MaxContinuousStep,
+                $"surviving-speed step at {s:F2} m/s jumped {step:F3} m/s — discontinuous.");
+            prev = cur;
+        }
+    }
+
+    // Cliff B — the DeadImpulseFloor backward-cone boundary (owner's comment).
+    // Sweep the exit-vector angle across the straight-back edge. Near dead-back
+    // the composed impulse magnitude passes up through DeadImpulseFloor (0.5);
+    // pre-fix it hard-snapped to the full ±9 flick below the floor, so an exit
+    // ~3° off straight-back leapt ~8.5 m/s versus one just inside. Post-fix:
+    // continuous. Parameterized over the three moves that share this function
+    // (Crossover 9, BetweenTheLegs 7.5, BehindTheBack 6) — the threshold at
+    // which the flick fallback yields is burst-speed-relative, so continuity
+    // must hold for each tunable, not just Crossover's.
+    [Theory]
+    [InlineData(9.0f)]
+    [InlineData(7.5f)]
+    [InlineData(6.0f)]
+    public void CliffB_BackwardConeEdge_ExitVelocityIsContinuous(float burstSpeed)
+    {
+        // Angle measured from +Z (forward); 180° is straight back. Sweep a
+        // window around dead-back where the composed impulse crosses the floor.
+        Vector3 AtAngle(float degrees)
+        {
+            float r = Mathf.DegToRad(degrees);
+            return CrossoverBurstMath.ComposeActiveVelocity(
+                survivingVelocity: Vector3.Zero, // isolate the impulse from momentum
+                heading: 0f,
+                flickSign: +1,
+                exitVector: new Vector2(Mathf.Sin(r), Mathf.Cos(r)),
+                burstSpeed: burstSpeed,
+                forwardBurstScale: burstSpeed,
+                exitDeadzone: ExitDeadzone);
+        }
+
+        // 0.1° sampling: fine enough that the fixed blend's steep-but-continuous
+        // ramp near the pole stays well under MaxContinuousStep, while the
+        // pre-fix DeadImpulseFloor snap (which leaps ~8.5 m/s across one sample
+        // no matter how fine the grid) still trips the bound. See the header
+        // insight on distinguishing a discontinuity from a steep slope.
+        Vector3 prev = AtAngle(150f);
+        for (float deg = 150.1f; deg <= 210.0f + 1e-4f; deg += 0.1f)
+        {
+            Vector3 cur = AtAngle(deg);
+            float step = (cur - prev).Length();
+            Assert.True(step <= MaxContinuousStep,
+                $"burstSpeed {burstSpeed}: exit-angle step at {deg:F1}° jumped {step:F3} m/s — discontinuous.");
+            prev = cur;
+        }
+    }
 }
