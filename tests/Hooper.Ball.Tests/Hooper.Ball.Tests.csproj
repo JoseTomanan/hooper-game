@@ -99,6 +99,7 @@
     <Compile Include="..\..\scripts\Input\DriveGather.cs" />
     <!-- Euro-step — rim-finishing vertical, third leaf (issue #231, ADR-0022) -->
     <Compile Include="..\..\scripts\Input\EuroStep.cs" />
+    <Compile Include="..\..\scripts\Input\EuroStepReadResolver.cs" />
   </ItemGroup>
 
   <!--
