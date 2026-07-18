@@ -1728,6 +1728,14 @@ public partial class PlayerController : CharacterBody3D
 			// Same reconstruction payload as "crossover"/"behindtheback"
 			// (issue #199) — param is the body-relative flick sign.
 			BeginCommittedMove(new BetweenTheLegs(burstDirection: param));
+		else if (moveId == "spin")
+			// Spin (#201): same reconstruction-payload convention as
+			// "crossover"/"behindtheback"/"betweenthelegs" — param is the
+			// body-relative flick sign, reused here as the rotation direction
+			// (Spin.SpinDirection). The world-space rotation itself is
+			// resolved at Active-entry from the ALREADY-authoritative Heading
+			// (SpinHeadingMath.ArcHeading), not from anything re-derived here.
+			BeginCommittedMove(new Spin(spinDirection: param));
 		else if (moveId == "hesitation")
 			BeginCommittedMove(new Hesitation());
 		else if (moveId == "inandout")
@@ -2545,7 +2553,36 @@ public partial class PlayerController : CharacterBody3D
 				// AFTER move_size_up so a player holding both defaults to the
 				// existing BehindTheBack behavior rather than silently
 				// reassigning it.
-				if (Input.IsActionPressed("move_size_up"))
+				//
+				// Spin (#201) is a FOURTH variant of the same crossover read,
+				// selected by holding BOTH existing modifiers together
+				// ("move_size_up" + "move_finesse") rather than adding a new
+				// input action or a new gesture-recognition primitive. This is
+				// a deliberate circuit-breaker call: a real spin is a
+				// rotational input (2K models it as a right-stick roll/circle
+				// gesture), but the right-stick vocabulary here is already
+				// full (Crossover/QuickReturn/StepBack/RetreatDribble), and
+				// building a new stick-rotation recognizer to match 2K's
+				// literal control feel would be a large, netcode-sensitive
+				// addition out of scope for this issue. Combining the two
+				// modifiers ALREADY used to select BehindTheBack/BetweenTheLegs
+				// is the lowest-complexity trigger that still fits the
+				// existing input model: same ADR-0014 tier-3 self-resolution
+				// those two variants already use (neither real ball nor
+				// Undisputed 3 specify a literal control mapping for "which
+				// crossover variant" — 2K's modifier-gated advanced-dribble
+				// convention is the lowest-ranked but still valid reference
+				// that resolves it), extended to a THIRD modifier combination
+				// rather than a new input primitive. Checked BEFORE the
+				// single-modifier checks so a player holding both gets Spin,
+				// not BehindTheBack (move_size_up alone still resolves to
+				// BehindTheBack exactly as before).
+				if (Input.IsActionPressed("move_size_up") && Input.IsActionPressed("move_finesse"))
+				{
+					if (BeginCommittedMove(new Spin(spinDirection: flickSign)) && !isServer)
+						RpcId(1, MethodName.RequestBeginMove, "spin", flickSign);
+				}
+				else if (Input.IsActionPressed("move_size_up"))
 				{
 					if (BeginCommittedMove(new BehindTheBack(flickSign)) && !isServer)
 						RpcId(1, MethodName.RequestBeginMove, "behindtheback", flickSign);
