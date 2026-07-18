@@ -142,6 +142,26 @@ public partial class BallController : Node3D
 	/// </summary>
 	[Export] public float BetweenTheLegsDipDepth { get; set; } = 0.85f;
 
+	/// <summary>
+	/// How far (metres) TOWARD the holder's centerline a Spin sweep (#201)
+	/// pulls the ball at the midpoint, subtracted from DribbleForwardOffset —
+	/// the "shielded by the rotating body" transit: the ball is tucked in
+	/// tight against the hip/torso, NOT extended forward (InFront) and NOT
+	/// swung fully behind the back (BehindTheBackSweepDepth's negative-offset
+	/// transit — a spin's own body already IS the shield, so there is no
+	/// separate behind-the-back pull to also play). ADR-0014 tier-1 real-ball
+	/// citation: see BallSweepPath.BodyShield's own doc. Deliberately SMALLER
+	/// than DribbleForwardOffset (0.5 default) so the result at peak dip stays
+	/// POSITIVE (0.5 - 0.45 = 0.05m — hugging the centerline, not crossing
+	/// behind it) — contrast BehindTheBackSweepDepth (0.7), which is larger
+	/// than baseline BY DESIGN so its own peak goes negative. Reuses the SAME
+	/// single-arch curve (CrossoverBallSweep.Offset's verticalDip) as every
+	/// other sweep path — one curve, composition over a new one (#194's
+	/// precedent). Feel-tuned default, hitl sign-off deferred to the
+	/// per-milestone human pass like every other sweep tunable.
+	/// </summary>
+	[Export] public float SpinBodyShieldDepth { get; set; } = 0.45f;
+
 	/// <summary>Full down-and-up dribble cycle duration (seconds).</summary>
 	[Export] public float DribblePeriod { get; set; } = 0.6f;
 
@@ -2065,7 +2085,7 @@ public partial class BallController : Node3D
 	/// method just supplies BallController's own tunables.
 	/// </summary>
 	private float SweepForwardOffset(float verticalDip, BallSweepPath sweepPath) =>
-		CrossoverBallSweep.ForwardOffset(DribbleForwardOffset, verticalDip, BehindTheBackSweepDepth, sweepPath);
+		CrossoverBallSweep.ForwardOffset(DribbleForwardOffset, verticalDip, BehindTheBackSweepDepth, SpinBodyShieldDepth, sweepPath);
 
 	/// <summary>
 	/// The vertical dip depth (metres) to apply for the CURRENT sweep's path
@@ -2216,6 +2236,7 @@ public partial class BallController : Node3D
 			{
 				"behindtheback"  => BallSweepPath.BehindBody,
 				"betweenthelegs" => BallSweepPath.ThroughLegs,
+				"spin"           => BallSweepPath.BodyShield,
 				_                => BallSweepPath.InFront,
 			};
 		}

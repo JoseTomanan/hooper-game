@@ -45,6 +45,20 @@ public enum BallSweepPath
 
     /// <summary>BetweenTheLegs's sweep: stays in front (like InFront) but dips deeper toward the floor.</summary>
     ThroughLegs,
+
+    /// <summary>
+    /// Spin's sweep (#201): pulled in tight against the rotating body's
+    /// centerline — neither InFront's full forward extension nor BehindBody's
+    /// negative (fully-behind) pull. ADR-0014 tier-1 (real half-court ball):
+    /// during a real spin the ball handler cradles the ball hard against the
+    /// hip/torso as the body rotates between it and the defender — it is
+    /// tucked CLOSE, not extended out front (that would defeat the shield)
+    /// and not swung fully behind the back either (a spin's body itself is
+    /// the shield; there is no separate behind-the-back pull to also play).
+    /// See CrossoverBallSweep.ForwardOffset's own doc for the exact formula
+    /// and why it stays non-negative, unlike BehindBody's.
+    /// </summary>
+    BodyShield,
 }
 
 public static class CrossoverBallSweep
@@ -110,13 +124,25 @@ public static class CrossoverBallSweep
     /// axis untouched); its distinguishing depth is a deeper VERTICAL dip
     /// (BallController.BetweenTheLegsDipDepth, applied by the caller
     /// alongside this forward offset), not a forward pull-back.
+    /// A Spin sweep (#201) pulls the ball toward the body's centerline along
+    /// the SAME single-arch curve, using its own (smaller) shieldDepth —
+    /// smaller than baseline BY DESIGN, so the result stays POSITIVE (the
+    /// ball tucked in tight against the hip, still marginally in front) and
+    /// never crosses to negative the way BehindBody's larger behindDepth
+    /// deliberately does. Reusing verticalDip's shared "how far through the
+    /// transit" progress keeps this a one-curve, many-consumers composition
+    /// (#194's precedent) rather than a fourth bespoke curve.
     /// </summary>
     /// <param name="baseline">The holder's steady-state forward offset (BallController.DribbleForwardOffset).</param>
     /// <param name="verticalDip">This tick's sweep dip curve value, from <see cref="Offset"/>.</param>
     /// <param name="behindDepth">How far behind baseline the peak of a behind-body sweep pulls (BallController.BehindTheBackSweepDepth).</param>
+    /// <param name="shieldDepth">How far toward the centerline the peak of a body-shield sweep pulls (BallController.SpinBodyShieldDepth) — must stay less than baseline so the result never goes negative.</param>
     /// <param name="path">Which transit path this sweep is playing.</param>
-    public static float ForwardOffset(float baseline, float verticalDip, float behindDepth, BallSweepPath path) =>
-        path == BallSweepPath.BehindBody
-            ? baseline - verticalDip * behindDepth
-            : baseline;
+    public static float ForwardOffset(float baseline, float verticalDip, float behindDepth, float shieldDepth, BallSweepPath path) =>
+        path switch
+        {
+            BallSweepPath.BehindBody => baseline - verticalDip * behindDepth,
+            BallSweepPath.BodyShield => baseline - verticalDip * shieldDepth,
+            _                        => baseline,
+        };
 }
