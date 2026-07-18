@@ -6,9 +6,9 @@ namespace Hooper.Moves;
 /// Pure "should this tick's feint input actually call
 /// CommittedMoveMachine.Feint()" decision — extracted so the composition
 /// PlayerController.SampleMoveInput already had (explicit "move_feint" press
-/// OR RightStickGestureRecognizer reporting GestureKind.Feint) is
-/// unit-testable without a running Godot instance, exactly like
-/// JumpShotReleaseResolver.
+/// OR RightStickGestureRecognizer reporting GestureKind.QuickReturn — renamed
+/// from "GestureKind.Feint", issue #202) is unit-testable without a running
+/// Godot instance, exactly like JumpShotReleaseResolver.
 ///
 /// ── Bug fix (/diagnose, 2026-07-03) ──────────────────────────────────────────
 /// The shared right-stick "Pro Stick" gesture recognizes a Feint from ANY
@@ -45,7 +45,7 @@ public static class FeintGateResolver
     public static bool ShouldFeint(bool explicitFeintPressed, GestureKind gestureKind, CommittedMove? currentMove)
     {
         if (explicitFeintPressed) return true;
-        if (gestureKind != GestureKind.Feint) return false;
+        if (gestureKind != GestureKind.QuickReturn) return false;
 
         // The ambiguous gesture-based feint may still abort any OTHER move
         // (unchanged, free-abort behaviour) but must never silently eat a

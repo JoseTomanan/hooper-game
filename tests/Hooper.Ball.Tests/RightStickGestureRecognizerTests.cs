@@ -17,14 +17,18 @@ namespace Hooper.Ball.Tests;
 /// ── Timing model ─────────────────────────────────────────────────────────────
 /// On the first tick the stick crosses FlickThreshold we start counting.
 /// The gesture fires when:
-///   (a) Stick returns to deadzone within FeintWindowTicks → Feint fires.
+///   (a) Stick returns to deadzone within FeintWindowTicks → QuickReturn fires.
 ///   (b) Stick stays above threshold for FeintWindowTicks+1 ticks → Crossover fires.
 /// After firing, the recognizer waits for the stick to return to the deadzone
 /// before it can fire again (debounce).
 ///
 /// With defaults (FlickThreshold=0.6, DeadzoneRadius=0.2, FeintWindowTicks=4):
 ///   Crossover fires on the 5th consecutive tick above threshold.
-///   Feint fires the tick the stick re-enters the deadzone (if within 4 ticks).
+///   QuickReturn fires the tick the stick re-enters the deadzone (if within 4 ticks).
+///
+/// (issue #202) This kind was renamed from "Feint" — see GestureKind's own
+/// doc for why. The RENAME is a pure identifier change; the timing model
+/// itself (FlickThreshold/DeadzoneRadius/FeintWindowTicks) is untouched.
 /// </summary>
 public class RightStickGestureRecognizerTests
 {
@@ -372,24 +376,25 @@ public class RightStickGestureRecognizerTests
     }
 
     // ═════════════════════════════════════════════════════════════════════════
-    // Feint gesture — quick flick and return within FeintWindowTicks
+    // QuickReturn gesture — quick flick and return within FeintWindowTicks
+    // (renamed from "Feint", issue #202 — see GestureKind's doc)
     // ═════════════════════════════════════════════════════════════════════════
 
     [Fact]
-    public void Sample_QuickReturnToDeadzoneWithinWindow_FiresFeint()
+    public void Sample_QuickReturnToDeadzoneWithinWindow_FiresQuickReturn()
     {
         // Push past threshold for 1 tick, then return to deadzone before
-        // FeintWindowTicks expires → Feint.
+        // FeintWindowTicks expires → QuickReturn.
         var r = NewRecognizer();
         r.Sample(new Vector2(0.9f, 0f)); // tick 1 above threshold — starts timing
         GestureResult result = r.Sample(Vector2.Zero); // returns to deadzone within window
-        Assert.Equal(GestureKind.Feint, result.Kind);
+        Assert.Equal(GestureKind.QuickReturn, result.Kind);
     }
 
     [Fact]
-    public void Sample_FeintPreservesDirection()
+    public void Sample_QuickReturnPreservesDirection()
     {
-        // Direction of the feint matches the direction of the initial flick.
+        // Direction of the quick-return matches the direction of the initial flick.
         var r = NewRecognizer();
         r.Sample(new Vector2(-0.9f, 0f)); // left flick
         GestureResult result = r.Sample(Vector2.Zero);
@@ -397,19 +402,19 @@ public class RightStickGestureRecognizerTests
     }
 
     [Fact]
-    public void Sample_FeintDebounce_NoRefireWithoutDeadzone()
+    public void Sample_QuickReturnDebounce_NoRefireWithoutDeadzone()
     {
-        // After a feint fires, the recognizer waits for re-arm before firing again.
+        // After a quick-return fires, the recognizer waits for re-arm before firing again.
         var r = NewRecognizer();
         r.Sample(new Vector2(0.9f, 0f));
-        r.Sample(Vector2.Zero); // feint fires here
+        r.Sample(Vector2.Zero); // quick-return fires here
         // Immediately sample deadzone again — no re-fire yet (still in locked state
         // because we just used the deadzone to fire).
         r.Sample(Vector2.Zero);
         // Now push past threshold again.
         GestureResult result = SampleN(r, new Vector2(0.9f, 0f), 5);
         // Should fire because we did pass through deadzone (the second Zero sample
-        // re-armed us after the feint already fired).
+        // re-armed us after the quick-return already fired).
         Assert.Equal(GestureKind.Crossover, result.Kind);
     }
 

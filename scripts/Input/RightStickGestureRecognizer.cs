@@ -12,8 +12,9 @@ namespace Hooper.Moves;
 /// [-1, 1]). Recognizes two axis-pairs, each sharing the SAME quick-vs-hold
 /// grammar:
 ///
-///   Horizontal — Crossover (held past FeintWindowTicks) / Feint (quick
-///                flick-and-return).
+///   Horizontal — Crossover (held past FeintWindowTicks) / QuickReturn (quick
+///                flick-and-return; see GestureKind's doc for the #202 rename
+///                — this used to be called "Feint").
 ///   Vertical, downward only (issue #197) — StepBack (held past
 ///                FeintWindowTicks) / RetreatDribble (quick flick-and-return).
 ///
@@ -32,11 +33,11 @@ namespace Hooper.Moves;
 /// counting, having first picked which axis this gesture belongs to (see
 /// "Axis disambiguation" below). The gesture kind is then decided when:
 ///   (a) the stick returns to the deadzone within FeintWindowTicks ticks →
-///       Feint (horizontal) / RetreatDribble (vertical).
+///       QuickReturn (horizontal) / RetreatDribble (vertical).
 ///   (b) the stick stays above threshold past FeintWindowTicks ticks →
 ///       Crossover (horizontal) / StepBack (vertical).
-/// The caller (#17 integration, #197 for the vertical pair) maps the
-/// GestureResult to a CommittedMove or a Feint() call on CommittedMoveMachine.
+/// The caller (#17 integration, #197 for the vertical pair, #202 for the
+/// horizontal QuickReturn retarget) maps the GestureResult to a CommittedMove.
 ///
 /// ── Axis disambiguation (issue #197) ─────────────────────────────────────────
 /// A diagonal flick is ambiguous between the horizontal and vertical pairs.
@@ -219,7 +220,7 @@ public sealed class RightStickGestureRecognizer
             float dir     = _flickDir;
             _gestureFired = true;
             return _pendingAxis == GestureAxis.Horizontal
-                ? new GestureResult(GestureKind.Feint, dir)
+                ? new GestureResult(GestureKind.QuickReturn, dir)
                 : new GestureResult(GestureKind.RetreatDribble, 0f);
         }
 

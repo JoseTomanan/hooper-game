@@ -49,38 +49,38 @@ public class FeintGateResolverTests
     }
 
     [Fact]
-    public void ShouldFeint_GestureFeintWithCrossover_True()
+    public void ShouldFeint_GestureQuickReturnWithCrossover_True()
     {
         // Unaffected by the fix: the shared gesture still free-aborts a
         // crossover exactly as before (FeintRecoveryFrames == 0 for Crossover).
         Assert.True(FeintGateResolver.ShouldFeint(
-            explicitFeintPressed: false, gestureKind: GestureKind.Feint, currentMove: new Crossover(1f)));
+            explicitFeintPressed: false, gestureKind: GestureKind.QuickReturn, currentMove: new Crossover(1f)));
     }
 
     [Fact]
-    public void ShouldFeint_GestureFeintWithHesitation_True()
+    public void ShouldFeint_GestureQuickReturnWithHesitation_True()
     {
         Assert.True(FeintGateResolver.ShouldFeint(
-            explicitFeintPressed: false, gestureKind: GestureKind.Feint, currentMove: new Hesitation()));
+            explicitFeintPressed: false, gestureKind: GestureKind.QuickReturn, currentMove: new Hesitation()));
     }
 
     [Fact]
-    public void ShouldFeint_GestureFeintWithNoMove_True()
+    public void ShouldFeint_GestureQuickReturnWithNoMove_True()
     {
         // No move running means Feint() will no-op regardless (Phase != Startup);
         // the gate must not special-case or throw on a null move.
         Assert.True(FeintGateResolver.ShouldFeint(
-            explicitFeintPressed: false, gestureKind: GestureKind.Feint, currentMove: null));
+            explicitFeintPressed: false, gestureKind: GestureKind.QuickReturn, currentMove: null));
     }
 
     [Fact]
-    public void ShouldFeint_GestureFeintWithJumpShot_False()
+    public void ShouldFeint_GestureQuickReturnWithJumpShot_False()
     {
         // THE FIX: an ambiguous aim-stick gesture must never silently eat a
         // jump shot's ball release. Only the explicit "move_feint" action may
         // pump-fake a JumpShot.
         Assert.False(FeintGateResolver.ShouldFeint(
-            explicitFeintPressed: false, gestureKind: GestureKind.Feint, currentMove: new JumpShot()));
+            explicitFeintPressed: false, gestureKind: GestureKind.QuickReturn, currentMove: new JumpShot()));
     }
 
     [Fact]
