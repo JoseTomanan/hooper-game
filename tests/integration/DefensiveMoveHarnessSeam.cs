@@ -1,3 +1,4 @@
+using Hooper.Ball;
 using Hooper.Moves;
 
 namespace Hooper.Player;
@@ -57,4 +58,39 @@ public partial class PlayerController
     /// public API surface.
     /// </summary>
     internal bool BeginMoveForHarness(CommittedMove move) => BeginCommittedMove(move);
+
+    /// <summary>
+    /// Test-only (issue #254): begins a steal with its TargetHand DERIVED
+    /// FROM AIM INPUT via the REAL production mapping (ResolveStealTargetHand
+    /// -> HandStateResolver.TargetHandFromAim), not constructed directly with
+    /// <c>new StealMove(HandSide.X)</c> — that direct construction is exactly
+    /// the gap #254 identified: it bypasses the aim→hand facing transform
+    /// entirely, so a regression there could never be caught by a harness
+    /// that only ever hand-picks the target.
+    ///
+    /// Mirrors BeginMoveForHarness's rationale: bypasses only the input/RPC
+    /// layer (hardware Input.GetVector, the RequestBeginMove RPC round-trip),
+    /// never the mapping/resolution logic itself, which is the exact thing
+    /// under test here. Routes through the SAME BeginCommittedMove choke
+    /// point (hooper-architecture-contract invariant #11).
+    /// </summary>
+    /// <param name="aimSign">
+    /// The defender's raw aim sign, same convention SampleMoveInput computes
+    /// from aim.X (positive = defender's own body-right).
+    /// </param>
+    /// <param name="ball">The live BallController, so the holder can be
+    /// looked up exactly like ResolveStealTargetHand does in production.</param>
+    internal bool BeginStealFromAimForHarness(float aimSign, BallController ball) =>
+        BeginCommittedMove(new StealMove(ResolveStealTargetHand(aimSign, ball)));
+
+    // NOTE: the Heading setup seam this test needs (SetHeadingForHarness) is
+    // now provided by PlayerHarnessSeam.cs, which #243's fadeaway harness added
+    // to main with an identical `internal void SetHeadingForHarness(float) =>
+    // Heading = value;` body. This file used to declare its own copy; that was
+    // removed when #254 merged main to avoid a CS0111 duplicate-member clash
+    // (both are partials of PlayerController). The rationale that lived on the
+    // old copy — a bare headless second node has no input path that would ever
+    // advance Heading via Move()->HeadingMath.Step, so scenario SETUP must
+    // force it — still applies; it just lives on the shared PlayerHarnessSeam
+    // declaration now.
 }
