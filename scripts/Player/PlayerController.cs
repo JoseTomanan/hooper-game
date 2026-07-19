@@ -663,13 +663,30 @@ public partial class PlayerController : CharacterBody3D
 	/// Harness observability (issue #242, ADR-0016): the display anim state
 	/// ApplyAnimation last Traveled the state machine to. Not read by any
 	/// gameplay or netcode path — cosmetic-only, same as <see cref="_currentAnimState"/>
-	/// it mirrors — this exists purely so the headless integration harness can
-	/// assert "the AnimationTree actually entered Pivot while IsPivotingInPlace
-	/// was true" without needing a live AnimationTree.Advance() frame pump
-	/// (spike #87's Tier-2 gap; this sidesteps it by reading the state-selection
-	/// decision directly rather than sampling rendered bone poses).
+	/// it mirrors.
+	///
+	/// NOTE this is the RESOLVER'S decision, not proof the AnimationTree
+	/// actually entered that state — <c>Travel()</c> to a missing/misnamed
+	/// state only logs a Godot engine error, it never throws or rolls this
+	/// field back. A harness asserting against this alone would pass even if
+	/// the .tscn's Pivot state/transitions were completely broken (found in
+	/// #257's code review). Use <see cref="ActiveAnimNodeForHarness"/> to
+	/// assert what the state machine actually did.
 	/// </summary>
 	internal MoveAnimState CurrentAnimStateForHarness => _currentAnimState;
+
+	/// <summary>
+	/// Harness observability (issue #242 code review, ADR-0016): the state
+	/// machine's ACTUAL current node name, read live from
+	/// <c>AnimationNodeStateMachinePlayback.GetCurrentNode()</c>. Unlike
+	/// <see cref="CurrentAnimStateForHarness"/> — which only reflects what
+	/// ApplyAnimation asked for — this reflects what the .tscn-authored
+	/// state machine really did with that request, so a harness reading THIS
+	/// is a genuine end-to-end proof of the AnimationTree wiring rather than
+	/// a re-statement of the resolver's own decision. Empty string if the
+	/// AnimationTree/playback never resolved (cosmetic degrade path).
+	/// </summary>
+	internal string ActiveAnimNodeForHarness => _animPlayback?.GetCurrentNode() ?? "";
 
 	// ── Network state ─────────────────────────────────────────────────────────
 

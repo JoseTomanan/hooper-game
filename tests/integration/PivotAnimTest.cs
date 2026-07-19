@@ -24,17 +24,25 @@ namespace HOOPERGAME.Tests.Integration;
 //   godot --headless --path . res://tests/integration/PivotAnimTest.tscn -- --harness-scenario=control-locomotion
 //   Exit: 0 = PASS, 1 = FAIL (via GetTree().Quit) — the ADR-0016 exit-code contract.
 //
-// ── Why CurrentAnimStateForHarness, not a live AnimationTree bone-pose read ──
+// ── Why ActiveAnimNodeForHarness, not a live bone-pose read (or the resolver's
+// own decision) ──────────────────────────────────────────────────────────────
 // Spike #87 found that headlessly driving AnimationTree.Advance() and
 // sampling rendered bone poses needs a custom MainLoop frame pump — time-
 // boxed out as a Tier-2 gap, left to the human's one-time visual confirm.
-// This harness sidesteps that gap entirely: it does not need to prove the
-// CLIP LOOKS RIGHT (that is #184/#173's irreducible feel judgment, explicitly
-// out of scope per #242's acceptance) — only that ApplyAnimation's
-// state-SELECTION decision (which the state machine is then handed via
-// Travel()) tracks IsPivotingInPlace. CurrentAnimStateForHarness reads that
-// decision directly, which is state-checkable today without solving spike
-// #87's live-advance gap.
+// This harness sidesteps that gap without falling into the opposite trap: an
+// earlier version of this file asserted against PlayerController's
+// CurrentAnimStateForHarness, which is only ApplyAnimation's own
+// state-SELECTION decision (the argument it hands to Travel()) — Travel() on
+// a missing/misnamed state only logs a Godot error, it never throws or rolls
+// that field back, so that assertion would PASS even if the .tscn's Pivot
+// state/transitions were totally broken (found in #257's code review: it
+// just re-proved the unit-tested resolver, not the .tscn wiring). Reading
+// ActiveAnimNodeForHarness — AnimationNodeStateMachinePlayback.GetCurrentNode()
+// — asserts what the state machine ACTUALLY did, which is state-checkable
+// today without solving spike #87's live-advance gap. It does not need to
+// prove the CLIP LOOKS RIGHT (that is #184/#173's irreducible feel judgment,
+// explicitly out of scope per #242's acceptance) — only that the state
+// machine really entered/exited the Pivot node.
 //
 // ── Why a single offline instance is enough ─────────────────────────────────
 // Same reasoning as PivotPlantTest: with no MultiplayerPeer assigned, Godot's
@@ -112,7 +120,11 @@ public partial class PivotAnimTest : Node
         }
 
         bool pivoting = _player.IsPivotingInPlace;
-        bool animIsPivot = _player.CurrentAnimStateForHarness == MoveAnimState.Pivot;
+        // Read the state machine's ACTUAL current node, not just the resolver's
+        // decision — Travel() to a broken/missing state only logs an engine
+        // error, it does not throw, so asserting the resolver's own output
+        // alone would prove nothing about the .tscn wiring (#257 review).
+        bool animIsPivot = _player.ActiveAnimNodeForHarness == MoveAnimState.Pivot.ToString();
 
         if (animIsPivot)
         {
@@ -137,8 +149,8 @@ public partial class PivotAnimTest : Node
 
     private void VerdictPivotEntersExits()
     {
-        bool animIsPivot = _player.CurrentAnimStateForHarness == MoveAnimState.Pivot;
-        bool settledLocomotion = _player.CurrentAnimStateForHarness == MoveAnimState.Locomotion && !animIsPivot;
+        bool animIsPivot = _player.ActiveAnimNodeForHarness == MoveAnimState.Pivot.ToString();
+        bool settledLocomotion = _player.ActiveAnimNodeForHarness == MoveAnimState.Locomotion.ToString() && !animIsPivot;
 
         bool pass = _pivotEnteredAnim && _pivotEnteredAnimWhileFlagTrue
                     && _sawFlagGoFalseAfterPivotAnim && settledLocomotion;
@@ -154,7 +166,7 @@ public partial class PivotAnimTest : Node
                  $"was true, then return to Locomotion; got pivotEnteredAnim={_pivotEnteredAnim}, " +
                  $"pivotEnteredWhileFlagTrue={_pivotEnteredAnimWhileFlagTrue}, " +
                  $"sawFlagGoFalseAfterPivotAnim={_sawFlagGoFalseAfterPivotAnim}, " +
-                 $"finalAnimState={_player.CurrentAnimStateForHarness}, " +
+                 $"finalActiveAnimNode={_player.ActiveAnimNodeForHarness}, " +
                  $"finalIsPivotingInPlace={_player.IsPivotingInPlace}.");
         }
         Finish(pass ? 0 : 1);
@@ -174,7 +186,7 @@ public partial class PivotAnimTest : Node
             GD.Print($"[pivot-anim] frame {_frame}: pressed move_backward (forward-ish, no reversal)");
         }
 
-        if (_player.CurrentAnimStateForHarness == MoveAnimState.Pivot)
+        if (_player.ActiveAnimNodeForHarness == MoveAnimState.Pivot.ToString())
         {
             Fail($"control-locomotion: anim state entered Pivot at frame {_frame} during plain " +
                  "forward-ish locomotion with no reversal — Pivot must only ever be reachable via " +
