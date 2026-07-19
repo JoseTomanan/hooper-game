@@ -126,4 +126,64 @@ public static class HandStateResolver
     /// </returns>
     public static Vector2 BurstWorldDir(float heading, int flickSign) =>
         flickSign * new Vector2(-MathF.Cos(heading), MathF.Sin(heading));
+
+    /// <summary>
+    /// Maps a defender's world-space aim sign to the ball-holder's BODY-RELATIVE
+    /// <see cref="HandSide"/>, transformed by the relative heading between the
+    /// two players (issue #254 fix; ADR-0010's server-authoritative <c>Heading</c>
+    /// feeds both sides).
+    ///
+    /// ── The bug this replaces ──────────────────────────────────────────────
+    /// The old steal code compared the defender's raw aim sign directly against
+    /// the holder's body-relative HandSide with NO facing transform at all:
+    /// <c>aim.X > 0 ? Right : Left</c>. That is only correct when the two
+    /// players face the SAME way (side-by-side/trailing defense) — it silently
+    /// inverts in a face-to-face stance, because the holder's body-right is no
+    /// longer the same world side as it would be if the holder faced away.
+    ///
+    /// ── The fix, and why it is continuous (not a blanket flip) ─────────────
+    /// <see cref="BurstWorldDir"/> already gives a unit world-space direction
+    /// for "this player's body-right" at a given heading: <c>BurstWorldDir(h,
+    /// +1) = (-cos h, sin h)</c>. The dot product of two such vectors at
+    /// headings h1, h2 reduces to <c>cos(h1 - h2)</c> (a standard trig
+    /// identity: <c>(-cos h1)(-cos h2) + (sin h1)(sin h2) = cos(h1 - h2)</c>).
+    /// So "does the defender's world-space aim direction fall on the holder's
+    /// body-right side?" is exactly <c>sign(aimSign * cos(defenderHeading -
+    /// holderHeading))</c> — no need to materialize either vector explicitly.
+    ///
+    /// This is continuous in the relative heading, per the issue's explicit
+    /// requirement: at 0° relative (same facing) cos = +1, so the result is
+    /// IDENTICAL to the old naive mapping — side-by-side/trailing defense sees
+    /// no change. At 180° (face-to-face) cos = -1, so the mapping fully
+    /// inverts — exactly the repro case. At exactly 90° relative heading the
+    /// product is genuinely 0 (neither side is meaningfully "more right" than
+    /// the other from the aim's perspective), so `> 0f` resolves this single
+    /// measure-zero case to Left — an arbitrary but harmless tie-break (this
+    /// is a DIFFERENT case from the old code's aim-input tie-break at
+    /// aim.X == 0; it happens to reuse the same ">, else Left" shape, not the
+    /// same justification).
+    /// </summary>
+    /// <param name="aimSign">
+    /// The defender's aim direction sign: positive = the defender's own
+    /// body-right (aim.X > 0), non-positive = body-left. Any magnitude is
+    /// accepted; only the sign is compared, matching <see cref="IsCrossover"/>'s
+    /// convention.
+    /// </param>
+    /// <param name="defenderHeading">
+    /// The defender's authoritative heading in radians (ADR-0010), same
+    /// convention as <see cref="BurstWorldDir"/>.
+    /// </param>
+    /// <param name="holderHeading">
+    /// The ball-holder's authoritative heading in radians (ADR-0010), same
+    /// convention.
+    /// </param>
+    /// <returns>
+    /// The holder's body-relative <see cref="HandSide"/> the defender's aim
+    /// resolves to.
+    /// </returns>
+    public static HandSide TargetHandFromAim(float aimSign, float defenderHeading, float holderHeading)
+    {
+        float relativeCos = MathF.Cos(defenderHeading - holderHeading);
+        return (aimSign * relativeCos) > 0f ? HandSide.Right : HandSide.Left;
+    }
 }
