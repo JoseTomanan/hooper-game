@@ -38,8 +38,17 @@ public static class MoveAnimResolver
     /// </summary>
     /// <param name="phase">Current phase of the committed-move state machine
     /// (own player) or the broadcast phase (remote copy, issue #69).</param>
+    /// <param name="isFadeaway">
+    /// (Issue #243) True when the CURRENT (or, per DisplayFadeaway's own
+    /// per-role reconstruction, the DISPLAYED) move is a JumpShot classified
+    /// fadeaway/off-balance by FadeawayTriggerResolver. Only changes the
+    /// result during <see cref="MovePhase.Active"/> — every other phase
+    /// ignores it, since the fadeaway distinction is specifically about the
+    /// release-frame clip, not the wind-up or landing. Defaults to false so
+    /// every pre-#243 call site is unaffected.
+    /// </param>
     /// <returns>The display animation state for that phase.</returns>
-    public static MoveAnimState Resolve(MovePhase phase)
+    public static MoveAnimState Resolve(MovePhase phase, bool isFadeaway = false)
     {
         switch (phase)
         {
@@ -48,7 +57,7 @@ public static class MoveAnimResolver
             case MovePhase.Startup:
                 return MoveAnimState.Startup;
             case MovePhase.Active:
-                return MoveAnimState.Active;
+                return isFadeaway ? MoveAnimState.FadeawayActive : MoveAnimState.Active;
             case MovePhase.Recovery:
                 return MoveAnimState.Recovery;
 
