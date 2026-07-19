@@ -24,6 +24,7 @@ namespace Hooper.Ball.Tests;
 ///   Dribbling  → Held       : StopDribble()     → returns true
 ///   Dribbling  → InFlight   : Shoot()           → returns true
 ///   Dribbling  → Loose      : GoLoose()         → returns true
+///   Held       → Loose      : GoLoose()         → returns true (issue #206)
 ///   InFlight   → Loose      : GoLoose()         → returns true
 ///   InFlight   → Held       : Catch(peerId)     → returns true
 ///   Loose      → Held       : Catch(peerId)     → returns true
@@ -347,11 +348,28 @@ public class BallStateMachineTests
     }
 
     [Fact]
-    public void GoLoose_WhenHeld_ReturnsFalse()
+    public void GoLoose_WhenHeld_ReturnsTrueAndStateIsLoose()
     {
+        // Issue #206 (ADR-0018 Amendment 2026-07-19): Held became a legal
+        // GoLoose source so a Held ball can be poked loose during a
+        // JumpShot's Startup/feint-Recovery — previously this returned
+        // false unconditionally, which was the actual root cause of total
+        // Held-steal immunity (BallController's success side effects ran
+        // but the state transition itself silently no-opped).
         var sm = NewMachine();
         bool result = sm.GoLoose();
-        Assert.False(result);
+
+        Assert.True(result);
+        Assert.Equal(BallState.Loose, sm.Current);
+    }
+
+    [Fact]
+    public void GoLoose_WhenHeld_ClearsHolder()
+    {
+        var sm = NewMachine(holderId: 3);
+        sm.GoLoose();
+
+        Assert.Equal(0, sm.HolderPeerId);
     }
 
     [Fact]

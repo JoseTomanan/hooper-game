@@ -30,6 +30,11 @@ namespace Hooper.Ball;
 ///   Dribbling  → Held       : StopDribble()    (player cradles the ball)
 ///   Dribbling  → InFlight   : Shoot()          (shoot out of a dribble)
 ///   Dribbling  → Loose      : GoLoose()        (knocked away mid-dribble)
+///   Held       → Loose      : GoLoose()        (issue #206, ADR-0018 Amendment
+///                                              2026-07-19: poked loose during
+///                                              a JumpShot's Startup/feint-
+///                                              Recovery cradle — a held ball
+///                                              was steal-immune before this)
 ///   InFlight   → Loose      : GoLoose()        (missed shot / block)
 ///   InFlight   → Held       : Catch()          (caught pass / alley-oop)
 ///   Loose      → Held       : Catch()          (picked up off the floor)
@@ -144,16 +149,28 @@ public sealed class BallStateMachine
     }
 
     /// <summary>
-    /// Dribbling or InFlight → Loose.  The ball becomes uncontrolled — a stolen
-    /// dribble, a missed shot, or a deflected pass.  HolderPeerId is cleared.
+    /// Dribbling, Held, or InFlight → Loose.  The ball becomes uncontrolled —
+    /// a stolen dribble, a poked-loose cradle, a missed shot, or a deflected
+    /// pass.  HolderPeerId is cleared.
     ///
     /// Named GoLoose (not "KnockLoose") because it covers both a knock-away
     /// and a missed shot falling to the floor — the ball just went loose.
+    ///
+    /// Held was NOT a legal source here before issue #206 (ADR-0018 Amendment
+    /// 2026-07-19): a held ball had no way to become uncontrolled at all,
+    /// which is exactly what made it steal-immune — a holder could cradle a
+    /// JumpShot to escape a Dribbling-targeted steal read with zero
+    /// consequence. Adding Held here is what lets
+    /// BallController.ResolveHeldStealAttempts's Held-branch (the pump-fake-
+    /// window fix) actually take effect; the caller-side timing/window logic
+    /// lives entirely in DefensiveResolution/PlayerController, not here — this
+    /// method only had to stop silently refusing the transition.
     /// </summary>
     /// <returns>True if the transition was legal; false if it was not.</returns>
     public bool GoLoose()
     {
-        if (Current != BallState.Dribbling && Current != BallState.InFlight) return false;
+        if (Current != BallState.Dribbling && Current != BallState.InFlight && Current != BallState.Held)
+            return false;
 
         Current      = BallState.Loose;
         HolderPeerId = 0;

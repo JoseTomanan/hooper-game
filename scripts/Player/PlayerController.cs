@@ -1209,6 +1209,93 @@ public partial class PlayerController : CharacterBody3D
 	}
 
 	/// <summary>
+	/// (Issue #206, ADR-0018 Amendment 2026-07-19) This player's current
+	/// Held-ball steal-vulnerable window, if any — the human-decided Option A
+	/// "pump-fake window" fix for the previously-total Held-steal immunity
+	/// (BallController.ResolveStealAttempts used to early-return unless the
+	/// ball was Dribbling). Absolute physics-tick half-open interval
+	/// [Start, End), directly composable with
+	/// DefensiveResolution.HeldStealSucceeds the same way ActiveMove's
+	/// interval already composes with block's Succeeds call. Null on every
+	/// phase/move other than a JumpShot's Startup or feint-Recovery.
+	///
+	/// ActiveMove&lt;TMove&gt;() (above) cannot see this window by construction —
+	/// it only returns non-null during Active (see its own "IsActive is the
+	/// WRONG check" note), and the vulnerable phases here are specifically
+	/// Startup and Recovery, i.e. BEFORE and only-if-feinted-back-FROM the
+	/// ball's actual release.
+	///
+	/// Why Recovery never needs an explicit "was this entered via feint" flag:
+	/// a JumpShot's Active phase is what releases the ball
+	/// (BallController.CheckJumpShotRelease reads JustReleasedJumpShot the
+	/// SAME tick Active is entered, flipping BallState off Held that tick).
+	/// So the only way this machine can be in Recovery on a JumpShot while
+	/// BallState is STILL Held is if Recovery was entered via Feint()
+	/// (Startup → Recovery, skipping Active entirely) — a normal
+	/// Active-completion recovery always co-occurs with a ball that has
+	/// already left Held. The sole caller (BallController.
+	/// ResolveHeldStealAttempts) only ever reads this property while
+	/// StateMachine.Current == BallState.Held, so that precondition holds at
+	/// every call site. (Doubt-cycle note, PR #206: CommittedMoveMachine.
+	/// Feint() itself never reaches Recovery with FeintRecoveryFrames == 0 —
+	/// that configuration aborts straight to Inactive instead — so the
+	/// Recovery branch below is unreachable except via a genuine pump-fake.)
+	///
+	/// Read fresh every tick like ActiveMove — no caching — so a still-open
+	/// Startup window is re-evaluated correctly as it approaches its end.
+	/// Like the existing block check (ResolveBlockAttempts's own comment),
+	/// this assumes the Players node ticks before Ball each frame
+	/// (hooper-architecture-contract invariant #3) so the phase read here
+	/// reflects THIS Ball tick, not the previous one.
+	/// </summary>
+	public (int Start, int End)? HeldStealVulnerableWindow
+	{
+		get
+		{
+			if (_machine.CurrentMove is not JumpShot jumpShot) return null;
+
+			if (_machine.Phase == MovePhase.Startup)
+			{
+				int start = PhysicsTick - _machine.FrameInPhase;
+				return (start, start + jumpShot.FrameData.StartupFrames);
+			}
+
+			if (_machine.Phase == MovePhase.Recovery)
+			{
+				// Feint() jumps FrameInPhase DIRECTLY to
+				// (RecoveryFrames - FeintRecoveryFrames) instead of entering
+				// Recovery at FrameInPhase == 0 via EnterPhase() (see
+				// CommittedMoveMachine.Feint()'s own doc) — so
+				// "PhysicsTick - FrameInPhase" is NOT the real tick Feint()
+				// fired; it is an earlier, purely arithmetic reference point
+				// (algebraically always at or before the true Startup-start
+				// tick, since a feint can only fire before FrameInPhase
+				// reaches FeintWindowFrames). Using it as a window START
+				// would therefore incorrectly extend vulnerability backward
+				// to before the shot attempt even existed.
+				//
+				// The END, however, IS correct from that same reference:
+				// if Feint() fired at real tick T (setting
+				// FrameInPhase_T = RecoveryFrames - FeintRecoveryFrames),
+				// then on any later tick P, FrameInPhase_P = (P - T) +
+				// FrameInPhase_T, so P - FrameInPhase_P = T -
+				// (RecoveryFrames - FeintRecoveryFrames) for every P — a
+				// tick-independent constant — and adding RecoveryFrames back
+				// gives T + FeintRecoveryFrames, exactly the real Recovery
+				// end. So END is derived the same way as Startup's END; only
+				// START must instead be derived BACKWARD from that correct
+				// END using the real FeintRecoveryFrames duration, not
+				// forward from the fictional reference tick.
+				int end = PhysicsTick - _machine.FrameInPhase + jumpShot.FrameData.RecoveryFrames;
+				int start = end - jumpShot.FrameData.FeintRecoveryFrames;
+				return (start, end);
+			}
+
+			return null;
+		}
+	}
+
+	/// <summary>
 	/// Server-only: ends this defender's defensive-move Active phase the instant
 	/// BallController resolves it as a success (ResolveStealAttempts /
 	/// ResolveBlockAttempts), paying Recovery immediately instead of riding out
