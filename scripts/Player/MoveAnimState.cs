@@ -37,6 +37,18 @@ namespace Hooper.Player;
 ///                already penalizes its accuracy; this is the visual half.
 ///                Every other committed move (and a squared-up JumpShot)
 ///                keeps using plain Active.
+///
+///   Pivot      — the planted-feet in-place turn (issue #172's
+///                IsPivotingInPlace, animated for issue #242/#184). Orthogonal
+///                to the MovePhase-driven states above: it is driven by
+///                HeadingMath's pivot latch, not by CommittedMoveMachine, and
+///                only ever coincides with MovePhase.Inactive — beginning a
+///                committed move clears any in-progress pivot latch (see
+///                PivotPlantTest's committed-cancel scenario), so Pivot never
+///                needs to out-rank Startup/Active/Recovery. It is also
+///                mutually exclusive with FadeawayActive by phase: Fadeaway
+///                only ever applies during Active, Pivot only during
+///                Inactive, so the two states never compete for one frame.
 /// </summary>
 public enum MoveAnimState
 {
@@ -45,4 +57,5 @@ public enum MoveAnimState
     Active,
     Recovery,
     FadeawayActive,
+    Pivot,
 }

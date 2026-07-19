@@ -31,25 +31,60 @@ public class MoveAnimResolverTests
         // Inactive is the neutral game; the idle↔run blend is handled separately
         // by the velocity-driven BlendSpace1D, so all of Inactive is one display
         // state here.
-        Assert.Equal(MoveAnimState.Locomotion, MoveAnimResolver.Resolve(MovePhase.Inactive));
+        Assert.Equal(MoveAnimState.Locomotion, MoveAnimResolver.Resolve(MovePhase.Inactive, isPivotingInPlace: false));
     }
 
     [Fact]
     public void Resolve_Startup_ReturnsStartup()
     {
-        Assert.Equal(MoveAnimState.Startup, MoveAnimResolver.Resolve(MovePhase.Startup));
+        Assert.Equal(MoveAnimState.Startup, MoveAnimResolver.Resolve(MovePhase.Startup, isPivotingInPlace: false));
     }
 
     [Fact]
     public void Resolve_Active_ReturnsActive()
     {
-        Assert.Equal(MoveAnimState.Active, MoveAnimResolver.Resolve(MovePhase.Active));
+        Assert.Equal(MoveAnimState.Active, MoveAnimResolver.Resolve(MovePhase.Active, isPivotingInPlace: false));
     }
 
     [Fact]
     public void Resolve_Recovery_ReturnsRecovery()
     {
-        Assert.Equal(MoveAnimState.Recovery, MoveAnimResolver.Resolve(MovePhase.Recovery));
+        Assert.Equal(MoveAnimState.Recovery, MoveAnimResolver.Resolve(MovePhase.Recovery, isPivotingInPlace: false));
+    }
+
+    // ── Pivot precedence (issue #242) ──────────────────────────────────────────
+
+    [Fact]
+    public void Resolve_InactiveAndPivoting_ReturnsPivot()
+    {
+        // The in-place pivot (#172) is orthogonal to MovePhase — it is driven
+        // by HeadingMath's latch, not the committed-move machine — so while it
+        // is active during Inactive it must override the plain Locomotion
+        // display, or the plant would render as ordinary run/idle.
+        Assert.Equal(MoveAnimState.Pivot, MoveAnimResolver.Resolve(MovePhase.Inactive, isPivotingInPlace: true));
+    }
+
+    [Fact]
+    public void Resolve_InactiveAndNotPivoting_ReturnsLocomotion()
+    {
+        // Control: the ordinary Inactive→Locomotion mapping is unchanged when
+        // no pivot is in progress.
+        Assert.Equal(MoveAnimState.Locomotion, MoveAnimResolver.Resolve(MovePhase.Inactive, isPivotingInPlace: false));
+    }
+
+    [Theory]
+    [InlineData(MovePhase.Startup, MoveAnimState.Startup)]
+    [InlineData(MovePhase.Active, MoveAnimState.Active)]
+    [InlineData(MovePhase.Recovery, MoveAnimState.Recovery)]
+    public void Resolve_CommittedMoveActiveAndPivoting_IgnoresPivotFlag(MovePhase phase, MoveAnimState expected)
+    {
+        // Defensive guarantee: even though PivotPlantTest's committed-cancel
+        // scenario proves BeginCommittedMove clears the latch in practice (so
+        // this combination should never arise live), the resolver itself must
+        // not let a stray isPivotingInPlace=true silently steal the display
+        // away from an in-progress committed move — Pivot only ever wins over
+        // Locomotion (Inactive), never over Startup/Active/Recovery.
+        Assert.Equal(expected, MoveAnimResolver.Resolve(phase, isPivotingInPlace: true));
     }
 
     // ── Fadeaway override (issue #243) ───────────────────────────────────────
@@ -96,6 +131,32 @@ public class MoveAnimResolverTests
             MoveAnimResolver.Resolve(MovePhase.Active));
     }
 
+    // ── Cross-flag precedence (issues #242 + #243 reconciled) ────────────────
+
+    [Fact]
+    public void Resolve_ActiveWithFadeawayAndPivotFlag_ReturnsFadeawayActive()
+    {
+        // Both flags are mutually exclusive by phase in practice (fadeaway is
+        // stamped only during Active, the pivot latch only applies to
+        // Inactive — see MoveAnimState's doc), but the resolver still needs a
+        // defined answer if a caller ever passes both. Committed-move phases
+        // always win over Pivot, so on Active isFadeaway alone decides; a
+        // stray isPivotingInPlace=true must not steal the display away from
+        // the fadeaway clip.
+        Assert.Equal(MoveAnimState.FadeawayActive,
+            MoveAnimResolver.Resolve(MovePhase.Active, isFadeaway: true, isPivotingInPlace: true));
+    }
+
+    [Fact]
+    public void Resolve_InactiveWithPivotFlagAndFadeawayTrue_ReturnsPivot()
+    {
+        // Symmetric case: on Inactive, isFadeaway can't apply (it only bites
+        // during Active), so isPivotingInPlace alone decides — a stray
+        // isFadeaway=true must not suppress the Pivot display.
+        Assert.Equal(MoveAnimState.Pivot,
+            MoveAnimResolver.Resolve(MovePhase.Inactive, isFadeaway: true, isPivotingInPlace: true));
+    }
+
     // ── Unknown phase fallback ────────────────────────────────────────────────
 
     [Fact]
@@ -110,7 +171,7 @@ public class MoveAnimResolverTests
         // surface here as "unexpectedly Locomotion" rather than as a live crash.
         MovePhase corrupt = (MovePhase)999;
 
-        Assert.Equal(MoveAnimState.Locomotion, MoveAnimResolver.Resolve(corrupt));
+        Assert.Equal(MoveAnimState.Locomotion, MoveAnimResolver.Resolve(corrupt, isPivotingInPlace: false));
     }
 
     // ── Purity / cosmetic-only guarantee ──────────────────────────────────────
@@ -127,8 +188,8 @@ public class MoveAnimResolverTests
         // with no side effects on gameplay (ADR-0004).
         foreach (MovePhase phase in System.Enum.GetValues<MovePhase>())
         {
-            MoveAnimState first  = MoveAnimResolver.Resolve(phase);
-            MoveAnimState second = MoveAnimResolver.Resolve(phase);
+            MoveAnimState first  = MoveAnimResolver.Resolve(phase, isPivotingInPlace: false);
+            MoveAnimState second = MoveAnimResolver.Resolve(phase, isPivotingInPlace: false);
 
             Assert.Equal(first, second);
         }

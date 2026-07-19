@@ -34,7 +34,9 @@ public static class MoveAnimResolver
     ///
     /// The four committed-move phases map one-to-one onto display states;
     /// <see cref="MovePhase.Inactive"/> maps to <see cref="MoveAnimState.Locomotion"/>
-    /// (the neutral idle/run game, blended separately from velocity).
+    /// (the neutral idle/run game, blended separately from velocity) — UNLESS
+    /// <paramref name="isPivotingInPlace"/> is true, in which case Inactive
+    /// maps to <see cref="MoveAnimState.Pivot"/> instead (issue #242).
     /// </summary>
     /// <param name="phase">Current phase of the committed-move state machine
     /// (own player) or the broadcast phase (remote copy, issue #69).</param>
@@ -47,13 +49,28 @@ public static class MoveAnimResolver
     /// release-frame clip, not the wind-up or landing. Defaults to false so
     /// every pre-#243 call site is unaffected.
     /// </param>
+    /// <param name="isPivotingInPlace">
+    /// The in-place pivot latch (issue #172's <c>IsPivotingInPlace</c>, own
+    /// player via <c>_pivot.HasLatch</c> or remote copy via the adopted
+    /// broadcast — both already correct for display, see PlayerController's
+    /// TickClientRemotePlayer). Orthogonal to <paramref name="phase"/>: it
+    /// overrides ONLY the Inactive→Locomotion mapping (issue #242) — a
+    /// committed move already clears the latch on Begin (PivotPlantTest's
+    /// committed-cancel scenario), so Startup/Active/Recovery never need to
+    /// yield to it, but the resolver enforces that precedence itself rather
+    /// than trusting the caller never to pass the combination. Mutually
+    /// exclusive with <paramref name="isFadeaway"/> by phase (see
+    /// <see cref="MoveAnimState"/>'s doc comment) — Active is what isFadeaway
+    /// governs, Inactive is what this governs, so they never compete for the
+    /// same call.
+    /// </param>
     /// <returns>The display animation state for that phase.</returns>
-    public static MoveAnimState Resolve(MovePhase phase, bool isFadeaway = false)
+    public static MoveAnimState Resolve(MovePhase phase, bool isFadeaway = false, bool isPivotingInPlace = false)
     {
         switch (phase)
         {
             case MovePhase.Inactive:
-                return MoveAnimState.Locomotion;
+                return isPivotingInPlace ? MoveAnimState.Pivot : MoveAnimState.Locomotion;
             case MovePhase.Startup:
                 return MoveAnimState.Startup;
             case MovePhase.Active:

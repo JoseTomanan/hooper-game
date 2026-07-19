@@ -659,6 +659,35 @@ public partial class PlayerController : CharacterBody3D
 	/// </summary>
 	private MoveAnimState _currentAnimState = MoveAnimState.Locomotion;
 
+	/// <summary>
+	/// Harness observability (issue #242, ADR-0016): the display anim state
+	/// ApplyAnimation last Traveled the state machine to. Not read by any
+	/// gameplay or netcode path — cosmetic-only, same as <see cref="_currentAnimState"/>
+	/// it mirrors.
+	///
+	/// NOTE this is the RESOLVER'S decision, not proof the AnimationTree
+	/// actually entered that state — <c>Travel()</c> to a missing/misnamed
+	/// state only logs a Godot engine error, it never throws or rolls this
+	/// field back. A harness asserting against this alone would pass even if
+	/// the .tscn's Pivot state/transitions were completely broken (found in
+	/// #257's code review). Use <see cref="ActiveAnimNodeForHarness"/> to
+	/// assert what the state machine actually did.
+	/// </summary>
+	internal MoveAnimState CurrentAnimStateForHarness => _currentAnimState;
+
+	/// <summary>
+	/// Harness observability (issue #242 code review, ADR-0016): the state
+	/// machine's ACTUAL current node name, read live from
+	/// <c>AnimationNodeStateMachinePlayback.GetCurrentNode()</c>. Unlike
+	/// <see cref="CurrentAnimStateForHarness"/> — which only reflects what
+	/// ApplyAnimation asked for — this reflects what the .tscn-authored
+	/// state machine really did with that request, so a harness reading THIS
+	/// is a genuine end-to-end proof of the AnimationTree wiring rather than
+	/// a re-statement of the resolver's own decision. Empty string if the
+	/// AnimationTree/playback never resolved (cosmetic degrade path).
+	/// </summary>
+	internal string ActiveAnimNodeForHarness => _animPlayback?.GetCurrentNode() ?? "";
+
 	// ── Network state ─────────────────────────────────────────────────────────
 
 	/// <summary>
@@ -2725,7 +2754,16 @@ public partial class PlayerController : CharacterBody3D
 		// (#243) isFadeaway only ever changes MoveAnimResolver's answer during
 		// Active (a squared-up JumpShot, every other move, and every non-Active
 		// phase ignore it) — see MoveAnimResolver.Resolve's own doc.
-		MoveAnimState target = MoveAnimResolver.Resolve(displayPhase, DisplayFadeaway());
+		//
+		// IsPivotingInPlace is already correct for EITHER role without going
+		// through DisplayMove(): the own player's Move() sets _pivot locally
+		// every tick, and TickClientRemotePlayer adopts the broadcast latch
+		// directly for the opponent's copy (see that method's #172 comment) —
+		// exactly the same "already-resolved for display" property DisplayMove
+		// itself exists to provide for MovePhase (issue #242). The two flags
+		// never both matter for the same call: isFadeaway only bites on
+		// Active, isPivotingInPlace only bites on Inactive.
+		MoveAnimState target = MoveAnimResolver.Resolve(displayPhase, DisplayFadeaway(), IsPivotingInPlace);
 		if (target != _currentAnimState)
 		{
 			_animPlayback.Travel(target.ToString());
