@@ -229,4 +229,43 @@ public static class DefensiveResolution
     /// </param>
     public static float ContestMoveFactor(bool contestActiveAtRelease, float contestMoveScatterK)
         => contestActiveAtRelease ? 1f + contestMoveScatterK : 1f;
+
+    /// <summary>
+    /// Held-ball steal success check (issue #206, ADR-0018 Amendment
+    /// 2026-07-19, human-decided Option A "pump-fake window"). A `Held` ball
+    /// was previously steal-immune outright (<see cref="BallController"/>.
+    /// ResolveStealAttempts early-returned unless the ball was Dribbling) —
+    /// which let a holder mash JumpShot's pump-fake to dodge any steal read
+    /// on reaction, inverting the mind-game the timing-window model exists to
+    /// create (CLAUDE.md §1). This predicate composes the SAME shared overlap
+    /// primitive (<see cref="Succeeds"/>) block already uses: a Held steal
+    /// connects iff the defender's StealMove Active window overlaps the
+    /// holder's JumpShot Startup-or-feint-Recovery vulnerable window (both
+    /// half-open absolute-tick intervals — see
+    /// <see cref="PlayerController.HeldStealVulnerableWindow"/> for how the
+    /// vulnerable interval itself is derived).
+    ///
+    /// ── Why no hand-side axis here (ADR-0014 tier-2 self-resolution) ───────
+    /// The live-dribble steal (<see cref="StealSucceeds"/>) gates on a
+    /// TargetHand match because a bouncing dribble is inherently
+    /// one-handed and exposes a discriminable side. A Held cradle is not: in
+    /// real half-court 1v1, a gathered/triple-threat ball is protected with
+    /// the whole body, not dribbled to one side, so "which hand did you aim
+    /// at" has no real-ball referent for a stationary cradle. Requiring a
+    /// hand match here would just hand the holder ANOTHER axis to dodge on
+    /// (aim your body so the "wrong" hand faces the defender), diluting the
+    /// exact design property that won this option in the decision brief: a
+    /// pump-fake exposes the gather, full stop, no second read to bait. This
+    /// predicate is therefore TIMING-ONLY, mirroring block's own
+    /// timing-plus-separately-composed-reach shape rather than steal's
+    /// timing-plus-hand shape — see <see cref="WithinBlockReach"/>'s doc for
+    /// the parallel "compose an ADDITIONAL axis at the call site, don't fold
+    /// it in here" convention if a future spatial term is ever added.
+    /// </summary>
+    /// <param name="activeStart">First tick of the defender's StealMove Active phase (inclusive).</param>
+    /// <param name="activeEnd">First tick after the defender's StealMove Active phase (exclusive).</param>
+    /// <param name="vulnStart">First tick of the holder's Held-steal vulnerable window (inclusive).</param>
+    /// <param name="vulnEnd">First tick after the holder's Held-steal vulnerable window (exclusive).</param>
+    public static bool HeldStealSucceeds(int activeStart, int activeEnd, int vulnStart, int vulnEnd)
+        => Succeeds(activeStart, activeEnd, vulnStart, vulnEnd);
 }

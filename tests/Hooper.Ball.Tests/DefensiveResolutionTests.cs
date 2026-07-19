@@ -516,4 +516,88 @@ public class DefensiveResolutionTests
 
         Assert.Equal(passiveContestFactor, passiveContestFactor * contestMoveFactor);
     }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // HeldStealSucceeds — Held-ball steal vulnerable window (issue #206,
+    // ADR-0018 Amendment 2026-07-19, Option A pump-fake-window variant).
+    //
+    // Timing-only (no hand-side axis — see the method's own doc for the
+    // ADR-0014 tier-2 self-resolution), so this is a thin composition over
+    // the shared Succeeds predicate. The boundary matrix here exists so the
+    // half-open convention and the delegation itself are pinned independent
+    // of Succeeds' own tests, per the campaign's "full xUnit boundary matrix"
+    // requirement.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void HeldStealSucceeds_ActiveInsideVulnerableWindow_ReturnsTrue()
+    {
+        // Defender's Active window [10,18) sits fully inside the holder's
+        // JumpShot Startup window [0,18) — a well-timed poke during the gather.
+        Assert.True(DefensiveResolution.HeldStealSucceeds(
+            activeStart: 10, activeEnd: 18, vulnStart: 0, vulnEnd: 18));
+    }
+
+    [Fact]
+    public void HeldStealSucceeds_SingleTickOverlap_ReturnsTrue()
+    {
+        // Smallest possible overlap: [14,22) ∩ [18,26) = [18,22) — real.
+        Assert.True(DefensiveResolution.HeldStealSucceeds(
+            activeStart: 14, activeEnd: 22, vulnStart: 18, vulnEnd: 26));
+    }
+
+    [Fact]
+    public void HeldStealSucceeds_ActiveEntirelyBeforeWindow_ReturnsFalse()
+    {
+        // Defender's Active window ends before the holder even begins the
+        // JumpShot's Startup — no shot attempt exists yet to be vulnerable.
+        Assert.False(DefensiveResolution.HeldStealSucceeds(
+            activeStart: 0, activeEnd: 5, vulnStart: 10, vulnEnd: 28));
+    }
+
+    [Fact]
+    public void HeldStealSucceeds_ActiveEntirelyAfterWindow_ReturnsFalse()
+    {
+        // Defender reacted too late — the vulnerable window (e.g. a short
+        // feint-Recovery tail) already closed before Active opened.
+        Assert.False(DefensiveResolution.HeldStealSucceeds(
+            activeStart: 30, activeEnd: 38, vulnStart: 10, vulnEnd: 28));
+    }
+
+    [Fact]
+    public void HeldStealSucceeds_AdjacentIntervals_ActiveEndsAtVulnStart_ReturnsFalse()
+    {
+        // Half-open boundary: Active ends exactly when the vulnerable window
+        // opens — [5,10) vs [10,20) share only the boundary tick, empty overlap.
+        Assert.False(DefensiveResolution.HeldStealSucceeds(
+            activeStart: 5, activeEnd: 10, vulnStart: 10, vulnEnd: 20));
+    }
+
+    [Fact]
+    public void HeldStealSucceeds_AdjacentIntervals_VulnEndsAtActiveStart_ReturnsFalse()
+    {
+        // Reversed adjacency: the vulnerable window closes exactly when
+        // Active opens.
+        Assert.False(DefensiveResolution.HeldStealSucceeds(
+            activeStart: 20, activeEnd: 28, vulnStart: 10, vulnEnd: 20));
+    }
+
+    [Fact]
+    public void HeldStealSucceeds_ActiveFullyContainsVulnerableWindow_ReturnsTrue()
+    {
+        // A long Active window (should not occur with StealMove's real 8-tick
+        // ActiveFrames, but the pure predicate must still be correct for any
+        // interval shape) fully wraps a short feint-Recovery tail.
+        Assert.True(DefensiveResolution.HeldStealSucceeds(
+            activeStart: 0, activeEnd: 40, vulnStart: 20, vulnEnd: 28));
+    }
+
+    [Fact]
+    public void HeldStealSucceeds_VulnerableWindowFullyContainsActive_ReturnsTrue()
+    {
+        // The reverse containment — Active fully inside the (longer) Startup
+        // window.
+        Assert.True(DefensiveResolution.HeldStealSucceeds(
+            activeStart: 5, activeEnd: 13, vulnStart: 0, vulnEnd: 18));
+    }
 }
