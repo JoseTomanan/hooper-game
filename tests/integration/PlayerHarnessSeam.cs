@@ -43,4 +43,16 @@ public partial class PlayerController
 
     /// <summary>Test-only (issue #175): the real machine's CurrentMove.Id, or "" if none.</summary>
     internal string CurrentMoveIdForHarness => _machine.CurrentMove?.Id ?? "";
+
+    /// <summary>
+    /// Test-only (issue #243): forces this player's server-authoritative
+    /// Heading directly, so a harness can set up a "mid-pivot" precondition
+    /// without spending frames driving real stick input through
+    /// HeadingMath.RotateToward (already covered elsewhere, e.g.
+    /// PivotPlantTest/DriveGatherTest) — the fadeaway-trigger scenario's own
+    /// subject is FadeawayTriggerResolver's classification given a Heading at
+    /// release, not how Heading itself gets there. Same category of direct
+    /// setup as ContestScatterTest assigning GlobalPosition post-construction.
+    /// </summary>
+    internal void SetHeadingForHarness(float yaw) => Heading = yaw;
 }

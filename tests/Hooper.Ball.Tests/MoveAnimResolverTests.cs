@@ -52,6 +52,50 @@ public class MoveAnimResolverTests
         Assert.Equal(MoveAnimState.Recovery, MoveAnimResolver.Resolve(MovePhase.Recovery));
     }
 
+    // ── Fadeaway override (issue #243) ───────────────────────────────────────
+
+    [Fact]
+    public void Resolve_ActiveWithFadeaway_ReturnsFadeawayActive()
+    {
+        // A JumpShot released mid-pivot displays the distinct fadeaway/
+        // off-balance clip instead of the normal Active clip (ADR-0003
+        // legibility) — the trigger itself is FadeawayTriggerResolver's job;
+        // this resolver just switches display state on the flag.
+        Assert.Equal(MoveAnimState.FadeawayActive,
+            MoveAnimResolver.Resolve(MovePhase.Active, isFadeaway: true));
+    }
+
+    [Fact]
+    public void Resolve_ActiveWithoutFadeaway_ReturnsActive()
+    {
+        Assert.Equal(MoveAnimState.Active,
+            MoveAnimResolver.Resolve(MovePhase.Active, isFadeaway: false));
+    }
+
+    [Theory]
+    [InlineData(MovePhase.Inactive)]
+    [InlineData(MovePhase.Startup)]
+    [InlineData(MovePhase.Recovery)]
+    public void Resolve_NonActiveWithFadeawayTrue_IgnoresFlag(MovePhase phase)
+    {
+        // isFadeaway only matters during Active — a fadeaway classification
+        // stamped at release must not leak into Startup/Recovery/Locomotion
+        // display, which stay on their normal generic clips.
+        MoveAnimState withFlag    = MoveAnimResolver.Resolve(phase, isFadeaway: true);
+        MoveAnimState withoutFlag = MoveAnimResolver.Resolve(phase, isFadeaway: false);
+
+        Assert.Equal(withoutFlag, withFlag);
+    }
+
+    [Fact]
+    public void Resolve_DefaultParameter_MatchesExplicitFalse()
+    {
+        // Every pre-#243 call site omits the new parameter; it must behave
+        // exactly as isFadeaway: false so existing callers are unaffected.
+        Assert.Equal(MoveAnimResolver.Resolve(MovePhase.Active, isFadeaway: false),
+            MoveAnimResolver.Resolve(MovePhase.Active));
+    }
+
     // ── Unknown phase fallback ────────────────────────────────────────────────
 
     [Fact]

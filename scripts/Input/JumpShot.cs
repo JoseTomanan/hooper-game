@@ -50,4 +50,17 @@ public sealed class JumpShot : CommittedMove
         : base(id: "jumpshot", displayName: "Jump Shot", frameData: frameData ?? DefaultFrameData)
     {
     }
+
+    /// <summary>
+    /// (Issue #243) Whether THIS release was classified fadeaway/off-balance
+    /// by FadeawayTriggerResolver — set once, at THIS move's own
+    /// JustEnteredActive tick (PlayerController.TickCommittedMoveBehavior),
+    /// not at construction. Unlike Crossover's BurstDirection (fixed at
+    /// Begin() from the input stick), the fadeaway classification depends on
+    /// the shooter's Heading at RELEASE, which can still be turning through
+    /// the whole of Startup — so it cannot be known until Active is entered.
+    /// Defaults false (squared-up) until that tick sets it. Mutable rather
+    /// than an init-only property for exactly that reason.
+    /// </summary>
+    public bool IsFadeaway { get; set; }
 }

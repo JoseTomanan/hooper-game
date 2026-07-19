@@ -145,6 +145,7 @@
     <Compile Include="..\..\scripts\Player\LeanResolver.cs" />
     <Compile Include="..\..\scripts\Player\MoveAnimState.cs" />
     <Compile Include="..\..\scripts\Player\MoveAnimResolver.cs" />
+    <Compile Include="..\..\scripts\Player\FadeawayTriggerResolver.cs" />
     <Compile Include="..\..\scripts\Player\DisplayPhaseResolver.cs" />
     <!-- Whiff-punish beaten-cue remote-display resolver (issue #102) -->
     <Compile Include="..\..\scripts\Player\BeatenDisplayResolver.cs" />
