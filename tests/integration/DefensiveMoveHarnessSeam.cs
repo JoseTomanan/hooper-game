@@ -83,19 +83,14 @@ public partial class PlayerController
     internal bool BeginStealFromAimForHarness(float aimSign, BallController ball) =>
         BeginCommittedMove(new StealMove(ResolveStealTargetHand(aimSign, ball)));
 
-    /// <summary>
-    /// Test-only (issue #254): force-sets this player's authoritative Heading
-    /// for scenario SETUP — analogous to StealTurnoverTest's own
-    /// <c>_ball.StateMachine.StartDribble()</c> pre-tick force, and needed for
-    /// the same reason PivotPlantTest's class doc calls out: a non-local-
-    /// player node (the "2" role in a single-offline-instance harness) has no
-    /// real input path that would otherwise ever turn it, since Heading is
-    /// only ever advanced by Move() -> HeadingMath.Step for a locally-driven
-    /// or server-remote-with-live-SubmitInput role, neither of which a bare
-    /// headless second node has. This is a setup seam, not something the
-    /// scenario asserts against — the relative-heading GEOMETRY is what's
-    /// under test, driven through the real HandStateResolver.TargetHandFromAim
-    /// via BeginStealFromAimForHarness above.
-    /// </summary>
-    internal void SetHeadingForHarness(float heading) => Heading = heading;
+    // NOTE: the Heading setup seam this test needs (SetHeadingForHarness) is
+    // now provided by PlayerHarnessSeam.cs, which #243's fadeaway harness added
+    // to main with an identical `internal void SetHeadingForHarness(float) =>
+    // Heading = value;` body. This file used to declare its own copy; that was
+    // removed when #254 merged main to avoid a CS0111 duplicate-member clash
+    // (both are partials of PlayerController). The rationale that lived on the
+    // old copy — a bare headless second node has no input path that would ever
+    // advance Heading via Move()->HeadingMath.Step, so scenario SETUP must
+    // force it — still applies; it just lives on the shared PlayerHarnessSeam
+    // declaration now.
 }
