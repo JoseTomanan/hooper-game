@@ -45,7 +45,11 @@ public partial class PlayerController
     ///
     /// internal, not public: only needs to be visible to the harnesses compiled
     /// into the same game assembly.
+    ///
+    /// clientWasAlreadyDribbling defaults to false (harmless — see
+    /// ApplyRequestedMove's doc: only the four cradle-family moveIds consult
+    /// it at all, and this scenario is not about #225's cradle race).
     /// </summary>
-    internal void RequestMoveForHarness(string moveId, float param = 0f)
-        => ApplyRequestedMove(moveId, param);
+    internal void RequestMoveForHarness(string moveId, float param = 0f, bool clientWasAlreadyDribbling = false)
+        => ApplyRequestedMove(moveId, param, clientWasAlreadyDribbling);
 }

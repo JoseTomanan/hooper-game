@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://tests/integration/CradleRaceTest.cs" id="1_cradlerace"]
+
+[node name="CradleRaceTest" type="Node"]
+script = ExtResource("1_cradlerace")
