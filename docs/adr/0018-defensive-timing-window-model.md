@@ -326,3 +326,117 @@ observability hook (`PlayerController.BeatenUntilTickForHarness`,
 future telegraph remote sync to read from — #102 owns making the beaten
 state visibly legible to both players (ADR-0003); this issue's scope is the
 mechanic only, no animation/display.
+
+## Amendment 2026-07-19 — A Held ball is steal-vulnerable during a JumpShot's Startup and feint-Recovery (#206)
+
+### The gap this closes
+
+`BallController.ResolveStealAttempts` (§1/§2's home) resolved steals only
+while `StateMachine.Current == BallState.Dribbling` — a `Held` ball was
+**total sanctuary**, with no vulnerable window at all. Combined with
+`CradleForShotStartup` flipping Dribbling→Held **synchronously** the instant
+a `JumpShot` begins (`PlayerController.BeginCommittedMove`), this created a
+strictly-dominant defensive dodge: a holder who saw a steal's Startup
+telegraph could tap the shoot button, escape the Dribbling-only check before
+the defender's Active window ever opened, then pump-fake the shot away
+(`CommittedMoveMachine.Feint()`) with zero downside. Mashing the pump-fake
+was a free counter to any steal read on reaction — inverting the mind-game
+this ADR's whole timing-window model exists to create (CLAUDE.md §1).
+
+### The decision: Option A, pump-fake-window variant
+
+Decided by the human 2026-07-19 via the held-ball-steal campaign (see issue
+#206's "Design decision — human call 2026-07-19" comment for the full ranked
+menu and evidence). **A `Held` ball becomes steal-vulnerable exactly during
+a `JumpShot`'s Startup (the gather/raise) and feint-Recovery (the pump-fake
+abort) — fixed integer-tick intervals, resolved with this ADR's §1 shared
+`Succeeds` interval-overlap predicate directly (the block form, not steal's
+per-tick point-in-band form — see §1's note on why steal and block use
+different shapes of the same primitive).**
+
+**Vulnerable interval, in `[start, end)` terms:**
+
+- While `CommittedMoveMachine.Phase == Startup` on a `JumpShot`:
+  `[start, start + StartupFrames)` where `start` is the tick Startup began
+  (`PhysicsTick - FrameInPhase`).
+- While `Phase == Recovery` on a `JumpShot`: `[end - FeintRecoveryFrames,
+  end)` where `end = PhysicsTick - FrameInPhase + RecoveryFrames`. This
+  `Recovery` case can ONLY be reached via a genuine pump-fake while the ball
+  is still `Held` — a normally-completed Active phase releases the ball the
+  SAME tick Active is entered (`BallController.CheckJumpShotRelease` reads
+  `JustReleasedJumpShot`), flipping `BallState` off `Held` before Recovery
+  begins, so this branch and a completed shot's Recovery are mutually
+  exclusive by construction (see `PlayerController.HeldStealVulnerableWindow`'s
+  own doc for the doubt-cycle-verified derivation of why `end` is computed
+  correctly from `FrameInPhase` even though Feint() enters Recovery at a
+  non-zero `FrameInPhase`, while the naive symmetric `start` formula would
+  not be).
+- Every OTHER phase/move (Inactive, or a Held ball with no `JumpShot` in
+  progress at all) has NO vulnerable window — this is deliberate, not an
+  oversight: see "What this does NOT fix" below.
+
+**Success predicate**: `DefensiveResolution.HeldStealSucceeds(activeStart,
+activeEnd, vulnStart, vulnEnd)` — a thin, separately-named delegate to §1's
+shared `Succeeds`, composing the defender's `StealMove` Active window against
+the holder's vulnerable window above.
+
+**No hand-side axis (ADR-0014 tier-2 self-resolution).** Unlike the live
+Dribbling steal (§2, two axes: timing AND hand), the Held check is
+TIMING-ONLY. Real half-court 1v1 (ADR-0014 tier 2): a gathered/triple-threat
+ball is protected with the whole body, not dribbled to one side, so "which
+hand did you aim at" has no real-ball referent for a stationary cradle.
+Requiring a hand match would hand the holder ANOTHER axis to dodge (aim the
+body so the "wrong" hand faces the defender), diluting the exact design
+property that won this option: a pump-fake exposes the gather, full stop,
+no second read to bait.
+
+### Required state-machine change: `Held` is now a legal `GoLoose()` source
+
+`BallStateMachine.GoLoose()` previously only accepted `Dribbling`/`InFlight`
+as legal sources — `Held → Loose` returned `false` unconditionally. This was
+the ACTUAL mechanical root cause of total Held-steal immunity (discovered via
+this issue's own doubt-driven review): even with the window/predicate wiring
+above fully correct, `ResolveHeldStealAttempts`'s success branch silently
+no-op'd on the state transition itself. `GoLoose()` now also accepts `Held`;
+every other edge and every other caller (the Dribbling steal, block,
+`TickLoose`'s own re-triggers) is unchanged.
+
+### What this does NOT fix (deferred to #255)
+
+This amendment closes **exploit #1 only** (pump-fake-mash beating the steal
+on reaction). It deliberately does **not** address **exploit #2**: a holder
+who simply never attempts a shot at all — a plain, idle `Held` possession
+with no `JumpShot` in progress — has no vulnerable window here and remains
+fully untouchable (no travel/5-second pressure exists in this codebase). The
+human explicitly accepted leaving that "dead-Held staller" case open at this
+stage rather than take on a second ADR amendment (ADR-0008 territory, a
+possession-turnover rule, not a defensive-timing one) plus a HUD legibility
+obligation in the same PR. It is tracked as a separate follow-up issue
+(#255) — no PR closing #206 may claim Held-immunity is fully solved.
+
+### Rejected options (recorded per the campaign's ranked menu)
+
+- **(B) Proximity/facing-based exposure** (a continuous predicate reading
+  authoritative `Heading` + defender bearing): rejected for #206's scope —
+  it targets the SAME exploit as (A) but does nothing about the
+  pump-fake-specific incentive inversion, and adds a facing-authority
+  dependency this issue didn't need to take on.
+- **(C) Hybrid (B) + 5-second rule**: rejected — bundles two ADR amendments
+  (0018 + 0008) and a HUD element into one PR; the human explicitly chose
+  to scope this PR to exploit #1 only.
+- **(D) 5-second-rule only**: rejected for THIS issue — it addresses
+  exploit #2 (the staller), not exploit #1 (the pump-fake dodge), so it
+  cannot close #206 alone; it remains a candidate for #255.
+
+### Harness proof (ADR-0016)
+
+`tests/integration/HeldStealTest.tscn`: `held-vulnerable` (a correctly-timed
+steal during Startup forces the turnover), `held-immune-outside-window`
+(CONTROL — identical setup, steal fully resolved before any `JumpShot`
+begins, ball stays `Held` throughout), `pumpfake-now-exposed` (the headline
+scenario — reproduces the historical live-dribble degenerate exchange: a
+steal timed against a live dribble, the holder cradles into `Held` before
+the defender's Active window opens, then pump-fakes away; the turnover
+connects anyway via the window above). Proven RED against the pre-#206
+`ResolveStealAttempts`/`GoLoose()` and GREEN after, per ADR-0016's
+evidence bar.

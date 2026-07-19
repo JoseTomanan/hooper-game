@@ -1627,8 +1627,36 @@ public partial class BallController : Node3D
 	/// <summary>
 	/// Server-only: resolve any steal attempts by defenders this physics tick.
 	///
-	/// Called after the main state-switch (so the dribble phase is already
-	/// advanced for this tick), before the OOB and clear checks.
+	/// Called after the main state-switch (so the dribble phase / committed-move
+	/// phases are already advanced for this tick), before the OOB and clear
+	/// checks.
+	///
+	/// Dispatches on the ball's CURRENT state (issue #206, ADR-0018 Amendment
+	/// 2026-07-19): a Dribbling ball resolves via the original two-axis
+	/// dribble-phase check (ResolveDribblingStealAttempts, unchanged since
+	/// #96); a Held ball resolves via the NEW pump-fake-window check
+	/// (ResolveHeldStealAttempts) that closes the previously-total Held-steal
+	/// immunity — a holder could mash JumpShot's pump-fake to dodge any steal
+	/// read on reaction, since the ball flips Dribbling→Held before a
+	/// Dribbling-only check could ever see it. Every other ball state has no
+	/// steal to resolve (InFlight/Loose are not a "the offense controls the
+	/// ball" state a steal targets).
+	/// </summary>
+	private void ResolveStealAttempts()
+	{
+		if (Players == null) return;
+
+		switch (StateMachine.Current)
+		{
+			case BallState.Dribbling: ResolveDribblingStealAttempts(); break;
+			case BallState.Held:      ResolveHeldStealAttempts();      break;
+		}
+	}
+
+	/// <summary>
+	/// Server-only (issue #96, ADR-0018 §2): the original live-dribble steal
+	/// check, unchanged by #206 — split out of ResolveStealAttempts so that
+	/// method could become a state dispatcher without duplicating this body.
 	///
 	/// A steal succeeds iff, on ANY tick the defender's committed-move machine is
 	/// in the Active phase of a StealMove, both steal axes pass (ADR-0018 §2):
@@ -1645,24 +1673,11 @@ public partial class BallController : Node3D
 	/// ground-truth phase — no projection, no duplicated dribble math — and
 	/// steals on the first in-band, matching-hand tick.
 	///
-	/// On success: GoLoose() once — the ball transitions Dribbling → Loose,
-	/// seeded with a provisional knock velocity (see below) — plus the
-	/// defender's StealMove Active phase is ended early via EndResolvedDefensiveMove()
-	/// so this StealMove cannot resolve a second time (issue #96 remediation's
-	/// multi-fire guard — see the comment at the success branch). The existing
-	/// TickLoose proximity scramble then awards possession to whichever player
-	/// reaches the ball first (ADR-0008 §Decision-2, §Amendment 2026-06-30:
-	/// steal is a defense-induced Dribbling→Loose turnover; the new holder is
-	/// chosen by the scramble, not awarded immediately).
-	///
 	/// On a whiff: no action. The defender's CommittedMoveMachine continues
 	/// through Recovery naturally — the punish window is implicit, not wired here.
 	/// </summary>
-	private void ResolveStealAttempts()
+	private void ResolveDribblingStealAttempts()
 	{
-		if (StateMachine.Current != BallState.Dribbling) return;
-		if (Players == null) return;
-
 		var holder = Players.GetNodeOrNull(StateMachine.HolderPeerId.ToString()) as PlayerController;
 		if (holder == null) return;
 
@@ -1692,76 +1707,7 @@ public partial class BallController : Node3D
 
 			if (success)
 			{
-				// GoLoose exactly once — the ball is now a live loose-ball contest.
-				// Dribbling → Loose routes into the existing TickLoose scramble
-				// (ADR-0008 §Amendment 2026-06-30). The new holder is awarded by
-				// the scramble's proximity check next tick, not here. The
-				// Dribbling guard at the top of this method blocks any re-resolution
-				// on later Active ticks once the ball has already gone Loose.
-				StateMachine.GoLoose();
-
-				// Seed _arc: GoLoose() only flips the discrete BallState. Every
-				// OTHER path into Loose arrives FROM InFlight, where Shoot()
-				// already constructed _arc; Dribbling never touches _arc at all.
-				// This steal is the first Dribbling→Loose path, and TickLoose's
-				// very first line dereferences _arc unconditionally — an
-				// unseeded _arc here crashes the server with a
-				// NullReferenceException on the very next physics tick
-				// (confirmed via the headless harness, issue #96 remediation).
-				//
-				// The knock is a provisional straight-line "poked toward the
-				// defender, with a small rise" velocity, not a real deflection
-				// model (ADR-0014 — real 1v1 ball: a stolen ball is knocked away
-				// from the handler, not left inert; precise feel tuning deferred
-				// to #104). ShotArc's constructor solves a velocity aimed at a
-				// target point, which has no meaning for a knock, so it is built
-				// with a degenerate release==target pair purely to obtain a
-				// valid Gravity-carrying instance (this yields Velocity = Zero,
-				// verified: equal release/target collapses every term in
-				// SolveInitialVelocity to zero, no divide-by-zero), then
-				// Velocity is overwritten directly — the same seed-then-overwrite
-				// pattern ReconcileFromServer already uses for a client's null _arc.
-				// DefensiveKnockDirection.SafeHorizontal (issue #216 row 4) —
-				// shared with the block swat direction math below. Degenerate
-				// (holder/defender coincident) falls back to Zero — rise only.
-				Vector3 knockDir = DefensiveKnockDirection.SafeHorizontal(defender.GlobalPosition - GlobalPosition);
-				_arc = new ShotArc(GlobalPosition, GlobalPosition, GlobalPosition.Y, Gravity);
-				_arc.Velocity = new Vector3(
-					knockDir.X * StealKnockSpeed,
-					StealKnockRiseSpeed,
-					knockDir.Z * StealKnockSpeed);
-
-				// The defender is now the last toucher (#118 rule, mirrors the
-				// comment in AwardPossession): this steal bypasses AwardPossession
-				// entirely (GoLoose keeps the ball in a live loose-ball contest,
-				// not a discrete Catch/Turnover edge), so without this line
-				// _lastToucherPeerId stays pinned to the offensive holder. A
-				// knocked ball that sails OOB before the scramble recovers it
-				// would then charge the OOB turnover to the offense again
-				// instead of the defender who just touched it — backwards from
-				// the "last-toucher-out" rule this steal itself just triggered.
-				// (#177 audit R4) `&& defenderPeerId != 0` matches every other
-				// name-parse site in this class (peer 0 is the "no possession
-				// history" sentinel ResolveRecipient clamps on) — unreachable in
-				// practice since NetworkManager.SpawnPlayer can never name a node
-				// "0", but this site was the one inconsistent outlier of four.
-				if (int.TryParse(defender.Name, out int defenderPeerId) && defenderPeerId != 0)
-					_lastToucherPeerId = defenderPeerId;
-
-				// End the defender's Active phase NOW instead of letting it ride
-				// out the remaining ActiveFrames (issue #96 multi-fire bug):
-				// DribbleCycle.Phase only advances in TickDribbling, so it is
-				// frozen at the in-band value read above for as long as the ball
-				// stays Loose. If TickLoose's proximity scramble re-awards the
-				// ball to this SAME holder before the Active window would have
-				// naturally expired, this method re-enters next tick and would
-				// see Dribbling + the same frozen in-band phase + matching hand
-				// again — firing GoLoose() a second time for one committed move.
-				// EndResolvedDefensiveMove caps it at exactly one turnover per
-				// StealMove, then the defender pays Recovery like any other
-				// spent move.
-				defender.EndResolvedDefensiveMove();
-
+				ResolveStealSuccess(holder, defender);
 				GD.Print($"[BallController] Steal success: defender {defender.Name}, " +
 						 $"phase {_dribble.Phase:F2}, hand {holder.HandSide}");
 				return; // only one steal resolves per tick
@@ -1770,6 +1716,164 @@ public partial class BallController : Node3D
 			// re-enters next physics tick). Recovery is the natural punishment for
 			// a fully-missed window; not wired here.
 		}
+	}
+
+	/// <summary>
+	/// Server-only (issue #206, ADR-0018 Amendment 2026-07-19, human-decided
+	/// Option A "pump-fake window"): the Held-ball steal check. Closes the
+	/// previously-total Held-steal immunity — before this, ResolveStealAttempts
+	/// early-returned unless the ball was Dribbling, so a holder who saw a
+	/// steal's Startup telegraph could just tap JumpShot: CradleForShotStartup
+	/// flips Dribbling→Held synchronously, the steal's Active window opens
+	/// against a now-immune ball, and the holder pump-fakes it away — mashing
+	/// pump-fakes was a strictly dominant dodge with zero downside.
+	///
+	/// A Held steal succeeds iff the defender's StealMove Active window
+	/// overlaps the holder's HeldStealVulnerableWindow (JumpShot Startup or
+	/// feint-Recovery — see that property's own doc for why Recovery here can
+	/// only mean "entered via a pump-fake," never a completed shot). Timing-
+	/// only, no hand-side axis — see DefensiveResolution.HeldStealSucceeds's
+	/// doc for the ADR-0014 tier-2 self-resolution on why a cradled ball
+	/// doesn't carry a discriminable hand-side the way a live dribble does.
+	///
+	/// Deliberately NOT a fix for a holder who never shoots at all (a plain,
+	/// idle Held ball with no committed move in progress returns a null
+	/// window here and is untouched) — that "dead-Held staller" exploit is
+	/// issue #255's scope, not this one's. See ADR-0018's amendment for the
+	/// full rejected-options list (hybrid proximity/facing, 5-second rule).
+	/// </summary>
+	private void ResolveHeldStealAttempts()
+	{
+		var holder = Players.GetNodeOrNull(StateMachine.HolderPeerId.ToString()) as PlayerController;
+		if (holder == null) return;
+
+		// Null whenever the holder isn't currently in a JumpShot's Startup or
+		// feint-Recovery — the fast path for every ordinary Held tick (a fresh
+		// tipoff/rebound catch, or a triple-threat hold with no shot attempt
+		// in progress; #255's scope, not this method's).
+		var window = holder.HeldStealVulnerableWindow;
+		if (window == null) return;
+
+		foreach (Node child in Players.GetChildren())
+		{
+			if (child is not PlayerController defender) continue;
+			if (defender == holder) continue; // can't steal from yourself
+
+			var stealActive = defender.ActiveMove<StealMove>();
+			if (stealActive == null) continue;
+
+			var (move, frameInPhase) = stealActive.Value;
+
+			// Defender's Active window as absolute physics ticks — identical
+			// derivation to ResolveBlockAttempts's defActiveStart/defActiveEnd
+			// (frameInPhase == 0 means they JUST entered Active this tick).
+			int activeStart = PhysicsTick - frameInPhase;
+			int activeEnd   = activeStart + move.FrameData.ActiveFrames;
+
+			bool success = DefensiveResolution.HeldStealSucceeds(
+				activeStart, activeEnd, window.Value.Start, window.Value.End);
+
+			if (success)
+			{
+				ResolveStealSuccess(holder, defender);
+				GD.Print($"[BallController] Held steal success: defender {defender.Name}, " +
+						 $"holder window [{window.Value.Start},{window.Value.End}), " +
+						 $"defender active [{activeStart},{activeEnd}).");
+				return; // only one steal resolves per tick
+			}
+		}
+	}
+
+	/// <summary>
+	/// Server-only: the shared steal-success side effects (issue #206
+	/// extraction — this body is unchanged from the original single-path
+	/// ResolveStealAttempts; only the two CALLERS now differ in how they
+	/// decide `success`, never in what happens once it's true).
+	///
+	/// GoLoose() once — the ball transitions {Dribbling,Held} → Loose,
+	/// seeded with a provisional knock velocity (see below) — plus the
+	/// defender's StealMove Active phase is ended early via
+	/// EndResolvedDefensiveMove() so this StealMove cannot resolve a second
+	/// time (issue #96 remediation's multi-fire guard). The existing TickLoose
+	/// proximity scramble then awards possession to whichever player reaches
+	/// the ball first (ADR-0008 §Decision-2, §Amendment 2026-06-30: steal is
+	/// a defense-induced turnover; the new holder is chosen by the scramble,
+	/// not awarded immediately).
+	/// </summary>
+	private void ResolveStealSuccess(PlayerController holder, PlayerController defender)
+	{
+		// GoLoose exactly once — the ball is now a live loose-ball contest.
+		// {Dribbling,Held} → Loose routes into the existing TickLoose scramble
+		// (ADR-0008 §Amendment 2026-06-30). The new holder is awarded by the
+		// scramble's proximity check next tick, not here. Each caller's own
+		// ball-state dispatch guard blocks any re-resolution on later Active
+		// ticks once the ball has already gone Loose (StateMachine.Current is
+		// no longer Dribbling or Held).
+		StateMachine.GoLoose();
+
+		// Seed _arc: GoLoose() only flips the discrete BallState. Every OTHER
+		// path into Loose arrives FROM InFlight, where Shoot() already
+		// constructed _arc; neither Dribbling nor Held ever touches _arc
+		// otherwise. TickLoose's very first line dereferences _arc
+		// unconditionally — an unseeded _arc here crashes the server with a
+		// NullReferenceException on the very next physics tick (confirmed via
+		// the headless harness, issue #96 remediation).
+		//
+		// The knock is a provisional straight-line "poked toward the
+		// defender, with a small rise" velocity, not a real deflection model
+		// (ADR-0014 — real 1v1 ball: a stolen ball is knocked away from the
+		// handler, not left inert; precise feel tuning deferred to #104).
+		// ShotArc's constructor solves a velocity aimed at a target point,
+		// which has no meaning for a knock, so it is built with a degenerate
+		// release==target pair purely to obtain a valid Gravity-carrying
+		// instance (this yields Velocity = Zero, verified: equal
+		// release/target collapses every term in SolveInitialVelocity to
+		// zero, no divide-by-zero), then Velocity is overwritten directly —
+		// the same seed-then-overwrite pattern ReconcileFromServer already
+		// uses for a client's null _arc. DefensiveKnockDirection.SafeHorizontal
+		// (issue #216 row 4) — shared with the block swat direction math
+		// below. Degenerate (holder/defender coincident) falls back to Zero
+		// — rise only.
+		Vector3 knockDir = DefensiveKnockDirection.SafeHorizontal(defender.GlobalPosition - GlobalPosition);
+		_arc = new ShotArc(GlobalPosition, GlobalPosition, GlobalPosition.Y, Gravity);
+		_arc.Velocity = new Vector3(
+			knockDir.X * StealKnockSpeed,
+			StealKnockRiseSpeed,
+			knockDir.Z * StealKnockSpeed);
+
+		// The defender is now the last toucher (#118 rule, mirrors the
+		// comment in AwardPossession): this steal bypasses AwardPossession
+		// entirely (GoLoose keeps the ball in a live loose-ball contest, not
+		// a discrete Catch/Turnover edge), so without this line
+		// _lastToucherPeerId stays pinned to the offensive holder. A knocked
+		// ball that sails OOB before the scramble recovers it would then
+		// charge the OOB turnover to the offense again instead of the
+		// defender who just touched it — backwards from the
+		// "last-toucher-out" rule this steal itself just triggered.
+		// (#177 audit R4) `&& defenderPeerId != 0` matches every other
+		// name-parse site in this class (peer 0 is the "no possession
+		// history" sentinel ResolveRecipient clamps on) — unreachable in
+		// practice since NetworkManager.SpawnPlayer can never name a node
+		// "0", but this site was the one inconsistent outlier of four.
+		if (int.TryParse(defender.Name, out int defenderPeerId) && defenderPeerId != 0)
+			_lastToucherPeerId = defenderPeerId;
+
+		// End the defender's Active phase NOW instead of letting it ride out
+		// the remaining ActiveFrames (issue #96 multi-fire bug): for the
+		// Dribbling path, DribbleCycle.Phase only advances in
+		// TickDribbling, so it is frozen at the in-band value for as long as
+		// the ball stays Loose; for the Held path, the holder's own JumpShot
+		// phase is similarly frozen once GoLoose() has taken the ball away
+		// from Held (ResolveHeldStealAttempts's window guard structurally
+		// cannot re-fire once StateMachine.Current is no longer Held either
+		// way). If TickLoose's proximity scramble re-awards the ball before
+		// the Active window would have naturally expired, the relevant
+		// resolver method re-enters next tick and would see the same
+		// in-window state again — firing GoLoose() a second time for one
+		// committed move. EndResolvedDefensiveMove caps it at exactly one
+		// turnover per StealMove, then the defender pays Recovery like any
+		// other spent move.
+		defender.EndResolvedDefensiveMove();
 	}
 
 	/// <summary>
