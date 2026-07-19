@@ -1,3 +1,4 @@
+using Hooper.Ball;
 using Hooper.Moves;
 
 namespace Hooper.Player;
@@ -57,4 +58,44 @@ public partial class PlayerController
     /// public API surface.
     /// </summary>
     internal bool BeginMoveForHarness(CommittedMove move) => BeginCommittedMove(move);
+
+    /// <summary>
+    /// Test-only (issue #254): begins a steal with its TargetHand DERIVED
+    /// FROM AIM INPUT via the REAL production mapping (ResolveStealTargetHand
+    /// -> HandStateResolver.TargetHandFromAim), not constructed directly with
+    /// <c>new StealMove(HandSide.X)</c> — that direct construction is exactly
+    /// the gap #254 identified: it bypasses the aim→hand facing transform
+    /// entirely, so a regression there could never be caught by a harness
+    /// that only ever hand-picks the target.
+    ///
+    /// Mirrors BeginMoveForHarness's rationale: bypasses only the input/RPC
+    /// layer (hardware Input.GetVector, the RequestBeginMove RPC round-trip),
+    /// never the mapping/resolution logic itself, which is the exact thing
+    /// under test here. Routes through the SAME BeginCommittedMove choke
+    /// point (hooper-architecture-contract invariant #11).
+    /// </summary>
+    /// <param name="aimSign">
+    /// The defender's raw aim sign, same convention SampleMoveInput computes
+    /// from aim.X (positive = defender's own body-right).
+    /// </param>
+    /// <param name="ball">The live BallController, so the holder can be
+    /// looked up exactly like ResolveStealTargetHand does in production.</param>
+    internal bool BeginStealFromAimForHarness(float aimSign, BallController ball) =>
+        BeginCommittedMove(new StealMove(ResolveStealTargetHand(aimSign, ball)));
+
+    /// <summary>
+    /// Test-only (issue #254): force-sets this player's authoritative Heading
+    /// for scenario SETUP — analogous to StealTurnoverTest's own
+    /// <c>_ball.StateMachine.StartDribble()</c> pre-tick force, and needed for
+    /// the same reason PivotPlantTest's class doc calls out: a non-local-
+    /// player node (the "2" role in a single-offline-instance harness) has no
+    /// real input path that would otherwise ever turn it, since Heading is
+    /// only ever advanced by Move() -> HeadingMath.Step for a locally-driven
+    /// or server-remote-with-live-SubmitInput role, neither of which a bare
+    /// headless second node has. This is a setup seam, not something the
+    /// scenario asserts against — the relative-heading GEOMETRY is what's
+    /// under test, driven through the real HandStateResolver.TargetHandFromAim
+    /// via BeginStealFromAimForHarness above.
+    /// </summary>
+    internal void SetHeadingForHarness(float heading) => Heading = heading;
 }
