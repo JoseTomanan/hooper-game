@@ -670,6 +670,39 @@ public partial class PlayerController : CharacterBody3D
 	private int _serverAckedSeq;
 
 	/// <summary>
+	/// #224 fix: <see cref="_serverAckedSeq"/> value stamped the instant THIS
+	/// player is awarded possession (rebound, turnover, make-it-take-it,
+	/// tipoff — anything that fires <see cref="BallController.PossessionChanged"/>
+	/// with this node's <see cref="OwnPeerId"/> as the new holder). Consulted
+	/// ONLY by <see cref="TickServerRemotePlayer"/>'s freshness gate — see that
+	/// method's doc for why this field must never be read from
+	/// TickServerOwnPlayer or TickClientOwnPlayer.
+	///
+	/// ── Why a signal, not a parameter threaded through AwardPossession ──────
+	/// BallController already diffs holder/cleared every tick and emits
+	/// PossessionChanged exactly once per change (EmitPossessionIfChanged) —
+	/// reusing that existing plumbing (the same one PossessionHud/CourtVisuals
+	/// already subscribe to) needs no new cross-object contract. Subscribed
+	/// lazily wherever <see cref="GetBall"/> first resolves a non-null ball,
+	/// mirroring _ball's own lazy-group-lookup doc (a player's _Ready can race
+	/// ahead of the ball's in the scene tree).
+	///
+	/// ── Why same-tick ordering is safe, not a race ──────────────────────────
+	/// scenes/Main.tscn ticks the "Players" subtree before the sibling "Ball"
+	/// node every physics frame (verified: Main.tscn declares Players at
+	/// unique_id=1470573220 before Ball at unique_id=783251786). An award
+	/// (AwardPossession/TryAssignTipoffHolder) always runs INSIDE BallController's
+	/// own _PhysicsProcess, i.e. strictly after this tick's Players phase has
+	/// already run — so the tick that awards possession cannot itself have
+	/// already read the stale gate with a stamp that lags the award; the
+	/// EARLIEST tick IsBallHolder can read true for the new holder is the tick
+	/// AFTER the award, by which time this field (updated synchronously by the
+	/// signal, during the award's own tick) is already fresh. No ordering
+	/// dependency between the award and the stamp remains to race.
+	/// </summary>
+	private int _awardStampSeq;
+
+	/// <summary>
 	/// The latest input received from the client this tick (server-side,
 	/// remote player only). A single value — we consume only the latest per
 	/// tick; earlier values are superseded by newer SubmitInput calls.
@@ -940,8 +973,31 @@ public partial class PlayerController : CharacterBody3D
 	private BallController GetBall()
 	{
 		if (_ball == null)
+		{
 			_ball = GetTree().GetFirstNodeInGroup("ball") as BallController;
+			// #224 fix: subscribe exactly once, the first tick the ball actually
+			// resolves (mirrors PossessionHud's PossessionChanged subscription
+			// pattern). See _awardStampSeq's doc for why this signal, not a
+			// parameter threaded through AwardPossession, is the fix's seam.
+			if (_ball != null)
+				_ball.PossessionChanged += OnPossessionChangedForAwardStamp;
+		}
 		return _ball;
+	}
+
+	/// <summary>
+	/// #224 fix: stamps <see cref="_awardStampSeq"/> the instant possession is
+	/// awarded to THIS player. See that field's doc for the full rationale.
+	/// Filtered to this node's own peer — every PlayerController instance on
+	/// a given peer subscribes to the SAME ball singleton, so every award
+	/// (regardless of which player it goes to) fires this handler on every
+	/// player node; only the node whose OwnPeerId matches the new holder
+	/// should update its stamp.
+	/// </summary>
+	private void OnPossessionChangedForAwardStamp(int holderPeerId, bool cleared)
+	{
+		if (holderPeerId != OwnPeerId) return;
+		_awardStampSeq = _serverAckedSeq;
 	}
 
 	/// <summary>
@@ -1213,6 +1269,15 @@ public partial class PlayerController : CharacterBody3D
 		_beatenIndicator = GetNodeOrNull<Node3D>("BeatenIndicator");
 	}
 
+	public override void _ExitTree()
+	{
+		// #224 fix: drop the PossessionChanged subscription so Godot doesn't
+		// hold a dangling reference to a freed player node — same lifecycle
+		// hygiene as PossessionHud's own PossessionChanged unsubscribe.
+		if (_ball != null)
+			_ball.PossessionChanged -= OnPossessionChangedForAwardStamp;
+	}
+
 	// ── Tick loop ─────────────────────────────────────────────────────────────
 
 	public override void _PhysicsProcess(double delta)
@@ -1350,7 +1415,27 @@ public partial class PlayerController : CharacterBody3D
 		else
 		{
 			Move(_pendingInput, delta);
-			CheckAutoStartDribble(_pendingInput);
+
+			// #224 fix: only honor drive intent from _pendingInput once a
+			// genuinely FRESH (post-award) SubmitInput has actually arrived —
+			// see _awardStampSeq's doc for the full race and why this gate is
+			// scoped to THIS call site only (TickServerOwnPlayer/
+			// TickClientOwnPlayer read same-tick hardware input and are already
+			// immune; gating them here too would permanently freeze the
+			// host's own drive, since the host never calls SubmitInput on
+			// itself and its _serverAckedSeq never advances past 0).
+			//
+			// Repo law: never force-match a ~1RTT-stale broadcast; only force
+			// discrete identity (project_networked_discrete_state_staleness).
+			// Applied here in the mirror direction — never TRUST a ~1RTT-stale
+			// input to drive a discrete transition either. A held drive keeps
+			// producing rising-seq packets, so this gate opens within ~1 tick
+			// of the award for a genuine drive; a released stick's stale cache
+			// carries no seq newer than the award and stays gated shut for the
+			// rest of this possession (until CheckAutoStartDribble's own
+			// IsBallHolder/HasDribbled guards make it moot anyway).
+			if (_serverAckedSeq > _awardStampSeq)
+				CheckAutoStartDribble(_pendingInput);
 		}
 
 		// Echo _serverAckedSeq so the client prunes its pending buffer, plus

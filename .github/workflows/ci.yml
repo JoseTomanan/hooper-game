@@ -485,6 +485,35 @@ jobs:
           godot --headless --path . res://tests/integration/TripleThreatTest.tscn -- --harness-scenario=dead-dribble
           godot --headless --path . res://tests/integration/TripleThreatTest.tscn -- --harness-scenario=production-drive
 
+      # #224 (Race 1 of #207): stale-input auto-dribble on possession award.
+      # TickServerRemotePlayer's CheckAutoStartDribble(_pendingInput) call can
+      # fire with a _pendingInput that is up to ~1 RTT stale relative to the
+      # possession-award tick — if a released stick's release-packet hasn't
+      # arrived yet, a fresh Held award could auto-fire Held->Dribbling
+      # against the player's ACTUAL (released) intent. The fix stamps
+      # _awardStampSeq (via a new PlayerController.PossessionChanged
+      # subscription) at the moment possession is awarded to THIS player, and
+      # only honors drive intent once _serverAckedSeq is genuinely NEWER than
+      # that stamp — gated at the TickServerRemotePlayer call site ONLY (the
+      # own-player roles read same-tick hardware input and would be
+      # PERMANENTLY frozen if gated the same way, since the host never calls
+      # SubmitInput on itself). The single 'stale-blocked-fresh-works'
+      # scenario primes peer 2 (NOT yet the holder) with a stale nonzero
+      # cached input via a harness seam (mirrors SubmitInput's own field
+      # assignment), walks the CURRENT holder OOB (the already-proven
+      # OobTurnoverTest path) to award peer 2 via the REAL
+      # BallController.AwardPossession, and asserts the ball stays Held for
+      # several ticks despite the stale nonzero cache — THEN simulates a
+      # genuinely newer packet and asserts the SAME held drive DOES start
+      # (the paired control the AC demands — a real held drive must not be
+      # permanently suppressed). RED-before/GREEN-after proven by temporarily
+      # reverting the gate to an unconditional call (PR body has the
+      # transcript) — the scenario FAILED (auto-dribbled) on the reverted
+      # code and PASSES on the shipped fix. Exit 0=PASS/1=FAIL (ADR-0016).
+      - name: Run award-freshness harness (#224)
+        run: |
+          godot --headless --path . res://tests/integration/AwardFreshnessTest.tscn -- --harness-scenario=stale-blocked-fresh-works
+
       # Crossover authoritative ball transit — no teleport (issue #195).
       # Boots a real BallController + two PlayerControllers headless and
       # drives an actual Crossover through the real BeginCommittedMove path
