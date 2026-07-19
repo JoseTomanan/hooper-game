@@ -117,6 +117,21 @@ jobs:
           godot --headless --path . res://tests/integration/StealTurnoverTest.tscn -- --harness-scenario=whiff
           godot --headless --path . res://tests/integration/StealTurnoverTest.tscn -- --harness-scenario=recovery-reset
 
+      # Steal aim→hand FACING transform (issue #254). StealTurnoverTest above
+      # isolates the TIMING axis only — both its players sit at the
+      # spawn-default Heading 0 throughout, so a regression in the aim→hand
+      # mapping's relative-heading transform could never fail it. This harness
+      # derives TargetHand from real aim input (BeginStealFromAimForHarness,
+      # the same production HandStateResolver.TargetHandFromAim mapping
+      # SampleMoveInput/ApplyRequestedMove both call) at a ~180° relative
+      # heading (face-to-face — the exact #254 repro) and at ~0° (side-by-side
+      # control, proving the fix is a no-op there, not a blanket inversion).
+      # Each exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run steal aim-to-hand facing-mapping harness
+        run: |
+          godot --headless --path . res://tests/integration/StealFacingMappingTest.tscn -- --harness-scenario=face-to-face
+          godot --headless --path . res://tests/integration/StealFacingMappingTest.tscn -- --harness-scenario=side-by-side
+
       # Block TURNOVER mechanic, end to end (issue #98, ADR-0018 §2). Boots a
       # real BallController + two PlayerControllers headless, begins a REAL
       # JumpShot (shooter) and a REAL BlockMove (defender) through the SAME
@@ -408,6 +423,30 @@ jobs:
         run: |
           godot --headless --path . res://tests/integration/ContestScatterTest.tscn -- --harness-scenario=contest-active
           godot --headless --path . res://tests/integration/ContestScatterTest.tscn -- --harness-scenario=no-contest
+
+      # Fadeaway/off-balance shot-animation TRIGGER (issue #243, build half of
+      # #185's legibility ask — ADR-0003). FadeawayTriggerResolverTests (xUnit)
+      # already pins the pure angle-threshold arithmetic; this proves the LIVE
+      # engine glue: a REAL JumpShot, begun through BeginCommittedMove, whose
+      # release tick (JustEnteredActive) actually reads the shooter's Heading
+      # and the ball's RimCenter to set JumpShot.IsFadeaway, with
+      # PlayerController.DisplayFadeaway() and MoveAnimResolver.Resolve
+      # reporting the real (IsFadeaway, Phase) pair TickCommittedMoveBehavior
+      # produces. 'mid-pivot' forces Heading 180 degrees off the rim direction
+      # before release and asserts DisplayFadeaway()==true and the resolved
+      # anim state is FadeawayActive. 'squared-up' is the REQUIRED control
+      # (hooper-verification-and-qa's "every X-didn't-happen assertion needs a
+      # control"): identical shooter setup, Heading forced to point exactly at
+      # the rim instead, asserting DisplayFadeaway()==false and the resolved
+      # state stays the ordinary Active — proving 'mid-pivot' true genuinely
+      # depends on the heading divergence, not a hardcoded/always-on flag.
+      # No accuracy assertion here (ADR-0009's ShotFacing model is unchanged
+      # by this issue) — this harness is legibility-only. Each exits
+      # 0=PASS/1=FAIL (ADR-0016).
+      - name: Run fadeaway shot-animation trigger harness
+        run: |
+          godot --headless --path . res://tests/integration/FadeawayTriggerTest.tscn -- --harness-scenario=mid-pivot
+          godot --headless --path . res://tests/integration/FadeawayTriggerTest.tscn -- --harness-scenario=squared-up
 
       # Whiff-punish blow-by lane (issue #100, ADR-0018 Amendment 2026-07-16).
       # Unit tests already pin the pure BeatenWindow clock (BeatenWindowTests)

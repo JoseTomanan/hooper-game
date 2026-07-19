@@ -87,6 +87,76 @@ public class MoveAnimResolverTests
         Assert.Equal(expected, MoveAnimResolver.Resolve(phase, isPivotingInPlace: true));
     }
 
+    // ── Fadeaway override (issue #243) ───────────────────────────────────────
+
+    [Fact]
+    public void Resolve_ActiveWithFadeaway_ReturnsFadeawayActive()
+    {
+        // A JumpShot released mid-pivot displays the distinct fadeaway/
+        // off-balance clip instead of the normal Active clip (ADR-0003
+        // legibility) — the trigger itself is FadeawayTriggerResolver's job;
+        // this resolver just switches display state on the flag.
+        Assert.Equal(MoveAnimState.FadeawayActive,
+            MoveAnimResolver.Resolve(MovePhase.Active, isFadeaway: true));
+    }
+
+    [Fact]
+    public void Resolve_ActiveWithoutFadeaway_ReturnsActive()
+    {
+        Assert.Equal(MoveAnimState.Active,
+            MoveAnimResolver.Resolve(MovePhase.Active, isFadeaway: false));
+    }
+
+    [Theory]
+    [InlineData(MovePhase.Inactive)]
+    [InlineData(MovePhase.Startup)]
+    [InlineData(MovePhase.Recovery)]
+    public void Resolve_NonActiveWithFadeawayTrue_IgnoresFlag(MovePhase phase)
+    {
+        // isFadeaway only matters during Active — a fadeaway classification
+        // stamped at release must not leak into Startup/Recovery/Locomotion
+        // display, which stay on their normal generic clips.
+        MoveAnimState withFlag    = MoveAnimResolver.Resolve(phase, isFadeaway: true);
+        MoveAnimState withoutFlag = MoveAnimResolver.Resolve(phase, isFadeaway: false);
+
+        Assert.Equal(withoutFlag, withFlag);
+    }
+
+    [Fact]
+    public void Resolve_DefaultParameter_MatchesExplicitFalse()
+    {
+        // Every pre-#243 call site omits the new parameter; it must behave
+        // exactly as isFadeaway: false so existing callers are unaffected.
+        Assert.Equal(MoveAnimResolver.Resolve(MovePhase.Active, isFadeaway: false),
+            MoveAnimResolver.Resolve(MovePhase.Active));
+    }
+
+    // ── Cross-flag precedence (issues #242 + #243 reconciled) ────────────────
+
+    [Fact]
+    public void Resolve_ActiveWithFadeawayAndPivotFlag_ReturnsFadeawayActive()
+    {
+        // Both flags are mutually exclusive by phase in practice (fadeaway is
+        // stamped only during Active, the pivot latch only applies to
+        // Inactive — see MoveAnimState's doc), but the resolver still needs a
+        // defined answer if a caller ever passes both. Committed-move phases
+        // always win over Pivot, so on Active isFadeaway alone decides; a
+        // stray isPivotingInPlace=true must not steal the display away from
+        // the fadeaway clip.
+        Assert.Equal(MoveAnimState.FadeawayActive,
+            MoveAnimResolver.Resolve(MovePhase.Active, isFadeaway: true, isPivotingInPlace: true));
+    }
+
+    [Fact]
+    public void Resolve_InactiveWithPivotFlagAndFadeawayTrue_ReturnsPivot()
+    {
+        // Symmetric case: on Inactive, isFadeaway can't apply (it only bites
+        // during Active), so isPivotingInPlace alone decides — a stray
+        // isFadeaway=true must not suppress the Pivot display.
+        Assert.Equal(MoveAnimState.Pivot,
+            MoveAnimResolver.Resolve(MovePhase.Inactive, isFadeaway: true, isPivotingInPlace: true));
+    }
+
     // ── Unknown phase fallback ────────────────────────────────────────────────
 
     [Fact]

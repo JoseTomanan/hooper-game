@@ -998,6 +998,69 @@ public partial class PlayerController : CharacterBody3D
 	}
 
 	/// <summary>
+	/// Resolves a steal attempt's target <see cref="HandSide"/> from the
+	/// defender's raw aim SIGN, transformed into the ball-holder's
+	/// body-relative frame via the relative heading between the two players
+	/// (issue #254 fix; ADR-0010's server-authoritative <see cref="Heading"/>
+	/// feeds both sides — never the cosmetic <c>FacingResolver</c>).
+	///
+	/// ── Root cause this replaces ────────────────────────────────────────
+	/// The old code compared the defender's raw aim.X sign directly against
+	/// the holder's body-relative HandSide with no transform at all
+	/// (<c>aim.X > 0 ? Right : Left</c>). That silently inverted whenever the
+	/// two players faced each other — a defender's own body-right is not the
+	/// same world side as the holder's body-right once the holder has turned
+	/// to face the defender.
+	///
+	/// ── Why this is called from BOTH ends, not just once ───────────────
+	/// SampleMoveInput calls this for the LOCAL prediction (best-available
+	/// data: own live Heading, holder's latest broadcast Heading).
+	/// ApplyRequestedMove's "steal" branch calls it AGAIN, server-side, using
+	/// the SERVER's own authoritative Heading for both players — so the value
+	/// that actually reaches DefensiveResolution.StealSucceeds is always
+	/// computed from truth, never trusted verbatim from the client (ADR-0002).
+	/// Only the RAW aim sign rides the wire (mirrors the crossover family's
+	/// BurstDirection convention), not a pre-resolved enum — see
+	/// SampleMoveInput's steal block and RequestBeginMove's "steal" case.
+	///
+	/// The actual geometry (continuous in the relative heading, not a blanket
+	/// flip) lives in HandStateResolver.TargetHandFromAim — see that method's
+	/// doc for the derivation.
+	///
+	/// Falls back to the OLD naive mapping (no transform) when the ball has no
+	/// live holder to be relative to (e.g. a Loose ball, or pre-tipoff) —
+	/// there is no meaningful "holder facing" to transform against in that
+	/// case, and StealMove's own resolution already no-ops against a
+	/// non-Dribbling ball.
+	///
+	/// ── Accepted residual: local prediction can briefly disagree with the
+	///    server's resolved TargetHand (doubt-cycle finding, #254) ──────────
+	/// Because SampleMoveInput's call reads the HOLDER's ~1-RTT-stale
+	/// broadcast Heading while ApplyRequestedMove's call reads the server's
+	/// live authoritative Heading for both players, the two ends can pick a
+	/// DIFFERENT HandSide near the boundary (e.g. a holder actively spinning
+	/// through ~90° relative heading during the round trip). This is the
+	/// same class of accepted, self-correcting staleness every other
+	/// predicted-then-reconciled field in this file already has (§4c/§11 of
+	/// the hooper-netcode-reference skill) — not a new divergence class —
+	/// and it is harmless to correctness: StealMove's outcome is never
+	/// client-predicted at all (only its Startup/Active timing is), so the
+	/// only visible effect of a locally mispredicted target is a brief
+	/// "reaching toward the other hand" animation cosmetic, self-correcting
+	/// on the next ReceiveState broadcast exactly like a mispredicted
+	/// Crossover already does today.
+	/// </summary>
+	private HandSide ResolveStealTargetHand(float aimSign, BallController ball)
+	{
+		PlayerController holder = ball?.Players?.GetNodeOrNull<PlayerController>(
+			ball.StateMachine.HolderPeerId.ToString());
+		if (holder == null)
+			return aimSign > 0f ? HandSide.Right : HandSide.Left;
+
+		return HandStateResolver.TargetHandFromAim(aimSign, Heading, holder.Heading);
+	}
+
+	/// <summary>
 	/// Tracks the last holderPeerId THIS handler observed, across every
 	/// PossessionChanged emission (not just ones addressed to THIS player) —
 	/// see OnPossessionChangedForAwardStamp's doc for why this is required.
@@ -1926,7 +1989,11 @@ public partial class PlayerController : CharacterBody3D
 	/// moveId/param is the minimal payload to reconstruct a move. A handful of
 	/// concrete moves exist now ("crossover", "behindtheback", and
 	/// "betweenthelegs", all carrying BurstDirection as param; "jumpshot", carrying none; "steal",
-	/// carrying TargetHand) so a small if-chain is still correct and
+	/// carrying the defender's RAW aim sign, NOT a pre-resolved TargetHand —
+	/// issue #254 fix; see ApplyRequestedMove's "steal" branch and
+	/// ResolveStealTargetHand's doc for why the facing transform is re-derived
+	/// server-side from this raw sign rather than trusted from the client) so
+	/// a small if-chain is still correct and
 	/// proportionate — see CommittedMove.Id's doc comment, which already
 	/// anticipated this exact use. Revisit only if a future move arrives with
 	/// materially different reconstruction needs than a simple id dispatch;
@@ -2160,12 +2227,22 @@ public partial class PlayerController : CharacterBody3D
 		}
 		else if (moveId == "steal")
 		{
-			// param = (float)(int)HandSide: 0 → Left, 1 → Right (written by
-			// SampleMoveInput; see comment there for rationale).
+			// param = the defender's RAW aim sign (issue #254 fix), not a
+			// pre-resolved HandSide — mirrors the crossover family's
+			// BurstDirection convention (param is body-relative read, the
+			// world mapping is re-derived here). The SERVER redoes the SAME
+			// facing transform ResolveStealTargetHand's doc describes, but
+			// using ITS OWN authoritative Heading for both this player
+			// (this.Heading — the defender, since ApplyRequestedMove runs on
+			// the AUTHORITY's copy of the RPC sender's node) and the ball's
+			// holder — never trusting a client-computed TargetHand verbatim
+			// (ADR-0002). This is what actually feeds
+			// DefensiveResolution.StealSucceeds; ResolveStealTargetHand's own
+			// doc explains why it is called from both ends.
 			// The CommittedMoveMachine enforces the usual phase guards (Inactive-
 			// only Begin), so a client that sends "steal" while still in Recovery
 			// gets a silent no-op — Begin() returns false and nothing happens.
-			HandSide target = param > 0.5f ? HandSide.Right : HandSide.Left;
+			HandSide target = ResolveStealTargetHand(param, GetBall());
 			BeginCommittedMove(new StealMove(target));
 		}
 		else if (moveId == "block")
@@ -2657,13 +2734,19 @@ public partial class PlayerController : CharacterBody3D
 		// state id — Locomotion/Startup/Active/Recovery.
 		if (_animPlayback == null) return;
 		(MovePhase displayPhase, _) = DisplayMove();
+		// (#243) isFadeaway only ever changes MoveAnimResolver's answer during
+		// Active (a squared-up JumpShot, every other move, and every non-Active
+		// phase ignore it) — see MoveAnimResolver.Resolve's own doc.
+		//
 		// IsPivotingInPlace is already correct for EITHER role without going
 		// through DisplayMove(): the own player's Move() sets _pivot locally
 		// every tick, and TickClientRemotePlayer adopts the broadcast latch
 		// directly for the opponent's copy (see that method's #172 comment) —
 		// exactly the same "already-resolved for display" property DisplayMove
-		// itself exists to provide for MovePhase (issue #242).
-		MoveAnimState target = MoveAnimResolver.Resolve(displayPhase, IsPivotingInPlace);
+		// itself exists to provide for MovePhase (issue #242). The two flags
+		// never both matter for the same call: isFadeaway only bites on
+		// Active, isPivotingInPlace only bites on Inactive.
+		MoveAnimState target = MoveAnimResolver.Resolve(displayPhase, DisplayFadeaway(), IsPivotingInPlace);
 		if (target != _currentAnimState)
 		{
 			_animPlayback.Travel(target.ToString());
@@ -2735,6 +2818,25 @@ public partial class PlayerController : CharacterBody3D
 		DisplayPhaseResolver.LocalMachineDrivesDisplay(IsServer, IsLocalPlayer)
 			? MoveIdOf(_machine.CurrentMove)
 			: _serverMoveId;
+
+	/// <summary>
+	/// (Issue #243) Whether this node should DISPLAY the fadeaway/off-balance
+	/// shot clip this frame — same per-role resolution as
+	/// <see cref="DisplayMove"/>/<see cref="DisplayMoveId"/> (M7b, #69): the
+	/// role that locally simulates this machine (server for either holder,
+	/// client for its own player) reads the live <c>JumpShot.IsFadeaway</c>
+	/// flag off <c>CurrentMove</c>; the client's copy of a REMOTE opponent has
+	/// no live local machine to read (that peer's machine never advances for
+	/// the opponent's node), so it falls back to the broadcast
+	/// <c>_serverMoveId</c>/<c>_serverMoveParam</c> pair, exactly like
+	/// DisplayMove's burstDir reconstruction — <see cref="MoveParamOf"/>
+	/// repurposes that same payload slot to carry IsFadeaway (1f/0f) for a
+	/// JumpShot specifically.
+	/// </summary>
+	public bool DisplayFadeaway() =>
+		DisplayPhaseResolver.LocalMachineDrivesDisplay(IsServer, IsLocalPlayer)
+			? _machine.CurrentMove is JumpShot jumpShot && jumpShot.IsFadeaway
+			: _serverMoveId == "jumpshot" && _serverMoveParam != 0f;
 
 	/// <summary>
 	/// Whether this node should DISPLAY the whiff-punish "beaten" cue
@@ -3092,21 +3194,28 @@ public partial class PlayerController : CharacterBody3D
 		//
 		// Gated on NOT holding the ball — you cannot steal from yourself.
 		// The "side" axis of the two-axis steal read (ADR-0018 §2) is chosen here
-		// from the AIM stick X component: right aim (aimX > 0) → HandSide.Right,
-		// left/neutral → HandSide.Left.  This reads the AIM direction, NOT the
-		// movement stick, so the defender can separately move and aim their reach.
+		// from the AIM stick X component: right aim (aimX > 0) → the defender's
+		// own body-right, left/neutral → body-left. This reads the AIM
+		// direction, NOT the movement stick, so the defender can separately
+		// move and aim their reach.
 		//
 		// ADR-0014 / real-ball rationale: in half-court 1v1 the most common steal
 		// attempt is a swipe at the dribble hand; the AIM axis lets the defender
 		// commit the read explicitly rather than guessing a default.
-		// Wire param = (float)(int)HandSide so RequestBeginMove can reconstruct
-		// the TargetHand without widening the RPC signature (HandSide.Left=0,
-		// HandSide.Right=1 — safe as float across the wire).
+		//
+		// (issue #254 fix) The wire payload is now the RAW aim SIGN, not a
+		// pre-resolved HandSide — see ResolveStealTargetHand's doc for why the
+		// facing transform must be re-derived, not trusted verbatim, and
+		// RequestBeginMove's "steal" branch for the server-side half of this
+		// same fix (mirrors the crossover family's BurstDirection convention:
+		// param is the defender's own body-relative read, the WORLD mapping is
+		// resolved from the authoritative Heading(s) at the point of use).
 		if (Input.IsActionJustPressed("def_steal") && !IsBallHolder)
 		{
-			HandSide target = aim.X > 0f ? HandSide.Right : HandSide.Left;
+			float aimSign = aim.X > 0f ? 1f : -1f;
+			HandSide target = ResolveStealTargetHand(aimSign, GetBall());
 			if (BeginCommittedMove(new StealMove(target)) && !isServer)
-				RpcId(1, MethodName.RequestBeginMove, "steal", (float)(int)target, false); // #225: not a cradle-family move
+				RpcId(1, MethodName.RequestBeginMove, "steal", aimSign, false); // #225: not a cradle-family move
 		}
 
 		// Block: defensive committed move (M10, issue #98, ADR-0018 §2).
@@ -3299,6 +3408,26 @@ public partial class PlayerController : CharacterBody3D
 				// same tick — that is a SEPARATE node's read of this machine's
 				// state, not a side effect this switch needs to produce.
 				//
+				// (#243) Classify a JumpShot's release as fadeaway/off-balance
+				// exactly on the tick it enters Active — the same tick the ball
+				// releases (JustReleasedJumpShot/CheckJumpShotRelease) and the
+				// same tick ShotFacing.Multiplier reads Heading server-side for
+				// the accuracy penalty. Must happen HERE, not at Begin(): the
+				// shooter can still be turning through the whole of Startup, so
+				// the classification is only meaningful at the release instant.
+				// Cosmetic-only (ADR-0004): this never feeds back into
+				// accuracy — BallController.ApplyShootLocally computes its own
+				// facingFactor independently from the same Heading/RimCenter
+				// inputs. GetBall() can be null in a scene with no ball wired;
+				// IsFadeaway simply stays false (squared-up default) then.
+				if (_machine.JustEnteredActive && _machine.CurrentMove is JumpShot jumpShotMove)
+				{
+					BallController ball = GetBall();
+					if (ball != null)
+						jumpShotMove.IsFadeaway =
+							FadeawayTriggerResolver.IsFadeaway(Heading, GlobalPosition, ball.RimCenter);
+				}
+
 				// Crossover, BehindTheBack (#194), BetweenTheLegs (#199), and
 				// InAndOut (#202) share the SAME CrossoverBurstMath composition
 				// (composition, not inheritance — see BehindTheBack's doc) with
@@ -3561,9 +3690,9 @@ public partial class PlayerController : CharacterBody3D
 
 	/// <summary>
 	/// The move's reconstruction payload to broadcast — Crossover's and
-	/// BehindTheBack's shared BurstDirection shape, or StealMove's TargetHand.
-	/// 0 when there is no current move or the move type carries no extra
-	/// payload.
+	/// BehindTheBack's shared BurstDirection shape, StealMove's TargetHand, or
+	/// (#243) JumpShot's IsFadeaway classification (1f/0f). 0 when there is no
+	/// current move or the move type carries no extra payload.
 	///
 	/// (#21 doubt cycle 1, finding #2) _serverMoveId/_serverMoveParam are stored
 	/// from every broadcast — satisfying "active move included in the server
@@ -3572,6 +3701,14 @@ public partial class PlayerController : CharacterBody3D
 	/// is consulted (see that method's comment). They are reserved for a
 	/// richer reconciliation once a second move type makes "client and server
 	/// agree a move is active, but disagree on WHICH one" a reachable case.
+	///
+	/// (#243) Unlike the burst-family payloads (fixed at construction),
+	/// JumpShot.IsFadeaway can change mid-life (false through Startup, set
+	/// once at Active-entry) — harmless here, since ReceiveState broadcasts
+	/// this every tick regardless (see the two Rpc(MethodName.ReceiveState...)
+	/// call sites), so the remote-viewing client's DisplayFadeaway() picks up
+	/// the flip within one broadcast of the release tick, same latency as
+	/// every other DisplayMove-family cosmetic.
 	/// </summary>
 	private static float MoveParamOf(CommittedMove move) =>
 		move is Crossover crossover         ? crossover.BurstDirection :
@@ -3579,7 +3716,8 @@ public partial class PlayerController : CharacterBody3D
 		move is BetweenTheLegs betweenLegs  ? betweenLegs.BurstDirection :
 		move is InAndOut inAndOut           ? inAndOut.BurstDirection :
 		move is StealMove steal             ? (float)(int)steal.TargetHand :
-		// BlockMove, JumpShot, Hesitation, and all future no-payload moves → 0f.
+		move is JumpShot jumpShot           ? (jumpShot.IsFadeaway ? 1f : 0f) :
+		// BlockMove, Hesitation, and all future no-payload moves → 0f.
 		0f;
 
 	// ── Shared motion step ────────────────────────────────────────────────────

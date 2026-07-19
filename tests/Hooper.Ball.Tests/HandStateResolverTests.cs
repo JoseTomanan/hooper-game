@@ -180,4 +180,65 @@ public class HandStateResolverTests
         float length   = result.Length();
         AssertApprox(1f, length, "length");
     }
+
+    // ── TargetHandFromAim — issue #254 (steal aim→hand facing transform) ─────
+
+    [Fact]
+    public void TargetHandFromAim_ZeroRelativeHeading_MatchesNaiveMapping()
+    {
+        // Side-by-side / trailing defense: defender and holder face the SAME
+        // way. This must reproduce the OLD naive `aim.X > 0 ? Right : Left`
+        // mapping exactly — the control that proves the fix does NOT blanket-
+        // invert everywhere.
+        Assert.Equal(HandSide.Right,
+            HandStateResolver.TargetHandFromAim(aimSign: +1f, defenderHeading: 0f, holderHeading: 0f));
+        Assert.Equal(HandSide.Left,
+            HandStateResolver.TargetHandFromAim(aimSign: -1f, defenderHeading: 0f, holderHeading: 0f));
+
+        // Same-heading control still holds away from zero (e.g. both facing
+        // the same arbitrary direction, not just the spawn default).
+        Assert.Equal(HandSide.Right,
+            HandStateResolver.TargetHandFromAim(aimSign: +1f, defenderHeading: 1.2f, holderHeading: 1.2f));
+    }
+
+    [Fact]
+    public void TargetHandFromAim_180DegreesRelativeHeading_FullyInverts()
+    {
+        // Face-to-face stance (the #254 repro): the mapping must invert
+        // relative to the naive same-heading case.
+        Assert.Equal(HandSide.Left,
+            HandStateResolver.TargetHandFromAim(aimSign: +1f, defenderHeading: MathF.PI, holderHeading: 0f));
+        Assert.Equal(HandSide.Right,
+            HandStateResolver.TargetHandFromAim(aimSign: -1f, defenderHeading: MathF.PI, holderHeading: 0f));
+    }
+
+    [Fact]
+    public void TargetHandFromAim_90DegreesRelativeHeading_TiesTowardLeft()
+    {
+        // Perpendicular relative heading is the genuine ambiguity point
+        // (cos(90°) == 0) — the tie-break defaults to Left, same convention
+        // the old code used for any non-positive product.
+        Assert.Equal(HandSide.Left,
+            HandStateResolver.TargetHandFromAim(aimSign: +1f, defenderHeading: MathF.PI / 2f, holderHeading: 0f));
+    }
+
+    [Theory]
+    [InlineData(0f)]
+    [InlineData(0.5f)]
+    [InlineData(MathF.PI)]
+    [InlineData(-2.1f)]
+    public void TargetHandFromAim_ResultIsContinuousInRelativeHeading_NotABlanketFlip(float holderHeading)
+    {
+        // Sweeping the relative heading through a full circle must produce
+        // BOTH Left and Right at different points — a "just always invert"
+        // implementation would be indistinguishable from the correct one at
+        // 180° alone, but would fail this sweep (it can never agree with the
+        // 0°-relative control case, which a blanket flip always contradicts).
+        HandSide atZeroRelative = HandStateResolver.TargetHandFromAim(+1f, holderHeading, holderHeading);
+        HandSide atOppositeRelative = HandStateResolver.TargetHandFromAim(+1f, holderHeading + MathF.PI, holderHeading);
+
+        Assert.Equal(HandSide.Right, atZeroRelative);
+        Assert.Equal(HandSide.Left, atOppositeRelative);
+        Assert.NotEqual(atZeroRelative, atOppositeRelative);
+    }
 }

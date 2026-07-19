@@ -56,6 +56,9 @@ animation = &"locomotion/idle"
 [sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_pvt242"]
 animation = &"locomotion/pivot"
 
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_fdwy1"]
+animation = &"locomotion/idle"
+
 [sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_khinc"]
 advance_mode = 2
 
@@ -99,10 +102,28 @@ advance_mode = 2
 
 [sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_re2pvt"]
 
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_fdw01"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_fdw02"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_fdw03"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_fdw04"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_fdw05"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_fdw06"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_fdw07"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_fdw08"]
+
 [sub_resource type="AnimationNodeStateMachine" id="AnimationNodeStateMachine_bruh7"]
 states/Active/node = SubResource("AnimationNodeAnimation_mdl7e")
 states/Active/position = Vector2(377, 248)
 states/End/position = Vector2(629, 100)
+states/FadeawayActive/node = SubResource("AnimationNodeAnimation_fdwy1")
+states/FadeawayActive/position = Vector2(600, 320)
 states/Locomotion/node = SubResource("AnimationNodeBlendSpace1D_cw2d6")
 states/Locomotion/position = Vector2(377, 100)
 states/Pivot/node = SubResource("AnimationNodeAnimation_pvt242")
@@ -112,7 +133,7 @@ states/Recovery/position = Vector2(496.0843, 179)
 states/Start/position = Vector2(179, 100)
 states/Startup/node = SubResource("AnimationNodeAnimation_khinc")
 states/Startup/position = Vector2(277.0843, 179)
-transitions = ["Start", "Locomotion", SubResource("AnimationNodeStateMachineTransition_khinc"), "Locomotion", "Startup", SubResource("AnimationNodeStateMachineTransition_bruh7"), "Locomotion", "Active", SubResource("AnimationNodeStateMachineTransition_6eyey"), "Locomotion", "Recovery", SubResource("AnimationNodeStateMachineTransition_d3wef"), "Startup", "Active", SubResource("AnimationNodeStateMachineTransition_o4126"), "Active", "Recovery", SubResource("AnimationNodeStateMachineTransition_lkdrv"), "Startup", "Recovery", SubResource("AnimationNodeStateMachineTransition_p7iby"), "Startup", "Locomotion", SubResource("AnimationNodeStateMachineTransition_su2lo"), "Active", "Locomotion", SubResource("AnimationNodeStateMachineTransition_ac2lo"), "Recovery", "Locomotion", SubResource("AnimationNodeStateMachineTransition_re2lo"), "Active", "Startup", SubResource("AnimationNodeStateMachineTransition_ac2su"), "Recovery", "Startup", SubResource("AnimationNodeStateMachineTransition_re2su"), "Recovery", "Active", SubResource("AnimationNodeStateMachineTransition_re2ac"), "Pivot", "Locomotion", SubResource("AnimationNodeStateMachineTransition_pvt2lo"), "Locomotion", "Pivot", SubResource("AnimationNodeStateMachineTransition_lo2pvt"), "Pivot", "Startup", SubResource("AnimationNodeStateMachineTransition_pvt2su"), "Startup", "Pivot", SubResource("AnimationNodeStateMachineTransition_su2pvt"), "Pivot", "Active", SubResource("AnimationNodeStateMachineTransition_pvt2ac"), "Active", "Pivot", SubResource("AnimationNodeStateMachineTransition_ac2pvt"), "Pivot", "Recovery", SubResource("AnimationNodeStateMachineTransition_pvt2re"), "Recovery", "Pivot", SubResource("AnimationNodeStateMachineTransition_re2pvt")]
+transitions = ["Start", "Locomotion", SubResource("AnimationNodeStateMachineTransition_khinc"), "Locomotion", "Startup", SubResource("AnimationNodeStateMachineTransition_bruh7"), "Locomotion", "Active", SubResource("AnimationNodeStateMachineTransition_6eyey"), "Locomotion", "Recovery", SubResource("AnimationNodeStateMachineTransition_d3wef"), "Startup", "Active", SubResource("AnimationNodeStateMachineTransition_o4126"), "Active", "Recovery", SubResource("AnimationNodeStateMachineTransition_lkdrv"), "Startup", "Recovery", SubResource("AnimationNodeStateMachineTransition_p7iby"), "Startup", "Locomotion", SubResource("AnimationNodeStateMachineTransition_su2lo"), "Active", "Locomotion", SubResource("AnimationNodeStateMachineTransition_ac2lo"), "Recovery", "Locomotion", SubResource("AnimationNodeStateMachineTransition_re2lo"), "Active", "Startup", SubResource("AnimationNodeStateMachineTransition_ac2su"), "Recovery", "Startup", SubResource("AnimationNodeStateMachineTransition_re2su"), "Recovery", "Active", SubResource("AnimationNodeStateMachineTransition_re2ac"), "Pivot", "Locomotion", SubResource("AnimationNodeStateMachineTransition_pvt2lo"), "Locomotion", "Pivot", SubResource("AnimationNodeStateMachineTransition_lo2pvt"), "Pivot", "Startup", SubResource("AnimationNodeStateMachineTransition_pvt2su"), "Startup", "Pivot", SubResource("AnimationNodeStateMachineTransition_su2pvt"), "Pivot", "Active", SubResource("AnimationNodeStateMachineTransition_pvt2ac"), "Active", "Pivot", SubResource("AnimationNodeStateMachineTransition_ac2pvt"), "Pivot", "Recovery", SubResource("AnimationNodeStateMachineTransition_pvt2re"), "Recovery", "Pivot", SubResource("AnimationNodeStateMachineTransition_re2pvt"), "Locomotion", "FadeawayActive", SubResource("AnimationNodeStateMachineTransition_fdw01"), "FadeawayActive", "Locomotion", SubResource("AnimationNodeStateMachineTransition_fdw02"), "Startup", "FadeawayActive", SubResource("AnimationNodeStateMachineTransition_fdw03"), "FadeawayActive", "Startup", SubResource("AnimationNodeStateMachineTransition_fdw04"), "Active", "FadeawayActive", SubResource("AnimationNodeStateMachineTransition_fdw05"), "FadeawayActive", "Active", SubResource("AnimationNodeStateMachineTransition_fdw06"), "Recovery", "FadeawayActive", SubResource("AnimationNodeStateMachineTransition_fdw07"), "FadeawayActive", "Recovery", SubResource("AnimationNodeStateMachineTransition_fdw08")]
 graph_offset = Vector2(56.084297, 0)
 
 [node name="CharacterBody3D" type="CharacterBody3D" unique_id=700308040]
