@@ -485,6 +485,73 @@ jobs:
           godot --headless --path . res://tests/integration/TripleThreatTest.tscn -- --harness-scenario=dead-dribble
           godot --headless --path . res://tests/integration/TripleThreatTest.tscn -- --harness-scenario=production-drive
 
+      # #224 (Race 1 of #207): stale-input auto-dribble on possession award.
+      # TickServerRemotePlayer's CheckAutoStartDribble(_pendingInput) call can
+      # fire with a _pendingInput that is up to ~1 RTT stale relative to the
+      # possession-award tick — if a released stick's release-packet hasn't
+      # arrived yet, a fresh Held award could auto-fire Held->Dribbling
+      # against the player's ACTUAL (released) intent. The fix stamps
+      # _awardStampSeq (via a new PlayerController.PossessionChanged
+      # subscription) at the moment possession is awarded to THIS player, and
+      # only honors drive intent once _serverAckedSeq is genuinely NEWER than
+      # that stamp — gated at the TickServerRemotePlayer call site ONLY (the
+      # own-player roles read same-tick hardware input and would be
+      # PERMANENTLY frozen if gated the same way, since the host never calls
+      # SubmitInput on itself). The single 'stale-blocked-fresh-works'
+      # scenario primes peer 2 (NOT yet the holder) with a stale nonzero
+      # cached input via a harness seam (mirrors SubmitInput's own field
+      # assignment), walks the CURRENT holder OOB (the already-proven
+      # OobTurnoverTest path) to award peer 2 via the REAL
+      # BallController.AwardPossession, and asserts the ball stays Held for
+      # several ticks despite the stale nonzero cache — THEN simulates a
+      # genuinely newer packet and asserts the SAME held drive DOES start
+      # (the paired control the AC demands — a real held drive must not be
+      # permanently suppressed). RED-before/GREEN-after proven by temporarily
+      # reverting the gate to an unconditional call (PR body has the
+      # transcript) — the scenario FAILED (auto-dribbled) on the reverted
+      # code and PASSES on the shipped fix. Exit 0=PASS/1=FAIL (ADR-0016).
+      - name: Run award-freshness harness (#224)
+        run: |
+          godot --headless --path . res://tests/integration/AwardFreshnessTest.tscn -- --harness-scenario=stale-blocked-fresh-works
+
+      # #225 (Race 2 of #207): cradle no-op — Reliable Begin(JumpShot)
+      # overtaking UnreliableOrdered dribble input, bypassing dead-dribble.
+      # RequestBeginMove (Reliable) and SubmitInput (UnreliableOrdered) have
+      # no cross-channel ordering, so the server can process Begin(JumpShot)
+      # while its own ball copy is still Held (the drive's SubmitInput hasn't
+      # landed yet) — CradleForShotStartup's guard no-ops, and pre-fix the
+      # dead-dribble rule was silently bypassed. The SHIPPED fix resolves the
+      # race entirely at Begin-time via a client-supplied boolean
+      # (clientWasAlreadyDribbling, riding a new trailing RequestBeginMove
+      # parameter) — NOT a later seq comparison against a delayed packet, per
+      # an empirical dead end documented in CradleForShotStartup's own doc:
+      # CommittedMoveMachine.IsActive means "Phase != Inactive", so
+      # TickServerRemotePlayer skips CheckAutoStartDribble for the ENTIRE
+      # Startup+Active+Recovery span, and the client zeroes its own input for
+      # that whole span too — a delayed drive packet is almost always
+      # superseded by later in-order zero packets long before the machine
+      # ever re-checks it. 'out-of-order' reproduces the race directly (Begin
+      # processed while the SERVER's ball is Held, client reports it was
+      # ALREADY Dribbling) and asserts SYNCHRONOUS convergence to Held,
+      # HasDribbled=true. 'in-order' is the paired control — drive first,
+      # then Begin — proving the ALREADY-correct ordering's outcome is
+      # unchanged (CradleForShotStartup's normal, non-no-op branch, untouched
+      # by this fix). 'later-legit-drive' is the Case-1 preservation control
+      # the CRITICAL TRAP demands: a shot-fake with NO drive ever (Begin with
+      # clientWasAlreadyDribbling=false) must leave a LATER, genuinely new
+      # drive attempt (after the machine returns fully to Inactive)
+      # completely unaffected — Dribbling, HasDribbled still false. RED-
+      # before/GREEN-after proven per scenario by temporarily reverting the
+      # fix's one conditional (PR body has the transcript): 'out-of-order'
+      # FAILED (HasDribbled stayed false) on the reverted code while both
+      # controls stayed green regardless — proof they discriminate the fix,
+      # not something else. Exit 0=PASS/1=FAIL (ADR-0016).
+      - name: Run cradle-race harness (#225)
+        run: |
+          godot --headless --path . res://tests/integration/CradleRaceTest.tscn -- --harness-scenario=out-of-order
+          godot --headless --path . res://tests/integration/CradleRaceTest.tscn -- --harness-scenario=in-order
+          godot --headless --path . res://tests/integration/CradleRaceTest.tscn -- --harness-scenario=later-legit-drive
+
       # Crossover authoritative ball transit — no teleport (issue #195).
       # Boots a real BallController + two PlayerControllers headless and
       # drives an actual Crossover through the real BeginCommittedMove path

@@ -2725,25 +2725,86 @@ public partial class BallController : Node3D
 	/// state. In particular, shooting straight out of a fresh live Held
 	/// possession never touches StopDribble at all: there is no dribble to
 	/// end, and HasDribbled is already false for that possession.
+	///
+	/// <paramref name="clientWasAlreadyDribbling"/> (#225 fix, formerly a
+	/// KNOWN ACCEPTED RACE — see history below): true if the CLIENT's OWN
+	/// local ball copy was ALREADY Dribbling at the instant it fired this
+	/// Begin — read from PlayerController.RequestBeginMove's new trailing
+	/// parameter. Only meaningful — and only ever explicitly passed — for
+	/// the SERVER's dispatch of a REMOTE client's Begin
+	/// (PlayerController.ApplyRequestedMove); a client's own local prediction
+	/// call always leaves it at the default (false), because its own gather
+	/// can never race (zero-latency, same-tick, always causally correct —
+	/// the NORMAL, non-no-op branch below already handles that case
+	/// correctly on its own).
+	///
+	/// ── Why a CLIENT-SUPPLIED BOOLEAN, not a later seq comparison
+	///    (doubt-driven-development, two review cycles) ─────────────────────
+	/// The first design attempted to resolve this lazily: remember a
+	/// "pending cradle" ceiling here and let a LATER TryStartDribble call
+	/// (once the delayed drive packet finally arrives) decide, by comparing
+	/// that packet's own seq against the ceiling. Empirically running that
+	/// design against the REAL production tick loop (not a synthetic seam)
+	/// disproved it: CommittedMoveMachine.IsActive means "Phase != Inactive"
+	/// — true for the ENTIRE Startup+Active+Recovery duration, not just the
+	/// Active phase — so PlayerController.TickServerRemotePlayer's
+	/// CheckAutoStartDribble call is skipped for the WHOLE life of the shot
+	/// (see that method's own IsActive branch). The delayed drive packet, if
+	/// it ever gets applied, only gets ACTED ON once the machine returns to
+	/// Inactive — by which point the client has been streaming
+	/// Vector2.Zero every tick since Active began (moveInput is zeroed while
+	/// IsActive), so the original nonzero packet has almost always already
+	/// been superseded by a later, in-order zero packet by then. The lazy
+	/// design was therefore a no-op in practice, not merely an accepted edge
+	/// case — a red flag caught only by running the harness against the real
+	/// tick loop, exactly the "harness-green != feature-complete" discipline
+	/// this repo's own verification skill warns about.
+	///
+	/// The fix instead resolves the race IMMEDIATELY, at Begin-time, using
+	/// information ONLY the client can know with zero-latency accuracy: did
+	/// MY OWN ball copy already reach Dribbling before I fired this Begin?
+	/// The client reads its own GetBall()?.State (BEFORE calling its own
+	/// local BeginCommittedMove, whose cradle side effect would otherwise
+	/// already have flipped it back to Held) and sends that single boolean
+	/// fact. No later packet is needed at all — this closes the SAME gap
+	/// the seq-ceiling design tried to close, without depending on a packet
+	/// that (per the IsActive finding above) usually never survives to be
+	/// observed.
 	/// </summary>
-	public void CradleForShotStartup(int peerId)
+	public void CradleForShotStartup(int peerId, bool clientWasAlreadyDribbling = false)
 	{
-		// KNOWN ACCEPTED RACE (code review on PR #204, ~1-tick window, NOT
-		// fixed here): PlayerController.RequestBeginMove travels Reliable
-		// while SubmitInput (the channel that carries the drive input
-		// CheckAutoStartDribble reads) travels UnreliableOrdered — separate
-		// channels with no cross-ordering guarantee. A client that drives and
-		// then pump-fakes within roughly one tick can have the SERVER process
-		// Begin(JumpShot) BEFORE that drive's SubmitInput arrives: the server
-		// still sees Held here (this guard no-ops), so HasDribbled stays
-		// false server-side while the client's own prediction already set it
-		// true — the client is then force-corrected back to false by the next
-		// ReceiveState broadcast (HasDribbled IS broadcast; see the
-		// ReconcileFromServer doc), a silent, narrow dead-dribble bypass. A
-		// robust fix is cross-channel input/RPC ordering, which is a separate
-		// piece of work, not a #193 fix — see the cradle-race follow-up issue
-		// linked from PR #204's conversation.
-		if (StateMachine.Current != BallState.Dribbling) return;
+		// #225 FIX (formerly a KNOWN ACCEPTED RACE, code review on PR #204):
+		// PlayerController.RequestBeginMove travels Reliable while SubmitInput
+		// (the channel that carries the drive input CheckAutoStartDribble
+		// reads) travels UnreliableOrdered — separate channels with no
+		// cross-ordering guarantee. A client that drives and then pump-fakes
+		// within roughly one tick can have the SERVER process Begin(JumpShot)
+		// BEFORE that drive's SubmitInput arrives: the server still sees Held
+		// here, so this guard no-ops.
+		//
+		// Un-fixed, this silently bypassed the dead-dribble rule: HasDribbled
+		// stayed false server-side (while the client's own prediction had
+		// already set it true), and the client's predicted true was force-
+		// corrected back to false by the next ReceiveState broadcast.
+		//
+		// The fix: if the client tells us (via clientWasAlreadyDribbling —
+		// see this method's param doc) that its OWN ball copy was ALREADY
+		// Dribbling when it fired this Begin, honor that immediately —
+		// HasDribbled becomes true right here, synchronously, matching the
+		// in-order case's own final state (Held, HasDribbled=true) exactly,
+		// with no dependency on any later packet arriving at all. Correctly
+		// leaves ALONE the separate, legitimate "pump-fake with no drive
+		// ever, then a later, genuinely new drive attempt in the SAME
+		// possession" case (the shoot-from-triple-threat rule this fix must
+		// not break) — clientWasAlreadyDribbling is false in that case
+		// (nothing to report), so this branch does nothing, and the later
+		// drive attempt reaches TryStartDribble completely unaffected.
+		if (StateMachine.Current != BallState.Dribbling)
+		{
+			if (clientWasAlreadyDribbling && StateMachine.HolderPeerId == peerId)
+				HasDribbled = true;
+			return;
+		}
 		if (StateMachine.HolderPeerId != peerId) return;
 
 		if (StateMachine.StopDribble())
@@ -2767,6 +2828,13 @@ public partial class BallController : Node3D
 	/// No-ops if the ball isn't Held, or if the caller isn't the ball's
 	/// holder — so an off-ball player's own stick input can never touch
 	/// someone else's possession.
+	///
+	/// (#225 fix: unchanged by that fix. An earlier design draft threaded a
+	/// seq comparison through this method to resolve the cradle race lazily
+	/// here instead — see CradleForShotStartup's doc for why that design was
+	/// disproven empirically and replaced with a client-supplied boolean
+	/// resolved entirely at Begin-time, leaving this method exactly as
+	/// #193 shipped it.)
 	/// </summary>
 	public void TryStartDribble(int peerId)
 	{

@@ -670,6 +670,39 @@ public partial class PlayerController : CharacterBody3D
 	private int _serverAckedSeq;
 
 	/// <summary>
+	/// #224 fix: <see cref="_serverAckedSeq"/> value stamped the instant THIS
+	/// player is awarded possession (rebound, turnover, make-it-take-it,
+	/// tipoff — anything that fires <see cref="BallController.PossessionChanged"/>
+	/// with this node's <see cref="OwnPeerId"/> as the new holder). Consulted
+	/// ONLY by <see cref="TickServerRemotePlayer"/>'s freshness gate — see that
+	/// method's doc for why this field must never be read from
+	/// TickServerOwnPlayer or TickClientOwnPlayer.
+	///
+	/// ── Why a signal, not a parameter threaded through AwardPossession ──────
+	/// BallController already diffs holder/cleared every tick and emits
+	/// PossessionChanged exactly once per change (EmitPossessionIfChanged) —
+	/// reusing that existing plumbing (the same one PossessionHud/CourtVisuals
+	/// already subscribe to) needs no new cross-object contract. Subscribed
+	/// lazily wherever <see cref="GetBall"/> first resolves a non-null ball,
+	/// mirroring _ball's own lazy-group-lookup doc (a player's _Ready can race
+	/// ahead of the ball's in the scene tree).
+	///
+	/// ── Why same-tick ordering is safe, not a race ──────────────────────────
+	/// scenes/Main.tscn ticks the "Players" subtree before the sibling "Ball"
+	/// node every physics frame (verified: Main.tscn declares Players at
+	/// unique_id=1470573220 before Ball at unique_id=783251786). An award
+	/// (AwardPossession/TryAssignTipoffHolder) always runs INSIDE BallController's
+	/// own _PhysicsProcess, i.e. strictly after this tick's Players phase has
+	/// already run — so the tick that awards possession cannot itself have
+	/// already read the stale gate with a stamp that lags the award; the
+	/// EARLIEST tick IsBallHolder can read true for the new holder is the tick
+	/// AFTER the award, by which time this field (updated synchronously by the
+	/// signal, during the award's own tick) is already fresh. No ordering
+	/// dependency between the award and the stamp remains to race.
+	/// </summary>
+	private int _awardStampSeq;
+
+	/// <summary>
 	/// The latest input received from the client this tick (server-side,
 	/// remote player only). A single value — we consume only the latest per
 	/// tick; earlier values are superseded by newer SubmitInput calls.
@@ -940,8 +973,58 @@ public partial class PlayerController : CharacterBody3D
 	private BallController GetBall()
 	{
 		if (_ball == null)
+		{
 			_ball = GetTree().GetFirstNodeInGroup("ball") as BallController;
+			// #224 fix: subscribe exactly once, the first tick the ball actually
+			// resolves (mirrors PossessionHud's PossessionChanged subscription
+			// pattern). See _awardStampSeq's doc for why this signal, not a
+			// parameter threaded through AwardPossession, is the fix's seam.
+			if (_ball != null)
+				_ball.PossessionChanged += OnPossessionChangedForAwardStamp;
+		}
 		return _ball;
+	}
+
+	/// <summary>
+	/// Tracks the last holderPeerId THIS handler observed, across every
+	/// PossessionChanged emission (not just ones addressed to THIS player) —
+	/// see OnPossessionChangedForAwardStamp's doc for why this is required.
+	/// -1 means "nothing observed yet" (0 is a legitimate "no holder" value
+	/// BallController._lastEmittedHolder's own doc already reserves -1 for
+	/// the analogous reason).
+	/// </summary>
+	private int _lastSeenHolderPeerIdForAwardStamp = -1;
+
+	/// <summary>
+	/// #224 fix: stamps <see cref="_awardStampSeq"/> the instant possession is
+	/// awarded to THIS player. See that field's doc for the full rationale.
+	/// Filtered to this node's own peer — every PlayerController instance on
+	/// a given peer subscribes to the SAME ball singleton, so every award
+	/// (regardless of which player it goes to) fires this handler on every
+	/// player node; only the node whose OwnPeerId matches the new holder
+	/// should update its stamp.
+	///
+	/// (Code-review fix) BallController.EmitPossessionIfChanged fires
+	/// PossessionChanged whenever EITHER the holder OR the cleared flag
+	/// differs from the last emit — not only on a genuine new award. A
+	/// player who is ALREADY the holder can trigger a cleared-only emission
+	/// (e.g. carrying the ball across the clear line, ADR-0008's take-it-
+	/// back rule, UpdateClearStatus) with no possession change at all. A
+	/// naive "holderPeerId == OwnPeerId" filter would re-stamp on THAT event
+	/// too, needlessly re-closing the freshness gate for ~1 tick on a drive
+	/// that was already legitimately in progress. Guarding on
+	/// _lastSeenHolderPeerIdForAwardStamp actually CHANGING restricts the
+	/// re-stamp to genuine award transitions only, matching this method's
+	/// own doc ("the instant possession is awarded").
+	/// </summary>
+	private void OnPossessionChangedForAwardStamp(int holderPeerId, bool cleared)
+	{
+		bool holderChanged = holderPeerId != _lastSeenHolderPeerIdForAwardStamp;
+		_lastSeenHolderPeerIdForAwardStamp = holderPeerId;
+		if (!holderChanged) return; // same holder as last emission -- a cleared-only toggle, not a new award
+
+		if (holderPeerId != OwnPeerId) return;
+		_awardStampSeq = _serverAckedSeq;
 	}
 
 	/// <summary>
@@ -1213,6 +1296,15 @@ public partial class PlayerController : CharacterBody3D
 		_beatenIndicator = GetNodeOrNull<Node3D>("BeatenIndicator");
 	}
 
+	public override void _ExitTree()
+	{
+		// #224 fix: drop the PossessionChanged subscription so Godot doesn't
+		// hold a dangling reference to a freed player node — same lifecycle
+		// hygiene as PossessionHud's own PossessionChanged unsubscribe.
+		if (_ball != null)
+			_ball.PossessionChanged -= OnPossessionChangedForAwardStamp;
+	}
+
 	// ── Tick loop ─────────────────────────────────────────────────────────────
 
 	public override void _PhysicsProcess(double delta)
@@ -1350,7 +1442,27 @@ public partial class PlayerController : CharacterBody3D
 		else
 		{
 			Move(_pendingInput, delta);
-			CheckAutoStartDribble(_pendingInput);
+
+			// #224 fix: only honor drive intent from _pendingInput once a
+			// genuinely FRESH (post-award) SubmitInput has actually arrived —
+			// see _awardStampSeq's doc for the full race and why this gate is
+			// scoped to THIS call site only (TickServerOwnPlayer/
+			// TickClientOwnPlayer read same-tick hardware input and are already
+			// immune; gating them here too would permanently freeze the
+			// host's own drive, since the host never calls SubmitInput on
+			// itself and its _serverAckedSeq never advances past 0).
+			//
+			// Repo law: never force-match a ~1RTT-stale broadcast; only force
+			// discrete identity (project_networked_discrete_state_staleness).
+			// Applied here in the mirror direction — never TRUST a ~1RTT-stale
+			// input to drive a discrete transition either. A held drive keeps
+			// producing rising-seq packets, so this gate opens within ~1 tick
+			// of the award for a genuine drive; a released stick's stale cache
+			// carries no seq newer than the award and stays gated shut for the
+			// rest of this possession (until CheckAutoStartDribble's own
+			// IsBallHolder/HasDribbled guards make it moot anyway).
+			if (_serverAckedSeq > _awardStampSeq)
+				CheckAutoStartDribble(_pendingInput);
 		}
 
 		// Echo _serverAckedSeq so the client prunes its pending buffer, plus
@@ -1641,7 +1753,7 @@ public partial class PlayerController : CharacterBody3D
 	/// unrelated facing debt inherited from before the move (HandStateResolver.
 	/// BurstWorldDir already reads Heading directly — no change needed there).
 	/// </summary>
-	private bool BeginCommittedMove(CommittedMove move)
+	private bool BeginCommittedMove(CommittedMove move, bool clientWasAlreadyDribbling = false)
 	{
 		// #210 doubt-driven-development fix: unconditionally clear any
 		// previously-received exit vector at the START of every attempt, not
@@ -1772,8 +1884,14 @@ public partial class PlayerController : CharacterBody3D
 		// EuroStep (#231, ADR-0022) cradles at Startup-begin exactly like
 		// DriveGather: beat 1 of the two-beat euro-step IS the gather, and the
 		// gather is inherent to the move beginning, not a later burst.
+		// #225 fix: clientWasAlreadyDribbling is forwarded here (false for
+		// every OTHER caller — a client's own local prediction of its own
+		// move, and every non-cradle-family Begin) — see
+		// CradleForShotStartup's doc for how the server's dispatch of a
+		// REMOTE client's request is the only caller that ever supplies a
+		// meaningful value.
 		if ((move is JumpShot || move is Layup || move is DriveGather || move is EuroStep) && OwnPeerId != 0)
-			GetBall()?.CradleForShotStartup(OwnPeerId);
+			GetBall()?.CradleForShotStartup(OwnPeerId, clientWasAlreadyDribbling);
 
 		return true;
 	}
@@ -1829,11 +1947,41 @@ public partial class PlayerController : CharacterBody3D
 	/// under duplicate or out-of-order delivery (a second call while already
 	/// active just no-ops and returns false), so there is no stale-input-regression
 	/// risk the way continuous movement input has.
+	///
+	/// <paramref name="clientWasAlreadyDribbling"/> (#225 fix): true if the
+	/// CLIENT's OWN local ball copy was ALREADY Dribbling the instant it
+	/// fired THIS request — read from the client's own zero-latency
+	/// GetBall()?.State, BEFORE its own local BeginCommittedMove call (whose
+	/// cradle side effect would otherwise already have flipped it back to
+	/// Held by the time it's read). NOT a replay/idempotency guard (the note
+	/// above still holds), but a one-off, move-specific payload consulted
+	/// ONLY by the four cradle-family moves (jumpshot/layup/drivegather/
+	/// eurostep) inside ApplyRequestedMove, to resolve the
+	/// Begin-races-SubmitInput cradle race (see
+	/// BallController.CradleForShotStartup's doc for the full mechanism —
+	/// including why this is a client-supplied boolean resolved immediately
+	/// at Begin-time, rather than a seq comparison deferred to a later
+	/// packet that an earlier design draft could not actually rely on
+	/// arriving). Every other moveId ignores it; the client always sends
+	/// SOME value (false where irrelevant) because Godot's RPC
+	/// deserialization requires the wire payload to match this method's
+	/// fixed arity exactly — there is no "omit an unused trailing arg" over
+	/// an RPC boundary the way a plain C# optional parameter would allow for
+	/// a direct call. Bundled into this SAME RPC (rather than a second,
+	/// separate one-shot RPC fired just before it) specifically so delivery
+	/// is atomic — no cross-RPC-ordering assumption needed at all, unlike a
+	/// two-RPC design would require (a doubt-driven-development review of
+	/// this fix's first draft flagged that #210's own RequestExitVector
+	/// precedent explicitly declined to rely solely on
+	/// same-channel-same-mode ordering between two DIFFERENT RPC methods,
+	/// adding a defense-in-depth phase gate instead — bundling into ONE RPC
+	/// removes the need for an equivalent gate here by removing the
+	/// cross-RPC race entirely).
 	/// </summary>
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer,
 		 CallLocal = false,
 		 TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void RequestBeginMove(string moveId, float param)
+	private void RequestBeginMove(string moveId, float param, bool clientWasAlreadyDribbling)
 	{
 		int senderId = Multiplayer.GetRemoteSenderId();
 		if (senderId.ToString() != Name)
@@ -1842,7 +1990,7 @@ public partial class PlayerController : CharacterBody3D
 			return;
 		}
 
-		ApplyRequestedMove(moveId, param);
+		ApplyRequestedMove(moveId, param, clientWasAlreadyDribbling);
 	}
 
 	/// <summary>
@@ -1865,8 +2013,15 @@ public partial class PlayerController : CharacterBody3D
 	///
 	/// Every branch here still routes through BeginCommittedMove — the one
 	/// production choke point (architecture-contract invariant #11).
+	///
+	/// <paramref name="clientWasAlreadyDribbling"/> (#225 fix): forwarded
+	/// ONLY by the four cradle-family branches (jumpshot/layup/drivegather/
+	/// eurostep) into BeginCommittedMove's own optional parameter — see
+	/// RequestBeginMove's doc for where this value comes from and
+	/// CradleForShotStartup's doc for how it resolves the cross-channel
+	/// cradle race. Every other branch ignores it.
 	/// </summary>
-	private void ApplyRequestedMove(string moveId, float param)
+	private void ApplyRequestedMove(string moveId, float param, bool clientWasAlreadyDribbling)
 	{
 		if (moveId == "crossover")
 			// param is the body-relative flick sign (M9, #85) — the world burst
@@ -1908,7 +2063,9 @@ public partial class PlayerController : CharacterBody3D
 			// drive line is resolved server-side from live GlobalPosition/
 			// RimCenter during Startup (TickCommittedMoveBehavior), not from
 			// anything the client sends.
-			BeginCommittedMove(new DriveGather());
+			{
+				BeginCommittedMove(new DriveGather(), clientWasAlreadyDribbling); // #225: cradle-family move
+			}
 		else if (moveId == "eurostep")
 			// Euro-step (#231, ADR-0022): param is the body-relative lateral read
 			// sign (+1 = step right, -1 = left), the SAME reconstruction-payload
@@ -1918,7 +2075,7 @@ public partial class PlayerController : CharacterBody3D
 			// finish is a SEPARATE "layup" request begun from the displaced
 			// position, which crosses the ADR-0023 range gate above verbatim at
 			// that displaced GlobalPosition (the chain — see EuroStep's class doc).
-			BeginCommittedMove(new EuroStep(lateralDirection: param));
+			BeginCommittedMove(new EuroStep(lateralDirection: param), clientWasAlreadyDribbling); // #225: cradle-family move
 		else if (moveId == "jab")
 			// Jab step (#200): param = 0f — no payload, no burst, purely
 			// informational (the telegraph itself is the whole effect).
@@ -1927,7 +2084,7 @@ public partial class PlayerController : CharacterBody3D
 		{
 			// Capture the server-authoritative pre-plant speed at begin for the
 			// movement scatter penalty (#137) — see ShotInitiationSpeed.
-			if (BeginCommittedMove(new JumpShot()))
+			if (BeginCommittedMove(new JumpShot(), clientWasAlreadyDribbling)) // #225: cradle-family move
 				CaptureShotInitiationSpeed();
 		}
 		else if (moveId == "layup")
@@ -1985,7 +2142,7 @@ public partial class PlayerController : CharacterBody3D
 					GlobalPosition, layupBall.RimCenter));
 				float serverGate = layupBall.LayupRange + layupBall.LayupRangeNetTolerance;
 				if (LayupRangeResolver.IsLayupRange(distanceToRim, serverGate)
-					&& BeginCommittedMove(new Layup()))
+					&& BeginCommittedMove(new Layup(), clientWasAlreadyDribbling)) // #225: cradle-family move
 					CaptureShotInitiationSpeed();
 			}
 		}
@@ -2620,6 +2777,10 @@ public partial class PlayerController : CharacterBody3D
 	/// IsBallHolder (#204 code-review cleanup) so a non-holder's movement
 	/// input never even makes the cross-object call, which TryStartDribble's
 	/// own HolderPeerId check would have no-opped on anyway.
+	///
+	/// (#225 fix: unchanged by that fix — see BallController.CradleForShotStartup's
+	/// doc for why the cradle race is resolved entirely at Begin-time via a
+	/// client-supplied boolean instead of a seq comparison here.)
 	/// </summary>
 	private void CheckAutoStartDribble(Vector2 input)
 	{
@@ -2732,26 +2893,26 @@ public partial class PlayerController : CharacterBody3D
 				if (Input.IsActionPressed("move_size_up") && Input.IsActionPressed("move_finesse"))
 				{
 					if (BeginCommittedMove(new Spin(spinDirection: flickSign)) && !isServer)
-						RpcId(1, MethodName.RequestBeginMove, "spin", flickSign);
+						RpcId(1, MethodName.RequestBeginMove, "spin", flickSign, false); // #225: not a cradle-family move
 				}
 				else if (Input.IsActionPressed("move_size_up"))
 				{
 					if (BeginCommittedMove(new BehindTheBack(flickSign)) && !isServer)
-						RpcId(1, MethodName.RequestBeginMove, "behindtheback", flickSign);
+						RpcId(1, MethodName.RequestBeginMove, "behindtheback", flickSign, false); // #225: not a cradle-family move
 				}
 				else if (Input.IsActionPressed("move_finesse"))
 				{
 					if (BeginCommittedMove(new BetweenTheLegs(flickSign)) && !isServer)
-						RpcId(1, MethodName.RequestBeginMove, "betweenthelegs", flickSign);
+						RpcId(1, MethodName.RequestBeginMove, "betweenthelegs", flickSign, false); // #225: not a cradle-family move
 				}
 				else if (BeginCommittedMove(new Crossover(flickSign)) && !isServer)
 				{
-					RpcId(1, MethodName.RequestBeginMove, "crossover", flickSign);
+					RpcId(1, MethodName.RequestBeginMove, "crossover", flickSign, false); // #225: not a cradle-family move
 				}
 			}
 			else if (BeginCommittedMove(new Hesitation()) && !isServer)
 			{
-				RpcId(1, MethodName.RequestBeginMove, "hesitation", 0f);
+				RpcId(1, MethodName.RequestBeginMove, "hesitation", 0f, false); // #225: not a cradle-family move
 			}
 		}
 		else if (gesture.Kind == GestureKind.QuickReturn)
@@ -2773,11 +2934,11 @@ public partial class PlayerController : CharacterBody3D
 			if (HandStateResolver.IsCrossover(HandSide, flickSign))
 			{
 				if (BeginCommittedMove(new InAndOut(flickSign)) && !isServer)
-					RpcId(1, MethodName.RequestBeginMove, "inandout", flickSign);
+					RpcId(1, MethodName.RequestBeginMove, "inandout", flickSign, false); // #225: not a cradle-family move
 			}
 			else if (BeginCommittedMove(new Hesitation()) && !isServer)
 			{
-				RpcId(1, MethodName.RequestBeginMove, "hesitation", 0f);
+				RpcId(1, MethodName.RequestBeginMove, "hesitation", 0f, false); // #225: not a cradle-family move
 			}
 		}
 		else if (gesture.Kind == GestureKind.StepBack)
@@ -2790,7 +2951,7 @@ public partial class PlayerController : CharacterBody3D
 			// method's comment for why the move's own Active-entry gather
 			// call safely no-ops from either starting state.
 			if (IsBallHolder && BeginCommittedMove(new StepBack()) && !isServer)
-				RpcId(1, MethodName.RequestBeginMove, "stepback", 0f);
+				RpcId(1, MethodName.RequestBeginMove, "stepback", 0f, false); // #225: cradles at Active-entry via StepBack's OWN call site, not this one — see CradleForShotStartup's doc
 		}
 		else if (gesture.Kind == GestureKind.RetreatDribble)
 		{
@@ -2802,7 +2963,7 @@ public partial class PlayerController : CharacterBody3D
 			// dead-dribble gate, extended for this move, refuses it from
 			// Held exactly like Crossover/Hesitation/BehindTheBack).
 			if (IsBallHolder && BeginCommittedMove(new RetreatDribble()) && !isServer)
-				RpcId(1, MethodName.RequestBeginMove, "retreatdribble", 0f);
+				RpcId(1, MethodName.RequestBeginMove, "retreatdribble", 0f, false); // #225: not a cradle-family move
 		}
 
 		// Drive-gather (M9, issue #230, ADR-0022): a discrete button, not a
@@ -2831,13 +2992,14 @@ public partial class PlayerController : CharacterBody3D
 		{
 			int lateralSign = EuroStepReadResolver.ResolveLateralSign(
 				ReadInput(), HandStateResolver.BurstWorldDir(Heading, +1), ExitDeadzone);
+			bool wasAlreadyDribblingForGather = GetBall()?.State == BallState.Dribbling;
 			if (lateralSign != 0)
 			{
 				if (BeginCommittedMove(new EuroStep(lateralDirection: lateralSign)) && !isServer)
-					RpcId(1, MethodName.RequestBeginMove, "eurostep", (float)lateralSign);
+					RpcId(1, MethodName.RequestBeginMove, "eurostep", (float)lateralSign, wasAlreadyDribblingForGather); // #225: cradle-family move
 			}
 			else if (BeginCommittedMove(new DriveGather()) && !isServer)
-				RpcId(1, MethodName.RequestBeginMove, "drivegather", 0f);
+				RpcId(1, MethodName.RequestBeginMove, "drivegather", 0f, wasAlreadyDribblingForGather); // #225: cradle-family move
 		}
 
 		// Jab step (M9, issue #200): triple threat's stance bait. Its own
@@ -2850,7 +3012,7 @@ public partial class PlayerController : CharacterBody3D
 		if (Input.IsActionJustPressed("move_jab") && IsBallHolder)
 		{
 			if (BeginCommittedMove(new JabStep()) && !isServer)
-				RpcId(1, MethodName.RequestBeginMove, "jab", 0f);
+				RpcId(1, MethodName.RequestBeginMove, "jab", 0f, false); // #225: not a cradle-family move
 		}
 
 		// Shoot: begin a JumpShot or a Layup (M7b #74; layup added #229,
@@ -2887,6 +3049,14 @@ public partial class PlayerController : CharacterBody3D
 			bool isLayup = LayupRangeResolver.IsLayupRange(distanceToRim, ball.LayupRange);
 
 			CommittedMove shot = isLayup ? new Layup() : new JumpShot();
+			// #225 fix: captured BEFORE BeginCommittedMove, whose own LOCAL
+			// cradle side effect (CradleForShotStartup, for our own
+			// zero-latency prediction) would otherwise already flip
+			// Dribbling -> Held by the time it's read below. See
+			// RequestBeginMove's doc for how the SERVER uses this value to
+			// resolve the cradle race for a REMOTE client's copy of this
+			// same request.
+			bool wasAlreadyDribblingForShot = ball.State == BallState.Dribbling;
 			if (BeginCommittedMove(shot))
 			{
 				// Capture the pre-plant locomotion speed NOW — Startup zeroes
@@ -2896,7 +3066,7 @@ public partial class PlayerController : CharacterBody3D
 				// types (ADR-0022: the layup feeds the same accuracy model).
 				CaptureShotInitiationSpeed();
 				if (!isServer)
-					RpcId(1, MethodName.RequestBeginMove, isLayup ? "layup" : "jumpshot", 0f);
+					RpcId(1, MethodName.RequestBeginMove, isLayup ? "layup" : "jumpshot", 0f, wasAlreadyDribblingForShot); // #225: cradle-family move
 			}
 		}
 
@@ -2918,7 +3088,7 @@ public partial class PlayerController : CharacterBody3D
 		{
 			HandSide target = aim.X > 0f ? HandSide.Right : HandSide.Left;
 			if (BeginCommittedMove(new StealMove(target)) && !isServer)
-				RpcId(1, MethodName.RequestBeginMove, "steal", (float)(int)target);
+				RpcId(1, MethodName.RequestBeginMove, "steal", (float)(int)target, false); // #225: not a cradle-family move
 		}
 
 		// Block: defensive committed move (M10, issue #98, ADR-0018 §2).
@@ -2943,7 +3113,7 @@ public partial class PlayerController : CharacterBody3D
 		if (Input.IsActionJustPressed("def_block") && !IsBallHolder)
 		{
 			if (BeginCommittedMove(new BlockMove()) && !isServer)
-				RpcId(1, MethodName.RequestBeginMove, "block", 0f);
+				RpcId(1, MethodName.RequestBeginMove, "block", 0f, false); // #225: not a cradle-family move
 		}
 
 		// Contest: defensive committed move (M10, issue #99, ADR-0018 §2).
@@ -2958,7 +3128,7 @@ public partial class PlayerController : CharacterBody3D
 		if (Input.IsActionJustPressed("def_contest") && !IsBallHolder)
 		{
 			if (BeginCommittedMove(new ContestMove()) && !isServer)
-				RpcId(1, MethodName.RequestBeginMove, "contest", 0f);
+				RpcId(1, MethodName.RequestBeginMove, "contest", 0f, false); // #225: not a cradle-family move
 		}
 
 		// Feint modifier (#202 closed the ambiguous-gesture path): the ONLY
