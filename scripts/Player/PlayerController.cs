@@ -2645,7 +2645,13 @@ public partial class PlayerController : CharacterBody3D
 		// state id — Locomotion/Startup/Active/Recovery.
 		if (_animPlayback == null) return;
 		(MovePhase displayPhase, _) = DisplayMove();
-		MoveAnimState target = MoveAnimResolver.Resolve(displayPhase);
+		// IsPivotingInPlace is already correct for EITHER role without going
+		// through DisplayMove(): the own player's Move() sets _pivot locally
+		// every tick, and TickClientRemotePlayer adopts the broadcast latch
+		// directly for the opponent's copy (see that method's #172 comment) —
+		// exactly the same "already-resolved for display" property DisplayMove
+		// itself exists to provide for MovePhase (issue #242).
+		MoveAnimState target = MoveAnimResolver.Resolve(displayPhase, IsPivotingInPlace);
 		if (target != _currentAnimState)
 		{
 			_animPlayback.Travel(target.ToString());

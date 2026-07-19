@@ -27,6 +27,15 @@ namespace Hooper.Player;
 ///   Active     — the move's effect frames (MovePhase.Active). The burst fires.
 ///
 ///   Recovery   — the move's cooldown (MovePhase.Recovery). The punish window.
+///
+///   Pivot      — the planted-feet in-place turn (issue #172's
+///                IsPivotingInPlace, animated for issue #242/#184). Orthogonal
+///                to the MovePhase-driven states above: it is driven by
+///                HeadingMath's pivot latch, not by CommittedMoveMachine, and
+///                only ever coincides with MovePhase.Inactive — beginning a
+///                committed move clears any in-progress pivot latch (see
+///                PivotPlantTest's committed-cancel scenario), so Pivot never
+///                needs to out-rank Startup/Active/Recovery.
 /// </summary>
 public enum MoveAnimState
 {
@@ -34,4 +43,5 @@ public enum MoveAnimState
     Startup,
     Active,
     Recovery,
+    Pivot,
 }
