@@ -600,6 +600,23 @@ jobs:
           godot --headless --path . res://tests/integration/PivotPlantTest.tscn -- --harness-scenario=no-plant-boundary
           godot --headless --path . res://tests/integration/PivotPlantTest.tscn -- --harness-scenario=committed-cancel
 
+      # Planted-feet pivot animation clip + AnimationTree wiring (issue #242,
+      # the AFK build half of #184's HITL feel verify). PivotPlantTest above
+      # only proves the MECHANIC (HeadingMath/Move()); this proves the REAL
+      # Player.tscn's AnimationTree state machine actually Travels into the
+      # new "Pivot" state while IsPivotingInPlace is true and back to
+      # Locomotion once it clears — the presentation wiring, not the math.
+      # 'pivot-enters-exits' drives the same ~180° flick as PivotPlantTest's
+      # flick-180 and asserts CurrentAnimStateForHarness tracks the flag in
+      # lockstep; 'control-locomotion' is the negative control proving plain
+      # forward-ish movement (no reversal) never enters Pivot. Whether the
+      # clip itself reads as "planted feet, no foot-sliding" stays #184/#173's
+      # deferred human feel judgment (ADR-0021) — not asserted here.
+      - name: Run pivot-anim harness
+        run: |
+          godot --headless --path . res://tests/integration/PivotAnimTest.tscn -- --harness-scenario=pivot-enters-exits
+          godot --headless --path . res://tests/integration/PivotAnimTest.tscn -- --harness-scenario=control-locomotion
+
       # Moving crossover — momentum-aware burst with left-stick exit (issue
       # #198, ADR-0003 amendment). CrossoverBurstMathTests already pin the
       # pure composition function; this drives a REAL PlayerController

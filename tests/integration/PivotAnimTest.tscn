@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://tests/integration/PivotAnimTest.cs" id="1_pivotanim"]
+
+[node name="PivotAnimTest" type="Node"]
+script = ExtResource("1_pivotanim")
