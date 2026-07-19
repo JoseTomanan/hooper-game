@@ -117,6 +117,34 @@ jobs:
           godot --headless --path . res://tests/integration/StealTurnoverTest.tscn -- --harness-scenario=whiff
           godot --headless --path . res://tests/integration/StealTurnoverTest.tscn -- --harness-scenario=recovery-reset
 
+      # Held-ball steal window (issue #206, ADR-0018 Amendment 2026-07-19,
+      # human-decided Option A "pump-fake window"). StealTurnoverTest above
+      # only ever exercises a Dribbling ball — before this fix, a Held ball
+      # (the state a JumpShot's cradle synchronously puts it in) was total
+      # steal sanctuary, letting a holder mash the pump-fake to dodge any
+      # steal read on reaction with zero downside. 'held-vulnerable' schedules
+      # a real StealMove's Active window generously inside a real JumpShot's
+      # Startup and asserts the turnover connects (ball goes Loose, defender
+      # is last toucher). 'held-immune-outside-window' is the CONTROL: the
+      # identical defender StealMove completes ENTIRELY (including its own
+      # Recovery) before the holder ever begins a JumpShot, so
+      # HeldStealVulnerableWindow is null the whole time — the steal must
+      # never connect and the ball must stay Held (without this control,
+      # 'held-vulnerable' passing would be equally consistent with a broken
+      # setup that always reports a turnover). 'pumpfake-now-exposed' is the
+      # HEADLINE scenario: it reproduces the historical degenerate exchange
+      # verbatim — a steal timed against a LIVE DRIBBLE, the holder cradling
+      # into Held before the defender's Active window opens (evading the old
+      # Dribbling-only check entirely), then pump-faking the shot away — and
+      # asserts the turnover connects anyway. All three were proven RED
+      # against the pre-#206 ResolveStealAttempts/BallStateMachine.GoLoose()
+      # and GREEN after (PR #206 body). Each exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run held-ball steal window harness
+        run: |
+          godot --headless --path . res://tests/integration/HeldStealTest.tscn -- --harness-scenario=held-vulnerable
+          godot --headless --path . res://tests/integration/HeldStealTest.tscn -- --harness-scenario=held-immune-outside-window
+          godot --headless --path . res://tests/integration/HeldStealTest.tscn -- --harness-scenario=pumpfake-now-exposed
+
       # Steal aim→hand FACING transform (issue #254). StealTurnoverTest above
       # isolates the TIMING axis only — both its players sit at the
       # spawn-default Heading 0 throughout, so a regression in the aim→hand
