@@ -1314,8 +1314,8 @@ public partial class BallController : Node3D
 		//   → RegisterBasket is never reached (ADR-0008 Amendment 2026-06-30).
 		//
 		// Contrast with steal (ResolveStealAttempts after the switch): steal targets
-		// Dribbling state which has no make-detection code, so ordering doesn't matter
-		// for steal. Block specifically interrupts InFlight's scoring path.
+		// Dribbling/Held state, neither of which has make-detection code, so ordering
+		// doesn't matter for steal. Block specifically interrupts InFlight's scoring path.
 		if (IsServer)
 			ResolveBlockAttempts();
 
@@ -1353,22 +1353,24 @@ public partial class BallController : Node3D
 			// evaluates the NEW holder, not the one being dispossessed.
 			ResolvePlayerOutOfBounds();
 
-			// Resolve defensive steal attempts (M10, issue #96, ADR-0018). Runs
-			// after the main state-switch so the dribble phase is already advanced
-			// this tick. A successful steal transitions Dribbling→Loose; the
-			// existing TickLoose scramble awards possession next tick (ADR-0008
+			// Resolve defensive steal attempts (M10, issue #96, ADR-0018; Held-ball
+			// case added in #206). Runs after the main state-switch so the dribble
+			// phase and committed-move phases are already advanced this tick. A
+			// successful steal transitions Dribbling or Held → Loose; the existing
+			// TickLoose scramble awards possession next tick (ADR-0008
 			// §Amendment 2026-06-30).
 			ResolveStealAttempts();
 
 			// Resolve the whiff-punish blow-by lane (issue #100, ADR-0018
 			// Amendment 2026-07-16). Deliberately its OWN call, not folded into
-			// ResolveStealAttempts: that method early-returns unless the ball is
-			// currently Dribbling, but a defender's committed move can whiff on
-			// ANY tick regardless of what the ball is doing right now (e.g. the
-			// holder released a shot mid-attempt) — the beaten window is a
-			// property of the DEFENDER's own machine, not the ball's state, so
-			// its detection must not inherit ResolveStealAttempts's ball-state
-			// guard. Runs every server tick, independent of ball state.
+			// ResolveStealAttempts: that method only resolves while the ball is
+			// Dribbling or Held (it dispatches on those two states and no-ops for
+			// InFlight/Loose), but a defender's committed move can whiff on ANY
+			// tick regardless of what the ball is doing right now (e.g. the holder
+			// released a shot mid-attempt) — the beaten window is a property of
+			// the DEFENDER's own machine, not the ball's state, so its detection
+			// must not inherit ResolveStealAttempts's ball-state guard. Runs every
+			// server tick, independent of ball state.
 			ResolveBeatenWindowTriggers();
 
 			// Clear the possession once the handler carries the ball back behind
@@ -1859,20 +1861,23 @@ public partial class BallController : Node3D
 			_lastToucherPeerId = defenderPeerId;
 
 		// End the defender's Active phase NOW instead of letting it ride out
-		// the remaining ActiveFrames (issue #96 multi-fire bug): for the
-		// Dribbling path, DribbleCycle.Phase only advances in
-		// TickDribbling, so it is frozen at the in-band value for as long as
-		// the ball stays Loose; for the Held path, the holder's own JumpShot
-		// phase is similarly frozen once GoLoose() has taken the ball away
-		// from Held (ResolveHeldStealAttempts's window guard structurally
-		// cannot re-fire once StateMachine.Current is no longer Held either
-		// way). If TickLoose's proximity scramble re-awards the ball before
-		// the Active window would have naturally expired, the relevant
-		// resolver method re-enters next tick and would see the same
-		// in-window state again — firing GoLoose() a second time for one
-		// committed move. EndResolvedDefensiveMove caps it at exactly one
-		// turnover per StealMove, then the defender pays Recovery like any
-		// other spent move.
+		// the remaining ActiveFrames (issue #96 multi-fire bug). The first line
+		// of defence is the ball-state dispatch itself: once GoLoose() flips
+		// StateMachine.Current to Loose, neither ResolveDribblingStealAttempts
+		// nor ResolveHeldStealAttempts runs at all (ResolveStealAttempts only
+		// dispatches on Dribbling/Held). But if TickLoose's proximity scramble
+		// re-awards the ball to the SAME holder before this defender's Active
+		// window would have naturally expired, the ball is briefly back in a
+		// stealable state with the defender's StealMove still nominally Active,
+		// and the relevant resolver re-enters. Note that does NOT rely on any
+		// "frozen phase": the committed-move machine keeps advancing by frame
+		// count regardless of BallState, so the Held path's JumpShot phase is
+		// NOT frozen by the turnover (only the Dribbling path's
+		// DribbleCycle.Phase is, since it advances solely in TickDribbling).
+		// EndResolvedDefensiveMove is what actually caps it at exactly one
+		// turnover per StealMove — ActiveMove<StealMove>() returns null once the
+		// move is ended, so a re-award cannot re-fire it. The defender then pays
+		// Recovery like any other spent move.
 		defender.EndResolvedDefensiveMove();
 	}
 

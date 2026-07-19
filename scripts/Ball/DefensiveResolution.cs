@@ -35,8 +35,9 @@ namespace Hooper.Ball;
 /// StealSucceeds is a point-in-band test (a single tick is inside the band iff
 /// the phase is currently in [lo, hi]).  The interval overlap ADR-0018 requires
 /// is produced by the CALLER re-checking it on every Active tick against the
-/// live dribble phase (BallController.ResolveStealAttempts, issue #96) — the
-/// union of those in-band point tests over the Active window IS the overlap.
+/// live dribble phase (BallController.ResolveDribblingStealAttempts, issue #96;
+/// split out of ResolveStealAttempts in #206) — the union of those in-band
+/// point tests over the Active window IS the overlap.
 /// Block (#98) instead calls the full interval Succeeds form directly,
 /// because the shot's release window has a concrete start tick in InFlight.
 ///
@@ -109,8 +110,9 @@ public static class DefensiveResolution
     /// Steal-specific success check: dribble-phase band (timing axis) AND
     /// authoritative hand-side (side axis), both required (ADR-0018 §2).
     ///
-    /// Called by BallController.ResolveStealAttempts on every tick the defender's
-    /// machine is in the Active phase of a StealMove.  At each such tick:
+    /// Called by BallController.ResolveDribblingStealAttempts (the live-dribble
+    /// branch of the ResolveStealAttempts dispatcher, #206) on every tick the
+    /// defender's machine is in the Active phase of a StealMove.  At each such tick:
     ///   • <paramref name="phase"/> is the current DribbleCycle.Phase [0, 1).
     ///   • This is a point-in-band test: the current tick is in the vulnerable
     ///     window iff phase ∈ [loExposed, hiExposed]. The caller's per-Active-tick
