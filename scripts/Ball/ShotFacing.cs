@@ -43,6 +43,81 @@ namespace Hooper.Ball;
 public static class ShotFacing
 {
     /// <summary>
+    /// The angle (radians) beyond which a release is classified "materially
+    /// diverging" from squared-up, for legibility purposes only (issue #243,
+    /// the fadeaway/off-balance shot-animation trigger — parent #185).
+    ///
+    /// This is NOT a second accuracy constant — <see cref="Multiplier"/>
+    /// remains the continuous, threshold-free penalty ADR-0009 specifies.
+    /// π/2 (90°) is reused directly from ADR-0009's own facing-factor table
+    /// (the amendment for issue #81), which names 90° "side-on" as the
+    /// qualitative midpoint between a squared-up shot (0°, 1.00×) and a full
+    /// back-to-basket turnaround (180°, 1.80×): 0°→1.00, 45°→1.20,
+    /// 90°→1.40, 135°→1.60, 180°→1.80. Picking that same documented pivot
+    /// point — rather than inventing an unrelated cutoff — is what satisfies
+    /// the duplicated-constant tripwire (hooper-config-and-flags): one angle
+    /// definition (<see cref="AngleFromTarget"/>), read by both the
+    /// continuous accuracy multiplier and this discrete display trigger.
+    ///
+    /// Deliberately a code constant, not an <c>[Export]</c>: it is defined AS
+    /// half of ShotFacing's own [0, π] domain, not an independent balance
+    /// knob a designer would tune separately from the penalty curve it rides.
+    /// </summary>
+    public const float MateriallyDivergentAngleRadians = MathF.PI / 2f;
+
+    /// <summary>
+    /// Shortest angular distance in [0, π] between <paramref name="headingYaw"/>
+    /// and the direction from <paramref name="shooterPos"/> to
+    /// <paramref name="target"/>. Extracted from <see cref="Multiplier"/> so
+    /// both the continuous accuracy penalty and the discrete fadeaway-anim
+    /// trigger (issue #243) read the exact same angle computation — one
+    /// definition of "how far off-rim," not two.
+    /// </summary>
+    /// <param name="headingYaw">
+    /// Shooter's current heading in radians (Y-rotation, Godot convention:
+    /// Atan2(x, z) on the XZ plane, +Z forward at yaw = 0). Must be the
+    /// server-authoritative <c>PlayerController.Heading</c>, NOT any cosmetic
+    /// FacingResolver output (ADR-0010).
+    /// </param>
+    /// <param name="shooterPos">Shooter's world-space position.</param>
+    /// <param name="target">World-space shot target (rim centre).</param>
+    /// <returns>
+    /// Angle in [0, π]. Returns 0 for the degenerate case (shooter's XZ
+    /// coincides with the target's) — you cannot meaningfully "face away"
+    /// from a target you are already standing on, and 0 correctly maps to
+    /// "no divergence" for every caller of this method.
+    /// </returns>
+    public static float AngleFromTarget(
+        float   headingYaw,
+        Vector3 shooterPos,
+        Vector3 target)
+    {
+        float dx = target.X - shooterPos.X;
+        float dz = target.Z - shooterPos.Z;
+
+        // Guard against the degenerate case (shooter standing on the rim).
+        // Atan2(0, 0) is undefined; 0 angle is the correct "no divergence"
+        // answer here.
+        if (dx * dx + dz * dz < 1e-6f)
+            return 0f;
+
+        // Target yaw: direction from shooter to rim in radians.
+        // Convention matches HeadingMath.RotateToward's desiredYaw formula:
+        // Atan2(x, z) on the XZ ground plane (Godot Y-up, −Z forward).
+        // A yaw of 0 points toward +Z; this formula faces the shooter toward
+        // the basket.
+        float targetYaw = MathF.Atan2(dx, dz);
+
+        // Shortest angular distance in [0, π] between heading and target.
+        // We normalise the raw difference into (−π, π] via the floor trick
+        // (avoids a while-loop, matches HeadingMath's intent exactly), then
+        // take the absolute value to get unsigned angular deviation.
+        float diff = headingYaw - targetYaw;
+        diff = diff - MathF.Tau * MathF.Floor((diff + MathF.PI) / MathF.Tau);
+        return MathF.Abs(diff); // [0, π]
+    }
+
+    /// <summary>
     /// Returns a scatter multiplier ≥ 1.0 based on how far the shooter's
     /// heading diverges from the direction to <paramref name="target"/>.
     ///
@@ -77,30 +152,7 @@ public static class ShotFacing
         Vector3 target,
         float   facingScatterK)
     {
-        float dx = target.X - shooterPos.X;
-        float dz = target.Z - shooterPos.Z;
-
-        // Guard against the degenerate case (shooter standing on the rim).
-        // Atan2(0, 0) is undefined; returning 1.0 gives no facing penalty,
-        // which is correct: you cannot meaningfully "face away" from a target
-        // you are already standing on.
-        if (dx * dx + dz * dz < 1e-6f)
-            return 1f;
-
-        // Target yaw: direction from shooter to rim in radians.
-        // Convention matches HeadingMath.RotateToward's desiredYaw formula:
-        // Atan2(x, z) on the XZ ground plane (Godot Y-up, −Z forward).
-        // A yaw of 0 points toward +Z; this formula faces the shooter toward
-        // the basket.
-        float targetYaw = MathF.Atan2(dx, dz);
-
-        // Shortest angular distance in [0, π] between heading and target.
-        // We normalise the raw difference into (−π, π] via the floor trick
-        // (avoids a while-loop, matches HeadingMath's intent exactly), then
-        // take the absolute value to get unsigned angular deviation.
-        float diff = headingYaw - targetYaw;
-        diff = diff - MathF.Tau * MathF.Floor((diff + MathF.PI) / MathF.Tau);
-        float angle = MathF.Abs(diff); // [0, π]
+        float angle = AngleFromTarget(headingYaw, shooterPos, target);
 
         // Linear penalty: 1.0 at 0°, (1 + facingScatterK) at 180°.
         // Each π/facingScatterK radians of deviation adds 1/π of the full

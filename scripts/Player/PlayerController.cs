@@ -2722,7 +2722,10 @@ public partial class PlayerController : CharacterBody3D
 		// state id — Locomotion/Startup/Active/Recovery.
 		if (_animPlayback == null) return;
 		(MovePhase displayPhase, _) = DisplayMove();
-		MoveAnimState target = MoveAnimResolver.Resolve(displayPhase);
+		// (#243) isFadeaway only ever changes MoveAnimResolver's answer during
+		// Active (a squared-up JumpShot, every other move, and every non-Active
+		// phase ignore it) — see MoveAnimResolver.Resolve's own doc.
+		MoveAnimState target = MoveAnimResolver.Resolve(displayPhase, DisplayFadeaway());
 		if (target != _currentAnimState)
 		{
 			_animPlayback.Travel(target.ToString());
@@ -2794,6 +2797,25 @@ public partial class PlayerController : CharacterBody3D
 		DisplayPhaseResolver.LocalMachineDrivesDisplay(IsServer, IsLocalPlayer)
 			? MoveIdOf(_machine.CurrentMove)
 			: _serverMoveId;
+
+	/// <summary>
+	/// (Issue #243) Whether this node should DISPLAY the fadeaway/off-balance
+	/// shot clip this frame — same per-role resolution as
+	/// <see cref="DisplayMove"/>/<see cref="DisplayMoveId"/> (M7b, #69): the
+	/// role that locally simulates this machine (server for either holder,
+	/// client for its own player) reads the live <c>JumpShot.IsFadeaway</c>
+	/// flag off <c>CurrentMove</c>; the client's copy of a REMOTE opponent has
+	/// no live local machine to read (that peer's machine never advances for
+	/// the opponent's node), so it falls back to the broadcast
+	/// <c>_serverMoveId</c>/<c>_serverMoveParam</c> pair, exactly like
+	/// DisplayMove's burstDir reconstruction — <see cref="MoveParamOf"/>
+	/// repurposes that same payload slot to carry IsFadeaway (1f/0f) for a
+	/// JumpShot specifically.
+	/// </summary>
+	public bool DisplayFadeaway() =>
+		DisplayPhaseResolver.LocalMachineDrivesDisplay(IsServer, IsLocalPlayer)
+			? _machine.CurrentMove is JumpShot jumpShot && jumpShot.IsFadeaway
+			: _serverMoveId == "jumpshot" && _serverMoveParam != 0f;
 
 	/// <summary>
 	/// Whether this node should DISPLAY the whiff-punish "beaten" cue
@@ -3365,6 +3387,26 @@ public partial class PlayerController : CharacterBody3D
 				// same tick — that is a SEPARATE node's read of this machine's
 				// state, not a side effect this switch needs to produce.
 				//
+				// (#243) Classify a JumpShot's release as fadeaway/off-balance
+				// exactly on the tick it enters Active — the same tick the ball
+				// releases (JustReleasedJumpShot/CheckJumpShotRelease) and the
+				// same tick ShotFacing.Multiplier reads Heading server-side for
+				// the accuracy penalty. Must happen HERE, not at Begin(): the
+				// shooter can still be turning through the whole of Startup, so
+				// the classification is only meaningful at the release instant.
+				// Cosmetic-only (ADR-0004): this never feeds back into
+				// accuracy — BallController.ApplyShootLocally computes its own
+				// facingFactor independently from the same Heading/RimCenter
+				// inputs. GetBall() can be null in a scene with no ball wired;
+				// IsFadeaway simply stays false (squared-up default) then.
+				if (_machine.JustEnteredActive && _machine.CurrentMove is JumpShot jumpShotMove)
+				{
+					BallController ball = GetBall();
+					if (ball != null)
+						jumpShotMove.IsFadeaway =
+							FadeawayTriggerResolver.IsFadeaway(Heading, GlobalPosition, ball.RimCenter);
+				}
+
 				// Crossover, BehindTheBack (#194), BetweenTheLegs (#199), and
 				// InAndOut (#202) share the SAME CrossoverBurstMath composition
 				// (composition, not inheritance — see BehindTheBack's doc) with
@@ -3627,9 +3669,9 @@ public partial class PlayerController : CharacterBody3D
 
 	/// <summary>
 	/// The move's reconstruction payload to broadcast — Crossover's and
-	/// BehindTheBack's shared BurstDirection shape, or StealMove's TargetHand.
-	/// 0 when there is no current move or the move type carries no extra
-	/// payload.
+	/// BehindTheBack's shared BurstDirection shape, StealMove's TargetHand, or
+	/// (#243) JumpShot's IsFadeaway classification (1f/0f). 0 when there is no
+	/// current move or the move type carries no extra payload.
 	///
 	/// (#21 doubt cycle 1, finding #2) _serverMoveId/_serverMoveParam are stored
 	/// from every broadcast — satisfying "active move included in the server
@@ -3638,6 +3680,14 @@ public partial class PlayerController : CharacterBody3D
 	/// is consulted (see that method's comment). They are reserved for a
 	/// richer reconciliation once a second move type makes "client and server
 	/// agree a move is active, but disagree on WHICH one" a reachable case.
+	///
+	/// (#243) Unlike the burst-family payloads (fixed at construction),
+	/// JumpShot.IsFadeaway can change mid-life (false through Startup, set
+	/// once at Active-entry) — harmless here, since ReceiveState broadcasts
+	/// this every tick regardless (see the two Rpc(MethodName.ReceiveState...)
+	/// call sites), so the remote-viewing client's DisplayFadeaway() picks up
+	/// the flip within one broadcast of the release tick, same latency as
+	/// every other DisplayMove-family cosmetic.
 	/// </summary>
 	private static float MoveParamOf(CommittedMove move) =>
 		move is Crossover crossover         ? crossover.BurstDirection :
@@ -3645,7 +3695,8 @@ public partial class PlayerController : CharacterBody3D
 		move is BetweenTheLegs betweenLegs  ? betweenLegs.BurstDirection :
 		move is InAndOut inAndOut           ? inAndOut.BurstDirection :
 		move is StealMove steal             ? (float)(int)steal.TargetHand :
-		// BlockMove, JumpShot, Hesitation, and all future no-payload moves → 0f.
+		move is JumpShot jumpShot           ? (jumpShot.IsFadeaway ? 1f : 0f) :
+		// BlockMove, Hesitation, and all future no-payload moves → 0f.
 		0f;
 
 	// ── Shared motion step ────────────────────────────────────────────────────

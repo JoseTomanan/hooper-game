@@ -27,6 +27,16 @@ namespace Hooper.Player;
 ///   Active     — the move's effect frames (MovePhase.Active). The burst fires.
 ///
 ///   Recovery   — the move's cooldown (MovePhase.Recovery). The punish window.
+///
+///   FadeawayActive — (issue #243) the SAME MovePhase.Active frames as
+///                Active, but for a JumpShot released while the shooter's
+///                heading materially diverges from the rim (mid-pivot —
+///                FadeawayTriggerResolver). A distinct clip so both players
+///                can SEE the attempt was off-balance/low-percentage
+///                (ADR-0003 legibility) — ADR-0009's ShotFacing model
+///                already penalizes its accuracy; this is the visual half.
+///                Every other committed move (and a squared-up JumpShot)
+///                keeps using plain Active.
 /// </summary>
 public enum MoveAnimState
 {
@@ -34,4 +44,5 @@ public enum MoveAnimState
     Startup,
     Active,
     Recovery,
+    FadeawayActive,
 }
