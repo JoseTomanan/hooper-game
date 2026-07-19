@@ -127,7 +127,16 @@ public partial class SpinTest : Node
             // IsBallHolder-gated, and GetBall() returning null makes that
             // gate a no-op, isolating the behavior under test from
             // possession state.
-            _p1 = new PlayerController { Name = "1" };
+            //
+            // "remote-exit-vector-preferred" (issue #210) names the node "2"
+            // instead of "1" — with no MultiplayerPeer assigned,
+            // OfflineMultiplayerPeer hardcodes unique_id 1, so "2" makes
+            // IsServer true but IsLocalPlayer FALSE: the TickServerRemotePlayer
+            // role, exactly like MovingCrossoverTest's "remote-pending-stick"
+            // scenario targets for Crossover. Every other Spin scenario stays
+            // named "1" (TickServerRemotePlayer's own-player role), which
+            // never reads _authoritativeExitVector/_pendingRawStick at all.
+            _p1 = new PlayerController { Name = _scenario == "remote-exit-vector-preferred" ? "2" : "1" };
             AddChild(_p1);
         }
     }
@@ -147,6 +156,7 @@ public partial class SpinTest : Node
             case "sweep-path":                          TickSweepPath();                   break;
             case "real-input-trigger":                   TickRealInputTrigger();            break;
             case "reconstruct":                          TickReconstruct();                 break;
+            case "remote-exit-vector-preferred":          TickRemoteExitVectorPreferred();   break;
             default:
                 Fail($"unknown scenario '{_scenario}'.");
                 Finish();
@@ -171,6 +181,7 @@ public partial class SpinTest : Node
         ReplacePlayerAwait, SwitchedAwaitFirstActive, SwitchedAwaitRecovery,
         SweepAwaitDribbling, SweepAwaitSwapped, SweepAwaitInactive, SweepControlAwaitSwapped,
         RealInputFlickStarted, RealInputAwaitInactive, RealInputControlFlickStarted,
+        RemoteExitVectorAwaitLastActive,
     }
     private Step _step = Step.Start;
     private int _stepDeadlineFrame;
@@ -872,6 +883,79 @@ public partial class SpinTest : Node
                 GD.Print("[spin] RESULT: PASS (exit 0)");
                 Finish(0);
                 return;
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Scenario: "remote-exit-vector-preferred" (issue #210)
+    // Proves the fix's shared seam genuinely REACHES Spin, not just the
+    // Crossover family: the SERVER's copy of a REMOTE player's
+    // _pendingRawStick is deliberately poisoned to a WRONG decoy direction
+    // (SetPendingRawStickForHarness, the same seam MovingCrossoverTest's
+    // "remote-pending-stick" control already uses for Crossover), but
+    // _authoritativeExitVector is ALSO set (SetAuthoritativeExitVectorForHarness,
+    // standing in for a real RequestExitVector RPC's arrival) to a DIFFERENT,
+    // TRUE direction. Spin's own composition (_spinEntryExitVector, captured
+    // once at JustEnteredActive and applied on the LAST Active tick) must
+    // reflect the TRUE value, not the poisoned cache — proving
+    // TickServerRemotePlayer's shared `_authoritativeExitVector ??
+    // _pendingRawStick` expression is what every burst-family move's
+    // exitVectorSample parameter ultimately traces back to, Spin included.
+    // The FALLBACK half of that expression (no RPC value received) is not
+    // re-proven here — it is the SAME non-move-specific ternary
+    // MovingCrossoverTest's "remote-pending-stick" scenario already exercises
+    // for Crossover, so proving it twice would test the same line of code
+    // twice, not two different behaviors.
+    // ═══════════════════════════════════════════════════════════════════════
+    private static readonly Vector2 RemoteExitVectorTrue  = new(1f, 0f);
+    private static readonly Vector2 RemoteExitVectorDecoy = new(-1f, 0f);
+
+    private void TickRemoteExitVectorPreferred()
+    {
+        switch (_step)
+        {
+            case Step.Start:
+            {
+                _p1.SetPendingRawStickForHarness(RemoteExitVectorDecoy);
+                bool began = _p1.BeginMoveForHarness(new Spin(spinDirection: 1f));
+                if (!began)
+                {
+                    Fail("remote-exit-vector-preferred: BeginMoveForHarness(Spin) returned false.");
+                    Finish();
+                    return;
+                }
+                // Set AFTER Begin() — BeginCommittedMove unconditionally
+                // clears _authoritativeExitVector at the START of every
+                // attempt (the #210 stale-echo guard), so setting it before
+                // would just be immediately wiped. This mirrors production
+                // timing too: RequestBeginMove is always processed before
+                // RequestExitVector for the SAME move (see RequestExitVector's
+                // own doc on ENet's same-channel ordering guarantee).
+                _p1.SetAuthoritativeExitVectorForHarness(RemoteExitVectorTrue);
+                _step = Step.RemoteExitVectorAwaitLastActive;
+                return;
+            }
+
+            case Step.RemoteExitVectorAwaitLastActive:
+            {
+                if (_p1.PhaseForHarness != MovePhase.Active) return;
+                if (_p1.FrameInPhaseForHarness < ActiveFrames - 1) return; // Spin's exit burst fires on the LAST Active tick only
+
+                Vector3 expected = CrossoverBurstMath.ComposeActiveVelocity(
+                    Vector3.Zero, 0f, 1, RemoteExitVectorTrue,
+                    _p1.SpinBurstSpeed, _p1.SpinForwardBurstScale, _p1.ExitDeadzone);
+                float diff = (expected - _p1.Velocity).Length();
+                if (diff > VelocityTolerance)
+                {
+                    Fail($"remote-exit-vector-preferred: expected the TRUE exit vector {RemoteExitVectorTrue} to win over the poisoned _pendingRawStick {RemoteExitVectorDecoy} — expected velocity={expected}, actual={_p1.Velocity}, diff={diff:F4}.");
+                    Finish();
+                    return;
+                }
+                GD.Print($"[spin] PASS remote-exit-vector-preferred — Spin's composed exit burst used the RPC'd TRUE exit vector {RemoteExitVectorTrue}, not the poisoned _pendingRawStick {RemoteExitVectorDecoy} (diff={diff:F4}); the #210 fix's shared seam reaches Spin.");
+                GD.Print("[spin] RESULT: PASS (exit 0)");
+                Finish(0);
+                return;
+            }
         }
     }
 

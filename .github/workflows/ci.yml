@@ -377,6 +377,7 @@ jobs:
           godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=sweep-path
           godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=real-input-trigger
           godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=reconstruct
+          godot --headless --path . res://tests/integration/SpinTest.tscn -- --harness-scenario=remote-exit-vector-preferred
 
       # On-ball contest as a committed move (issue #99, ADR-0018 §2). Unit
       # tests already pin the pure composition arithmetic
@@ -740,3 +741,29 @@ jobs:
         run: |
           chmod +x tests/integration/run-net-defensive-telegraph.sh
           tests/integration/run-net-defensive-telegraph.sh godot control
+
+      # Dual-instance harness: exit-vector RPC divergence fix (issue #210).
+      # TickClientOwnPlayer (where the new RequestExitVector send site lives)
+      # only ever runs on a role that is "!IsServer && IsLocalPlayer" —
+      # structurally unreachable in a single offline instance, where
+      # Multiplayer.IsServer() is unconditionally true. The CLIENT here drives
+      # a REAL Crossover through the unmodified production input path (a
+      # genuine right-stick gesture via Input.ActionPress, no
+      # BeginXForHarness seam involved for the move itself) and holds a real,
+      # distinct left-stick exit direction. The SERVER carries the verdict
+      # (a deliberate deviation from this repo's other dual-instance
+      # scripts — see NetExitVectorRpcTest.cs's class doc for why). "poisoned":
+      # the server's _pendingRawStick is continuously poisoned to the
+      # OPPOSITE decoy direction throughout the run — the actual regression
+      # proof, since pre-#210 code read that field directly and would have
+      # composed the decoy. "steady": no poisoning — the paired control,
+      # proving the ordinary unpoisoned path is unaffected.
+      - name: Run dual-instance exit-vector RPC harness (poisoned)
+        run: |
+          chmod +x tests/integration/run-net-exitvector-rpc.sh
+          tests/integration/run-net-exitvector-rpc.sh godot poisoned
+
+      - name: Run dual-instance exit-vector RPC harness (steady)
+        run: |
+          chmod +x tests/integration/run-net-exitvector-rpc.sh
+          tests/integration/run-net-exitvector-rpc.sh godot steady

@@ -692,20 +692,63 @@ public partial class PlayerController : CharacterBody3D
 	/// The moving crossover's exit vector needs the OPPOSITE guarantee — the
 	/// TRUE stick value, continuously, even mid-move — so it rides its own
 	/// always-on field fed by two extra SubmitInput floats, never the
-	/// intentionally-gated _pendingInput. Read ONLY inside
-	/// TickCommittedMoveBehavior's Crossover branch; never substituted into
-	/// the Move() call the way _pendingInput is.
+	/// intentionally-gated _pendingInput.
 	///
-	/// This deliberately does NOT ride the moveId/moveParam one-shot RPC the
-	/// way Crossover.BurstDirection does: that RPC fires once at Begin()
-	/// (Startup-entry), 6 frames before Active begins, so the stick's future
-	/// position is unknowable at send time. SubmitInput already streams the
-	/// true stick every tick — exactly the "not a local-only read, predicted
-	/// + reconciled" channel the exit vector needs at the LATER Active-entry
-	/// tick, without racing Active's short (3-tick default) window the way a
-	/// new one-shot RPC fired at Active-entry would (doubt cycle, #198).
+	/// (#210 — DEMOTED to fallback-only.) This field is streamed continuously
+	/// over UnreliableOrdered SubmitInput, so under jitter/packet loss the
+	/// freshest value cached here at the server's OWN JustEnteredActive tick
+	/// can be several ticks stale relative to what the client actually read
+	/// at ITS OWN JustEnteredActive tick — a genuine 5-30 degree burst-angle
+	/// divergence between client and server with no self-heal (issue #210).
+	/// <see cref="_authoritativeExitVector"/> (the discrete
+	/// <see cref="RequestExitVector"/> RPC) is now the PRIMARY source read by
+	/// <see cref="TickServerRemotePlayer"/>; this field is consulted only as
+	/// the fallback for the residual case where that Reliable RPC has not yet
+	/// been processed by the time it's needed — see
+	/// <see cref="_authoritativeExitVector"/>'s doc for why that residual
+	/// can't be proven to never happen. Still read ONLY inside
+	/// TickCommittedMoveBehavior's burst-family branches; never substituted
+	/// into the Move() call the way _pendingInput is.
 	/// </summary>
 	private Vector2 _pendingRawStick;
+
+	/// <summary>
+	/// The exit vector delivered by the client's discrete, one-shot
+	/// <see cref="RequestExitVector"/> RPC for the CURRENTLY active committed
+	/// move — issue #210's fix for the divergence <see cref="_pendingRawStick"/>'s
+	/// doc describes. <c>null</c> means "not yet received for this move" (the
+	/// server falls back to <see cref="_pendingRawStick"/> in that case — see
+	/// <see cref="TickServerRemotePlayer"/>).
+	///
+	/// ── Why a discrete RPC succeeds where the streamed cache didn't ────────
+	/// <see cref="_pendingRawStick"/>'s OWN doc already explains why the exit
+	/// vector couldn't ride the EXISTING moveId/moveParam one-shot RPC
+	/// (RequestBeginMove/BurstDirection): that RPC fires at Begin()
+	/// (Startup-entry), 6 frames before Active begins for a default Crossover
+	/// — the stick's future value is unknowable that early. This is a
+	/// DIFFERENT, NEW one-shot RPC, fired at the CLIENT's own
+	/// <c>JustEnteredActive</c> tick instead (see <see cref="TickClientOwnPlayer"/>)
+	/// — exactly when the value is both known and needed — so it does not
+	/// have that problem. It still needs to be Reliable (a dropped exit
+	/// vector would be a correctness bug, not a smoothing concern — see
+	/// <see cref="RequestExitVector"/>'s own doc), which is precisely what an
+	/// UnreliableOrdered stream cannot promise.
+	///
+	/// ── Reset discipline (doubt-driven-development, #210) ──────────────────
+	/// Cleared to <c>null</c> at the very TOP of <see cref="BeginCommittedMove"/>
+	/// — unconditionally, on EVERY attempt, not only a successful one — so a
+	/// stray value from a move the SERVER rejected (e.g. the dead-Held gate)
+	/// can never survive to pollute a LATER, unrelated move. Combined with the
+	/// phase gate inside <see cref="RequestExitVector"/> itself (only stores
+	/// while the server's OWN machine is genuinely Startup/Active for a
+	/// qualifying move), this does not rely SOLELY on ENet's same-channel
+	/// reliable-ordering guarantee between RequestBeginMove and
+	/// RequestExitVector (verified against Godot's own docs — see that RPC's
+	/// class doc — but treated as defense-in-depth, not the only guard, per
+	/// the doubt cycle finding that the "different RPC methods" granularity
+	/// isn't explicitly spelled out there).
+	/// </summary>
+	private Vector2? _authoritativeExitVector;
 
 	/// <summary>
 	/// Spin's heading-arc anchor (issue #201) — the authoritative Heading at
@@ -735,8 +778,10 @@ public partial class PlayerController : CharacterBody3D
 	/// this arc locally — it just displays the server's broadcast Heading
 	/// directly every tick. Same class of accepted, bounded trade-off as the
 	/// pre-M4 positional-smoothing artifact and the burst's own #210
-	/// exitVectorSample divergence — documented on the record here rather
-	/// than engineered around, per this issue's doubt-driven pass.
+	/// exitVectorSample residual (narrowed, not eliminated, by the
+	/// RequestExitVector RPC fix — see <see cref="_authoritativeExitVector"/>'s
+	/// doc) — documented on the record here rather than engineered around,
+	/// per this issue's doubt-driven pass.
 	/// </summary>
 	private float _spinEntryHeading;
 
@@ -759,7 +804,8 @@ public partial class PlayerController : CharacterBody3D
 	/// per-role source (ReadInput()/_pendingRawStick/rawStick) every sibling
 	/// move already snapshots from, closes that hole AND makes Spin's per-role
 	/// snapshot divergence properties identical to Crossover's own (inherits
-	/// the SAME already-accepted, already-open #210 gap — not a wider one).
+	/// the SAME #210 residual — narrowed by the RequestExitVector RPC fix
+	/// exactly like every other burst-family move's, not a wider one).
 	/// </summary>
 	private Vector2 _spinEntryExitVector;
 
@@ -1289,10 +1335,18 @@ public partial class PlayerController : CharacterBody3D
 		_machine.Tick();
 
 		if (_machine.IsActive)
-			// _pendingRawStick, NOT _pendingInput — see that field's doc for why
-			// the exit-vector snapshot needs the always-on channel rather than
-			// the one the client itself zeroes during a committed move (#198).
-			TickCommittedMoveBehavior(delta, _pendingRawStick);
+			// #210 fix: PREFER the exit vector delivered by the client's
+			// discrete RequestExitVector RPC (fired at the CLIENT's own
+			// JustEnteredActive, the exact tick the value is needed) over the
+			// old continuously-streamed _pendingRawStick cache, which under
+			// jitter/loss could be several ticks stale relative to what the
+			// client actually read. Falls back to _pendingRawStick ONLY if
+			// the Reliable RPC has not yet been processed by this tick — see
+			// RequestExitVector's doc for why that can't be proven to NEVER
+			// happen (a timing race under jitter, not a guarantee either
+			// way); bounded to no worse than the pre-#210 status quo in that
+			// residual case.
+			TickCommittedMoveBehavior(delta, _authoritativeExitVector ?? _pendingRawStick);
 		else
 		{
 			Move(_pendingInput, delta);
@@ -1354,11 +1408,27 @@ public partial class PlayerController : CharacterBody3D
 		int seq = _buffer.Record(moveInput);
 
 		if (_machine.IsActive)
+		{
+			// #210 fix: tell the server the EXACT exit vector THIS role's own
+			// local prediction is about to compose its burst from — fired
+			// ONCE, at THIS role's own JustEnteredActive tick, never at
+			// Begin() (see _authoritativeExitVector's doc for why Begin-time
+			// is 6 frames too early to know the stick's future value). Only
+			// the six moves that actually read exitVectorSample need this
+			// (see TickCommittedMoveBehavior's param doc); every other
+			// committed move (JumpShot, StealMove, ...) skips the call
+			// entirely — RequestExitVector's own phase gate would discard it
+			// anyway, but there's no reason to send it at all.
+			if (_machine.JustEnteredActive && _machine.CurrentMove is Crossover or BehindTheBack
+				or BetweenTheLegs or InAndOut or StepBack or Spin)
+				RpcId(1, MethodName.RequestExitVector, rawStick.X, rawStick.Y);
+
 			// Local zero-lag prediction: rawStick, not moveInput (moveInput is
 			// deliberately zeroed above for Move()/replay purposes — see the
 			// comment on that line — but the exit-vector snapshot needs the
 			// TRUE stick, #198).
 			TickCommittedMoveBehavior(delta, rawStick);
+		}
 		else
 		{
 			Move(moveInput, delta);
@@ -1471,6 +1541,80 @@ public partial class PlayerController : CharacterBody3D
 	}
 
 	/// <summary>
+	/// Called BY THE CLIENT on the SERVER's copy of this node — issue #210's
+	/// fix. Fired ONCE, from <see cref="TickClientOwnPlayer"/>, at the
+	/// CLIENT's own local <c>JustEnteredActive</c> tick for one of the six
+	/// burst-family moves that read an exit vector (Crossover, BehindTheBack,
+	/// BetweenTheLegs, InAndOut, StepBack, Spin — see
+	/// <see cref="TickCommittedMoveBehavior"/>'s <c>exitVectorSample</c> param
+	/// doc for the full list; RetreatDribble/DriveGather/EuroStep never read
+	/// the stick, so they never send this and are unaffected by #210).
+	///
+	/// Transfer mode: Reliable — same one-time-discrete-event reasoning as
+	/// <see cref="RequestBeginMove"/> (see that RPC's doc): a dropped exit
+	/// vector is a correctness bug (the server permanently falls back to the
+	/// stale <see cref="_pendingRawStick"/> cache for this move), not a
+	/// smoothing concern, so it must retransmit rather than silently vanish
+	/// the way an UnreliableOrdered <see cref="SubmitInput"/> drop is allowed
+	/// to.
+	///
+	/// No explicit channel override, matching RequestBeginMove/RequestFeint —
+	/// Godot's high-level multiplayer API gives each TRANSFER MODE its own
+	/// underlying ENet channel regardless of which RPC method sent it ("the
+	/// default channel with index 0 is actually three different channels —
+	/// one for each transfer mode," per Godot's own networking docs), and
+	/// ENet's reliable channels deliver packets in the exact order sent. Since
+	/// the client's own local phase machine can only send RequestBeginMove(B)
+	/// for a NEW move after RequestExitVector(A) for whatever move A preceded
+	/// it (a new move cannot begin locally until the prior one fully cycles
+	/// through Active → Recovery → Inactive), this ordering means A's exit
+	/// vector is always PROCESSED before B's Begin() request arrives — so a
+	/// stale echo of A can never overwrite a freshly-reset slot for B by
+	/// arriving late.
+	///
+	/// That said (doubt-driven-development finding, #210): Godot's own docs
+	/// don't spell out the ordering guarantee at the "two different RPC
+	/// method names" granularity, only "same channel ⇒ same transfer mode."
+	/// This method therefore does NOT rely on that ordering ALONE — see the
+	/// phase gate below, which is defense-in-depth regardless of whether the
+	/// ordering claim above holds in every Godot/ENet version.
+	///
+	/// The phase gate: even a stray/rejected exit vector (the client's OWN
+	/// local prediction reached JustEnteredActive for a move the SERVER
+	/// rejected — e.g. the dead-Held gate in <see cref="BeginCommittedMove"/>)
+	/// is only STORED if the server's own machine is CURRENTLY Startup or
+	/// Active for one of the six qualifying move types — i.e. genuinely
+	/// mid-move on the server's own authoritative copy. A stray value
+	/// arriving while nothing legitimate is running is discarded rather than
+	/// left to pollute <see cref="_authoritativeExitVector"/> until some later,
+	/// unrelated Begin() happens to reset it. Combined with
+	/// <see cref="BeginCommittedMove"/> unconditionally clearing that field at
+	/// the TOP of every attempt (successful or not), a stale value from move A
+	/// cannot be applied to a later move B.
+	///
+	/// Security: same sender check as SubmitInput/RequestBeginMove.
+	/// </summary>
+	[Rpc(MultiplayerApi.RpcMode.AnyPeer,
+		 CallLocal = false,
+		 TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+	private void RequestExitVector(float x, float y)
+	{
+		int senderId = Multiplayer.GetRemoteSenderId();
+		if (senderId.ToString() != Name)
+		{
+			GD.PrintErr($"[PlayerController] Unauthorized RequestExitVector from peer {senderId} for node '{Name}'");
+			return;
+		}
+
+		bool inQualifyingPhase = _machine.Phase is MovePhase.Startup or MovePhase.Active;
+		bool isQualifyingMove = _machine.CurrentMove is Crossover or BehindTheBack or BetweenTheLegs
+			or InAndOut or StepBack or Spin;
+		if (!inQualifyingPhase || !isQualifyingMove) return;
+
+		_authoritativeExitVector = new Vector2(x, y);
+	}
+
+	/// <summary>
 	/// Starts a committed move on <see cref="_machine"/> and — only if it
 	/// actually started — cancels any in-progress in-place pivot (issue #172).
 	///
@@ -1499,6 +1643,14 @@ public partial class PlayerController : CharacterBody3D
 	/// </summary>
 	private bool BeginCommittedMove(CommittedMove move)
 	{
+		// #210 doubt-driven-development fix: unconditionally clear any
+		// previously-received exit vector at the START of every attempt, not
+		// only a successful one — see _authoritativeExitVector's field doc.
+		// A move the SERVER goes on to REJECT (e.g. the dead-Held gate a few
+		// lines down) must not leave a stale value sitting in that field for
+		// whatever move comes next to inherit.
+		_authoritativeExitVector = null;
+
 		// #193 code-review fix: a Crossover/Hesitation IS a dribble move in
 		// real ball — it cannot legally begin while this player HOLDS the
 		// ball in Held state, dead OR live. Without this gate, JumpShot was
@@ -2975,20 +3127,30 @@ public partial class PlayerController : CharacterBody3D
 					// momentum with the exit-vector-driven burst impulse — see
 					// its doc for the full emergent-move table.
 					//
-					// NOT jointly deterministic across client/server the way
-					// Heading is (ADR-0010). Each role composes from its OWN
-					// snapshot of exitVectorSample, sampled at its OWN tick:
-					// the local, zero-lag ReadInput() for an own-player role
-					// vs. the server's networked _pendingRawStick snapshot for
-					// its copy of a remote player (see TickCommittedMoveBehavior's
-					// exitVectorSample param doc). Steady-state (no packet loss,
-					// no jitter) the two composed bursts coincide, but under
-					// loss/jitter they can genuinely diverge for a tick or two —
-					// an accepted gap, corrected by the existing prediction/
-					// reconciliation path rather than closed here. Tracked as
-					// issue #210; not this issue's scope to fix — BehindTheBack,
-					// BetweenTheLegs, and InAndOut all ride the SAME composition
-					// path, so #210's eventual fix covers all of them for free.
+					// (#210, fixed) STILL NOT jointly deterministic across
+					// client/server the way Heading is (ADR-0010) — each role
+					// composes from its OWN snapshot of exitVectorSample — but
+					// the SERVER's snapshot (TickServerRemotePlayer's call
+					// site) now PREFERS the value delivered by the client's
+					// discrete RequestExitVector RPC, fired at the client's
+					// own JustEnteredActive tick, over the old continuously-
+					// streamed _pendingRawStick cache that used to be the
+					// sole source. Any tick the RPC has already been
+					// processed by the time the server needs it, the two
+					// composed bursts are IDENTICAL, not just coincidentally
+					// close — the RPC IS the client's own value, not a second
+					// independent read of it. The residual: the RPC can only
+					// be proven to win a same-frame-or-earlier arrival, not a
+					// strict "always beats the old cache" guarantee under
+					// adversarial jitter (see RequestExitVector's doc for the
+					// timing analysis) — in that rare residual case this falls
+					// back to _pendingRawStick, i.e. no worse than the
+					// pre-#210 status quo, never a NEW divergence class.
+					// BehindTheBack, BetweenTheLegs, and InAndOut all ride the
+					// SAME composition path (and the SAME RequestExitVector
+					// send site, gated on CurrentMove type in
+					// TickClientOwnPlayer), so this fix covers all of them,
+					// and Spin (below), for free.
 					float burstSign = _machine.CurrentMove switch
 					{
 						Crossover c      => c.BurstDirection,
