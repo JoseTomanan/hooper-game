@@ -986,6 +986,16 @@ public partial class PlayerController : CharacterBody3D
 	}
 
 	/// <summary>
+	/// Tracks the last holderPeerId THIS handler observed, across every
+	/// PossessionChanged emission (not just ones addressed to THIS player) —
+	/// see OnPossessionChangedForAwardStamp's doc for why this is required.
+	/// -1 means "nothing observed yet" (0 is a legitimate "no holder" value
+	/// BallController._lastEmittedHolder's own doc already reserves -1 for
+	/// the analogous reason).
+	/// </summary>
+	private int _lastSeenHolderPeerIdForAwardStamp = -1;
+
+	/// <summary>
 	/// #224 fix: stamps <see cref="_awardStampSeq"/> the instant possession is
 	/// awarded to THIS player. See that field's doc for the full rationale.
 	/// Filtered to this node's own peer — every PlayerController instance on
@@ -993,9 +1003,26 @@ public partial class PlayerController : CharacterBody3D
 	/// (regardless of which player it goes to) fires this handler on every
 	/// player node; only the node whose OwnPeerId matches the new holder
 	/// should update its stamp.
+	///
+	/// (Code-review fix) BallController.EmitPossessionIfChanged fires
+	/// PossessionChanged whenever EITHER the holder OR the cleared flag
+	/// differs from the last emit — not only on a genuine new award. A
+	/// player who is ALREADY the holder can trigger a cleared-only emission
+	/// (e.g. carrying the ball across the clear line, ADR-0008's take-it-
+	/// back rule, UpdateClearStatus) with no possession change at all. A
+	/// naive "holderPeerId == OwnPeerId" filter would re-stamp on THAT event
+	/// too, needlessly re-closing the freshness gate for ~1 tick on a drive
+	/// that was already legitimately in progress. Guarding on
+	/// _lastSeenHolderPeerIdForAwardStamp actually CHANGING restricts the
+	/// re-stamp to genuine award transitions only, matching this method's
+	/// own doc ("the instant possession is awarded").
 	/// </summary>
 	private void OnPossessionChangedForAwardStamp(int holderPeerId, bool cleared)
 	{
+		bool holderChanged = holderPeerId != _lastSeenHolderPeerIdForAwardStamp;
+		_lastSeenHolderPeerIdForAwardStamp = holderPeerId;
+		if (!holderChanged) return; // same holder as last emission -- a cleared-only toggle, not a new award
+
 		if (holderPeerId != OwnPeerId) return;
 		_awardStampSeq = _serverAckedSeq;
 	}
