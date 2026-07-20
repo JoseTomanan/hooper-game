@@ -3,9 +3,22 @@ using Hooper.Moves;
 namespace Hooper.Ball.Tests;
 
 /// <summary>
-/// Characterization tests proving a SECOND, broader "phantom shot" gap found
-/// while diagnosing the same reported bug FeintGateResolverTests fixes one
-/// instance of (windup animation plays, ball never releases).
+/// Regression locks for a RATIFIED design behavior: a committed move plays to
+/// completion even when an external event (a defensive steal, ADR-0018 #96, or
+/// an OOB carry-turnover, ADR-0008 #63/#118) has taken the ball away mid-move
+/// and made its payload structurally impossible.
+///
+/// These began (2026-07-03) as CHARACTERIZATION tests — pinning behavior whose
+/// correctness was undecided, found while diagnosing the same reported bug
+/// FeintGateResolverTests fixes one instance of (windup animation plays, ball
+/// never releases). Issue #189 escalated the "should anything interrupt the
+/// move?" question to the human, who ruled (2026-07-20) that the move SHOULD
+/// play through: the player is planted for its full duration and loses that
+/// time, and the lost time IS the punishment for committing to a move the
+/// defender broke up. See the ADR-0003 amendment "External events do not
+/// interrupt a committed move (#189)". The behavior below is therefore
+/// design-INTENDED, and these tests now lock it against regression rather than
+/// documenting an open gap.
 ///
 /// BallController.CheckJumpShotRelease/ApplyShootLocally extend a Godot Node
 /// and cannot run headless (ADR-0004), so — exactly as OobShotReleaseTests and
@@ -19,17 +32,16 @@ namespace Hooper.Ball.Tests;
 ///     actually began the JumpShot.
 ///
 /// CommittedMoveMachine has no Cancel()/Interrupt() by design (ADR-0003 "no
-/// flow-cancel" — a committed move runs to completion or a feint abort). That
-/// design targets player-INITIATED cancellation. It has the side effect that
-/// nothing stops a player's machine from completing a full JumpShot lifecycle
-/// (and its windup/active/recovery animation, which reads Phase alone via
-/// MoveAnimResolver — see MoveAnimResolverTests) after an EXTERNAL event (an
-/// OOB carry-turnover, ADR-0008 #63/#118, or a defensive steal, ADR-0018 #96)
-/// has already taken the ball away. The release the machine "fires" is
-/// structurally unreachable — BallController would resolve `holder` to
-/// whoever the ball's CURRENT HolderPeerId is, not the original shooter.
+/// flow-cancel"), and the #189 ruling confirms that absence extends to
+/// external events too: nothing stops a player's machine from completing a
+/// full JumpShot lifecycle (and its windup/active/recovery animation, which
+/// reads Phase alone via MoveAnimResolver — see MoveAnimResolverTests) after
+/// the ball is gone. The release the machine "fires" is structurally
+/// unreachable — BallController resolves `holder` to whoever the ball's
+/// CURRENT HolderPeerId is, not the original shooter — so no phantom basket
+/// ever scores; only the animation plays.
 ///
-/// This is NOT the same gap #120/OobShotReleaseTests covers (OOB at the exact
+/// This is NOT the same case #120/OobShotReleaseTests covers (OOB at the exact
 /// release tick, which correctly voids the shot). This is possession changing
 /// at ANY earlier point during Startup/Active, well before release — a much
 /// wider window (up to 18 Startup + 4 Active ticks vs. one release tick) and,
@@ -39,7 +51,7 @@ namespace Hooper.Ball.Tests;
 /// ── Test naming ──────────────────────────────────────────────────────────────
 /// [Scenario]_[ExpectedOutcome]
 /// </summary>
-public class PhantomShotCharacterizationTests
+public class CommittedMovePlaysThroughPossessionLossTests
 {
     private const int Shooter  = 1;
     private const int Opponent = 2;

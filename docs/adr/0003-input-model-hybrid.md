@@ -24,6 +24,12 @@
   #198 amendment already bounds it to, as its ONLY "fewer follow-ups" cost —
   never a recovery-frame or chain/cooldown penalty. See *Exit-cone width as
   the sole "fewer follow-ups" lever* below.
+- **Refined:** 2026-07-20 (M9/M10, #189) — human design ruling: the "no
+  flow-cancel" rule also covers **external-event** interruption, not just
+  player-initiated cancellation. A committed move whose payload an external
+  event (a steal or OOB carry-turnover) has made structurally impossible still
+  runs to completion; the wasted planted time IS the punishment. See *External
+  events do not interrupt a committed move* below.
 - **Superseded-by:** —
 
 ---
@@ -373,6 +379,51 @@ Crossover call site is bit-for-bit unaffected — the cone is a parameter on
 the SAME shared pure function, not a forked copy of the math (composition
 over hierarchy, matching BehindTheBack's own "own CommittedMove subclass,
 not a Crossover flag" structure).
+
+### External events do not interrupt a committed move (M9/M10, #189)
+
+The Context and Decision above frame "no flow-cancel" against
+**player-initiated** cancellation — you cannot bail out of your own committed
+move because you changed your mind, and that absence is the mind game. Issue
+#189 surfaced the adjacent, previously-unaddressed case: an **external** event
+during a committed move's Startup/Active — a defensive steal during the
+dribble gather (ADR-0018 #96) or a carry-OOB turnover (ADR-0008 #63/#118) —
+takes the ball away and makes the move's payload structurally impossible (a
+`JumpShot` whose release can never resolve, because `BallController` reads the
+ball's CURRENT `HolderPeerId`, which is no longer the shooter). Nothing on
+`CommittedMoveMachine` reacts to this; the windup → active → recovery ticks to
+completion regardless, and the shot animation plays with no ball ever leaving
+the hand.
+
+**Ruling (human, 2026-07-20): this is intended behavior, not a gap.** The
+committed move runs to completion even when an external event has already
+voided its payload. The player is planted for the move's full duration and
+loses that time — and **the lost time is exactly the punishment** for having
+committed to a move the defender read and broke up. This applies to **all**
+committed moves, not just `JumpShot`.
+
+**Why this is a scope clarification, not a contradiction:** the "no
+flow-cancel" principle exists so that committing to a move is a real,
+punishable bet. An external interrupt that shortcut the animation would
+*refund* that bet — the moment a steal landed, the loser would instantly get
+their body back and their time returned, erasing the very punishment the read
+earned. Letting the move play out is therefore not a grudging side effect of
+having no `Cancel()`; it is the same commitment principle the ADR already
+states, now confirmed to hold whether the move ends because it finished, because
+the player was punished, or because the ball was taken. The reality reference
+agrees (ADR-0014 tier-1): a stripped shooter does not teleport back to neutral;
+they finish the useless shooting motion while the defender is already gone.
+
+**Rejected alternative — an external-event interrupt/abort carve-out
+(triage's staged recommendation).** Add some form of `Interrupt()` to
+`CommittedMoveMachine` that a possession change fires, so the animation can
+abort or show a "whiff" the instant the ball is lost. Rejected by the human
+ruling above: it refunds the commitment (see the paragraph above) and buys
+nothing the status quo lacks — no phantom basket can score today, because the
+holder check already fails once possession moves. Any *cosmetic* whiff cue is a
+separate **feel** question, deferred to the consolidated human feel pass (#173,
+ADR-0021), not a mechanics change. A request to add an external-event cancel
+path to `CommittedMoveMachine` contradicts this ruling; it does not refine it.
 
 ## Consequences
 
