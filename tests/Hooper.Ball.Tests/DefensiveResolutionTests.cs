@@ -1,3 +1,4 @@
+using System;
 using Godot;
 using Hooper.Ball;
 using Hooper.Moves;
@@ -670,5 +671,224 @@ public class DefensiveResolutionTests
             defenderPosition: new Vector3(0f, 0f, 5f),
             sweptBallPosition: new Vector3(0f, 1f, 5f),
             reachRadius: 2.2f));
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // WithinHeldStealReach — static Held-steal spatial gate (issue #255,
+    // ADR-0018 Amendment 2026-07-20, Route A). Thin delegate to
+    // WithinBlockReach, same shape as WithinStealTransitReach's own tests —
+    // a minimal smoke matrix since the underlying primitive is already
+    // exhaustively covered above; this only pins the delegation itself.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void WithinHeldStealReach_DistanceInsideRadius_ReturnsTrue()
+    {
+        Assert.True(DefensiveResolution.WithinHeldStealReach(
+            defenderPosition: new Vector3(1f, 0f, 0f),
+            ballPosition: new Vector3(0f, 0f, 0f),
+            reachRadius: 2.2f));
+    }
+
+    [Fact]
+    public void WithinHeldStealReach_DistanceExactlyAtRadius_ReturnsTrue()
+    {
+        // Boundary inclusive, matching WithinBlockReach's own convention.
+        Assert.True(DefensiveResolution.WithinHeldStealReach(
+            defenderPosition: new Vector3(2.2f, 0f, 0f),
+            ballPosition: new Vector3(0f, 0f, 0f),
+            reachRadius: 2.2f));
+    }
+
+    [Fact]
+    public void WithinHeldStealReach_JustBeyondRadius_ReturnsFalse()
+    {
+        Assert.False(DefensiveResolution.WithinHeldStealReach(
+            defenderPosition: new Vector3(2.21f, 0f, 0f),
+            ballPosition: new Vector3(0f, 0f, 0f),
+            reachRadius: 2.2f));
+    }
+
+    [Fact]
+    public void WithinHeldStealReach_IgnoresVerticalSeparation_ReturnsTrue()
+    {
+        Assert.True(DefensiveResolution.WithinHeldStealReach(
+            defenderPosition: new Vector3(0f, 5f, 0f),
+            ballPosition: new Vector3(0f, 0f, 0f),
+            reachRadius: 2.2f));
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // HeldStaticHandExposed — static Held-steal FACING gate (issue #255,
+    // ADR-0018 Amendment 2026-07-20, Route A) — the genuinely new predicate.
+    //
+    // Convention pinned by these tests — LOCKED to BallController.HandRight/
+    // HandSign, the same formula the ball render itself uses (see
+    // HeldStaticHandExposed's own class doc for the full derivation): at
+    // heading == 0 (facing +Z), forward == (0,1) in (worldX, worldZ) terms,
+    // right == (-forward.Z, forward.X) == (-1, 0) == world -X, and
+    // handDirection == right * handSign. So a RIGHT-hand ball is carried
+    // toward world -X and a LEFT-hand ball toward world +X — the OPPOSITE of
+    // the naive "Right = +X" assumption a fresh reader is prone to making
+    // (this file's first version got exactly this backwards; code review
+    // caught it before merge — see the PR discussion). Cone half-angle used
+    // throughout: 60° (π/3 rad) — an arbitrary but fixed test fixture value;
+    // it does NOT assert BallController.HeldStealExposureConeDegrees's actual
+    // provisional default (that is a separate, feel-owned number, #238).
+    // ═══════════════════════════════════════════════════════════════════════
+
+    private const float ConeSixty = MathF.PI / 3f;
+
+    [Fact]
+    public void HeldStaticHandExposed_DefenderOnRightHandAxis_RightHand_ReturnsTrue()
+    {
+        // heading 0, Right hand -> exposed direction is -X (HandRight/
+        // HandSign convention). Defender directly on that axis (dot == 1).
+        Assert.True(DefensiveResolution.HeldStaticHandExposed(
+            holderPosition: new Vector3(0f, 0f, 0f),
+            holderHeading: 0f,
+            holderHand: HandSide.Right,
+            defenderPosition: new Vector3(-1f, 0f, 0f),
+            halfConeRadians: ConeSixty));
+    }
+
+    [Fact]
+    public void HeldStaticHandExposed_DefenderOnOppositeAxis_RightHand_ReturnsFalse()
+    {
+        // Defender on the OFF-hand side (+X) while the exposed hand is Right
+        // (-X) — squarely outside any reasonable cone (dot == -1).
+        Assert.False(DefensiveResolution.HeldStaticHandExposed(
+            holderPosition: new Vector3(0f, 0f, 0f),
+            holderHeading: 0f,
+            holderHand: HandSide.Right,
+            defenderPosition: new Vector3(1f, 0f, 0f),
+            halfConeRadians: ConeSixty));
+    }
+
+    [Fact]
+    public void HeldStaticHandExposed_DefenderOnLeftHandAxis_LeftHand_ReturnsTrue()
+    {
+        // heading 0, Left hand -> exposed direction is +X (HandSign flips
+        // the same `right` axis).
+        Assert.True(DefensiveResolution.HeldStaticHandExposed(
+            holderPosition: new Vector3(0f, 0f, 0f),
+            holderHeading: 0f,
+            holderHand: HandSide.Left,
+            defenderPosition: new Vector3(1f, 0f, 0f),
+            halfConeRadians: ConeSixty));
+    }
+
+    [Fact]
+    public void HeldStaticHandExposed_DefenderOnRightAxis_LeftHand_ReturnsFalse()
+    {
+        // Ball carried in the LEFT hand -> a defender squarely on the RIGHT-
+        // hand side (-X) is on the protected side, not the exposed one.
+        Assert.False(DefensiveResolution.HeldStaticHandExposed(
+            holderPosition: new Vector3(0f, 0f, 0f),
+            holderHeading: 0f,
+            holderHand: HandSide.Left,
+            defenderPosition: new Vector3(-1f, 0f, 0f),
+            halfConeRadians: ConeSixty));
+    }
+
+    [Fact]
+    public void HeldStaticHandExposed_DefenderDirectlyInFront_ReturnsFalse()
+    {
+        // Squared-up defense (directly at +Z, the holder's Forward) is 90°
+        // off a ±X hand axis — outside a 60° cone regardless of which hand.
+        Assert.False(DefensiveResolution.HeldStaticHandExposed(
+            holderPosition: new Vector3(0f, 0f, 0f),
+            holderHeading: 0f,
+            holderHand: HandSide.Right,
+            defenderPosition: new Vector3(0f, 0f, 1f),
+            halfConeRadians: ConeSixty));
+    }
+
+    [Fact]
+    public void HeldStaticHandExposed_ExactlyAtConeBoundary_ReturnsTrue()
+    {
+        // Defender at EXACTLY 60° off the Right-hand (-X) axis — the closed
+        // (inclusive) boundary, matching StealSucceeds's own closed-band
+        // convention (phase >= lo && phase <= hi) rather than Succeeds's
+        // half-open [start, end) tick convention (this is a continuous
+        // spatial angle, not a discrete tick range). The -X axis sits at
+        // angle 180 degrees from +X in (X,Z) polar terms, so a point 60
+        // degrees off it (rotating toward +Z) sits at 180-60=120 degrees.
+        float angleFromPositiveX = MathF.PI - ConeSixty; // 120 degrees
+        var defenderPos = new Vector3(MathF.Cos(angleFromPositiveX), 0f, MathF.Sin(angleFromPositiveX));
+
+        Assert.True(DefensiveResolution.HeldStaticHandExposed(
+            holderPosition: new Vector3(0f, 0f, 0f),
+            holderHeading: 0f,
+            holderHand: HandSide.Right,
+            defenderPosition: defenderPos,
+            halfConeRadians: ConeSixty));
+    }
+
+    [Fact]
+    public void HeldStaticHandExposed_JustBeyondConeBoundary_ReturnsFalse()
+    {
+        // One degree past the 60° edge (off the -X axis) -> just outside
+        // the cone: 180-61=119 degrees from +X.
+        float angleFromPositiveX = MathF.PI - (ConeSixty + MathF.PI / 180f); // 119 degrees
+        var defenderPos = new Vector3(MathF.Cos(angleFromPositiveX), 0f, MathF.Sin(angleFromPositiveX));
+
+        Assert.False(DefensiveResolution.HeldStaticHandExposed(
+            holderPosition: new Vector3(0f, 0f, 0f),
+            holderHeading: 0f,
+            holderHand: HandSide.Right,
+            defenderPosition: defenderPos,
+            halfConeRadians: ConeSixty));
+    }
+
+    [Fact]
+    public void HeldStaticHandExposed_HolderTurnsToShield_FalsifiesPreviouslyExposedAngle()
+    {
+        // A defender squarely on the Left-hand axis at heading 0 (+X, dot ==
+        // 1, exposed)...
+        Assert.True(DefensiveResolution.HeldStaticHandExposed(
+            holderPosition: new Vector3(0f, 0f, 0f),
+            holderHeading: 0f,
+            holderHand: HandSide.Left,
+            defenderPosition: new Vector3(1f, 0f, 0f),
+            halfConeRadians: ConeSixty));
+
+        // ...is shielded off once the holder pivots 180 degrees: the whole
+        // cone rotates with Heading, so the SAME defender position is now
+        // squarely OFF-axis (dot == -1). This is the "turn the body to
+        // shield the ball" counter the issue's design contract requires.
+        Assert.False(DefensiveResolution.HeldStaticHandExposed(
+            holderPosition: new Vector3(0f, 0f, 0f),
+            holderHeading: MathF.PI,
+            holderHand: HandSide.Left,
+            defenderPosition: new Vector3(1f, 0f, 0f),
+            halfConeRadians: ConeSixty));
+    }
+
+    [Fact]
+    public void HeldStaticHandExposed_DegenerateCoincidentPositions_ReturnsFalse()
+    {
+        // Holder and defender at the identical XZ point: no discriminable
+        // direction (would divide by zero) -> false, not a throw/NaN.
+        Assert.False(DefensiveResolution.HeldStaticHandExposed(
+            holderPosition: new Vector3(3f, 0f, 4f),
+            holderHeading: 0f,
+            holderHand: HandSide.Right,
+            defenderPosition: new Vector3(3f, 0f, 4f),
+            halfConeRadians: ConeSixty));
+    }
+
+    [Fact]
+    public void HeldStaticHandExposed_IgnoresVerticalSeparation_ReturnsTrue()
+    {
+        // Y offset must not by itself defeat exposure — XZ-only, matching
+        // every other spatial gate in this file (WithinBlockReach etc.).
+        // Right hand's exposed axis is -X (HandRight/HandSign convention).
+        Assert.True(DefensiveResolution.HeldStaticHandExposed(
+            holderPosition: new Vector3(0f, 0f, 0f),
+            holderHeading: 0f,
+            holderHand: HandSide.Right,
+            defenderPosition: new Vector3(-1f, 5f, 0f),
+            halfConeRadians: ConeSixty));
     }
 }
