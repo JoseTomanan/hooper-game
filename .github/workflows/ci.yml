@@ -178,6 +178,47 @@ jobs:
           godot --headless --path . res://tests/integration/TransitStealTest.tscn -- --harness-scenario=out-of-reach-recovery
           godot --headless --path . res://tests/integration/TransitStealTest.tscn -- --harness-scenario=normal-window-unchanged
 
+      # Transit steal window coverage for the NON-crossover sweep paths
+      # (issue #261, a #196 follow-up). AdvanceHandSweep (BallController.cs)
+      # drives the SAME _sweepActive flag for EVERY sweep move — Crossover,
+      # BehindTheBack, BetweenTheLegs, and Spin's BodyShield sweep — so
+      # ResolveDribblingStealAttempts' transit window already applied to all
+      # of them; the gap this closes is COVERAGE (only Crossover had a
+      # dedicated scenario), not a behavior change. Each pair below reuses
+      # the SAME headline/control shape as transit-steal/out-of-reach-
+      # recovery above (see TransitStealTest.cs's class doc and
+      # ComputeStealBeginFrameAfterFlip), with a discriminator RE-DERIVED
+      # per move rather than copy-pasted:
+      #   - transit-steal-behind-the-back / out-of-reach-recovery-behind-
+      #     the-back and transit-steal-between-the-legs / out-of-reach-
+      #     recovery-between-the-legs: BehindTheBack/BetweenTheLegs both
+      #     flip HandSide on JustEnteredActive (the same tick Crossover
+      #     does) and share Crossover's exact Startup/Active frame counts,
+      #     so the same "old-hand-targeted, mistimed-for-the-normal-window"
+      #     schedule discriminates them too — computed from each move's own
+      #     LIVE DefaultFrameData, not hardcoded, so a future #238 retune
+      #     that diverges their timing from Crossover's fails loud instead
+      #     of going vacuous.
+      #   - transit-steal-spin / out-of-reach-recovery-spin: Spin flips
+      #     HandSide on its LAST Active tick, not JustEnteredActive (see
+      #     Spin's class doc's "swap at the END" section) — a genuinely
+      #     different flip point, so this pair schedules the steal's Active
+      #     window against THAT later flip instead of assuming Crossover's
+      #     timing.
+      # All six scenarios were proven RED by temporarily neutering
+      # BallController's transitWindowSucceeds term (forcing it false) —
+      # every "transit-steal-*" headline failed (ball stayed Dribbling, no
+      # turnover) while the fix was disabled — and GREEN with the term
+      # restored (PR body). Each exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run transit steal window harness (non-crossover sweep paths)
+        run: |
+          godot --headless --path . res://tests/integration/TransitStealTest.tscn -- --harness-scenario=transit-steal-behind-the-back
+          godot --headless --path . res://tests/integration/TransitStealTest.tscn -- --harness-scenario=out-of-reach-recovery-behind-the-back
+          godot --headless --path . res://tests/integration/TransitStealTest.tscn -- --harness-scenario=transit-steal-between-the-legs
+          godot --headless --path . res://tests/integration/TransitStealTest.tscn -- --harness-scenario=out-of-reach-recovery-between-the-legs
+          godot --headless --path . res://tests/integration/TransitStealTest.tscn -- --harness-scenario=transit-steal-spin
+          godot --headless --path . res://tests/integration/TransitStealTest.tscn -- --harness-scenario=out-of-reach-recovery-spin
+
       # Steal aim→hand FACING transform (issue #254). StealTurnoverTest above
       # isolates the TIMING axis only — both its players sit at the
       # spawn-default Heading 0 throughout, so a regression in the aim→hand
