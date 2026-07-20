@@ -617,6 +617,25 @@ public partial class BallController : Node3D
 	/// </summary>
 	[Export] public float BlockReachRadius { get; set; } = 2.2f;
 
+	/// <summary>
+	/// Maximum XZ distance (metres) between the defender and the SWEPT ball
+	/// position at which a transit (crossover-sweep) steal can still connect
+	/// (issue #196, ADR-0018 Amendment 2026-07-20). Gated by
+	/// ResolveDribblingStealAttempts alongside `_sweepActive` (the timing
+	/// axis) — BOTH must hold; neither replaces the live-dribble two-axis
+	/// check, they union.
+	///
+	/// Default 2.2 m reuses the SAME ADR-0014 real-ball "arm's-length
+	/// closeout" anchor <see cref="ContestRange"/> and <see cref="BlockReachRadius"/>
+	/// already cite (issue #65) — a new export because it is a DISTINCT feel
+	/// axis (a different move's reach), not because the physical concept
+	/// differs. Provisional — feel tuning deferred to the consolidated tuning
+	/// pass #238 (NOT #104 — #104 closed into #238 because the magnitudes
+	/// interact), consistent with how BlockReachRadius documents its own
+	/// deferral.
+	/// </summary>
+	[Export] public float StealReachRadius { get; set; } = 2.2f;
+
 	// ── Contest tunables (M10, issue #99, ADR-0018 §2) ────────────────────
 
 	/// <summary>
@@ -1656,24 +1675,47 @@ public partial class BallController : Node3D
 	}
 
 	/// <summary>
-	/// Server-only (issue #96, ADR-0018 §2): the original live-dribble steal
-	/// check, unchanged by #206 — split out of ResolveStealAttempts so that
-	/// method could become a state dispatcher without duplicating this body.
+	/// Server-only (issue #96, ADR-0018 §2, extended by issue #196's transit
+	/// window, ADR-0018 Amendment 2026-07-20): the live-dribble steal check.
 	///
 	/// A steal succeeds iff, on ANY tick the defender's committed-move machine is
-	/// in the Active phase of a StealMove, both steal axes pass (ADR-0018 §2):
-	///   Axis 1 — dribble phase in the exposed band [StealLoExposed, StealHiExposed]
-	///   Axis 2 — defender's TargetHand matches the holder's authoritative
-	///             HandSide (ADR-0012 — read from PlayerController, never from
-	///             the cosmetic FacingResolver)
+	/// in the Active phase of a StealMove, EITHER of two windows is open —
+	/// unioned, not exclusive (#196 does not replace the original check):
 	///
-	/// This is checked EVERY Active tick, not just the entry tick: ADR-0018
-	/// defines success as the Active window OVERLAPPING the exposed band (an
-	/// interval), so sampling only the entry tick (the merged #96 bug) collapsed
-	/// that to a point and left the Active window's width inert. Re-reading the
-	/// live _dribble.Phase each Active tick evaluates the interval model against
-	/// ground-truth phase — no projection, no duplicated dribble math — and
-	/// steals on the first in-band, matching-hand tick.
+	///   (a) Normal dribble window (unchanged since #96) — both axes pass:
+	///       Axis 1 — dribble phase in the exposed band [StealLoExposed, StealHiExposed]
+	///       Axis 2 — defender's TargetHand matches the holder's authoritative
+	///                 HandSide (ADR-0012 — read from PlayerController, never
+	///                 from the cosmetic FacingResolver)
+	///   (b) Transit window (#196) — while a #195 ball-hand sweep is active
+	///       (SweepActiveForHarness's backing `_sweepActive`), the defender is
+	///       within StealReachRadius of the ball's actual SWEPT position
+	///       (GlobalPosition — see TickDribbling, which writes the sweep's
+	///       offsets directly into it, never a cosmetic mesh offset; this is
+	///       why #196 needed no new netcode, ADR-0004). Hand side is
+	///       deliberately IGNORED here — the ball is between hands mid-transit,
+	///       so `targetHand` has no discriminable referent; the reach check
+	///       IS the de-facto side discriminator (a defender only ends up close
+	///       to the swept position on the side the ball is crossing INTO).
+	///
+	///       2v2 note: a facing-cone gate (defender must face the swept ball)
+	///       is deliberately omitted here — in 1v1 the on-ball defender always
+	///       faces the handler, so a cone never bites. The natural extension
+	///       point for a help-defender side-poke, once 2v2 exists, is composing
+	///       a heading-cone check alongside this reach test, not folding one in.
+	///
+	/// Both windows are checked EVERY Active tick, not just the entry tick —
+	/// same interval-overlap-by-repetition reasoning as the original #96 fix
+	/// (see the class-level ADR-0018 Amendment 2026-07-01): re-reading live
+	/// state each Active tick evaluates the interval model against ground
+	/// truth with no projection, no duplicated math.
+	///
+	/// A transit-steal WHIFF (defender Active expires naturally into Recovery
+	/// without either window ever opening) needs no dedicated handling here —
+	/// it is caught generically by ResolveBeatenWindowTriggers'
+	/// JustWhiffedDefensiveMove&lt;StealMove&gt;() regardless of which branch
+	/// almost fired, exactly as ADR-0018's #100 amendment designed it
+	/// ("reusable by construction, not hardwired to steal (#196)").
 	///
 	/// On a whiff: no action. The defender's CommittedMoveMachine continues
 	/// through Recovery naturally — the punish window is implicit, not wired here.
@@ -1697,21 +1739,36 @@ public partial class BallController : Node3D
 			if (stealActive == null) continue;
 			HandSide targetHand = stealActive.Value.Move.TargetHand;
 
-			// Two-axis steal check (ADR-0018 §2, issue #96), re-evaluated against
-			// the live dribble phase THIS tick: DefensiveResolution.StealSucceeds
-			// checks side first (fast exit if wrong hand), then the phase band.
-			// Pure method, no engine calls — same result on server AND any
-			// predicting client (ADR-0004).
-			bool success = DefensiveResolution.StealSucceeds(
+			// Window (a) — normal dribble two-axis check (ADR-0018 §2, issue
+			// #96), re-evaluated against the live dribble phase THIS tick:
+			// DefensiveResolution.StealSucceeds checks side first (fast exit if
+			// wrong hand), then the phase band. Pure method, no engine calls —
+			// same result on server AND any predicting client (ADR-0004).
+			bool normalWindowSucceeds = DefensiveResolution.StealSucceeds(
 				_dribble.Phase,
 				StealLoExposed, StealHiExposed,
 				targetHand, holder.HandSide);
 
-			if (success)
+			// Window (b) — transit window (issue #196, ADR-0018 Amendment
+			// 2026-07-20): gated on the timing axis (_sweepActive) here at the
+			// call site — SweepActiveForHarness is the harness-visible mirror
+			// of the same private field TickDribbling/TickHeld already
+			// maintain — with the spatial axis delegated to the pure predicate.
+			// Short-circuits on !_sweepActive so the common case (no sweep in
+			// progress) pays only a bool check, never the distance math.
+			bool transitWindowSucceeds = _sweepActive
+				&& DefensiveResolution.WithinStealTransitReach(
+					defender.GlobalPosition, GlobalPosition, StealReachRadius);
+
+			// Union, not exclusive-or: either window resolves the SAME steal
+			// success path exactly once (ADR-0018 Amendment 2026-07-20 — a
+			// third steal shape composed alongside, not replacing, (a)).
+			if (normalWindowSucceeds || transitWindowSucceeds)
 			{
 				ResolveStealSuccess(holder, defender);
 				GD.Print($"[BallController] Steal success: defender {defender.Name}, " +
-						 $"phase {_dribble.Phase:F2}, hand {holder.HandSide}");
+						 $"phase {_dribble.Phase:F2}, hand {holder.HandSide}, " +
+						 $"viaTransit={transitWindowSucceeds && !normalWindowSucceeds}");
 				return; // only one steal resolves per tick
 			}
 			// Whiff this tick: keep checking subsequent Active ticks (the loop
