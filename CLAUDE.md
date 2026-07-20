@@ -108,8 +108,13 @@ the human.
 > map (#101), on-ball contest (#99, PR #221), blow-by punish (#100), telegraph
 > remote sync (#102), held-ball steal window (#206, PR #259 — Option A pump-fake
 > window, ADR-0018 Amendment 2026-07-19; the dead-Held staller half was carved
-> off to #255). Remaining: spatial steal window (#196) and #255 (deferred
-> dead-Held staller — no travel/5-second pressure yet). Tuning is no longer
+> off to #255), spatial/transit steal window (#196, PR #260 — a third steal
+> shape unioned into the live-dribble check: while a #195 ball-hand sweep is
+> active a defender within `StealReachRadius` of the swept ball position
+> connects with the hand-side axis dropped, ADR-0018 Amendment 2026-07-20).
+> Remaining: #255 (deferred dead-Held staller — no travel/5-second pressure
+> yet) and #261 (transit-steal harness coverage for the non-crossover sweep
+> paths, a #196 follow-up). Tuning is no longer
 > per-milestone: #104 closed into the consolidated tuning pass **#238**, because
 > the magnitudes interact (see that issue). Feel for M9+M10 is deferred to the
 > consolidated human feel pass **#173** (#114 is the M9+M10 checklist folded
@@ -132,7 +137,7 @@ the human.
 | M8 — Realism & polish pass | Done (epic closed; leftover verify/feel/realism work continues under M8b) | #61 |
 | **M8b — Realism & polish pass, continued** | **Active** (umbrella; M8 leftovers — #153 net/fence verify, #170 realistic player rig (sourcing bounded by ADR-0020) + its verify #178) | #171 |
 | **M9 — Basketball-related controls (offense)** | **Active** (umbrella; dribble-move family largely landed — PR #88, #194/#195/#197/#198/#199; open: #200/#201/#202/#209/#210; rim-finishing vertical #203 (ADR-0022) un-deferred 2026-07-17, #229/#230/#232 landed — open: #231, #236; feel deferred to #173 per ADR-0021, #114 folded in) | #75 |
-| **M10 — Defense & the reactive read** | **Active** (umbrella; core shipped — ADR-0018 #95, steal #96, block #98/#214, contest #99, blow-by #100, telegraph #102, held-ball steal #206 (PR #259, Option A); open: #196, deferred staller #255; tuning #104 closed into #238; feel deferred to #173 per ADR-0021, #114 folded in) | #89 |
+| **M10 — Defense & the reactive read** | **Active** (umbrella; core shipped — ADR-0018 #95, steal #96, block #98/#214, contest #99, blow-by #100, telegraph #102, held-ball steal #206 (PR #259, Option A), transit/spatial steal #196 (PR #260, ADR-0018 Amendment 2026-07-20); open: deferred staller #255, non-crossover transit-steal coverage #261; tuning #104 closed into #238; feel deferred to #173 per ADR-0021, #114 folded in) | #89 |
 | M11 — Stamina & resource economy | DEFERRED (planning epic) | #90 |
 | M12 — Match flow, HUD & session lifecycle | DEFERRED (planning epic) | #91 |
 | M13 — Audio & game feel | DEFERRED (planning epic) | #92 |
