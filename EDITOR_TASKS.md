@@ -947,6 +947,14 @@ tell Claude Code.
 
 ### Step 2 — Issue #68: get idle/run animations onto the rig
 
+> ⚠️ **Superseded by #170 (M8b).** The `characterMedium.fbx` Kenney rig this
+> section describes has been replaced as the player visual by the Mixamo **Y Bot**
+> rig (`assets/Y Bot.fbx`); `characterMedium.fbx` and its textures were deleted.
+> The locomotion clips below (`locomotion.res` etc.) were authored against the
+> Kenney skeleton and do **not** bind to the `mixamorig:` bones — re-binding them
+> is the follow-up **#267**, and this section stays only as the historical record
+> of how the M7b clips were made. Do not follow it against the current rig.
+
 **Source:** `Documents/kenney_animated-characters-protagonists/Animations/idle.fbx`
 and `run.fbx` (sibling folder to this repo, CC0 license) — same skeleton as the
 `characterMedium.fbx` already imported for M7a, so this should be a clean
