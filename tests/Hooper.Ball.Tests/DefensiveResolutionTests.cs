@@ -600,4 +600,75 @@ public class DefensiveResolutionTests
         Assert.True(DefensiveResolution.HeldStealSucceeds(
             activeStart: 5, activeEnd: 13, vulnStart: 0, vulnEnd: 18));
     }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // WithinStealTransitReach — the transit (crossover-sweep) steal window's
+    // spatial axis (issue #196, ADR-0018 Amendment 2026-07-20).
+    //
+    // Timing (is a sweep currently active?) is gated by the CALLER reading
+    // BallController's authoritative _sweepActive — this predicate is purely
+    // spatial: is the defender within reachRadius of the swept ball position?
+    // A thin, separately-named delegate to WithinBlockReach (same XZ-only
+    // distance concept — a grounded defender's reach doesn't care about the
+    // ball's height — different call site / different tunable radius), for
+    // call-site legibility, exactly mirroring the HeldStealSucceeds -> Succeeds
+    // and ContestAppliesAt -> Succeeds precedents already in this file.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    [Fact]
+    public void WithinStealTransitReach_DefenderAtSweptBallPosition_ReturnsTrue()
+    {
+        Assert.True(DefensiveResolution.WithinStealTransitReach(
+            defenderPosition: new Vector3(0f, 0f, 5f),
+            sweptBallPosition: new Vector3(0f, 0f, 5f),
+            reachRadius: 2.2f));
+    }
+
+    [Fact]
+    public void WithinStealTransitReach_DistanceInsideRadius_ReturnsTrue()
+    {
+        Assert.True(DefensiveResolution.WithinStealTransitReach(
+            defenderPosition: new Vector3(1f, 0f, 5f),
+            sweptBallPosition: new Vector3(0f, 0f, 5f),
+            reachRadius: 2.2f));
+    }
+
+    [Fact]
+    public void WithinStealTransitReach_DistanceExactlyAtRadius_ReturnsTrue()
+    {
+        // Boundary inclusive, matching WithinBlockReach's own convention.
+        Assert.True(DefensiveResolution.WithinStealTransitReach(
+            defenderPosition: new Vector3(2.2f, 0f, 5f),
+            sweptBallPosition: new Vector3(0f, 0f, 5f),
+            reachRadius: 2.2f));
+    }
+
+    [Fact]
+    public void WithinStealTransitReach_DistanceBeyondRadius_ReturnsFalse()
+    {
+        Assert.False(DefensiveResolution.WithinStealTransitReach(
+            defenderPosition: new Vector3(0f, 0f, -1f),
+            sweptBallPosition: new Vector3(0f, 0f, 5f),
+            reachRadius: 2.2f));
+    }
+
+    [Fact]
+    public void WithinStealTransitReach_JustBeyondRadius_ReturnsFalse()
+    {
+        Assert.False(DefensiveResolution.WithinStealTransitReach(
+            defenderPosition: new Vector3(2.21f, 0f, 5f),
+            sweptBallPosition: new Vector3(0f, 0f, 5f),
+            reachRadius: 2.2f));
+    }
+
+    [Fact]
+    public void WithinStealTransitReach_IgnoresVerticalSeparation_ReturnsTrue()
+    {
+        // XZ-only, matching WithinBlockReach — the swept ball's dip/hand-height
+        // Y offset must not by itself defeat the reach gate.
+        Assert.True(DefensiveResolution.WithinStealTransitReach(
+            defenderPosition: new Vector3(0f, 0f, 5f),
+            sweptBallPosition: new Vector3(0f, 1f, 5f),
+            reachRadius: 2.2f));
+    }
 }

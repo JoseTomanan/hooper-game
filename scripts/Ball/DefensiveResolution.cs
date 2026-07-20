@@ -270,4 +270,59 @@ public static class DefensiveResolution
     /// <param name="vulnEnd">First tick after the holder's Held-steal vulnerable window (exclusive).</param>
     public static bool HeldStealSucceeds(int activeStart, int activeEnd, int vulnStart, int vulnEnd)
         => Succeeds(activeStart, activeEnd, vulnStart, vulnEnd);
+
+    /// <summary>
+    /// Transit (crossover-sweep) steal spatial gate (issue #196, ADR-0018
+    /// Amendment 2026-07-20). A THIRD steal shape, unioned with (not
+    /// replacing) the live-dribble two-axis read (<see cref="StealSucceeds"/>)
+    /// and the Held pump-fake window (<see cref="HeldStealSucceeds"/>):
+    /// during a #195 ball-transit sweep, the side axis is dropped (the ball is
+    /// between hands — see <see cref="BallController"/>.
+    /// ResolveDribblingStealAttempts for why `targetHand` is ignored here) and
+    /// replaced by a spatial one — is the defender within reach of the ball's
+    /// actual SWEPT position, which self-encodes "exposed on the side the ball
+    /// crosses into."
+    ///
+    /// ── Why a thin delegate, not a fresh implementation ──────────────────
+    /// Identical XZ-only distance concept to <see cref="WithinBlockReach"/>
+    /// (a grounded defender's reach doesn't care about the ball's height —
+    /// same rationale, see that method's doc), just a different call site and
+    /// a different tunable radius (<see cref="BallController.StealReachRadius"/>,
+    /// NOT BlockReachRadius — a separate feel axis for a separate move).
+    /// Named for call-site legibility rather than making
+    /// ResolveDribblingStealAttempts call "WithinBlockReach" for a steal,
+    /// mirroring the HeldStealSucceeds -> Succeeds and ContestAppliesAt ->
+    /// Succeeds precedents already in this file: reuse the primitive, name
+    /// the wrapper for the caller's own vocabulary.
+    ///
+    /// ── Timing is NOT part of this predicate ─────────────────────────────
+    /// Unlike Succeeds/StealSucceeds/HeldStealSucceeds, this method takes no
+    /// tick bounds at all — the timing axis (is a #195 sweep currently
+    /// active?) is gated by the CALLER reading BallController's authoritative
+    /// `_sweepActive` field directly (mirroring how ResolveDribblingStealAttempts
+    /// already gates the live-dribble check by reading
+    /// `defender.ActiveMove&lt;StealMove&gt;()`), not threaded through this pure
+    /// method as an interval. The spatial test alone is what's left to encode
+    /// once timing is externally satisfied.
+    ///
+    /// ── 2v2 extension point (deliberately NOT built here) ────────────────
+    /// A facing-cone gate (defender must be facing the swept ball, heading
+    /// within a cone) is deliberately OMITTED for 1v1: the on-ball defender
+    /// always faces the handler, so a cone never bites — it would just add
+    /// dead code with no discriminating power in the 1v1 case this issue
+    /// scopes. The natural extension point for a help-defender side-poke,
+    /// once 2v2 exists, is composing a heading-cone check alongside this
+    /// reach test at the call site — not folding one in here.
+    /// </summary>
+    /// <param name="defenderPosition">Defender's world position (engine lookup resolved by the caller).</param>
+    /// <param name="sweptBallPosition">
+    /// The ball's authoritative GlobalPosition while a #195 sweep is active —
+    /// TickDribbling writes the sweep's lateral/forward/vertical offsets
+    /// directly into this position (not a cosmetic mesh offset), so it is the
+    /// same honest, reconciled value on the server and every predicting
+    /// client (ADR-0004).
+    /// </param>
+    /// <param name="reachRadius">Maximum XZ distance (metres) at which a transit steal can still connect.</param>
+    public static bool WithinStealTransitReach(Vector3 defenderPosition, Vector3 sweptBallPosition, float reachRadius)
+        => WithinBlockReach(defenderPosition, sweptBallPosition, reachRadius);
 }

@@ -145,6 +145,39 @@ jobs:
           godot --headless --path . res://tests/integration/HeldStealTest.tscn -- --harness-scenario=held-immune-outside-window
           godot --headless --path . res://tests/integration/HeldStealTest.tscn -- --harness-scenario=pumpfake-now-exposed
 
+      # Transit (crossover-sweep) steal window (issue #196, ADR-0018 Amendment
+      # 2026-07-20). StealTurnoverTest above only ever checks the live-dribble
+      # two-axis (phase+hand) window; before this fix, a crossover's mid-body
+      # ball transit had NO spatial term at all, and — worse — HandSide flips
+      # to the new hand the instant Active begins while the ball is still
+      # visibly sweeping across on the OLD side, so a defender reaching for
+      # exactly where the ball visibly is got refused on the hand axis.
+      # 'transit-steal' is the HEADLINE: the defender's StealMove targets the
+      # holder's OLD hand, scheduled so the crossover's hand-flip completes
+      # several ticks before the defender's Active window even opens — the
+      # normal window's side axis is guaranteed to fail for the WHOLE run —
+      # yet the turnover connects anyway because the defender sits within
+      # StealReachRadius of the swept ball's authoritative GlobalPosition
+      # during the live #195 sweep. 'out-of-reach-recovery' is the CONTROL:
+      # identical setup, defender placed far outside reach — the steal must
+      # never connect, the ball must stay Dribbling, the defender's StealMove
+      # must expire naturally into Recovery, and the #100 whiff-punish beaten
+      # window must fire (without this control, 'transit-steal' passing would
+      # be equally consistent with "any steal always connects regardless of
+      # reach"). 'normal-window-unchanged' is a second CONTROL guarding the
+      # union itself: a plain live-dribble steal with a correctly-matched
+      # hand and no crossover in play must still connect via the original
+      # window (a) branch, unaffected by the added `||`. All three were
+      # proven RED against the pre-#196 ResolveDribblingStealAttempts
+      # ('transit-steal' fails — ball stays Dribbling, no turnover; the two
+      # controls are unaffected by the fix either way, by design) and GREEN
+      # after (PR body). Each exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run transit steal window harness
+        run: |
+          godot --headless --path . res://tests/integration/TransitStealTest.tscn -- --harness-scenario=transit-steal
+          godot --headless --path . res://tests/integration/TransitStealTest.tscn -- --harness-scenario=out-of-reach-recovery
+          godot --headless --path . res://tests/integration/TransitStealTest.tscn -- --harness-scenario=normal-window-unchanged
+
       # Steal aim→hand FACING transform (issue #254). StealTurnoverTest above
       # isolates the TIMING axis only — both its players sit at the
       # spawn-default Heading 0 throughout, so a regression in the aim→hand

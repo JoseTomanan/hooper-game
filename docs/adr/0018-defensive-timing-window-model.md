@@ -440,3 +440,111 @@ the defender's Active window opens, then pump-fakes away; the turnover
 connects anyway via the window above). Proven RED against the pre-#206
 `ResolveStealAttempts`/`GoLoose()` and GREEN after, per ADR-0016's
 evidence bar.
+
+## Amendment 2026-07-20 — Transit (crossover-sweep) steal window (#196)
+
+### The gap this closes
+
+§2's steal window keys on the dribble-phase band only — nowhere does it read
+where the ball physically IS. Worse, `HandSide` flips to the new hand in a
+single tick at crossover Active-entry (issue #195), while the ball itself is
+still physically sweeping across the body — mid-transit, the authoritative
+hand already reports the NEW side while the ball is visibly still on the OLD
+side. A defender poking exactly where the ball visibly is gets told "wrong
+hand," the one moment the ball is most exposed being the one moment the
+existing model refuses. Real 1v1 (ADR-0014 tier 2): a cross in the defender's
+grill risks a poke — the ball briefly exposed as it travels hand-to-hand, and
+a defender reading that exposure can reach in and knock it loose.
+
+### The decision: a THIRD steal shape, unioned with the normal window
+
+Locked by grill+triage 2026-07-04, implemented once #195 (the authoritative
+swept ball position) landed. The transit window is unioned with — not a
+replacement for — the normal live-dribble window §2 already defines. Both
+are evaluated every tick `ResolveDribblingStealAttempts` sees the defender's
+`StealMove` in Active; either succeeding resolves the SAME steal-success path
+(`ResolveStealSuccess`) exactly once (§1's "one steal resolves per tick" still
+holds — the union is checked, then a single resolution fires):
+
+| Window | Timing axis | Side axis | Spatial axis |
+|---|---|---|---|
+| Normal dribble (§2, unchanged) | `Phase ∈ [lo, hi]` | must match `HandSide` | — |
+| **Transit (#196, this amendment)** | ticks the #195 sweep is active (`_sweepActive`) | **dropped** | defender within `StealReachRadius` of the **swept** ball position |
+
+- **Timing axis = the #195 sweep-active interval.** Gated by the CALLER
+  (`ResolveDribblingStealAttempts`) reading `_sweepActive` directly (the same
+  private field `SweepActiveForHarness` mirrors for harness observability) —
+  not threaded through the pure predicate as tick bounds, because the caller
+  already owns exactly this kind of gate for the normal window's
+  `ActiveMove<StealMove>()` check. "Visibly crossing == stealable," one
+  source of truth, maximally legible (ADR-0003).
+- **Spatial axis = `DefensiveResolution.WithinStealTransitReach(defenderPos,
+  sweptBallPos, StealReachRadius)`** — a thin delegate to the SAME XZ-only
+  distance primitive block's reach gate uses (`WithinBlockReach`, #214),
+  named separately for call-site legibility (mirroring how
+  `HeldStealSucceeds`/`ContestAppliesAt` are themselves thin delegates to §1's
+  shared `Succeeds`). New export `StealReachRadius` (default 2.2 m) reuses the
+  SAME ADR-0014 "arm's-length closeout" anchor `ContestRange`/
+  `BlockReachRadius` already cite (issue #65) — a new export because it is a
+  distinct feel axis (a different move's reach), not because the physical
+  concept differs. Feel tuning deferred to the consolidated tuning pass #238
+  (#104 closed into #238 because the magnitudes interact), consistent with
+  how `BlockReachRadius` documents its own deferral.
+- **Side axis is DROPPED during transit.** The ball is between hands —
+  `targetHand` has no discriminable referent mid-sweep — so the spatial axis
+  IS the de-facto side discriminator: a defender only ends up close to the
+  swept position on the side the ball is actually crossing INTO. This is the
+  headline behavior: a steal connects during the sweep even though
+  `holder.HandSide` already reports the NEW hand, closing exactly the gap
+  described above.
+- **A facing-cone gate is deliberately omitted for 1v1.** The on-ball
+  defender always faces the handler, so a cone gate never bites in the
+  current 1v1 game — it would add dead code with no discriminating power.
+  The natural extension point for a help-defender side-poke, once 2v2 exists,
+  is composing a heading-cone check alongside the reach test at the call
+  site, not folding one into the pure predicate.
+
+### Determinism (ADR-0002/0004) — no new netcode
+
+The swept ball position is not a new authoritative channel: `TickDribbling`
+already writes the #195 sweep's lateral/forward/vertical offsets directly
+into the ball's authoritative `GlobalPosition` (never a cosmetic mesh
+offset — re-confirmed by direct read of `TickDribbling`/`AdvanceHandSweep`
+for this amendment, the doubt-cycle check this issue's own spec called for
+given the M7b #69 remote-display bug class), and `ReceiveState` broadcasts
+that same `GlobalPosition` every tick. The transit check therefore reads
+already-reconciled state exactly like the normal window's `_dribble.Phase`
+read — no new RPC, no new prediction/reconciliation channel, identical
+result on the server and every predicting client.
+
+### Whiff → blow-by composes for free (reuses #100's lane)
+
+A transit-steal whiff — the defender's `StealMove` Active phase expiring
+naturally into Recovery without either window ever opening — needs no
+dedicated handling: it is caught generically by `ResolveBeatenWindowTriggers`'
+`JustWhiffedDefensiveMove<StealMove>()`, which detects a natural whiff
+regardless of which steal branch almost fired. This is exactly what the §
+"Reusable by construction, not hardwired to steal (#196)" note under the
+2026-07-16 whiff-punish amendment predicted — the blow-by lane needed no
+changes for this issue.
+
+### Harness proof (ADR-0016)
+
+`tests/integration/TransitStealTest.tscn`: `transit-steal` (the headline
+scenario — a defender's `StealMove` Active window overlaps a live #195
+crossover sweep, positioned within `StealReachRadius` of the swept ball;
+the turnover connects even though `holder.HandSide` already reports the new
+hand, and the defender's `TargetHand` is deliberately set to the OLD hand so
+the normal window's side axis would refuse — isolating that the transit
+window, not the normal one, resolved the steal), `out-of-reach-recovery`
+(CONTROL — identical setup, defender positioned well outside
+`StealReachRadius`; the steal must NOT connect, the defender's `StealMove`
+must resolve naturally into Recovery, and the resulting beaten window must
+fire — proving both the risk half of the gamble AND that the setup could
+have detected a steal at all). Proven RED against the pre-#196
+`ResolveDribblingStealAttempts` and GREEN after, per ADR-0016's evidence bar.
+
+Out of scope, per the issue: #255 (the deferred dead-Held staller — a plain,
+idle `Held` ball with no sweep or shot attempt in progress remains untouched
+by this amendment, same as it was left by #206) and any 2v2 facing-cone term
+(noted above as a future extension point, not built here).
