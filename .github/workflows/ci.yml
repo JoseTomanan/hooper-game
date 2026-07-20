@@ -139,11 +139,54 @@ jobs:
       # asserts the turnover connects anyway. All three were proven RED
       # against the pre-#206 ResolveStealAttempts/BallStateMachine.GoLoose()
       # and GREEN after (PR #206 body). Each exits 0=PASS/1=FAIL (ADR-0016).
+      #
+      # Static Held-steal exposure (issue #255, ADR-0018 Amendment
+      # 2026-07-20, Route A — human-decided over Route B's closely-guarded/
+      # 5-second rule). #206 above deliberately left one case untouched: a
+      # plain, idle Held possession with NO JumpShot ever begun (a "dead-Held
+      # staller") had HeldStealVulnerableWindow permanently null and was
+      # fully immune. 'held-static-vulnerable' is the HEADLINE: no committed
+      # move on the holder at all, a defender within HeldStealReachRadius AND
+      # on the holder's exposed ball-hand cone (HeldStealExposureConeDegrees)
+      # times a real StealMove Active window — the turnover must connect via
+      # the NEW static term alone (holder window stays null throughout).
+      # 'held-static-immune-out-of-reach' is a CONTROL: identical on-axis
+      # geometry/timing, defender moved beyond the reach radius — the steal
+      # must NOT connect (proves the reach axis actually gates, not just
+      # "any nearby StealMove connects"). 'held-static-immune-shielded' is a
+      # second CONTROL: identical in-reach geometry, but the holder's
+      # Heading is force-rotated 180 degrees before the steal resolves,
+      # rotating the exposed cone off the defender entirely — the "turn the
+      # body to shield the ball" counter the issue's design contract
+      # requires; the steal must NOT connect (proves the facing axis, not
+      # just proximity, is load-bearing). NOTE: this control is left/right
+      # SYMMETRIC — a mirrored hand-side convention would still pass it (this
+      # is exactly how a real mirror bug survived code review's first pass on
+      # this PR). 'held-static-immune-wrong-side' is the control that
+      # actually pins handedness: identical heading/timing, defender within
+      # reach but on the PROTECTED off-hand side (opposite the ball's actual
+      # carry side, per BallController.HandRight/HandSign — NOT the naive
+      # "Right hand = world +X" assumption; Godot's +Z-forward,
+      # right-handed convention makes a facing-+Z player's actual right point
+      # toward world -X) — the steal must NOT connect. 'held-static-vulnerable'
+      # and 'held-static-immune-wrong-side' were both proven RED against a
+      # deliberately re-mirrored hand-side convention and GREEN against the
+      # corrected one; 'held-static-vulnerable' was ALSO proven RED against
+      # the pre-#255 ResolveHeldStealAttempts (which early-returned whenever
+      # HeldStealVulnerableWindow was null) and GREEN after. The two
+      # proximity-only controls (out-of-reach, shielded) are unaffected by
+      # the pre-#255 fix either way (the pre-#255 code was already fully
+      # immune), which is the expected, correct RED/GREEN story for a
+      # control. Each exits 0=PASS/1=FAIL.
       - name: Run held-ball steal window harness
         run: |
           godot --headless --path . res://tests/integration/HeldStealTest.tscn -- --harness-scenario=held-vulnerable
           godot --headless --path . res://tests/integration/HeldStealTest.tscn -- --harness-scenario=held-immune-outside-window
           godot --headless --path . res://tests/integration/HeldStealTest.tscn -- --harness-scenario=pumpfake-now-exposed
+          godot --headless --path . res://tests/integration/HeldStealTest.tscn -- --harness-scenario=held-static-vulnerable
+          godot --headless --path . res://tests/integration/HeldStealTest.tscn -- --harness-scenario=held-static-immune-out-of-reach
+          godot --headless --path . res://tests/integration/HeldStealTest.tscn -- --harness-scenario=held-static-immune-shielded
+          godot --headless --path . res://tests/integration/HeldStealTest.tscn -- --harness-scenario=held-static-immune-wrong-side
 
       # Transit (crossover-sweep) steal window (issue #196, ADR-0018 Amendment
       # 2026-07-20). StealTurnoverTest above only ever checks the live-dribble

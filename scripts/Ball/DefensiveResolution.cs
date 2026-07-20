@@ -1,3 +1,4 @@
+using System;
 using Godot;
 using Hooper.Player;
 
@@ -325,4 +326,172 @@ public static class DefensiveResolution
     /// <param name="reachRadius">Maximum XZ distance (metres) at which a transit steal can still connect.</param>
     public static bool WithinStealTransitReach(Vector3 defenderPosition, Vector3 sweptBallPosition, float reachRadius)
         => WithinBlockReach(defenderPosition, sweptBallPosition, reachRadius);
+
+    /// <summary>
+    /// Static Held-ball steal spatial gate (issue #255, ADR-0018 Amendment
+    /// 2026-07-20, Route A "static proximity/facing exposure" — human-decided
+    /// per the issue's decision comment). Thin delegate to
+    /// <see cref="WithinBlockReach"/>, following the exact
+    /// <see cref="WithinStealTransitReach"/> precedent: same XZ-only distance
+    /// concept (a grounded defender's reach doesn't care about the Held
+    /// ball's height), a distinct tunable radius
+    /// (<see cref="BallController.HeldStealReachRadius"/>, a separate feel
+    /// axis from BlockReachRadius/StealReachRadius), named for this call
+    /// site's own vocabulary.
+    /// </summary>
+    /// <param name="defenderPosition">Defender's world position.</param>
+    /// <param name="ballPosition">The Held ball's world position (== holder's carry position).</param>
+    /// <param name="reachRadius">Maximum XZ distance (metres) at which a static Held steal can still connect.</param>
+    public static bool WithinHeldStealReach(Vector3 defenderPosition, Vector3 ballPosition, float reachRadius)
+        => WithinBlockReach(defenderPosition, ballPosition, reachRadius);
+
+    /// <summary>
+    /// Static Held-ball steal FACING gate (issue #255, ADR-0018 Amendment
+    /// 2026-07-20, Route A) — the genuinely new predicate this issue adds.
+    ///
+    /// ── What this closes ─────────────────────────────────────────────────
+    /// #206 (ADR-0018 Amendment 2026-07-19) closed the PUMP-FAKE dodge but
+    /// explicitly left a plain, idle Held ball (no committed move in
+    /// progress — <see cref="HeldStealSucceeds"/>'s window is null) fully
+    /// immune: a holder who simply never shoots was untouchable. Route A
+    /// (over Route B's closely-guarded/5-second rule, rejected — see the
+    /// ADR-0018 amendment for the full comparison) adds a static exposure
+    /// term so a STATIONARY Held ball is mildly exposed — hard to steal, not
+    /// impossible — mirroring real half-court 1v1 (ADR-0014 tier 2): a
+    /// gathered/triple-threat ball is protected by BODY POSITION, not
+    /// sanctuary. A defender positioned on the ball-hand side can still
+    /// reach in and poke it; a holder who pivots their shoulder/back toward
+    /// the defender (shielding) denies that angle entirely.
+    ///
+    /// ── Why HandSide, not TargetHand (contrast HeldStealSucceeds) ────────
+    /// The pump-fake window (<see cref="HeldStealSucceeds"/>) is deliberately
+    /// TIMING-ONLY — its own doc explains a cradled ball has no discriminable
+    /// hand-side to aim at DURING a pump-fake (the whole body is committed
+    /// to the shot-startup animation, no read to bait). That reasoning does
+    /// NOT apply here: a STATIC triple-threat hold has no committed-move
+    /// startup consuming the body, so the holder's actual carry side
+    /// (<see cref="HandSide"/>, ADR-0012) is a real, currently-true fact
+    /// about where the ball physically sits relative to their torso — and
+    /// exposing it is the exact design property that makes this a FACING
+    /// read (reward defensive positioning) rather than a second timing axis.
+    /// This predicate therefore reads <c>holderHand</c> + <c>holderHeading</c>
+    /// together, never <c>TargetHand</c> — the defender does not need to
+    /// "call" a side; whichever side the ball is actually carried on is the
+    /// side that is exposed, full stop.
+    ///
+    /// ── The geometry (LOCKED to the ball-render convention, not re-derived) ──
+    /// The holder's authoritative <see cref="PlayerController.Heading"/>
+    /// (ADR-0010 — NEVER the cosmetic FacingResolver, exactly like
+    /// <see cref="StealSucceeds"/>'s own HandSide read and ShotFacing's own
+    /// citation) determines a body-relative "hand-side direction." This MUST
+    /// be computed with the exact same formula
+    /// <c>BallController.HandRight</c>/<c>BallController.HandSign</c> already
+    /// use to place the ball mesh in-hand (verified by direct read of those
+    /// methods during code review of this predicate's first version, which
+    /// had derived an independent — and MIRRORED — convention that silently
+    /// pointed the exposed cone at the PROTECTED side instead):
+    ///
+    ///   forward     = HeadingMath.Forward(heading)              // (worldX, worldZ)
+    ///   right       = (-forward.Z, forward.X)                   // BallController.HandRight, flattened to XZ
+    ///   handDirection = right * (hand == Right ? +1 : -1)        // BallController.HandSign
+    ///
+    /// At heading 0 (Forward == +Z, i.e. (0,1) in this (X,Z) pair), that
+    /// gives <c>right = (-1, 0)</c> — world −X — so a Right-hand ball is
+    /// carried toward −X and a Left-hand ball toward +X. This is Godot's
+    /// right-handed, +Z-forward convention: a player facing +Z has their
+    /// anatomical right toward −X, the opposite of the naive "right hand ⇒
+    /// world +X" assumption a fresh reader (or a fresh predicate) is prone to
+    /// making. Deriving this locally from the SAME two primitives the render
+    /// reads — rather than re-deriving "which way is right" independently —
+    /// is what keeps this predicate from drifting out of sync with the
+    /// render again.
+    ///
+    /// The defender is "exposed to" iff the unit vector from the holder to
+    /// the defender falls within <paramref name="halfConeRadians"/> of that
+    /// hand-side direction — a dot-product cone test (both vectors unit
+    /// length, so their dot product IS cos(angle-between)):
+    ///
+    ///   exposed ⟺ dot(toDefender, handDirection) ≥ cos(halfConeRadians) − ε
+    ///
+    /// Turning the holder's body (changing Heading) rotates the ENTIRE cone
+    /// with it — this is exactly how "pivoting to shield the ball" falsifies
+    /// the predicate without moving anyone: rotate 180° and a defender who
+    /// was squarely on-axis (dot = 1) becomes squarely OFF-axis (dot = −1),
+    /// well below any reasonable cone threshold. No separate "is the
+    /// defender behind me" check is needed — the cone IS the shield.
+    ///
+    /// Half-open boundary convention: inclusive (≥), matching
+    /// <see cref="StealSucceeds"/>'s own closed-band convention
+    /// (<c>phase &gt;= lo &amp;&amp; phase &lt;= hi</c>) rather than the
+    /// half-open [start, end) tick-interval convention <see cref="Succeeds"/>
+    /// uses — this is a continuous spatial angle, not a discrete tick range,
+    /// so "exactly at the cone edge" is defined to count as exposed. A tiny
+    /// epsilon (<see cref="ConeBoundaryEpsilon"/>) is subtracted from the
+    /// comparison threshold purely to absorb float round-trip error from
+    /// composing two independent trig evaluations (the caller's cone-edge
+    /// position via MathF.Sin/Cos, and this method's own HeadingMath.Forward)
+    /// — without it, a geometrically-exact boundary case can land a few ULPs
+    /// on the "wrong" side of a bare ≥ and flip a should-be-true result to
+    /// false. It has no effect away from the exact edge.
+    ///
+    /// Degenerate case: holder and defender occupying the identical XZ point
+    /// have no discriminable direction between them (division by zero) —
+    /// returns false (not exposed) rather than throwing or producing NaN.
+    /// This should not arise in practice (a defender at zero XZ distance
+    /// from the holder has already failed <see cref="WithinHeldStealReach"/>'s
+    /// caller-composed reach check in every realistic geometry, but the
+    /// guard exists so this pure function is total regardless).
+    /// </summary>
+    /// <param name="holderPosition">Holder's world position (XZ used; Y ignored).</param>
+    /// <param name="holderHeading">
+    /// Holder's authoritative Heading in radians (ADR-0010 — Y-rotation,
+    /// Godot convention, Atan2(x, z), yaw 0 faces +Z). Must be
+    /// PlayerController.Heading, never a cosmetic facing value.
+    /// </param>
+    /// <param name="holderHand">Holder's authoritative carry HandSide (ADR-0012).</param>
+    /// <param name="defenderPosition">Defender's world position (XZ used; Y ignored).</param>
+    /// <param name="halfConeRadians">
+    /// Half-angle (radians) of the exposed cone straddling the hand-side
+    /// direction. Larger = easier to be "on the exposed side"; smaller =
+    /// the holder must be almost squarely facing away from the defender's
+    /// carry-side for exposure. Provisional tunable — see
+    /// <see cref="BallController.HeldStealExposureConeDegrees"/>.
+    /// </param>
+    public static bool HeldStaticHandExposed(
+        Vector3 holderPosition, float holderHeading, HandSide holderHand,
+        Vector3 defenderPosition, float halfConeRadians)
+    {
+        float dx = defenderPosition.X - holderPosition.X;
+        float dz = defenderPosition.Z - holderPosition.Z;
+        float distSq = dx * dx + dz * dz;
+
+        // Degenerate: coincident XZ positions have no discriminable
+        // direction (would divide by zero below). See method doc.
+        if (distSq < 1e-6f) return false;
+
+        float invDist = 1f / MathF.Sqrt(distSq);
+        var toDefender = new Vector2(dx * invDist, dz * invDist);
+
+        // LOCKED to BallController.HandRight/HandSign's own formula (see this
+        // method's class doc for the worked-through derivation and why a
+        // fresh "Right = +90 degrees" assumption is the WRONG convention in
+        // this codebase's coordinate system) — never re-derive this
+        // independently.
+        Vector2 forward = HeadingMath.Forward(holderHeading); // (worldX, worldZ)
+        Vector2 right = new(-forward.Y, forward.X);           // BallController.HandRight, flattened to XZ
+        float handSign = holderHand == HandSide.Right ? 1f : -1f; // BallController.HandSign
+        Vector2 handDirection = right * handSign;
+
+        float dot = toDefender.Dot(handDirection); // both unit vectors -> cos(angle-between)
+        float cosHalfCone = MathF.Cos(halfConeRadians);
+
+        return dot >= cosHalfCone - ConeBoundaryEpsilon;
+    }
+
+    /// <summary>
+    /// Float round-trip tolerance for <see cref="HeldStaticHandExposed"/>'s
+    /// inclusive cone-boundary comparison — see that method's own doc for why
+    /// a bare ≥ is not float-safe at an exact geometric edge.
+    /// </summary>
+    private const float ConeBoundaryEpsilon = 1e-4f;
 }

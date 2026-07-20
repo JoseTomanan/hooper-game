@@ -636,6 +636,45 @@ public partial class BallController : Node3D
 	/// </summary>
 	[Export] public float StealReachRadius { get; set; } = 2.2f;
 
+	/// <summary>
+	/// Maximum XZ distance (metres) between the defender and a HELD ball at
+	/// which the STATIC exposure term (issue #255, ADR-0018 Amendment
+	/// 2026-07-20, Route A) can still connect. Composed by
+	/// ResolveHeldStealAttempts alongside <see cref="HeldStealExposureConeDegrees"/>
+	/// and the defender's Active-phase timing gate — ALL THREE must hold;
+	/// none replaces the others (same "compose an additional axis at the
+	/// call site" convention as <see cref="BlockReachRadius"/> /
+	/// <see cref="StealReachRadius"/>).
+	///
+	/// Default 2.2 m reuses the SAME ADR-0014 real-ball "arm's-length
+	/// closeout" anchor those two exports already cite (issue #65) — a new
+	/// export because a static Held steal is a DISTINCT feel axis (a
+	/// different move/window entirely), not because the physical concept
+	/// differs. Provisional — tuning deferred to the consolidated tuning
+	/// pass #238 (NOT #104/#114, both closed).
+	/// </summary>
+	[Export] public float HeldStealReachRadius { get; set; } = 2.2f;
+
+	/// <summary>
+	/// Half-angle (degrees) of the exposed cone straddling the Held ball's
+	/// carry-side hand direction (issue #255, ADR-0018 Amendment 2026-07-20,
+	/// Route A). See <see cref="DefensiveResolution.HeldStaticHandExposed"/>
+	/// for the full geometry — larger widens the arc a defender can stand in
+	/// and still be "on the exposed side"; smaller demands the holder be
+	/// almost squarely turned away from the defender's actual approach angle
+	/// before exposure bites.
+	///
+	/// 60° is a provisional starting point (not derived from a specific
+	/// real-ball measurement — ADR-0014 tier-2 citations ground the
+	/// PREDICATE's existence and shape here, not this specific number): wide
+	/// enough that a defender standing roughly abreast of the holder's carry
+	/// side reads as exposed, narrow enough that a defender squared up
+	/// directly in front (90° off either hand axis) or on the fully
+	/// protected off-hand side does not. Tuning deferred to the consolidated
+	/// tuning pass #238.
+	/// </summary>
+	[Export] public float HeldStealExposureConeDegrees { get; set; } = 60f;
+
 	// ── Contest tunables (M10, issue #99, ADR-0018 §2) ────────────────────
 
 	/// <summary>
@@ -1779,45 +1818,60 @@ public partial class BallController : Node3D
 
 	/// <summary>
 	/// Server-only (issue #206, ADR-0018 Amendment 2026-07-19, human-decided
-	/// Option A "pump-fake window"): the Held-ball steal check. Closes the
-	/// previously-total Held-steal immunity — before this, ResolveStealAttempts
-	/// early-returned unless the ball was Dribbling, so a holder who saw a
-	/// steal's Startup telegraph could just tap JumpShot: CradleForShotStartup
-	/// flips Dribbling→Held synchronously, the steal's Active window opens
-	/// against a now-immune ball, and the holder pump-fakes it away — mashing
-	/// pump-fakes was a strictly dominant dodge with zero downside.
+	/// Option A "pump-fake window"; extended by issue #255's Route A static
+	/// exposure term, ADR-0018 Amendment 2026-07-20): the Held-ball steal
+	/// check. Closes the previously-total Held-steal immunity in TWO stages,
+	/// unioned — either window can force the turnover, both route through the
+	/// shared ResolveStealSuccess:
 	///
-	/// A Held steal succeeds iff the defender's StealMove Active window
-	/// overlaps the holder's HeldStealVulnerableWindow (JumpShot Startup or
-	/// feint-Recovery — see that property's own doc for why Recovery here can
-	/// only mean "entered via a pump-fake," never a completed shot). Timing-
-	/// only, no hand-side axis — see DefensiveResolution.HeldStealSucceeds's
-	/// doc for the ADR-0014 tier-2 self-resolution on why a cradled ball
-	/// doesn't carry a discriminable hand-side the way a live dribble does.
+	///   (a) Pump-fake window (#206, unchanged) — the defender's StealMove
+	///       Active window overlaps the holder's HeldStealVulnerableWindow
+	///       (JumpShot Startup or feint-Recovery; null whenever no such move
+	///       is in progress). Timing-only, no hand-side axis — see
+	///       DefensiveResolution.HeldStealSucceeds's doc for why a pump-fake
+	///       exposes the WHOLE gather with no discriminable side to bait.
+	///       Before #255 this early-returned the whole method when the
+	///       window was null — a plain idle Held ball (no shot attempt in
+	///       progress) was untouched entirely; that was #255's exact scope.
 	///
-	/// Deliberately NOT a fix for a holder who never shoots at all (a plain,
-	/// idle Held ball with no committed move in progress returns a null
-	/// window here and is untouched) — that "dead-Held staller" exploit is
-	/// issue #255's scope, not this one's. See ADR-0018's amendment for the
-	/// full rejected-options list (hybrid proximity/facing, 5-second rule).
+	///   (b) Static exposure (#255, NEW) — with no committed move required on
+	///       the holder's side, a defender within HeldStealReachRadius of the
+	///       ball AND positioned inside the exposed hand-side cone
+	///       (DefensiveResolution.HeldStaticHandExposed, reading the
+	///       holder's authoritative Heading + HandSide, ADR-0010/ADR-0012 —
+	///       never the cosmetic FacingResolver) can still force a turnover.
+	///       This is what makes a stationary triple-threat stall hard, not
+	///       impossible, to steal from (ADR-0014 tier-2: real ball, a
+	///       gathered ball is protected by body position, not sanctuary).
+	///       Turning the body to shield the ball (rotating the exposed cone
+	///       away from the defender) falsifies this term — the counter lives
+	///       entirely in HeldStaticHandExposed's geometry, no separate
+	///       "behind the holder" check needed.
+	///
+	/// BOTH branches still require the SAME timing gate as every other steal
+	/// shape (ADR-0018 §1): the defender's committed move must be a StealMove
+	/// currently in its Active phase THIS tick — a steal is a committed read,
+	/// never a passive proximity drain. That gate is checked once, up front
+	/// of the per-defender loop below, before either window is evaluated.
 	/// </summary>
 	private void ResolveHeldStealAttempts()
 	{
 		var holder = Players.GetNodeOrNull(StateMachine.HolderPeerId.ToString()) as PlayerController;
 		if (holder == null) return;
 
-		// Null whenever the holder isn't currently in a JumpShot's Startup or
-		// feint-Recovery — the fast path for every ordinary Held tick (a fresh
-		// tipoff/rebound catch, or a triple-threat hold with no shot attempt
-		// in progress; #255's scope, not this method's).
+		// May be null (no JumpShot Startup/feint-Recovery in progress) — the
+		// #255 static term below is exactly what still applies in that case,
+		// so this no longer early-returns the whole method.
 		var window = holder.HeldStealVulnerableWindow;
-		if (window == null) return;
 
 		foreach (Node child in Players.GetChildren())
 		{
 			if (child is not PlayerController defender) continue;
 			if (defender == holder) continue; // can't steal from yourself
 
+			// Timing gate (ADR-0018 §1), shared by BOTH windows below: a
+			// steal is a committed read, never a passive drain — the
+			// defender's machine must be Active on a StealMove THIS tick.
 			var stealActive = defender.ActiveMove<StealMove>();
 			if (stealActive == null) continue;
 
@@ -1829,14 +1883,28 @@ public partial class BallController : Node3D
 			int activeStart = PhysicsTick - frameInPhase;
 			int activeEnd   = activeStart + move.FrameData.ActiveFrames;
 
-			bool success = DefensiveResolution.HeldStealSucceeds(
+			// Window (a) — pump-fake vulnerable window (#206), unchanged.
+			bool pumpFakeSucceeds = window != null && DefensiveResolution.HeldStealSucceeds(
 				activeStart, activeEnd, window.Value.Start, window.Value.End);
 
-			if (success)
+			// Window (b) — static proximity/facing exposure (#255, Route A).
+			// Short-circuits on pumpFakeSucceeds so the common "already
+			// succeeded via the pump-fake window" case never pays the extra
+			// distance/angle math — same short-circuit discipline
+			// ResolveDribblingStealAttempts's transit window already uses.
+			bool staticSucceeds = !pumpFakeSucceeds
+				&& DefensiveResolution.WithinHeldStealReach(
+					defender.GlobalPosition, GlobalPosition, HeldStealReachRadius)
+				&& DefensiveResolution.HeldStaticHandExposed(
+					holder.GlobalPosition, holder.Heading, holder.HandSide,
+					defender.GlobalPosition, Mathf.DegToRad(HeldStealExposureConeDegrees));
+
+			if (pumpFakeSucceeds || staticSucceeds)
 			{
 				ResolveStealSuccess(holder, defender);
 				GD.Print($"[BallController] Held steal success: defender {defender.Name}, " +
-						 $"holder window [{window.Value.Start},{window.Value.End}), " +
+						 $"viaStatic={staticSucceeds}, " +
+						 $"holder window={(window is { } w ? $"[{w.Start},{w.End})" : "null")}, " +
 						 $"defender active [{activeStart},{activeEnd}).");
 				return; // only one steal resolves per tick
 			}

@@ -548,3 +548,159 @@ Out of scope, per the issue: #255 (the deferred dead-Held staller — a plain,
 idle `Held` ball with no sweep or shot attempt in progress remains untouched
 by this amendment, same as it was left by #206) and any 2v2 facing-cone term
 (noted above as a future extension point, not built here).
+
+## Amendment 2026-07-20 — Static proximity/facing exposure closes the dead-Held staller (#255, Route A)
+
+### The gap this closes
+
+The 2026-07-19 amendment above closed exploit #1 (pump-fake-mash beating a
+steal read) but explicitly left exploit #2 open: a holder who simply never
+attempts a shot — a plain, idle `Held` possession with no `JumpShot` in
+progress — had `HeldStealVulnerableWindow == null` for the ENTIRE hold and
+remained fully steal-immune. No travel/5-second pressure exists in this
+codebase, so a patient triple-threat stall was a free, zero-risk stalling
+tactic with no counter anywhere in the system.
+
+### The decision: Route A, static proximity/facing exposure
+
+Decided by the human 2026-07-20 (issue #255, "HITL: Human response — Go
+with Route A: Static proximity/facing exposure"), over the campaign's
+originally-recommended candidate menu recorded in the 2026-07-19 amendment's
+"Rejected options" list. **A `Held` ball — with or without a `JumpShot` in
+progress — is now ALSO vulnerable whenever a defender is within
+`HeldStealReachRadius` of the ball AND positioned inside the holder's
+exposed ball-hand cone**, unioned with (not replacing) the pump-fake window
+above. Success requires ALL THREE, checked at the call site
+(`BallController.ResolveHeldStealAttempts`):
+
+1. **Timing** — the SAME shared gate every steal shape in this ADR uses:
+   the defender's `StealMove` must be in its Active phase THIS tick
+   (`defender.ActiveMove<StealMove>()`). A steal is a committed read, never
+   a passive proximity drain — this is not a new vulnerable-tick interval,
+   it is the existing timing axis composed with two new spatial/orientation
+   ones.
+2. **Proximity** — `DefensiveResolution.WithinHeldStealReach(defenderPos,
+   ballPos, HeldStealReachRadius)`, a thin delegate to the SAME
+   `WithinBlockReach` XZ-distance primitive block's reach gate (#214) and
+   the transit steal's `WithinStealTransitReach` (2026-07-20 amendment
+   above) already use. New export `HeldStealReachRadius` (default 2.2 m)
+   reuses the SAME ADR-0014 "arm's-length closeout" anchor those two already
+   cite (issue #65) — a distinct feel axis (a different move/window), not a
+   different physical concept.
+3. **Facing exposure** — `DefensiveResolution.HeldStaticHandExposed(holderPos,
+   holder.Heading, holder.HandSide, defenderPos, halfConeRadians)`, the
+   genuinely NEW predicate this amendment adds. Reads the holder's
+   authoritative `Heading` (ADR-0010) and `HandSide` (ADR-0012) — never the
+   cosmetic `FacingResolver` — to derive a world-space "hand-side direction"
+   and tests whether the unit vector from holder to defender falls within a
+   tunable half-angle (`HeldStealExposureConeDegrees`, provisional default
+   60°) of it. Turning the body (changing `Heading`) rotates the whole cone
+   with it — this IS the "shield the ball" counter; no separate "behind the
+   holder" check is needed.
+
+   **The hand-side direction is LOCKED to `BallController.HandRight`/
+   `HandSign`** — the exact formula that already places the ball mesh
+   in-hand (`right = (-forward.Z, forward.X)`, `handSign = +1` for Right/`-1`
+   for Left) — not re-derived independently. Code review of this PR's first
+   version caught a real bug here: it had independently derived "Right ⇒
+   world +X" as a fresh assumption, which is backwards in this codebase's
+   coordinate convention — Godot's +Z-forward, right-handed system puts a
+   facing-+Z player's actual right hand toward world **−X** (a Right-hand
+   ball is carried toward −X, a Left-hand ball toward +X). The independently-
+   derived version pointed the exposed cone at the *protected* side and
+   nothing caught it locally: the unit tests and the one harness scenario
+   that exercised it were written against the SAME wrong assumption, so they
+   all passed green while being semantically inverted. The fix re-derives
+   the hand direction from the same two primitives the render reads, so it
+   cannot drift out of sync with the render again, and adds a harness
+   control (`held-static-immune-wrong-side`, below) specifically shaped to
+   catch a re-introduced mirror — the pre-existing `held-static-immune-
+   shielded` control is left/right symmetric and provably cannot.
+
+### Reconciling with the pump-fake window's "no hand-side axis" note
+
+The 2026-07-19 amendment's `HeldStealSucceeds` is deliberately TIMING-ONLY,
+arguing a cradled ball mid-pump-fake has no discriminable hand-side to aim
+at (the whole body is committed to the shot-startup animation, no read to
+bait). That argument does **not** transfer here, and this predicate
+deliberately reads `HandSide` anyway: a STATIC triple-threat hold has no
+committed-move startup consuming the body, so the holder's actual carry
+side is a real, currently-true fact about where the ball sits relative to
+their torso, not a manufactured axis. Exposing it is the entire point of
+Route A — it is an orientation/positioning read (rewarding a defender who
+gets to the right spot), not a second timing window layered onto the first.
+The two predicates therefore differ in kind on purpose: `HeldStealSucceeds`
+composes ADR-0018 §1's shared `Succeeds` tick-interval form (a discrete
+timing question); `HeldStaticHandExposed` is a continuous spatial-angle
+predicate with its own closed-boundary convention (mirroring §2's
+`StealSucceeds` phase-band inclusivity, not §1's half-open tick convention)
+— see that method's own doc comment for the full boundary-semantics
+rationale.
+
+### ADR-0014 citation (tier 2, real half-court 1v1)
+
+A gathered/triple-threat ball is not sanctuary in real ball — it is
+protected by body position (shoulder/hip between the ball and the defender),
+not invulnerability. A defender who gets goal-side of that positioning, on
+the exposed hand, can still reach in and poke a stationary hold; a holder
+who pivots to shield denies that angle. This is the same reference tier the
+2026-07-19 amendment's own hand-side reasoning cites, applied to the
+opposite conclusion because the underlying game state differs (static hold
+vs. mid-pump-fake gather) — not a contradiction of that amendment, a
+narrower-scoped sibling rule for a case it explicitly deferred.
+
+### Rejected alternative: Route B (closely-guarded / 5-second rule)
+
+Recorded per the campaign's original menu (2026-07-19 amendment, option D)
+and the issue's decision brief. Route B — a server tick counter awarding a
+turnover after N ticks of sustained close-guarding, independent of any
+defensive committed move — was NOT chosen. It amends **ADR-0008**
+(possession rules), not this ADR, since it is a possession-turnover rule
+rather than a defensive-timing-window one; it also carries a legibility
+obligation (a hidden tick count violates CLAUDE.md §1's "legibility is a
+competitive requirement," so it would need a pressure-count HUD element —
+a UI sub-task and feel surface this issue's scope did not take on). Route B
+remains a candidate for a FUTURE issue if Route A alone proves insufficient
+in the human's deferred feel pass (#173) — the two are not mutually
+exclusive; Route A does not preclude adding Route B later, it simply
+resolves #255 on its own without also requiring one.
+
+### Harness proof (ADR-0016)
+
+`tests/integration/HeldStealTest.tscn`, extending the existing scene:
+`held-static-vulnerable` (a plain idle `Held` ball — no `JumpShot` ever
+begins — with the defender in reach AND on the exposed hand-side cone,
+timing a `StealMove` Active window; the turnover must connect — the
+headline metric, the previously-untouchable staller losing the ball),
+`held-static-immune-out-of-reach` (CONTROL — identical geometry/timing,
+defender moved beyond `HeldStealReachRadius`; the steal must NOT connect,
+ball stays `Held`), `held-static-immune-shielded` (CONTROL — identical
+in-reach geometry, but the holder's `Heading` is rotated 180° so the
+defender who was on-axis is now off the exposed cone; the steal must NOT
+connect — NOTE: this control is left/right symmetric and therefore cannot
+by itself catch a mirrored hand-side convention), and
+`held-static-immune-wrong-side` (CONTROL, added after code review caught the
+mirror bug described above — identical heading/timing, defender in reach but
+on the PROTECTED off-hand side per the locked `HandRight`/`HandSign`
+convention; the steal must NOT connect. This IS the control that
+discriminates handedness: it and `held-static-vulnerable` were both proven
+RED against a deliberately re-mirrored convention and GREEN against the
+corrected one). The pre-existing `held-vulnerable`/`held-immune-outside-
+window`/`pumpfake-now-exposed` scenarios (2026-07-19 amendment) and
+`TripleThreatTest`'s `dead-dribble`/`production-drive` scenarios remain
+green unchanged, proving the union does not disturb the pump-fake timing
+path or fire during an ordinary triple-threat hold with no defender present
+— `held-immune-outside-window` specifically needed its shared default
+defender geometry moved off the newly-added exposure cone (directly in
+front of the holder, 90° off either hand axis) once the static term made
+that geometry genuinely exposed under the corrected convention; it was
+never about proximity/facing, only the pump-fake window's own null-ness, so
+narrowing its setup to isolate that axis again is not a weakening of the
+proof. `held-static-vulnerable` was ALSO proven RED against the pre-#255
+`ResolveHeldStealAttempts` (which early-returned whenever
+`HeldStealVulnerableWindow` was null) and GREEN after, per ADR-0016's
+evidence bar.
+
+Tuning (`HeldStealReachRadius`, `HeldStealExposureConeDegrees`) is
+provisional, deferred to the consolidated tuning pass #238 — not this
+issue's or this ADR's to sign off.

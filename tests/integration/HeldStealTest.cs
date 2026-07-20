@@ -19,6 +19,10 @@ namespace HOOPERGAME.Tests.Integration;
 //   godot --headless --path . res://tests/integration/HeldStealTest.tscn -- --harness-scenario=held-vulnerable
 //   godot --headless --path . res://tests/integration/HeldStealTest.tscn -- --harness-scenario=held-immune-outside-window
 //   godot --headless --path . res://tests/integration/HeldStealTest.tscn -- --harness-scenario=pumpfake-now-exposed
+//   godot --headless --path . res://tests/integration/HeldStealTest.tscn -- --harness-scenario=held-static-vulnerable
+//   godot --headless --path . res://tests/integration/HeldStealTest.tscn -- --harness-scenario=held-static-immune-out-of-reach
+//   godot --headless --path . res://tests/integration/HeldStealTest.tscn -- --harness-scenario=held-static-immune-shielded
+//   godot --headless --path . res://tests/integration/HeldStealTest.tscn -- --harness-scenario=held-static-immune-wrong-side
 //   Exit: 0 = PASS, 1 = FAIL (ADR-0016 exit-code contract).
 //
 // ── The scenarios ──────────────────────────────────────────────────────────
@@ -43,6 +47,45 @@ namespace HOOPERGAME.Tests.Integration;
 //   defender's Active window overlaps the holder's Startup/feint-Recovery
 //   vulnerable window and the steal connects anyway — mashing the pump-fake
 //   no longer saves the holder.
+//
+// ── Issue #255 (ADR-0018 Amendment 2026-07-20, Route A static exposure) ────
+// held-static-vulnerable: HEADLINE for #255. The holder never begins ANY
+//   committed move at all — a plain, idle "dead-Held staller" possession,
+//   the exact case #206 left untouched (HeldStealVulnerableWindow stays null
+//   the entire run). The defender is positioned within HeldStealReachRadius
+//   AND on the holder's exposed hand-side cone. Exposed-side geometry is
+//   LOCKED to BallController.HandRight/HandSign, the same formula the ball
+//   render itself uses (NOT a naive "Right hand = world +X" assumption —
+//   Godot's +Z-forward, right-handed convention makes a facing-+Z player's
+//   actual right point toward world -X; this file's first version had this
+//   backwards and code review caught it before merge): default HandSide.Left
+//   at heading 0 carries the ball toward world +X. Times a real StealMove
+//   Active window; the turnover must connect via the NEW static term alone —
+//   proving the previously-untouchable staller now loses the ball.
+// held-static-immune-out-of-reach: CONTROL. Identical on-axis geometry and
+//   timing, but the defender is placed well beyond HeldStealReachRadius —
+//   the steal must NOT connect, ball stays Held (without this control,
+//   held-static-vulnerable's PASS would be equally consistent with "any
+//   defender near a StealMove connects regardless of reach").
+// held-static-immune-shielded: CONTROL. Identical in-reach, on-original-axis
+//   geometry, but the holder's Heading is force-set 180 degrees away
+//   (SetHeadingForHarness) BEFORE the steal resolves — rotating the exposed
+//   cone off the defender entirely (the "turn the body to shield the ball"
+//   counter the issue's design contract requires). The steal must NOT
+//   connect (without this control, held-static-vulnerable's PASS would be
+//   equally consistent with "proximity alone is sufficient, facing does
+//   nothing"). NOTE: this control is left/right SYMMETRIC — a mirrored
+//   hand-side convention would still pass it, which is exactly how the
+//   mirror bug above survived this control alone; see
+//   held-static-immune-wrong-side below for the control that actually
+//   discriminates handedness.
+// held-static-immune-wrong-side: CONTROL (code-review-added). Identical
+//   heading/timing to held-static-vulnerable, defender within
+//   HeldStealReachRadius, but on the PROTECTED off-hand side (world -X, the
+//   RIGHT-hand axis) rather than the exposed side (the ball is actually
+//   carried Left/+X). This is NOT axis-symmetric like the shielded control
+//   above — it fails to discriminate a mirrored convention, which is exactly
+//   the bug this scenario was added to pin. The steal must NOT connect.
 
 public partial class HeldStealTest : Node
 {
@@ -117,6 +160,20 @@ public partial class HeldStealTest : Node
                 // inside the holder's 18-tick Startup so the overlap is
                 // unambiguous regardless of the tree's one-tick read skew
                 // (Players ticks before Ball each frame).
+                //
+                // Defender placed directly in front (+Z) — deliberately OFF
+                // #255's static exposure cone (90 degrees off either hand
+                // axis) — so this scenario isolates the #206 pump-fake
+                // window ALONE. HeldStealSucceeds is timing-only (no reach/
+                // facing term), so the pump-fake steal still connects from
+                // here; without this, the shared default geometry (1,0,1) is
+                // ALSO inside the static cone for the holder's default
+                // Left-hand carry, so a regression that broke
+                // HeldStealSucceeds could be masked by the static term
+                // resolving the same steal for the wrong reason (the exact
+                // "a scenario must isolate its axis" failure the #255 mirror
+                // bug taught — see held-immune-outside-window below).
+                _defender.GlobalPosition = new Vector3(0, 0, 1);
                 _jumpShotBeginFrame = 5;
                 _stealBeginFrame = 10; // Active opens ~18 — comfortably inside Startup [5, ~23)
                 _verdictFrame = _stealBeginFrame
@@ -129,8 +186,21 @@ public partial class HeldStealTest : Node
                 // CONTROL: the defender's ENTIRE StealMove — Startup, Active,
                 // AND its own Recovery — completes before the holder ever
                 // begins a JumpShot. HeldStealVulnerableWindow is null for
-                // every tick the defender's machine is Active, so the steal
-                // must never connect.
+                // every tick the defender's machine is Active, so the
+                // PUMP-FAKE path must never connect. This scenario predates
+                // #255 and isolates ONLY the pump-fake timing axis — since
+                // #255 added a SECOND, independent way to steal a Held ball
+                // (the static reach+facing term, exercised by its own
+                // dedicated held-static-* scenarios below), the shared
+                // default defender geometry (1,0,1) — which happens to sit
+                // inside the default HeldStealReachRadius/cone for the
+                // holder's default Left-hand carry — must be moved OFF that
+                // static cone here, or this control would spuriously connect
+                // via the static term and no longer isolate the axis it was
+                // written to test. Directly in front (+Z) is 90 degrees off
+                // either hand-side axis, defeating the facing term
+                // regardless of HandSide.
+                _defender.GlobalPosition = new Vector3(0, 0, 1);
                 _stealBeginFrame = 5;
                 _jumpShotBeginFrame = _stealBeginFrame
                     + StealMove.DefaultFrameData.StartupFrames
@@ -146,6 +216,15 @@ public partial class HeldStealTest : Node
                 // timed to the exposed DRIBBLE band gets dodged because the
                 // holder cradles into Held before the defender's Active
                 // window opens.
+                //
+                // Defender placed directly in front (+Z) — same rationale as
+                // held-vulnerable above: deliberately off #255's static
+                // exposure cone so this scenario isolates the #206 pump-fake
+                // window alone (the shared default geometry (1,0,1) is
+                // inside that cone for the holder's default Left-hand carry
+                // and would let the static term mask a pump-fake-window
+                // regression here too).
+                _defender.GlobalPosition = new Vector3(0, 0, 1);
                 _ball.StateMachine.StartDribble();
                 _jumpShotBeginFrame = 5; // cradles Dribbling->Held well before...
                 _stealBeginFrame = 7;    // ...the defender's Active window opens (~15)
@@ -155,6 +234,88 @@ public partial class HeldStealTest : Node
                     + StealMove.DefaultFrameData.StartupFrames
                     + StealMove.DefaultFrameData.ActiveFrames
                     + VerdictMarginFrames + 10;
+                break;
+
+            case "held-static-vulnerable":
+                // Issue #255 headline: NO JumpShot ever begins (a plain idle
+                // "dead-Held staller" — HeldStealVulnerableWindow stays null
+                // for the whole run, so success can ONLY come from the new
+                // static term). Holder's default HandSide is Left and
+                // Heading is 0 (Forward == +Z); the exposed hand-side
+                // direction is LOCKED to the same formula the ball render
+                // uses (BallController.HandRight/HandSign, code-review-
+                // caught: an earlier version of this predicate/scenario had
+                // this mirrored) — forward==(0,1) -> right==(-1,0) -> Left's
+                // handSign(-1) flips it to world +X. Place the defender
+                // squarely on that axis, well inside the default
+                // HeldStealReachRadius (2.2m).
+                _jumpShotBeginFrame = int.MaxValue; // disabled
+                _defender.GlobalPosition = new Vector3(1, 0, 0);
+                _stealBeginFrame = 5;
+                _verdictFrame = _stealBeginFrame
+                    + StealMove.DefaultFrameData.StartupFrames
+                    + StealMove.DefaultFrameData.ActiveFrames
+                    + VerdictMarginFrames;
+                break;
+
+            case "held-static-immune-out-of-reach":
+                // CONTROL: identical on-axis geometry/timing to
+                // held-static-vulnerable, but the defender sits well beyond
+                // the default HeldStealReachRadius (2.2m) — the reach axis
+                // alone must refuse the steal regardless of facing.
+                _jumpShotBeginFrame = int.MaxValue; // disabled
+                _defender.GlobalPosition = new Vector3(10, 0, 0);
+                _stealBeginFrame = 5;
+                _verdictFrame = _stealBeginFrame
+                    + StealMove.DefaultFrameData.StartupFrames
+                    + StealMove.DefaultFrameData.ActiveFrames
+                    + VerdictMarginFrames;
+                break;
+
+            case "held-static-immune-shielded":
+                // CONTROL: identical in-reach, on-original-axis geometry to
+                // held-static-vulnerable (defender at world +X, the holder's
+                // actual Left-hand carry side at heading 0), but the
+                // holder's Heading is force-rotated 180 degrees BEFORE the
+                // steal resolves (SetHeadingForHarness — a bare headless
+                // second node has no input path that would ever advance
+                // Heading via Move()->HeadingMath.Step, so setup must force
+                // it directly, same rationale as FadeawayTriggerTest's use
+                // of the same seam). The exposed hand-side direction rotates
+                // WITH Heading (forward(pi)==(0,-1) -> right==(1,0) ->
+                // Left's handSign(-1) flips it to world -X), so the SAME
+                // defender position that was on-axis is now squarely
+                // off-cone — the "turn the body to shield the ball" counter.
+                _jumpShotBeginFrame = int.MaxValue; // disabled
+                _defender.GlobalPosition = new Vector3(1, 0, 0);
+                _holder.SetHeadingForHarness(Mathf.Pi);
+                _stealBeginFrame = 5;
+                _verdictFrame = _stealBeginFrame
+                    + StealMove.DefaultFrameData.StartupFrames
+                    + StealMove.DefaultFrameData.ActiveFrames
+                    + VerdictMarginFrames;
+                break;
+
+            case "held-static-immune-wrong-side":
+                // CONTROL (code-review-added, catches the exact mirror bug
+                // this scenario file's first version had): identical
+                // heading/timing to held-static-vulnerable, defender WITHIN
+                // HeldStealReachRadius, but on the PROTECTED off-hand side
+                // (world -X — the RIGHT-hand axis, since the ball is
+                // actually carried Left/+X) rather than the exposed side.
+                // Unlike held-static-immune-shielded (which is symmetric
+                // under a left/right mirror-up — a flipped convention would
+                // still pass it), this control is NOT axis-symmetric: it
+                // fails to discriminate only if the facing term is dropped
+                // entirely, and it fails to PASS if the exposed axis is
+                // computed on the wrong side. The steal must NOT connect.
+                _jumpShotBeginFrame = int.MaxValue; // disabled
+                _defender.GlobalPosition = new Vector3(-1, 0, 0);
+                _stealBeginFrame = 5;
+                _verdictFrame = _stealBeginFrame
+                    + StealMove.DefaultFrameData.StartupFrames
+                    + StealMove.DefaultFrameData.ActiveFrames
+                    + VerdictMarginFrames;
                 break;
 
             default:
@@ -240,7 +401,12 @@ public partial class HeldStealTest : Node
         bool pass;
         string detail;
 
-        if (_scenario == "held-immune-outside-window")
+        bool isControlScenario = _scenario == "held-immune-outside-window"
+            || _scenario == "held-static-immune-out-of-reach"
+            || _scenario == "held-static-immune-shielded"
+            || _scenario == "held-static-immune-wrong-side";
+
+        if (isControlScenario)
         {
             // CONTROL: the steal must NEVER connect — ball stays Held the
             // whole run, holder unchanged.
@@ -250,8 +416,9 @@ public partial class HeldStealTest : Node
         }
         else
         {
-            // held-vulnerable / pumpfake-now-exposed: the steal MUST connect
-            // — the ball went Loose with the defender (peer 2) as the
+            // held-vulnerable / pumpfake-now-exposed / held-static-vulnerable:
+            // the steal MUST connect — the ball went Loose with the defender
+            // (peer 2) as the
             // toucher. Deliberately NOT asserting a final "settled back into
             // Held" state here (unlike StealTurnoverTest's Dribbling-path
             // verdict): ResolveStealSuccess reuses the EXACT SAME
