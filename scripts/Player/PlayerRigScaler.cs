@@ -3,9 +3,13 @@ using Godot;
 namespace Hooper.Player;
 
 /// <summary>
-/// Godot glue node (issue #170) that gives a Mixamo-rigged player independently
+/// Godot glue node (issue #170) that gives a Mixamo-rigged player separately
 /// scalable HEIGHT and WINGSPAN, replacing the single uniform Transform3D scale
-/// the old Kenney chibi model used. It walks the player's <see cref="Skeleton3D"/>,
+/// the old Kenney chibi model used. The two are independent in their WRITE-SET
+/// (each factor touches a disjoint bone set) but NOT fully visually independent —
+/// scaling height moves the arms too, because the arm chain descends from Spine2;
+/// see <see cref="RigScale"/>'s class doc for that documented bleed and why it is
+/// left to the #178 visual verify. It walks the player's <see cref="Skeleton3D"/>,
 /// asks the pure <see cref="RigScale"/> classifier which chain each bone belongs
 /// to, and applies the chain's scale factor via
 /// <c>Skeleton3D.SetBonePoseScale</c> — so the spine+leg chain and the arm chain
