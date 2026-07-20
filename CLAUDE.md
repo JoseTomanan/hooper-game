@@ -83,8 +83,11 @@ the human.
 
 ## 2. Current milestone
 
-> **M8b / M10 — the active set (as of 2026-07-20; M9 epic #75 closed
-> 2026-07-20 — build complete, feel deferred to #173).**
+> **M8b — the sole active set (as of 2026-07-20; M9 epic #75 AND M10 epic #89
+> both closed 2026-07-20 — builds complete, feel deferred to #173). The
+> autopilot is HOLDING at the M11 boundary by human ruling (2026-07-20): M11
+> (stamina, #90) is NOT activated and its foundation ADR #105 is NOT to be
+> auto-drafted — it awaits a human "go".**
 >
 > **M8b — Realism & polish, continued** (epic **#171**): M8's leftover
 > verify/feel work — #153 net/fence visuals (human feel pass FAILED 2026-06-30;
@@ -108,24 +111,28 @@ the human.
 > `hitl` verify halves #184 (pivot clip) and #185 (fadeaway indicator),
 > deferred to the consolidated feel pass #173.
 >
-> **M10 — Defense & the reactive read** (epic **#89**): the core shipped —
-> foundation ADR-0018 (#95), steal (#96), block (#98, + reach gate #214), input
-> map (#101), on-ball contest (#99, PR #221), blow-by punish (#100), telegraph
-> remote sync (#102), held-ball steal window (#206, PR #259 — Option A pump-fake
-> window, ADR-0018 Amendment 2026-07-19; the dead-Held staller half was carved
-> off to #255), spatial/transit steal window (#196, PR #260 — a third steal
-> shape unioned into the live-dribble check: while a #195 ball-hand sweep is
-> active a defender within `StealReachRadius` of the swept ball position
-> connects with the hand-side axis dropped, ADR-0018 Amendment 2026-07-20).
-> Remaining: #261 (transit-steal harness coverage for the non-crossover sweep
-> paths, a #196 follow-up — **in flight 2026-07-20**, PR open) and #255
-> (deferred dead-Held staller — no travel/5-second pressure yet; its 5-second/
-> travel-violation shape arguably belongs to M12 flow, to be dispositioned when
-> M10 is next assessed for close). Tuning is no longer
-> per-milestone: #104 closed into the consolidated tuning pass **#238**, because
-> the magnitudes interact (see that issue). Feel for M9+M10 is deferred to the
-> consolidated human feel pass **#173** (#114 is the M9+M10 checklist folded
-> into it), per ADR-0021 — it no longer gates milestone activation.
+> **M10 — Defense & the reactive read** (epic **#89** — CLOSED 2026-07-20): the
+> reactive-read defensive core shipped in full — foundation ADR-0018 (#95),
+> steal (#96), block (#98, + reach gate #214), input map (#101), on-ball
+> contest (#99, PR #221), blow-by punish (#100), telegraph remote sync (#102),
+> steal aim→hand facing transform (#254), held-ball steal window (#206, PR #259
+> — Option A pump-fake window, ADR-0018 Amendment 2026-07-19; the dead-Held
+> staller half was carved off to #255), spatial/transit steal window (#196, PR
+> #260 — a third steal shape unioned into the live-dribble check: while a #195
+> ball-hand sweep is active a defender within `StealReachRadius` of the swept
+> ball position connects with the hand-side axis dropped, ADR-0018 Amendment
+> 2026-07-20), and its non-crossover sweep-path harness coverage (#261, PR #263
+> — behind-the-back / between-the-legs / spin, each with out-of-reach controls).
+> Carried forward past the close, NOT gating it (mirrors the M9 precedent —
+> human-gated residue does not block an epic close, ADR-0015/ADR-0021): #255
+> (deferred dead-Held staller — no travel/5-second pressure yet; blocked on a
+> human design gate, route (a) proximity/ADR-0018 vs route (b) closely-guarded
+> 5-second/ADR-0008 + HUD; its violation-timer shape leans M12 flow, left
+> unparented pending that a-vs-b call). Tuning is no longer per-milestone: #104
+> closed into the consolidated tuning pass **#238**, because the magnitudes
+> interact (see that issue). Feel for M9+M10 is deferred to the consolidated
+> human feel pass **#173** (#114 is the M9+M10 checklist folded into it), per
+> ADR-0021 — it no longer gates milestone activation.
 
 ### Milestone status
 
@@ -144,7 +151,7 @@ the human.
 | M8 — Realism & polish pass | Done (epic closed; leftover verify/feel/realism work continues under M8b) | #61 |
 | **M8b — Realism & polish pass, continued** | **Active** (umbrella; M8 leftovers — #153 net/fence verify, #170 realistic player rig (sourcing bounded by ADR-0020) + its verify #178) | #171 |
 | M9 — Basketball-related controls (offense) | Done (epic closed 2026-07-20; full dribble-move family #88/#194/#195/#197/#198/#199/#200/#201/#202, netcode #209/#210, cradle-race #253, rim-finishing #203 (#229/#230/#231/#232/#236), anim-clip builds #242/#243; #241 closed as designed-behavior per #189 ruling; feel-verifies #184/#185 deferred to #173 per ADR-0021, don't gate) | #75 |
-| **M10 — Defense & the reactive read** | **Active** (umbrella; core shipped — ADR-0018 #95, steal #96, block #98/#214, contest #99, blow-by #100, telegraph #102, held-ball steal #206 (PR #259, Option A), transit/spatial steal #196 (PR #260, ADR-0018 Amendment 2026-07-20); open: non-crossover transit-steal coverage #261 (in flight), deferred staller #255; tuning #104 closed into #238; feel deferred to #173 per ADR-0021, #114 folded in) | #89 |
+| M10 — Defense & the reactive read | Done (epic closed 2026-07-20; core shipped — ADR-0018 #95, steal #96, block #98/#214, contest #99, blow-by #100, telegraph #102, aim→hand #254, held-ball steal #206 (PR #259, Option A), transit/spatial steal #196 (PR #260, ADR-0018 Amendment 2026-07-20), non-crossover transit-steal coverage #261 (PR #263); carried forward, doesn't gate: deferred staller #255 (human design gate); tuning #104 closed into #238; feel deferred to #173 per ADR-0021, #114 folded in) | #89 |
 | M11 — Stamina & resource economy | DEFERRED (planning epic) | #90 |
 | M12 — Match flow, HUD & session lifecycle | DEFERRED (planning epic) | #91 |
 | M13 — Audio & game feel | DEFERRED (planning epic) | #92 |
@@ -166,8 +173,14 @@ legible. M10 was activated by human design call (2026-06-30) ahead of the
 combined M9+M10 feel pass (#114, folded into the consolidated #173 pass), which
 per [ADR-0021](docs/adr/0021-feel-taste-deferred-indefinitely.md) is deferred
 indefinitely rather than gating M10. M9's epic (#75) closed 2026-07-20 (build
-complete; feel-verifies #184/#185 deferred to #173, don't gate). M10 remains an
-active umbrella that still accrues sub-issues.
+complete; feel-verifies #184/#185 deferred to #173, don't gate). M10's epic
+(#89) closed 2026-07-20 too (reactive-read defensive core complete; #255 the
+sole human-gated residue, carried forward, doesn't gate). Per the human ruling
+of 2026-07-20 the autopilot then HOLDS at the M11 boundary: M11 (#90) stays
+DEFERRED and is NOT to be activated, and its foundation ADR #105 is NOT to be
+auto-drafted — both await an explicit human "go". M8b (#171) remains the sole
+open active umbrella, blocked on human inputs (asset-license #170, material
+fix #153).
 
 **Autopilot exception ([ADR-0017](docs/adr/0017-autopilot-activates-deferred-milestones.md)):**
 the human has pre-authorised driving the full roadmap (now ending at M13 — M14/M15
