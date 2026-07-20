@@ -652,6 +652,37 @@ jobs:
           godot --headless --path . res://tests/integration/CradleRaceTest.tscn -- --harness-scenario=in-order
           godot --headless --path . res://tests/integration/CradleRaceTest.tscn -- --harness-scenario=later-legit-drive
 
+      # #253 (StepBack's parallel exposure to #225's race): StepBack shares the
+      # identical Reliable-Begin-overtakes-UnreliableOrdered-drive race, but at
+      # its ACTIVE-ENTRY gather rather than Begin-time. StepBack is deliberately
+      # exempt from the dead-dribble Held-gate and cradles later (Startup-
+      # duration window), so its pre-#253 Startup-length window was a
+      # probabilistic mitigation, not immunity. The fix carries the same
+      # client-supplied clientWasAlreadyDribbling boolean #225 uses, but on the
+      # StepBack INSTANCE (StepBack.ClientWasAlreadyDribbling) so it survives the
+      # Begin→Active-entry gap, honored at the Active-entry CradleForShotStartup
+      # call (whose no-op branch #225 already made boolean-aware). Because
+      # StepBack cradles at Active-entry, each scenario ticks the REAL machine
+      # through Startup and asserts only AFTER the gather fires (unlike #225's
+      # synchronous assertion). 'out-of-order' reproduces the race directly
+      # (Begin processed while the SERVER's ball is Held, client reports it was
+      # ALREADY Dribbling) and asserts the gather converges to Held,
+      # HasDribbled=true. 'in-order' is the paired control — drive first, then
+      # Begin — proving the already-correct ordering's outcome (the normal,
+      # non-no-op gather branch) is unchanged. 'no-drive-ever' is the triple-
+      # threat preservation control: a StepBack from a genuine Held with no
+      # drive ever (clientWasAlreadyDribbling=false) must NOT fabricate a
+      # dribble — Held, HasDribbled still false. RED-before/GREEN-after proven
+      # per scenario by temporarily reverting the fix (PR body has the
+      # transcript): 'out-of-order' FAILED (HasDribbled stayed false) on the
+      # reverted code while both controls stayed green regardless. Exit
+      # 0=PASS/1=FAIL (ADR-0016).
+      - name: Run StepBack cradle-race harness (#253)
+        run: |
+          godot --headless --path . res://tests/integration/StepBackCradleRaceTest.tscn -- --harness-scenario=out-of-order
+          godot --headless --path . res://tests/integration/StepBackCradleRaceTest.tscn -- --harness-scenario=in-order
+          godot --headless --path . res://tests/integration/StepBackCradleRaceTest.tscn -- --harness-scenario=no-drive-ever
+
       # Crossover authoritative ball transit — no teleport (issue #195).
       # Boots a real BallController + two PlayerControllers headless and
       # drives an actual Crossover through the real BeginCommittedMove path
