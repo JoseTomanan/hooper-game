@@ -160,6 +160,20 @@ public partial class HeldStealTest : Node
                 // inside the holder's 18-tick Startup so the overlap is
                 // unambiguous regardless of the tree's one-tick read skew
                 // (Players ticks before Ball each frame).
+                //
+                // Defender placed directly in front (+Z) — deliberately OFF
+                // #255's static exposure cone (90 degrees off either hand
+                // axis) — so this scenario isolates the #206 pump-fake
+                // window ALONE. HeldStealSucceeds is timing-only (no reach/
+                // facing term), so the pump-fake steal still connects from
+                // here; without this, the shared default geometry (1,0,1) is
+                // ALSO inside the static cone for the holder's default
+                // Left-hand carry, so a regression that broke
+                // HeldStealSucceeds could be masked by the static term
+                // resolving the same steal for the wrong reason (the exact
+                // "a scenario must isolate its axis" failure the #255 mirror
+                // bug taught — see held-immune-outside-window below).
+                _defender.GlobalPosition = new Vector3(0, 0, 1);
                 _jumpShotBeginFrame = 5;
                 _stealBeginFrame = 10; // Active opens ~18 — comfortably inside Startup [5, ~23)
                 _verdictFrame = _stealBeginFrame
@@ -202,6 +216,15 @@ public partial class HeldStealTest : Node
                 // timed to the exposed DRIBBLE band gets dodged because the
                 // holder cradles into Held before the defender's Active
                 // window opens.
+                //
+                // Defender placed directly in front (+Z) — same rationale as
+                // held-vulnerable above: deliberately off #255's static
+                // exposure cone so this scenario isolates the #206 pump-fake
+                // window alone (the shared default geometry (1,0,1) is
+                // inside that cone for the holder's default Left-hand carry
+                // and would let the static term mask a pump-fake-window
+                // regression here too).
+                _defender.GlobalPosition = new Vector3(0, 0, 1);
                 _ball.StateMachine.StartDribble();
                 _jumpShotBeginFrame = 5; // cradles Dribbling->Held well before...
                 _stealBeginFrame = 7;    // ...the defender's Active window opens (~15)
