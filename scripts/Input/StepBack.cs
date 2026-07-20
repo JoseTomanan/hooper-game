@@ -54,9 +54,46 @@ public sealed class StepBack : CommittedMove
     public static readonly MoveFrameData DefaultFrameData =
         new(startupFrames: 7, activeFrames: 4, recoveryFrames: 8, feintWindowFrames: 0);
 
+    /// <summary>
+    /// #253 cradle-race fix: the client's own zero-latency
+    /// <c>GetBall()?.State == BallState.Dribbling</c> captured at THIS move's
+    /// Begin, carried to the Active-entry gather so
+    /// <see cref="Hooper.Ball.BallController.CradleForShotStartup"/> can resolve
+    /// the same Reliable-Begin-overtakes-UnreliableOrdered-drive race #225 fixed
+    /// for the Begin-time cradle-family moves (JumpShot/Layup/DriveGather/
+    /// EuroStep). Those consume the boolean SYNCHRONOUSLY as a BeginCommittedMove
+    /// parameter because they cradle at Begin; StepBack is deliberately exempt
+    /// from that Begin-time cradle (it cradles at ACTIVE-entry — see the
+    /// PlayerController.TickCommittedMoveBehavior StepBack branch), so the value
+    /// must instead SURVIVE the several-tick Begin→Active-entry gap on the move
+    /// instance itself — the same "payload known at Begin, consumed at
+    /// Active-entry" idiom as <see cref="Spin.SpinDirection"/> /
+    /// <see cref="Crossover.BurstDirection"/>.
+    ///
+    /// COUPLING NOTE: this value is NOT in the ReceiveState broadcast payload
+    /// (which carries only the moveId, not per-move booleans). It survives
+    /// reconciliation only because no reconcile path rebuilds an in-flight move
+    /// FROM its moveId — the two ForceState callers either abort the move
+    /// (move: null) or reuse the SAME _machine.CurrentMove instance (preserving
+    /// this field). ApplyRequestedMove is the ONLY site that reconstructs a
+    /// StepBack, and it does so server-side WITH the RPC-supplied value. If a
+    /// future reconcile path is ever changed to rebuild a live move from its
+    /// broadcast moveId, this boolean would silently reset to false and the
+    /// client-own Active-entry cradle would lose it — thread it through the
+    /// broadcast then, or this fix regresses.
+    /// </summary>
+    public bool ClientWasAlreadyDribbling { get; }
+
+    /// <param name="clientWasAlreadyDribbling">
+    /// See <see cref="ClientWasAlreadyDribbling"/>. Defaults false: every caller
+    /// that isn't a real client Begin (or its server-side RPC reconstruction)
+    /// has nothing to report and leaves the gather's normal Dribbling-guard to
+    /// decide, exactly as before this fix.
+    /// </param>
     /// <param name="frameData">Override frame data for tuning. Null uses <see cref="DefaultFrameData"/>.</param>
-    public StepBack(MoveFrameData? frameData = null)
+    public StepBack(bool clientWasAlreadyDribbling = false, MoveFrameData? frameData = null)
         : base(id: "stepback", displayName: "Step-Back", frameData: frameData ?? DefaultFrameData)
     {
+        ClientWasAlreadyDribbling = clientWasAlreadyDribbling;
     }
 }

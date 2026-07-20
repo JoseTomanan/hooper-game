@@ -2197,12 +2197,15 @@ public partial class PlayerController : CharacterBody3D
 	/// Every branch here still routes through BeginCommittedMove — the one
 	/// production choke point (architecture-contract invariant #11).
 	///
-	/// <paramref name="clientWasAlreadyDribbling"/> (#225 fix): forwarded
-	/// ONLY by the four cradle-family branches (jumpshot/layup/drivegather/
-	/// eurostep) into BeginCommittedMove's own optional parameter — see
-	/// RequestBeginMove's doc for where this value comes from and
-	/// CradleForShotStartup's doc for how it resolves the cross-channel
-	/// cradle race. Every other branch ignores it.
+	/// <paramref name="clientWasAlreadyDribbling"/> (#225 fix): forwarded by the
+	/// four Begin-time cradle-family branches (jumpshot/layup/drivegather/
+	/// eurostep) into BeginCommittedMove's own optional parameter, consumed
+	/// synchronously there. The stepback branch (#253) ALSO uses it, but stores
+	/// it on the StepBack instance instead — StepBack cradles at Active-entry,
+	/// several ticks later, so it can't consume the value synchronously (see
+	/// StepBack.ClientWasAlreadyDribbling). See RequestBeginMove's doc for where
+	/// this value comes from and CradleForShotStartup's doc for how it resolves
+	/// the cross-channel cradle race. Every other branch ignores it.
 	/// </summary>
 	private void ApplyRequestedMove(string moveId, float param, bool clientWasAlreadyDribbling)
 	{
@@ -2237,7 +2240,15 @@ public partial class PlayerController : CharacterBody3D
 		else if (moveId == "stepback")
 			// param = 0f — step-back carries no payload; its exit direction
 			// is read from the left stick at Active-entry, not the RPC.
-			BeginCommittedMove(new StepBack());
+			//
+			// #253 cradle-race fix: clientWasAlreadyDribbling IS carried here,
+			// but into the StepBack INSTANCE — NOT as BeginCommittedMove's own
+			// 2nd argument (which would be inert for StepBack, since that
+			// Begin-time cradle only fires for JumpShot/Layup/DriveGather/
+			// EuroStep). StepBack cradles at Active-entry, so the value has to
+			// survive on the move instance until then; see StepBack.
+			// ClientWasAlreadyDribbling and this method's param doc.
+			BeginCommittedMove(new StepBack(clientWasAlreadyDribbling: clientWasAlreadyDribbling));
 		else if (moveId == "retreatdribble")
 			// param = 0f — retreat dribble carries no payload (issue #197).
 			BeginCommittedMove(new RetreatDribble());
@@ -3174,8 +3185,28 @@ public partial class PlayerController : CharacterBody3D
 			// Crossover/Hesitation/BehindTheBack/RetreatDribble) — see that
 			// method's comment for why the move's own Active-entry gather
 			// call safely no-ops from either starting state.
-			if (IsBallHolder && BeginCommittedMove(new StepBack()) && !isServer)
-				RpcId(1, MethodName.RequestBeginMove, "stepback", 0f, false); // #225: cradles at Active-entry via StepBack's OWN call site, not this one — see CradleForShotStartup's doc
+			//
+			// #253 cradle-race fix: capture whether OUR OWN ball copy was already
+			// Dribbling at Begin and carry it on the StepBack instance AND the
+			// RPC. Unlike JumpShot (#225), StepBack cradles at ACTIVE-entry, so
+			// this boolean can't be consumed synchronously — it rides the move
+			// instance across the Begin→Active-entry gap (see StepBack.
+			// ClientWasAlreadyDribbling). Captured BEFORE BeginCommittedMove for
+			// symmetry with the "shoot" site below, though StepBack's Begin fires
+			// no cradle side effect that would flip our ball state here.
+			//
+			// Deliberately passed on the client's OWN local instance too (not
+			// left default-false the way #225's JumpShot client-Begin is): unlike
+			// a Begin-time cradle, StepBack's Active-entry gather can observe a
+			// ball this client force-corrected Dribbling→Held mid-Startup off a
+			// server broadcast, and reporting the true value there keeps our own
+			// predicted HasDribbled converged with the server through that
+			// correction instead of flickering. Inert in the common case (our own
+			// ball is still Dribbling at our Active-entry, so the gather's normal
+			// branch fires and the boolean is never read).
+			bool wasAlreadyDribbling = GetBall()?.State == BallState.Dribbling;
+			if (IsBallHolder && BeginCommittedMove(new StepBack(clientWasAlreadyDribbling: wasAlreadyDribbling)) && !isServer)
+				RpcId(1, MethodName.RequestBeginMove, "stepback", 0f, wasAlreadyDribbling); // #253: carried to StepBack's Active-entry gather — see CradleForShotStartup's doc
 		}
 		else if (gesture.Kind == GestureKind.RetreatDribble)
 		{
@@ -3637,7 +3668,7 @@ public partial class PlayerController : CharacterBody3D
 					Vector2 backward = -HeadingMath.Forward(Heading);
 					Velocity = new Vector3(backward.X, 0f, backward.Y) * RetreatDribbleBurstSpeed;
 				}
-				else if (_machine.JustEnteredActive && _machine.CurrentMove is StepBack)
+				else if (_machine.JustEnteredActive && _machine.CurrentMove is StepBack stepBack)
 				{
 					// Step-back (#197): full backward burst, shaped by the
 					// left-stick exit vector within a backward-only cone —
@@ -3657,7 +3688,18 @@ public partial class PlayerController : CharacterBody3D
 					// holder) is generic enough to reuse verbatim despite its
 					// shot-specific name; see its own doc for the exact
 					// no-op conditions this relies on.
-					GetBall()?.CradleForShotStartup(OwnPeerId);
+					//
+					// #253 cradle-race fix: pass the client's own Begin-time
+					// dribble state (stored on the move instance since Begin —
+					// see StepBack.ClientWasAlreadyDribbling). On the SERVER's
+					// copy of a remote player this closes the same cross-channel
+					// race #225 closed for JumpShot: if the drive's
+					// UnreliableOrdered SubmitInput hasn't yet arrived when the
+					// Reliable Begin's Active-entry lands here, the ball is still
+					// Held and this call would otherwise no-op, silently leaving
+					// HasDribbled=false. CradleForShotStartup's no-op branch
+					// honors the boolean (HasDribbled=true) — see its doc.
+					GetBall()?.CradleForShotStartup(OwnPeerId, stepBack.ClientWasAlreadyDribbling);
 				}
 				else if (_machine.JustEnteredActive && _machine.CurrentMove is DriveGather)
 				{
