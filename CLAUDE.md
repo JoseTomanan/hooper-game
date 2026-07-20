@@ -83,7 +83,8 @@ the human.
 
 ## 2. Current milestone
 
-> **M8b / M9 / M10 — the active set (all umbrellas, as of 2026-07-17).**
+> **M8b / M10 — the active set (as of 2026-07-20; M9 epic #75 closed
+> 2026-07-20 — build complete, feel deferred to #173).**
 >
 > **M8b — Realism & polish, continued** (epic **#171**): M8's leftover
 > verify/feel work — #153 net/fence visuals (human feel pass FAILED 2026-06-30;
@@ -91,17 +92,21 @@ the human.
 > (blocked on a human asset-license pick, sourcing bounded by ADR-0020) and its
 > verify #178.
 >
-> **M9 — Basketball-related controls, offense** (epic **#75**): the dribble-move
-> family has largely landed — crossover/hesi (PR #88), moving crossover (#198),
-> behind-the-back (#194), ball-hand sweep (#195), step-back/retreat dribble
-> (#197), between-the-legs (#199). Remaining: jab step (#200), spin (#201),
-> in-and-out (#202), crossover netcode hardening (#209/#210). The rim-finishing
-> vertical (**#203** umbrella, un-deferred 2026-07-17, ADR-0022) is nearly
-> complete: layup/rim-finish shot type (#229), drive-gather (#230) and the
-> decision record/taxonomy leaf (#232) all landed 2026-07-17; open are the
-> euro-step (#231, un-gated once #229/#230 landed) and #236 (a #229 follow-up
-> defect — the server's layup range gate drops an out-of-range request instead
-> of falling back to a JumpShot).
+> **M9 — Basketball-related controls, offense** (epic **#75** — CLOSED
+> 2026-07-20): the full dribble-move family landed — crossover/hesi (PR #88),
+> moving crossover (#198), behind-the-back (#194), ball-hand sweep (#195),
+> step-back/retreat dribble (#197), between-the-legs (#199), jab step (#200),
+> spin (#201), in-and-out (#202) — plus crossover netcode hardening (#209/#210),
+> the StepBack cradle-race fix (#253), and the rim-finishing vertical (**#203**
+> umbrella, ADR-0022): layup/rim-finish (#229), drive-gather (#230), euro-step
+> (#231), taxonomy leaf (#232), layup-range fallback (#236). The anim-clip build
+> halves also landed — planted-pivot clip (#242), fadeaway clip (#243). #241
+> (external-event abort) was closed as designed-behavior: the human #189 ruling
+> (ADR-0003 amendment, 2026-07-20) rejected the carve-out — a committed move runs
+> to completion even when a steal/OOB voids its payload; the lost time IS the
+> punishment. Still open but NOT gating the close (feel/visual, ADR-0021): the
+> `hitl` verify halves #184 (pivot clip) and #185 (fadeaway indicator),
+> deferred to the consolidated feel pass #173.
 >
 > **M10 — Defense & the reactive read** (epic **#89**): the core shipped —
 > foundation ADR-0018 (#95), steal (#96), block (#98, + reach gate #214), input
@@ -112,9 +117,11 @@ the human.
 > shape unioned into the live-dribble check: while a #195 ball-hand sweep is
 > active a defender within `StealReachRadius` of the swept ball position
 > connects with the hand-side axis dropped, ADR-0018 Amendment 2026-07-20).
-> Remaining: #255 (deferred dead-Held staller — no travel/5-second pressure
-> yet) and #261 (transit-steal harness coverage for the non-crossover sweep
-> paths, a #196 follow-up). Tuning is no longer
+> Remaining: #261 (transit-steal harness coverage for the non-crossover sweep
+> paths, a #196 follow-up — **in flight 2026-07-20**, PR open) and #255
+> (deferred dead-Held staller — no travel/5-second pressure yet; its 5-second/
+> travel-violation shape arguably belongs to M12 flow, to be dispositioned when
+> M10 is next assessed for close). Tuning is no longer
 > per-milestone: #104 closed into the consolidated tuning pass **#238**, because
 > the magnitudes interact (see that issue). Feel for M9+M10 is deferred to the
 > consolidated human feel pass **#173** (#114 is the M9+M10 checklist folded
@@ -136,8 +143,8 @@ the human.
 | M7b — Rigged humanoid animation | Done (epic closed 2026-06-26) | #54 |
 | M8 — Realism & polish pass | Done (epic closed; leftover verify/feel/realism work continues under M8b) | #61 |
 | **M8b — Realism & polish pass, continued** | **Active** (umbrella; M8 leftovers — #153 net/fence verify, #170 realistic player rig (sourcing bounded by ADR-0020) + its verify #178) | #171 |
-| **M9 — Basketball-related controls (offense)** | **Active** (umbrella; dribble-move family largely landed — PR #88, #194/#195/#197/#198/#199; open: #200/#201/#202/#209/#210; rim-finishing vertical #203 (ADR-0022) un-deferred 2026-07-17, #229/#230/#232 landed — open: #231, #236; feel deferred to #173 per ADR-0021, #114 folded in) | #75 |
-| **M10 — Defense & the reactive read** | **Active** (umbrella; core shipped — ADR-0018 #95, steal #96, block #98/#214, contest #99, blow-by #100, telegraph #102, held-ball steal #206 (PR #259, Option A), transit/spatial steal #196 (PR #260, ADR-0018 Amendment 2026-07-20); open: deferred staller #255, non-crossover transit-steal coverage #261; tuning #104 closed into #238; feel deferred to #173 per ADR-0021, #114 folded in) | #89 |
+| M9 — Basketball-related controls (offense) | Done (epic closed 2026-07-20; full dribble-move family #88/#194/#195/#197/#198/#199/#200/#201/#202, netcode #209/#210, cradle-race #253, rim-finishing #203 (#229/#230/#231/#232/#236), anim-clip builds #242/#243; #241 closed as designed-behavior per #189 ruling; feel-verifies #184/#185 deferred to #173 per ADR-0021, don't gate) | #75 |
+| **M10 — Defense & the reactive read** | **Active** (umbrella; core shipped — ADR-0018 #95, steal #96, block #98/#214, contest #99, blow-by #100, telegraph #102, held-ball steal #206 (PR #259, Option A), transit/spatial steal #196 (PR #260, ADR-0018 Amendment 2026-07-20); open: non-crossover transit-steal coverage #261 (in flight), deferred staller #255; tuning #104 closed into #238; feel deferred to #173 per ADR-0021, #114 folded in) | #89 |
 | M11 — Stamina & resource economy | DEFERRED (planning epic) | #90 |
 | M12 — Match flow, HUD & session lifecycle | DEFERRED (planning epic) | #91 |
 | M13 — Audio & game feel | DEFERRED (planning epic) | #92 |
@@ -158,8 +165,9 @@ are no longer on the roadmap; their rows remain only so the numbering stays
 legible. M10 was activated by human design call (2026-06-30) ahead of the
 combined M9+M10 feel pass (#114, folded into the consolidated #173 pass), which
 per [ADR-0021](docs/adr/0021-feel-taste-deferred-indefinitely.md) is deferred
-indefinitely rather than gating M10. Both M9 and M10 remain umbrellas that
-still accrue sub-issues.
+indefinitely rather than gating M10. M9's epic (#75) closed 2026-07-20 (build
+complete; feel-verifies #184/#185 deferred to #173, don't gate). M10 remains an
+active umbrella that still accrues sub-issues.
 
 **Autopilot exception ([ADR-0017](docs/adr/0017-autopilot-activates-deferred-milestones.md)):**
 the human has pre-authorised driving the full roadmap (now ending at M13 — M14/M15
