@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://rdl3i0tqsm1v"
-path="res://.godot/imported/idle.fbx-0f445bc4fa0a8471918993a988bab8df.scn"
+uid="uid://ccwq28ro7ug5x"
+path="res://.godot/imported/Y Bot.fbx-1fba6ba89fd68088e6b27b1218e9a89e.scn"
 
 [deps]
 
-source_file="res://assets/idle.fbx"
-dest_files=["res://.godot/imported/idle.fbx-0f445bc4fa0a8471918993a988bab8df.scn"]
+source_file="res://assets/Y Bot.fbx"
+dest_files=["res://.godot/imported/Y Bot.fbx-1fba6ba89fd68088e6b27b1218e9a89e.scn"]
 
 [params]
 
@@ -39,21 +39,7 @@ import_script/path=""
 materials/extract=0
 materials/extract_format=0
 materials/extract_path=""
-_subresources={
-"nodes": {
-"PATH:Root/Skeleton3D": {
-"retarget/bone_map": Resource("res://assets/retarget/idle_bonemap.tres"),
-"retarget/bone_renamer/rename_bones": true,
-"retarget/bone_renamer/unique_node": false,
-"retarget/remove_tracks/except_bone_transform": false,
-"retarget/remove_tracks/unimportant_positions": true,
-"retarget/remove_tracks/unmapped_bones": true,
-"retarget/rest_fixer/apply_node_transforms": true,
-"retarget/rest_fixer/normalize_position_tracks": true,
-"retarget/rest_fixer/overwrite_axis": true
-}
-}
-}
+_subresources={}
 fbx/importer=0
 fbx/allow_geometry_helper_nodes=false
 fbx/embedded_image_handling=1
