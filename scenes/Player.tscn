@@ -2,8 +2,9 @@
 
 [ext_resource type="Script" uid="uid://erpigohkoatw" path="res://scripts/Player/PlayerController.cs" id="1_p0vlq"]
 [ext_resource type="Script" uid="uid://b2cug8lv7pgn8" path="res://scripts/Systems/BlobShadow.cs" id="2_blobshadow"]
-[ext_resource type="PackedScene" uid="uid://b58mjs28h2dpi" path="res://assets/characterMedium.fbx" id="3_3li8b"]
+[ext_resource type="PackedScene" path="res://assets/Y Bot.fbx" id="3_3li8b"]
 [ext_resource type="AnimationLibrary" uid="uid://beyrxgsi2rt6p" path="res://assets/locomotion.res" id="4_mdl7e"]
+[ext_resource type="Script" path="res://scripts/Player/PlayerRigScaler.cs" id="5_rigscaler"]
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_p0vlq"]
 
@@ -157,7 +158,10 @@ mesh = SubResource("CylinderMesh_playershadow")
 surface_material_override/0 = SubResource("StandardMaterial3D_playershadow")
 
 [node name="CharacterModel" parent="." unique_id=216087023 instance=ExtResource("3_3li8b")]
-transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, -0.9975891, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1, 0)
+
+[node name="RigScaler" type="Node" parent="." unique_id=216087024]
+script = ExtResource("5_rigscaler")
 
 [node name="BeatenIndicator" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.1, 0)

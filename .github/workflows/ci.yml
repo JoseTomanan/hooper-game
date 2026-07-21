@@ -832,6 +832,20 @@ jobs:
           godot --headless --path . res://tests/integration/PivotAnimTest.tscn -- --harness-scenario=pivot-enters-exits
           godot --headless --path . res://tests/integration/PivotAnimTest.tscn -- --harness-scenario=control-locomotion
 
+      # Independent height/wingspan rig scaling (issue #170), the engine-glue
+      # half. RigScaleTests (dotnet) pins the pure RigScale classifier; this
+      # proves PlayerRigScaler runs against the REAL imported Y Bot Skeleton3D:
+      # the classifier matched a non-zero count of height AND wingspan bones on
+      # the actual rig (the silent-no-op guard the doubt review flagged), a
+      # height-only scale grew the height chain while leaving the wingspan chain
+      # and the Hips root at baseline (write-set independence on the live
+      # skeleton), and 1.0 restored the baseline. Prints every imported bone name
+      # + classification first, so a wrong Mixamo-naming assumption names the real
+      # bones in the log instead of passing vacuously. The proportions eyeball
+      # stays #178/#173's deferred human feel judgment (ADR-0021).
+      - name: Run rig-scale harness
+        run: godot --headless --path . res://tests/integration/RigScaleHarnessTest.tscn -- --harness-scenario=independent-scaling
+
       # Moving crossover — momentum-aware burst with left-stick exit (issue
       # #198, ADR-0003 amendment). CrossoverBurstMathTests already pin the
       # pure composition function; this drives a REAL PlayerController
