@@ -64,11 +64,11 @@ jobs:
 
       # Install the .NET/Mono build of Godot. The version is given as a
       # GodotSharp version string and MUST match the Godot.NET.Sdk / GodotSharp
-      # version the project pins (4.6.3) so the C# bindings line up.
+      # version the project pins (4.7.1) so the C# bindings line up.
       - name: Set up Godot (.NET)
         uses: chickensoft-games/setup-godot@v2
         with:
-          version: 4.6.3
+          version: 4.7.1
           use-dotnet: true
           include-templates: false
 

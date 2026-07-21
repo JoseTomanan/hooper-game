@@ -12,7 +12,7 @@ config_version=5
 
 config/name="HOOPER GAME"
 run/main_scene="uid://c047mrir711mo"
-config/features=PackedStringArray("4.6", "C#", "Mobile")
+config/features=PackedStringArray("4.7", "C#", "Mobile")
 config/icon="res://icon.svg"
 
 [dotnet]
