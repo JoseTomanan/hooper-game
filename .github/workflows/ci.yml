@@ -846,6 +846,19 @@ jobs:
       - name: Run rig-scale harness
         run: godot --headless --path . res://tests/integration/RigScaleHarnessTest.tscn -- --harness-scenario=independent-scaling
 
+      # Locomotion clip retarget (issue #267): idle/run/pivot in
+      # assets/locomotion.res were authored against the Kenney rig's deform
+      # bone names (Hips/Chest/LeftUpLeg/...); Y Bot's real Skeleton3D bones
+      # are all "mixamorig_"-prefixed, so every track failed to resolve and
+      # the player stayed in a T-pose. This asserts every bone track in every
+      # clip resolves against the LIVE Player.tscn skeleton (not just an
+      # isolated FindBone check), with a vacuous-pass guard on both the
+      # library's clip keys and each clip's track count. It does not (and per
+      # spike #87 cannot cheaply) assert the pose LOOKS right — that stays
+      # the deferred human feel judgment (#178/#173, ADR-0021).
+      - name: Run locomotion-clip retarget harness
+        run: godot --headless --path . res://tests/integration/LocomotionClipTest.tscn
+
       # Moving crossover — momentum-aware burst with left-stick exit (issue
       # #198, ADR-0003 amendment). CrossoverBurstMathTests already pin the
       # pure composition function; this drives a REAL PlayerController
