@@ -16,6 +16,8 @@ dest_files=["res://.godot/imported/idle.fbx-0f445bc4fa0a8471918993a988bab8df.scn
 nodes/root_type=""
 nodes/root_name=""
 nodes/root_script=null
+mesh_library/use_node_names_as_mesh_names=false
+array_mesh/deduplicate_surfaces=true
 nodes/apply_root_scale=true
 nodes/root_scale=1.0
 nodes/import_as_skeleton_bones=false
@@ -37,7 +39,21 @@ import_script/path=""
 materials/extract=0
 materials/extract_format=0
 materials/extract_path=""
-_subresources={}
+_subresources={
+"nodes": {
+"PATH:Root/Skeleton3D": {
+"retarget/bone_map": Resource("res://assets/retarget/idle_bonemap.tres"),
+"retarget/bone_renamer/rename_bones": true,
+"retarget/bone_renamer/unique_node": false,
+"retarget/remove_tracks/except_bone_transform": false,
+"retarget/remove_tracks/unimportant_positions": true,
+"retarget/remove_tracks/unmapped_bones": true,
+"retarget/rest_fixer/apply_node_transforms": true,
+"retarget/rest_fixer/normalize_position_tracks": true,
+"retarget/rest_fixer/overwrite_axis": true
+}
+}
+}
 fbx/importer=0
 fbx/allow_geometry_helper_nodes=false
 fbx/embedded_image_handling=1

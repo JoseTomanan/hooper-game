@@ -3,19 +3,21 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://rx44t54w6ofn"
-path="res://.godot/imported/jump.fbx-5dc4ac7c5cc50683e8e68135f0906e16.scn"
+uid="uid://ccwq28ro7ug5x"
+path="res://.godot/imported/Y Bot.fbx-1fba6ba89fd68088e6b27b1218e9a89e.scn"
 
 [deps]
 
-source_file="res://assets/jump.fbx"
-dest_files=["res://.godot/imported/jump.fbx-5dc4ac7c5cc50683e8e68135f0906e16.scn"]
+source_file="res://assets/Y Bot.fbx"
+dest_files=["res://.godot/imported/Y Bot.fbx-1fba6ba89fd68088e6b27b1218e9a89e.scn"]
 
 [params]
 
 nodes/root_type=""
 nodes/root_name=""
 nodes/root_script=null
+mesh_library/use_node_names_as_mesh_names=false
+array_mesh/deduplicate_surfaces=true
 nodes/apply_root_scale=true
 nodes/root_scale=1.0
 nodes/import_as_skeleton_bones=false
