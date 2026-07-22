@@ -114,7 +114,15 @@ exports onto nodes that already exist — moves to **AFK**.
   editor-authored one (in-engine confirmed). AnimationTree **graph authoring is
   now AFK**, under the standing guardrails below plus the authoring gotchas in
   `docs/spikes/0011-animationtree-text-authoring.md`. See Consequences.
-- Editor **import-dialog** settings not already scriptable headlessly.
+- ~~Editor **import-dialog** settings not already scriptable headlessly.~~
+  **Narrowed 2026-07-22** — the FBX **retarget** subset (`retarget/bone_map`,
+  `retarget/bone_renamer`, `retarget/rest_fixer`, i.e. a `BoneMap` +
+  `SkeletonProfile` assigned in a `*.fbx.import` `_subresources` block) is proven
+  driveable by a plain headless `godot --headless --import` pass (issue #267,
+  PR #270), so it is now **AFK**, under the standing guardrails below plus the
+  authoring gotchas in `docs/spikes/0012-headless-import-retarget.md`. Any import
+  operation that genuinely has *no* headless scripting path (a GUI-only dialog
+  toggle) stays HITL; the exclusion now covers only that residue. See Consequences.
 - All **feel/verification** runs.
 
 **Guardrails (mandatory when Claude edits a scene/config file):**
@@ -161,6 +169,29 @@ exports onto nodes that already exist — moves to **AFK**.
   32-bit float round-off in `min_space`/`max_space`, virtual `Start`/`End` states
   — are recorded in `docs/spikes/0011-animationtree-text-authoring.md` as the
   authoring checklist. M7b Steps 3–4 (#41, #69) are no longer HITL-gated on this.
+- **Import-dialog retarget moves to AFK (2026-07-22, issue #267 / PR #270).**
+  The player T-posed because the Kenney-authored locomotion clips
+  (`assets/locomotion.res`) were bound to the old rig's deform-bone names and
+  resolved 0 tracks on the Mixamo **Y Bot** skeleton after the #170 rig swap.
+  Fixing it required Godot's FBX **retarget** (BoneMap + SkeletonProfile + rest
+  fixer) — historically an import-dialog operation. A custom `SkeletonProfile`
+  whose canonical bone names ARE the literal `mixamorig_*` names, plus a per-clip
+  `BoneMap`, assigned via each *source* clip's `*.fbx.import` `_subresources`, was
+  proven to be consumed by a plain headless `--import` pass — no editor GUI
+  session — behind a non-vacuous harness (`LocomotionClipTest`) that goes RED on
+  the pre-fix clips and GREEN after (idle 31/31, run 22/22, pivot 4/4 tracks
+  resolve on the live `Player.tscn` skeleton). **Rejected alternative:** a
+  programmatic track-path/bone-name remap on the orphaned extracted `.res`
+  (Route B) — rejected because the two rigs' rest quaternions differ arbitrarily,
+  so a bare rename binds each track to the right bone but at the wrong
+  orientation; the rest-fixer the import pipeline runs for free is what supplies
+  the per-bone rest-delta correction. The authoring gotchas (retarget only the
+  *source* clips, never `Y Bot.fbx` — else the `mixamorig_` names `RigScale`
+  depends on get renamed; the `GeneralSkeleton` node rename; `pivot` has no source
+  `.fbx` so it gets a name-only remap with no rest-fixer pass — a pose caveat left
+  to #178) are in `docs/spikes/0012-headless-import-retarget.md`. Pose
+  *correctness* stays the deferred human feel judgment (#178/#173, ADR-0021);
+  this lift covers track *binding* only.
 - **Documentation must be updated on acceptance, in the accepting commit**
   (Decision Discipline): rewrite CLAUDE.md §3's "scenes are authored by the
   human" paragraph to reflect the new boundary, add this ADR (0011) to CLAUDE.md's
