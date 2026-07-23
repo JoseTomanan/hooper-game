@@ -55,10 +55,18 @@ headlessly, or did it force a human editor session?
   are inert (static tracks) — leave them UNMAPPED (this narrows the track count,
   e.g. idle 40→31, expected).
 - **`pivot` has no source `.fbx`** (hand-authored, 4 bones) — it gets a
-  name-only remap (`Hips→mixamorig_Hips`, …) with **no rest-fixer pass**, so its
-  track *binds* but its *pose orientation* is unverified. **`run`'s "Run" clip
-  has no `mixamorig_Hips` track** at all (before and after) — any vertical hip
-  bob was already absent. Both are pose caveats for the human verify #178.
+  name-only remap (`Hips→mixamorig_Hips`, …) with **no rest-fixer pass**, so at
+  the time of this spike its *pose orientation* was unverified beyond track
+  *binding*. **RESOLVED in #273** (see the addendum below): the name-only
+  remap left the keys expressed against the KENNEY rig's rest orientations, not
+  Y Bot's — a separate rest-delta correction pass (analogous in spirit to the
+  rest fixer below, but hand-derived since pivot has no source FBX for the
+  importer to run against) fixed it. Track *binding* and rest-anchored *pose*
+  are both now state-checkable and proven; only visual pose *quality* stays a
+  human feel caveat (#178/#173).
+- **`run`'s "Run" clip has no `mixamorig_Hips` track** at all (before and
+  after) — any vertical hip bob was already absent. Still an open pose caveat
+  for the human verify #178.
 - **Route B (programmatic track-path/bone-name remap on the orphaned `.res`)
   was rejected:** the two rigs' rest quaternions differ arbitrarily, so a bare
   rename binds to the right bone at the wrong orientation. Godot's rest-fixer,
@@ -117,3 +125,53 @@ not the extraction step:
 Both fixes are confirmed by `LocomotionClipTest`'s two new assertion families
 (`loop_mode == Linear` per clip; first-key-vs-rest `>= 10°` for `LeftArm`/
 `RightArm` on `idle`/`run`) — RED before, GREEN after. See PR for #271.
+
+## Addendum (issue #273, 2026-07-23) — pivot's "no rest-fixer pass" caveat, closed
+
+A human in-editor 180° pivot after #271 landed a garbage pose (limbs splayed,
+body collapsed) — the caveat flagged above (`pivot` "pose orientation is
+unverified") turned out to be a real bug, not just an untested gap. Root
+cause, confirmed numerically: pivot's name-only remap (#267) carried the
+rotation keys over **as authored against the KENNEY rig's rest
+orientations**. Godot `ROTATION_3D` tracks are absolute local rotations, so
+Y Bot's bones were handed the raw Kenney rest quats verbatim — pivot's first
+key matched Kenney's rest **bit-for-bit** (`0.000000°` deviation on all 4
+bones) while sitting 177–180° off Y Bot's own rest on Hips/LeftUpLeg/
+RightUpLeg (Spine's rest happens to coincide across rigs at ~0°, which is why
+the pose read "collapsed" rather than uniformly rotated).
+
+Because `pivot` has no source FBX, the importer's rest fixer (the
+`fix_silhouette` mechanism from the #271 addendum above) cannot run against
+it — the same hand-derivation gap this spike's gotcha list already flagged.
+The fix instead re-derives the equivalent correction by hand, per rotation
+key:
+
+```
+q_fixed = ybot_rest * kenney_rest⁻¹ * q_key
+```
+
+`kenney_rest` is hardcoded per bone (the 4 quats are the pivot clip's own
+pre-fix first keys — provenance: extracted at rev `80d66c5`, the #242
+authoring commit; the source Kenney rig no longer exists in the tree).
+`ybot_rest` is read live from `res://assets/Y Bot.fbx`'s `Skeleton3D`, so the
+correction stays valid even if the rig is ever re-imported. Left-
+multiplication by a unit quaternion is an isometry, so the authored inter-key
+motion (the real pivot animation, 6–10° pairwise per track) is preserved
+exactly — only the rest anchor moves. Applied via a one-off headless GDScript
+pass (not shipped, same disposable-tool precedent as this spike's own
+extraction scripts), writing the corrected `pivot` animation back into
+`assets/locomotion.res`; `assets/Y Bot.fbx.import` stays untouched.
+
+Confirmed by `LocomotionClipTest`'s third assertion family (opposite polarity
+of the #271 T-pose-anchor guard: every pivot rotation key must sit **within**
+15° of Y Bot's rest, not far from it, plus a `>= 3°` per-track pairwise-motion
+floor so a degenerate "fix" can't collapse the clip to static rests) — RED
+before (Hips 179.83°, LeftUpLeg 177.55°, RightUpLeg 177.99°, matching this
+addendum's fact table bit-for-bit) and GREEN after (6.0–10.0° on all 4
+tracks, motion intact). See PR for #273.
+
+**Net effect on the gotcha above:** pivot's pose is now numerically anchored
+to Y Bot's rests, on the same footing as idle/run's rest-fixer pass — track
+*binding* and rest-anchored *pose* are both proven by the harness. Only
+whether the pose *looks right* remains open, deferred to the human feel pass
+(#178/#173, ADR-0021).
