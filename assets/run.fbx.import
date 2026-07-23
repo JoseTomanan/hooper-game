@@ -49,6 +49,8 @@ _subresources={
 "retarget/remove_tracks/unimportant_positions": true,
 "retarget/remove_tracks/unmapped_bones": true,
 "retarget/rest_fixer/apply_node_transforms": true,
+"retarget/rest_fixer/fix_silhouette/enable": true,
+"retarget/rest_fixer/fix_silhouette/threshold": 15.0,
 "retarget/rest_fixer/normalize_position_tracks": true,
 "retarget/rest_fixer/overwrite_axis": true
 }
