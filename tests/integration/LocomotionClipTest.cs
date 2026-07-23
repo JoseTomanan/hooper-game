@@ -21,7 +21,7 @@ namespace HOOPERGAME.Tests.Integration;
 //
 // Deliberately does NOT assert the pose LOOKS right — per spike #87, driving
 // AnimationTree.Advance() and sampling rendered bone poses headlessly needs a
-// custom MainLoop frame pump, out of scope here. Three bounded clip-property
+// custom MainLoop frame pump, out of scope here. Four bounded clip-property
 // assertion families sit on top of track resolution:
 //   1. loop_mode (#271 — the import default LOOP_NONE shipped once, freezing
 //      run after a single pass);
@@ -32,7 +32,13 @@ namespace HOOPERGAME.Tests.Integration;
 //      tracks must sit NEAR Y Bot's rest instead of far from it — the
 //      OPPOSITE polarity of (2) — because pivot's hand-authored keys were
 //      Kenney-rest-relative and Godot's absolute ROTATION_3D tracks handed
-//      Y Bot's bones the raw Kenney rest orientations verbatim).
+//      Y Bot's bones the raw Kenney rest orientations verbatim);
+//   4. an idle<->run blend-compatibility guard (#275 — cross-clip signed-dot
+//      >= 0 on shared rotation tracks, an anatomical <= 90 deg bound on the
+//      UpLeg bones' cross-clip angle, and intra-track consecutive-key
+//      hemisphere continuity — because the BlendSpace1D interpolates the two
+//      clips together at intermediate speeds, where a hemisphere flip or a
+//      retarget twist transits garbage poses invisible at either endpoint).
 // Whether the corrected pose actually looks RIGHT remains the deferred human
 // feel judgment (#178/#173, ADR-0021) — but as of #273, pivot's pose is now
 // numerically anchored to Y Bot's own rests via the rest-delta correction,
@@ -416,8 +422,10 @@ public partial class LocomotionClipTest : Node
         }
 
         // Vacuous-pass guard: idle/run share plenty of skeletal rotation
-        // tracks (23 in the pre-fix asset) -- a near-empty overlap would mean
-        // this whole assertion family isn't actually exercising anything.
+        // tracks (20 in the pre-fix asset: 24 shared bone paths minus the 4
+        // that are SCALE_3D on one side, per issue #275's table) -- a
+        // near-empty overlap would mean this whole assertion family isn't
+        // actually exercising anything.
         if (sharedBones.Count < 10)
         {
             Fail($"clip 'idle'/'run': only {sharedBones.Count} shared ROTATION_3D bone tracks found -- " +
