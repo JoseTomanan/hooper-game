@@ -21,15 +21,23 @@ namespace HOOPERGAME.Tests.Integration;
 //
 // Deliberately does NOT assert the pose LOOKS right — per spike #87, driving
 // AnimationTree.Advance() and sampling rendered bone poses headlessly needs a
-// custom MainLoop frame pump, out of scope here. Since #271 two bounded clip
-// properties ARE asserted on top of track resolution: loop_mode (the import
-// default LOOP_NONE shipped once, freezing run after a single pass) and a
-// T-pose-anchor guard (each arm chain's first rotation key must sit well off
-// the skeleton's rest — the #271 bug pinned it at rest EXACTLY, because the
-// rest fixer without fix_silhouette anchors clips at the target rest).
-// Whether the corrected pose actually looks RIGHT (especially `pivot`, which
-// has no rest-fixer pass — it was hand-remapped bone-name-only, see the #267
-// PR body) remains the deferred human feel judgment (#178/#173, ADR-0021).
+// custom MainLoop frame pump, out of scope here. Three bounded clip-property
+// assertion families sit on top of track resolution:
+//   1. loop_mode (#271 — the import default LOOP_NONE shipped once, freezing
+//      run after a single pass);
+//   2. a T-pose-anchor guard for idle/run (#271 — each arm chain's first
+//      rotation key must sit well off the skeleton's rest, because the rest
+//      fixer without fix_silhouette anchors clips at the target rest);
+//   3. a rest-delta guard for pivot (#273 — every rotation key on pivot's 4
+//      tracks must sit NEAR Y Bot's rest instead of far from it — the
+//      OPPOSITE polarity of (2) — because pivot's hand-authored keys were
+//      Kenney-rest-relative and Godot's absolute ROTATION_3D tracks handed
+//      Y Bot's bones the raw Kenney rest orientations verbatim).
+// Whether the corrected pose actually looks RIGHT remains the deferred human
+// feel judgment (#178/#173, ADR-0021) — but as of #273, pivot's pose is now
+// numerically anchored to Y Bot's own rests via the rest-delta correction,
+// the same footing as idle/run's rest-fixer pass; only visual pose quality
+// is still unverified, not track-level correctness.
 //
 //   godot --headless --path . res://tests/integration/LocomotionClipTest.tscn
 //   Exit: 0 = PASS, 1 = FAIL (via GetTree().Quit) — the ADR-0016 exit-code contract.
