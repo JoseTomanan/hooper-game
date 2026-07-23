@@ -231,6 +231,118 @@ public partial class LocomotionClipTest : Node
             }
         }
 
+        // --- Issue #273 assertion family: pivot rest-delta correction -------
+        // pivot (authored in #242 against the KENNEY characterMedium.fbx rig,
+        // then bone-name-only remapped in #267) carries rotation keys
+        // expressed against KENNEY's rest orientations, not Y Bot's. Godot
+        // ROTATION_3D tracks are absolute local rotations, so unlike idle/run
+        // (which went through the importer's rest-fixer), pivot's raw Kenney
+        // rest quats get handed to Y Bot's bones verbatim — Hips/LeftUpLeg/
+        // RightUpLeg land 177-180 deg off Y Bot's rest (confirmed exact in the
+        // issue's fact table; Spine happens to coincide across rigs at ~0deg,
+        // which is why the pose reads "collapsed", not uniformly rotated).
+        //
+        // Polarity is the OPPOSITE of the #271 T-pose-anchor guard above:
+        // pivot's CORRECT keys sit NEAR Y Bot rest (small authored deltas
+        // around a live stance), not far from it. Threshold 15 deg: the
+        // observed bug values are 177-180 deg (an order of magnitude beyond),
+        // and the authored inter-key motion is only 6-10 deg per track, so 15
+        // deg comfortably separates "still broken" from "corrected" without
+        // demanding exact pose correctness (that stays the deferred human
+        // feel judgment, #178/#173).
+        const double PivotRestDeltaThresholdDeg = 15.0;
+        // The correction is a left-multiplication by a unit quaternion (an
+        // isometry) — it must preserve the authored inter-key motion exactly.
+        // Guard against a "fix" that collapses pivot to static rests instead
+        // of correcting them: every track's keys must still span at least
+        // this much pairwise deviation. Observed authored motion is 6-10 deg;
+        // 3 deg leaves margin against floating-point noise while still ruling
+        // out a degenerate all-keys-equal "fix".
+        const double PivotMinPairwiseMotionDeg = 3.0;
+        // Guards against a "fix" that silently drops/merges tracks — pivot is
+        // documented (root-cause table) as exactly 4 rotation tracks.
+        const int PivotExpectedRotationTrackCount = 4;
+
+        var pivotAnim = lib.GetAnimation("pivot");
+        var pivotRotationTracks = new List<(int TrackIdx, string BoneName)>();
+        for (int i = 0; i < pivotAnim.GetTrackCount(); i++)
+        {
+            if (pivotAnim.TrackGetType(i) != Animation.TrackType.Rotation3D) continue;
+            var path = pivotAnim.TrackGetPath(i);
+            if (path.GetSubNameCount() == 0) continue;
+            pivotRotationTracks.Add((i, path.GetSubName(0)));
+        }
+
+        GD.Print($"[locomotion-clip]   'pivot': rotation_track_count={pivotRotationTracks.Count}");
+        if (pivotRotationTracks.Count != PivotExpectedRotationTrackCount)
+        {
+            Fail($"clip 'pivot': expected {PivotExpectedRotationTrackCount} rotation tracks, " +
+                 $"found {pivotRotationTracks.Count}.");
+            allPass = false;
+        }
+
+        foreach (var (trackIdx, boneName) in pivotRotationTracks)
+        {
+            int boneIdx = skeleton.FindBone(boneName);
+            if (boneIdx < 0)
+            {
+                Fail($"clip 'pivot': skeleton has no bone '{boneName}' to check against — " +
+                     "cannot evaluate the rest-delta assertion.");
+                allPass = false;
+                continue;
+            }
+            Quaternion restRot = skeleton.GetBoneRest(boneIdx).Basis.GetRotationQuaternion();
+
+            int keyCount = pivotAnim.TrackGetKeyCount(trackIdx);
+            if (keyCount <= 0)
+            {
+                Fail($"clip 'pivot': rotation track for '{boneName}' has zero keys — vacuous, not proof.");
+                allPass = false;
+                continue;
+            }
+
+            var keys = new List<Quaternion>(keyCount);
+            for (int k = 0; k < keyCount; k++)
+            {
+                keys.Add((Quaternion)pivotAnim.TrackGetKeyValue(trackIdx, k));
+            }
+
+            double maxRestDeviationDeg = 0.0;
+            foreach (var key in keys)
+            {
+                double deviationDeg = QuaternionAngleDeg(key, restRot);
+                if (deviationDeg > maxRestDeviationDeg) maxRestDeviationDeg = deviationDeg;
+            }
+
+            double maxPairwiseDeviationDeg = 0.0;
+            for (int a = 0; a < keys.Count; a++)
+            {
+                for (int b = a + 1; b < keys.Count; b++)
+                {
+                    double devDeg = QuaternionAngleDeg(keys[a], keys[b]);
+                    if (devDeg > maxPairwiseDeviationDeg) maxPairwiseDeviationDeg = devDeg;
+                }
+            }
+
+            GD.Print($"[locomotion-clip]   'pivot' '{boneName}': max_vs_ybot_rest={maxRestDeviationDeg:F6} deg, " +
+                      $"max_pairwise_key_deviation={maxPairwiseDeviationDeg:F6} deg");
+
+            if (maxRestDeviationDeg >= PivotRestDeltaThresholdDeg)
+            {
+                Fail($"clip 'pivot': '{boneName}' has a key {maxRestDeviationDeg:F6} deg from Y Bot's rest — " +
+                     $"expected < {PivotRestDeltaThresholdDeg} deg (issue #273 Kenney-rest-relative bug).");
+                allPass = false;
+            }
+
+            if (maxPairwiseDeviationDeg < PivotMinPairwiseMotionDeg)
+            {
+                Fail($"clip 'pivot': '{boneName}' keys only span {maxPairwiseDeviationDeg:F6} deg pairwise — " +
+                     $"expected >= {PivotMinPairwiseMotionDeg} deg (clip must still actually animate, not " +
+                     "collapse to static rests).");
+                allPass = false;
+            }
+        }
+
         Finish(allPass ? 0 : 1);
     }
 
