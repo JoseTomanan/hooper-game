@@ -21,7 +21,7 @@ namespace HOOPERGAME.Tests.Integration;
 //
 // Deliberately does NOT assert the pose LOOKS right — per spike #87, driving
 // AnimationTree.Advance() and sampling rendered bone poses headlessly needs a
-// custom MainLoop frame pump, out of scope here. Three bounded clip-property
+// custom MainLoop frame pump, out of scope here. Four bounded clip-property
 // assertion families sit on top of track resolution:
 //   1. loop_mode (#271 — the import default LOOP_NONE shipped once, freezing
 //      run after a single pass);
@@ -32,7 +32,13 @@ namespace HOOPERGAME.Tests.Integration;
 //      tracks must sit NEAR Y Bot's rest instead of far from it — the
 //      OPPOSITE polarity of (2) — because pivot's hand-authored keys were
 //      Kenney-rest-relative and Godot's absolute ROTATION_3D tracks handed
-//      Y Bot's bones the raw Kenney rest orientations verbatim).
+//      Y Bot's bones the raw Kenney rest orientations verbatim);
+//   4. an idle<->run blend-compatibility guard (#275 — cross-clip signed-dot
+//      >= 0 on shared rotation tracks, an anatomical <= 90 deg bound on the
+//      UpLeg bones' cross-clip angle, and intra-track consecutive-key
+//      hemisphere continuity — because the BlendSpace1D interpolates the two
+//      clips together at intermediate speeds, where a hemisphere flip or a
+//      retarget twist transits garbage poses invisible at either endpoint).
 // Whether the corrected pose actually looks RIGHT remains the deferred human
 // feel judgment (#178/#173, ADR-0021) — but as of #273, pivot's pose is now
 // numerically anchored to Y Bot's own rests via the rest-delta correction,
@@ -348,6 +354,164 @@ public partial class LocomotionClipTest : Node
                      $"expected >= {PivotMinPairwiseMotionDeg} deg (clip must still actually animate, not " +
                      "collapse to static rests).");
                 allPass = false;
+            }
+        }
+
+        // --- Issue #275 assertion family: idle<->run blend-compatibility ----
+        // The Locomotion BlendSpace1D (idle@0.0 <-> run@6.0) transits an
+        // out-of-corridor pose at intermediate blend weights on the upper-leg
+        // bones (the human-visible start/stop-run twitch). Root cause,
+        // confirmed by a headless empirical probe (Godot 4.7.1, real Y Bot
+        // skeleton, code-built blend space mirroring this scene's config):
+        //   - mixamorig_LeftUpLeg: min signed dot between idle/run keys was
+        //     -0.962 (near-antipodal REPRESENTATION for orientations only
+        //     ~32 deg apart physically -- a hemisphere-flip data defect).
+        //   - mixamorig_RightUpLeg: min signed dot was -0.215; worst-pair
+        //     physical angle 162 deg -- anatomically absurd for a thigh
+        //     between an idle stance and a running stride, pointing at a
+        //     genuine ~180 deg twist about the bone's own axis (silhouette-
+        //     disambiguation picked the wrong branch for this one bone during
+        //     #267's retarget), not just a representation artifact.
+        //   - Every OTHER shared rotation track already has a positive min
+        //     signed dot (Hips 0.997, Spine 0.994, LeftLeg 0.656, ...) --
+        //     these two UpLeg bones are the only violators.
+        //
+        // Two independent invariants pin what the fix must establish:
+        //   (a) signed-dot continuity: every cross pair of (idle key, run
+        //       key) on a shared bone must have a non-negative dot product
+        //       (no antipodal-quaternion / hemisphere-flip data defect);
+        //   (b) anatomical bound: on the UpLeg bones specifically, the worst
+        //       cross-pair PHYSICAL angle (dot-sign-independent, via the
+        //       existing QuaternionAngleDeg helper) must stay <= 90 deg --
+        //       comfortably above every OTHER bone's own worst-pair angle
+        //       once the twist is corrected (RightUpLeg drops from 162 deg to
+        //       65 deg), while still an order of magnitude under the observed
+        //       162 deg bug value, so this threshold cleanly separates
+        //       "genuinely close" from "twisted" without demanding exact pose
+        //       correctness (pose *quality* stays the deferred human feel
+        //       judgment, #178/#173, ADR-0021 -- this pins data-level
+        //       correctness only).
+        // A third, weaker invariant (c) pins ordinary interpolation hygiene
+        // within each clip on its own: consecutive keys in the SAME track
+        // must already have a non-negative dot (no internal hemisphere hop),
+        // which every OTHER assertion family above implicitly assumes holds.
+        const double SignedDotFloor = 0.0;
+        const double UpLegAngleThresholdDeg = 90.0;
+        string[] upLegBones = { "mixamorig_LeftUpLeg", "mixamorig_RightUpLeg" };
+
+        var idleAnim = lib.GetAnimation("idle");
+        var runAnim = lib.GetAnimation("run");
+
+        var idleRotationBones = new List<string>();
+        for (int i = 0; i < idleAnim.GetTrackCount(); i++)
+        {
+            if (idleAnim.TrackGetType(i) != Animation.TrackType.Rotation3D) continue;
+            var path = idleAnim.TrackGetPath(i);
+            if (path.GetSubNameCount() == 0) continue;
+            idleRotationBones.Add(path.GetSubName(0));
+        }
+
+        var sharedBones = new List<string>();
+        for (int i = 0; i < runAnim.GetTrackCount(); i++)
+        {
+            if (runAnim.TrackGetType(i) != Animation.TrackType.Rotation3D) continue;
+            var path = runAnim.TrackGetPath(i);
+            if (path.GetSubNameCount() == 0) continue;
+            var bone = path.GetSubName(0);
+            if (idleRotationBones.Contains(bone)) sharedBones.Add(bone);
+        }
+
+        // Vacuous-pass guard: idle/run share plenty of skeletal rotation
+        // tracks (20 in the pre-fix asset: 24 shared bone paths minus the 4
+        // that are SCALE_3D on one side, per issue #275's table) -- a
+        // near-empty overlap would mean this whole assertion family isn't
+        // actually exercising anything.
+        if (sharedBones.Count < 10)
+        {
+            Fail($"clip 'idle'/'run': only {sharedBones.Count} shared ROTATION_3D bone tracks found -- " +
+                 "expected >= 10; the #275 blend-compatibility assertion family would be vacuous.");
+            allPass = false;
+        }
+
+        foreach (var bone in sharedBones)
+        {
+            int idleTrack = FindRotationTrack(idleAnim, bone);
+            int runTrack = FindRotationTrack(runAnim, bone);
+            int idleKeyCount = idleAnim.TrackGetKeyCount(idleTrack);
+            int runKeyCount = runAnim.TrackGetKeyCount(runTrack);
+            if (idleKeyCount <= 0 || runKeyCount <= 0)
+            {
+                Fail($"clip 'idle'/'run': bone '{bone}' has a zero-key rotation track -- vacuous, not proof.");
+                allPass = false;
+                continue;
+            }
+
+            double minCrossDot = double.PositiveInfinity;
+            double maxCrossAngleDeg = 0.0;
+            for (int ik = 0; ik < idleKeyCount; ik++)
+            {
+                var idleKey = (Quaternion)idleAnim.TrackGetKeyValue(idleTrack, ik);
+                for (int rk = 0; rk < runKeyCount; rk++)
+                {
+                    var runKey = (Quaternion)runAnim.TrackGetKeyValue(runTrack, rk);
+                    double dot = idleKey.Normalized().Dot(runKey.Normalized());
+                    if (dot < minCrossDot) minCrossDot = dot;
+                    double angleDeg = QuaternionAngleDeg(idleKey, runKey);
+                    if (angleDeg > maxCrossAngleDeg) maxCrossAngleDeg = angleDeg;
+                }
+            }
+
+            bool isUpLeg = System.Array.IndexOf(upLegBones, bone) >= 0;
+            GD.Print($"[locomotion-clip]   #275 '{bone}': min_cross_signed_dot={minCrossDot:F6} " +
+                      $"max_cross_angle_deg={maxCrossAngleDeg:F6} is_upleg={isUpLeg}");
+
+            if (minCrossDot < SignedDotFloor)
+            {
+                Fail($"clip 'idle'/'run': bone '{bone}' has a cross-clip key pair with signed dot " +
+                     $"{minCrossDot:F6} (< {SignedDotFloor}) -- antipodal-quaternion / hemisphere-flip " +
+                     "defect (issue #275): the idle<->run blend will transit the long way around the " +
+                     "sphere at intermediate weights instead of staying in the idle/run pose corridor.");
+                allPass = false;
+            }
+
+            if (isUpLeg && maxCrossAngleDeg > UpLegAngleThresholdDeg)
+            {
+                Fail($"clip 'idle'/'run': UpLeg bone '{bone}' has a cross-clip key pair {maxCrossAngleDeg:F6} " +
+                     $"deg apart (> {UpLegAngleThresholdDeg} deg) -- anatomically implausible for a thigh " +
+                     "between an idle stance and a running stride; points at an uncorrected twist about the " +
+                     "bone's own axis (issue #275).");
+                allPass = false;
+            }
+        }
+
+        // Intra-track continuity (c): within EACH clip on its own, every
+        // consecutive key pair on every rotation track must already share a
+        // non-negative dot, or that clip's own key-to-key interpolation
+        // (independent of any cross-clip blending) already hops hemispheres.
+        foreach (var (clipName, anim) in new[] { ("idle", idleAnim), ("run", runAnim) })
+        {
+            for (int i = 0; i < anim.GetTrackCount(); i++)
+            {
+                if (anim.TrackGetType(i) != Animation.TrackType.Rotation3D) continue;
+                int keyCount = anim.TrackGetKeyCount(i);
+                if (keyCount < 2) continue;
+
+                var prev = (Quaternion)anim.TrackGetKeyValue(i, 0);
+                for (int k = 1; k < keyCount; k++)
+                {
+                    var cur = (Quaternion)anim.TrackGetKeyValue(i, k);
+                    double dot = prev.Normalized().Dot(cur.Normalized());
+                    if (dot < SignedDotFloor)
+                    {
+                        var path = anim.TrackGetPath(i);
+                        string boneName = path.GetSubNameCount() > 0 ? path.GetSubName(0) : $"track[{i}]";
+                        Fail($"clip '{clipName}': bone '{boneName}' has consecutive keys {k - 1}->{k} with " +
+                             $"signed dot {dot:F6} (< {SignedDotFloor}) -- intra-track hemisphere hop " +
+                             "(issue #275 continuity invariant).");
+                        allPass = false;
+                    }
+                    prev = cur;
+                }
             }
         }
 
