@@ -79,6 +79,20 @@ public partial class LocomotionClipTest : Node
     private PlayerController _sweepRef0;
     private PlayerController _sweepRef6;
 
+    // #287 (BlendRestAnchor): scenes/Player.tscn now mutates TWO bone rests
+    // (mixamorig_LeftUpLeg/RightUpLeg) at _Ready, on every instance including
+    // `_player` above. The #271 T-pose-anchor and #273 pivot rest-delta
+    // families below compare clip keys against "Y Bot's rest" — that
+    // reference must stay the RAW, un-anchored rest, or those two families
+    // would silently start grading against a moving target. A separate,
+    // freshly-instantiated res://assets/Y Bot.fbx (NOT Player.tscn — it has
+    // no BlendRestAnchor node of its own) supplies that untouched ground
+    // truth. `_player`'s own skeleton remains the source for bone
+    // existence/track-resolution checks (structurally identical either way)
+    // and for #287's own pose sampling (which is SUPPOSED to reflect the
+    // anchored rest — that's the fix under test).
+    private Skeleton3D _rawYBotSkeleton;
+
     public override void _Ready()
     {
         GD.Print("[locomotion-clip] booting headless…");
@@ -88,6 +102,12 @@ public partial class LocomotionClipTest : Node
         inst.Name = "1";
         AddChild(inst);
         _player = inst;
+
+        var ybotScene = GD.Load<PackedScene>("res://assets/Y Bot.fbx");
+        var ybotInst = ybotScene.Instantiate();
+        ybotInst.Name = "RawYBotReference";
+        AddChild(ybotInst);
+        _rawYBotSkeleton = FindSkeleton(ybotInst);
 
         _sweepTest = InstantiateSweepRig("SweepTest");
         _sweepRef0 = InstantiateSweepRig("SweepRef0");
@@ -150,6 +170,13 @@ public partial class LocomotionClipTest : Node
         if (skeleton == null)
         {
             Fail("could not locate a Skeleton3D in the instanced Player.tscn.");
+            Finish(1);
+            return;
+        }
+        if (_rawYBotSkeleton == null)
+        {
+            Fail("could not locate a Skeleton3D in the raw (non-Player.tscn) Y Bot.fbx reference instance " +
+                 "— #271/#273's rest-comparison families cannot evaluate against ground truth.");
             Finish(1);
             return;
         }
@@ -264,15 +291,20 @@ public partial class LocomotionClipTest : Node
             var anim = lib.GetAnimation(clipName);
             foreach (var boneName in armBones)
             {
-                int boneIdx = skeleton.FindBone(boneName);
+                // Rest is read from the RAW Y Bot.fbx reference (#287's
+                // BlendRestAnchor mutates two OTHER bones' rest on Player.tscn's
+                // own skeleton, not these arm bones — but resolving both index
+                // AND rest against the untouched reference, rather than mixing
+                // sources, keeps this assertion's ground truth unambiguous).
+                int boneIdx = _rawYBotSkeleton.FindBone(boneName);
                 if (boneIdx < 0)
                 {
-                    Fail($"clip '{clipName}': skeleton has no bone '{boneName}' to check against — " +
-                         "cannot evaluate the T-pose-anchor assertion.");
+                    Fail($"clip '{clipName}': raw Y Bot reference skeleton has no bone '{boneName}' to " +
+                         "check against — cannot evaluate the T-pose-anchor assertion.");
                     allPass = false;
                     continue;
                 }
-                Quaternion restRot = skeleton.GetBoneRest(boneIdx).Basis.GetRotationQuaternion();
+                Quaternion restRot = _rawYBotSkeleton.GetBoneRest(boneIdx).Basis.GetRotationQuaternion();
 
                 int trackIdx = FindRotationTrack(anim, boneName);
                 if (trackIdx < 0)
@@ -354,15 +386,24 @@ public partial class LocomotionClipTest : Node
 
         foreach (var (trackIdx, boneName) in pivotRotationTracks)
         {
-            int boneIdx = skeleton.FindBone(boneName);
+            // #287: pivot's own rotation tracks include mixamorig_LeftUpLeg/
+            // RightUpLeg — the EXACT two bones BlendRestAnchor re-anchors on
+            // Player.tscn's own skeleton. This assertion's whole point is
+            // "pivot's authored keys sit near Y BOT'S REAL REST", so it must
+            // read rest from the RAW, un-anchored reference skeleton or it
+            // would silently start grading pivot against its own fix instead
+            // of the ground truth (a false-negative sinkhole: an actually-
+            // broken pivot clip could still pass by coincidentally landing
+            // near the ANCHORED rest instead of Y Bot's real one).
+            int boneIdx = _rawYBotSkeleton.FindBone(boneName);
             if (boneIdx < 0)
             {
-                Fail($"clip 'pivot': skeleton has no bone '{boneName}' to check against — " +
-                     "cannot evaluate the rest-delta assertion.");
+                Fail($"clip 'pivot': raw Y Bot reference skeleton has no bone '{boneName}' to check " +
+                     "against — cannot evaluate the rest-delta assertion.");
                 allPass = false;
                 continue;
             }
-            Quaternion restRot = skeleton.GetBoneRest(boneIdx).Basis.GetRotationQuaternion();
+            Quaternion restRot = _rawYBotSkeleton.GetBoneRest(boneIdx).Basis.GetRotationQuaternion();
 
             int keyCount = pivotAnim.TrackGetKeyCount(trackIdx);
             if (keyCount <= 0)
