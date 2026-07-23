@@ -5,6 +5,7 @@
 [ext_resource type="PackedScene" path="res://assets/Y Bot.fbx" id="3_3li8b"]
 [ext_resource type="AnimationLibrary" uid="uid://beyrxgsi2rt6p" path="res://assets/locomotion.res" id="4_mdl7e"]
 [ext_resource type="Script" path="res://scripts/Player/PlayerRigScaler.cs" id="5_rigscaler"]
+[ext_resource type="Script" path="res://scripts/Player/BlendRestAnchor.cs" id="6_restanchor287"]
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_p0vlq"]
 
@@ -162,6 +163,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1, 0)
 
 [node name="RigScaler" type="Node" parent="." unique_id=216087024]
 script = ExtResource("5_rigscaler")
+
+[node name="BlendRestAnchor" type="Node" parent="."]
+script = ExtResource("6_restanchor287")
 
 [node name="BeatenIndicator" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.1, 0)
