@@ -19,10 +19,14 @@ namespace HOOPERGAME.Tests.Integration;
 // "don't guess, print the real names and assert against them" proof for that
 // fix, generalized across all three clips.
 //
-// Deliberately does NOT assert the pose LOOKS right — per spike #87, driving
-// AnimationTree.Advance() and sampling rendered bone poses headlessly needs a
-// custom MainLoop frame pump, out of scope here. Four bounded clip-property
-// assertion families sit on top of track resolution:
+// The header used to say driving AnimationTree.Advance() and sampling
+// rendered bone poses headlessly needed a custom MainLoop frame pump and was
+// "out of scope here" (spike #87). That claim is now STALE as of #287: a
+// disposable diagnostic probe proved `AnimationTree.Advance(dt)` pumps and
+// samples real `Skeleton3D` bone poses perfectly headlessly from an ordinary
+// Node's _Ready/_PhysicsProcess — no custom MainLoop needed — and family 5
+// below now does exactly that, in this same harness. Five bounded
+// clip-property/pose assertion families sit on top of track resolution:
 //   1. loop_mode (#271 — the import default LOOP_NONE shipped once, freezing
 //      run after a single pass);
 //   2. a T-pose-anchor guard for idle/run (#271 — each arm chain's first
@@ -38,7 +42,16 @@ namespace HOOPERGAME.Tests.Integration;
 //      UpLeg bones' cross-clip angle, and intra-track consecutive-key
 //      hemisphere continuity — because the BlendSpace1D interpolates the two
 //      clips together at intermediate speeds, where a hemisphere flip or a
-//      retarget twist transits garbage poses invisible at either endpoint).
+//      retarget twist transits garbage poses invisible at either endpoint);
+//   5. a continuous-drive corridor sweep (#275's own predecessor #287 — data-
+//      level key compatibility (family 4) turned out NOT sufficient: the
+//      live AnimationNodeBlendSpace1D mixer still produces out-of-corridor
+//      leg poses at INTERMEDIATE blend weights during a real 0->6 ramp, a
+//      mixer-accumulation degeneracy, not a data defect. Drives the actual
+//      live Player.tscn AnimationTree with real Advance() calls across a
+//      90-frame/1.5s ramp and asserts every leg-chain bone pose stays within
+//      (reference-gap + 10 deg) of at least one of two phase-matched
+//      reference rigs pinned at blend 0 and blend 6).
 // Whether the corrected pose actually looks RIGHT remains the deferred human
 // feel judgment (#178/#173, ADR-0021) — but as of #273, pivot's pose is now
 // numerically anchored to Y Bot's own rests via the rest-delta correction,
@@ -56,6 +69,30 @@ public partial class LocomotionClipTest : Node
     private double _elapsed;
     private bool _finished;
 
+    // #287 corridor-sweep rigs: three independent live instances of the SAME
+    // scenes/Player.tscn (not a hand-built stand-in tree) so the sweep drives
+    // the exact production AnimationTree/BlendSpace1D/Skeleton3D wiring. Test
+    // ramps blend 0->6; ref0/ref6 are phase-matched controls pinned at the two
+    // endpoints, advanced with the identical dt sequence so "same frame index"
+    // means "same elapsed animation time" across all three.
+    private PlayerController _sweepTest;
+    private PlayerController _sweepRef0;
+    private PlayerController _sweepRef6;
+
+    // #287 (BlendRestAnchor): scenes/Player.tscn now mutates TWO bone rests
+    // (mixamorig_LeftUpLeg/RightUpLeg) at _Ready, on every instance including
+    // `_player` above. The #271 T-pose-anchor and #273 pivot rest-delta
+    // families below compare clip keys against "Y Bot's rest" — that
+    // reference must stay the RAW, un-anchored rest, or those two families
+    // would silently start grading against a moving target. A separate,
+    // freshly-instantiated res://assets/Y Bot.fbx (NOT Player.tscn — it has
+    // no BlendRestAnchor node of its own) supplies that untouched ground
+    // truth. `_player`'s own skeleton remains the source for bone
+    // existence/track-resolution checks (structurally identical either way)
+    // and for #287's own pose sampling (which is SUPPOSED to reflect the
+    // anchored rest — that's the fix under test).
+    private Skeleton3D _rawYBotSkeleton;
+
     public override void _Ready()
     {
         GD.Print("[locomotion-clip] booting headless…");
@@ -65,6 +102,46 @@ public partial class LocomotionClipTest : Node
         inst.Name = "1";
         AddChild(inst);
         _player = inst;
+
+        var ybotScene = GD.Load<PackedScene>("res://assets/Y Bot.fbx");
+        var ybotInst = ybotScene.Instantiate();
+        ybotInst.Name = "RawYBotReference";
+        AddChild(ybotInst);
+        _rawYBotSkeleton = FindSkeleton(ybotInst);
+
+        _sweepTest = InstantiateSweepRig("SweepTest");
+        _sweepRef0 = InstantiateSweepRig("SweepRef0");
+        _sweepRef6 = InstantiateSweepRig("SweepRef6");
+    }
+
+    // Sets up a Player.tscn instance for #287's manual-drive corridor sweep.
+    // PlayerController.ApplyAnimation() re-derives parameters/Locomotion/
+    // blend_position from live horizontal speed EVERY _PhysicsProcess tick
+    // (scripts/Player/PlayerController.cs) -- left running, it would fight
+    // this harness's own blend ramp, so physics/process are disabled here.
+    // AnimationTree.ProcessCallback is flipped to Manual in this SAME _Ready
+    // call that PlayerController's own _Ready sets Active=true in, before the
+    // engine's SceneTree has processed even one physics frame -- this is what
+    // guarantees the harness's own later Advance(0.0) prime call genuinely IS
+    // the first Advance() this tree ever receives, reproducing the exact
+    // "first advance after Active=true only primes at t=0, swallows dt"
+    // gotcha the #287 diagnostic probe confirmed (not a no-op after already-
+    // elapsed automatic ticks, which an engine-driven Physics-mode tree would
+    // have accumulated by the time RunCorridorSweep() gets around to it).
+    private PlayerController InstantiateSweepRig(string name)
+    {
+        var scene = GD.Load<PackedScene>("res://scenes/Player.tscn");
+        var inst = scene.Instantiate<PlayerController>();
+        inst.Name = name;
+        AddChild(inst);
+        inst.SetPhysicsProcess(false);
+        inst.SetProcess(false);
+
+        var tree = inst.GetNodeOrNull<AnimationTree>("AnimationTree");
+        if (tree != null)
+            tree.CallbackModeProcess = AnimationMixer.AnimationCallbackModeProcess.Manual;
+
+        return inst;
     }
 
     public override void _PhysicsProcess(double delta)
@@ -93,6 +170,13 @@ public partial class LocomotionClipTest : Node
         if (skeleton == null)
         {
             Fail("could not locate a Skeleton3D in the instanced Player.tscn.");
+            Finish(1);
+            return;
+        }
+        if (_rawYBotSkeleton == null)
+        {
+            Fail("could not locate a Skeleton3D in the raw (non-Player.tscn) Y Bot.fbx reference instance " +
+                 "— #271/#273's rest-comparison families cannot evaluate against ground truth.");
             Finish(1);
             return;
         }
@@ -207,15 +291,20 @@ public partial class LocomotionClipTest : Node
             var anim = lib.GetAnimation(clipName);
             foreach (var boneName in armBones)
             {
-                int boneIdx = skeleton.FindBone(boneName);
+                // Rest is read from the RAW Y Bot.fbx reference (#287's
+                // BlendRestAnchor mutates two OTHER bones' rest on Player.tscn's
+                // own skeleton, not these arm bones — but resolving both index
+                // AND rest against the untouched reference, rather than mixing
+                // sources, keeps this assertion's ground truth unambiguous).
+                int boneIdx = _rawYBotSkeleton.FindBone(boneName);
                 if (boneIdx < 0)
                 {
-                    Fail($"clip '{clipName}': skeleton has no bone '{boneName}' to check against — " +
-                         "cannot evaluate the T-pose-anchor assertion.");
+                    Fail($"clip '{clipName}': raw Y Bot reference skeleton has no bone '{boneName}' to " +
+                         "check against — cannot evaluate the T-pose-anchor assertion.");
                     allPass = false;
                     continue;
                 }
-                Quaternion restRot = skeleton.GetBoneRest(boneIdx).Basis.GetRotationQuaternion();
+                Quaternion restRot = _rawYBotSkeleton.GetBoneRest(boneIdx).Basis.GetRotationQuaternion();
 
                 int trackIdx = FindRotationTrack(anim, boneName);
                 if (trackIdx < 0)
@@ -297,15 +386,24 @@ public partial class LocomotionClipTest : Node
 
         foreach (var (trackIdx, boneName) in pivotRotationTracks)
         {
-            int boneIdx = skeleton.FindBone(boneName);
+            // #287: pivot's own rotation tracks include mixamorig_LeftUpLeg/
+            // RightUpLeg — the EXACT two bones BlendRestAnchor re-anchors on
+            // Player.tscn's own skeleton. This assertion's whole point is
+            // "pivot's authored keys sit near Y BOT'S REAL REST", so it must
+            // read rest from the RAW, un-anchored reference skeleton or it
+            // would silently start grading pivot against its own fix instead
+            // of the ground truth (a false-negative sinkhole: an actually-
+            // broken pivot clip could still pass by coincidentally landing
+            // near the ANCHORED rest instead of Y Bot's real one).
+            int boneIdx = _rawYBotSkeleton.FindBone(boneName);
             if (boneIdx < 0)
             {
-                Fail($"clip 'pivot': skeleton has no bone '{boneName}' to check against — " +
-                     "cannot evaluate the rest-delta assertion.");
+                Fail($"clip 'pivot': raw Y Bot reference skeleton has no bone '{boneName}' to check " +
+                     "against — cannot evaluate the rest-delta assertion.");
                 allPass = false;
                 continue;
             }
-            Quaternion restRot = skeleton.GetBoneRest(boneIdx).Basis.GetRotationQuaternion();
+            Quaternion restRot = _rawYBotSkeleton.GetBoneRest(boneIdx).Basis.GetRotationQuaternion();
 
             int keyCount = pivotAnim.TrackGetKeyCount(trackIdx);
             if (keyCount <= 0)
@@ -515,7 +613,199 @@ public partial class LocomotionClipTest : Node
             }
         }
 
+        // --- Issue #287 assertion family: continuous-drive corridor sweep ---
+        // #275 (family 4 above) proved data-level key compatibility but a
+        // dedicated diagnostic probe found it insufficient: driving the LIVE
+        // AnimationNodeBlendSpace1D mixer through a continuous 0->6 ramp (the
+        // actual production shape, not a discrete key-pair comparison) still
+        // produced out-of-corridor leg poses at INTERMEDIATE blend weights --
+        // a mixer rest-anchored-accumulation degeneracy, not a data defect
+        // (stored-sign changes were proven inert to blend output in #286).
+        // `sharedBones`/`idleAnim`/`runAnim` are reused from family 4 above.
+        string[] legChainCandidates =
+        {
+            "mixamorig_LeftUpLeg", "mixamorig_RightUpLeg",
+            "mixamorig_LeftLeg", "mixamorig_RightLeg",
+            "mixamorig_LeftFoot", "mixamorig_RightFoot",
+            "mixamorig_LeftToeBase", "mixamorig_RightToeBase",
+        };
+        // mixamorig_LeftToeBase is NOT included: idle carries no ROTATION_3D
+        // track for it at all (confirmed via a disposable [DEBUG-287] probe),
+        // so there is no idle-side reference to sweep against -- it is simply
+        // absent from `sharedBones`, the same intersection family 4 computes.
+        var legChainBones = sharedBones.Where(b => legChainCandidates.Contains(b)).ToList();
+
+        // Vacuous-pass guard: the #275 fact table names 2 UpLeg bones as the
+        // confirmed violators and the mechanism section says "only leg bones
+        // misbehave" across the whole chain -- a near-empty leg-chain set
+        // would mean this sweep isn't actually exercising the bug.
+        if (legChainBones.Count < 5)
+        {
+            Fail($"#287 corridor sweep: only {legChainBones.Count} shared leg-chain rotation tracks found -- " +
+                 "expected >= 5; the sweep would be vacuous.");
+            allPass = false;
+        }
+        else if (RunCorridorSweep(legChainBones))
+        {
+            // pass — printed inside RunCorridorSweep
+        }
+        else
+        {
+            allPass = false;
+        }
+
         Finish(allPass ? 0 : 1);
+    }
+
+    // #287: drives the three live sweep rigs' AnimationTrees through a
+    // 90-frame/1.5s continuous 0->6 blend ramp at a fixed 1/60s dt (the
+    // production shape a real start/stop-run transition takes) and asserts
+    // every leg-chain bone's pose stays within a corridor around the two
+    // phase-matched reference rigs (pinned at blend 0 / blend 6) at every
+    // frame. `mixamorig_Hips` rides along as a non-leg CONTROL bone (per the
+    // mechanism doc: arms/spine/Hips sit near rest and should stay well
+    // inside the corridor) -- printed for evidence but never counted toward
+    // a violation, so a Hips violation would flag a methodology bug, not
+    // reprove the leg-bone defect.
+    private const double CorridorMarginDeg = 10.0;
+    private const int SweepFrameCount = 90;
+    private const double SweepDt = 1.0 / 60.0;
+    private const double SweepDurationSeconds = 1.5; // 90 * 1/60
+
+    private bool RunCorridorSweep(List<string> legChainBones)
+    {
+        var testTree = _sweepTest.GetNodeOrNull<AnimationTree>("AnimationTree");
+        var ref0Tree = _sweepRef0.GetNodeOrNull<AnimationTree>("AnimationTree");
+        var ref6Tree = _sweepRef6.GetNodeOrNull<AnimationTree>("AnimationTree");
+        var testSkel = FindSkeleton(_sweepTest);
+        var ref0Skel = FindSkeleton(_sweepRef0);
+        var ref6Skel = FindSkeleton(_sweepRef6);
+
+        if (testTree == null || ref0Tree == null || ref6Tree == null ||
+            testSkel == null || ref0Skel == null || ref6Skel == null)
+        {
+            Fail("#287 corridor sweep: could not resolve AnimationTree/Skeleton3D on one or more sweep rigs.");
+            return false;
+        }
+
+        // Prime: see InstantiateSweepRig's doc — this is genuinely the FIRST
+        // Advance() call each tree has ever received (ProcessCallback was
+        // flipped to Manual before any physics frame ran), so it reproduces
+        // the confirmed "swallows dt, only enters Start->Locomotion" gotcha
+        // safely rather than accidentally landing mid-ramp.
+        testTree.Advance(0.0);
+        ref0Tree.Advance(0.0);
+        ref6Tree.Advance(0.0);
+
+        // Pin the two reference rigs at the BlendSpace1D's endpoints (idle@0,
+        // run@6, matching scenes/Player.tscn's AnimationNodeBlendSpace1D_cw2d6)
+        // for their entire run. Test starts the ramp at 0.
+        testTree.Set("parameters/Locomotion/blend_position", 0.0);
+        ref0Tree.Set("parameters/Locomotion/blend_position", 0.0);
+        ref6Tree.Set("parameters/Locomotion/blend_position", 6.0);
+
+        int violatingFrames = 0;
+        int hipsViolatingFrames = 0;
+        double worstExcessDeg = 0.0;
+        string worstBone = "";
+        int worstFrame = -1;
+        double worstAngle0 = 0.0, worstAngle6 = 0.0, worstGap = 0.0;
+
+        for (int frame = 1; frame <= SweepFrameCount; frame++)
+        {
+            double t = frame * SweepDt;
+            double blend = 6.0 * System.Math.Min(t / SweepDurationSeconds, 1.0);
+            testTree.Set("parameters/Locomotion/blend_position", blend);
+
+            testTree.Advance(SweepDt);
+            ref0Tree.Advance(SweepDt);
+            ref6Tree.Advance(SweepDt);
+
+            bool frameViolated = false;
+            foreach (var bone in legChainBones)
+            {
+                if (!TryCorridorCheck(testSkel, ref0Skel, ref6Skel, bone,
+                        out double angle0, out double angle6, out double gap))
+                    continue;
+
+                double threshold = gap + CorridorMarginDeg;
+                if (angle0 > threshold && angle6 > threshold)
+                {
+                    frameViolated = true;
+                    double excess = System.Math.Min(angle0, angle6) - threshold;
+                    if (excess > worstExcessDeg)
+                    {
+                        worstExcessDeg = excess;
+                        worstBone = bone;
+                        worstFrame = frame;
+                        worstAngle0 = angle0;
+                        worstAngle6 = angle6;
+                        worstGap = gap;
+                    }
+                }
+            }
+            if (frameViolated) violatingFrames++;
+
+            // Control bone: computed and counted for evidence only.
+            if (TryCorridorCheck(testSkel, ref0Skel, ref6Skel, "mixamorig_Hips",
+                    out double hipsAngle0, out double hipsAngle6, out double hipsGap) &&
+                hipsAngle0 > hipsGap + CorridorMarginDeg && hipsAngle6 > hipsGap + CorridorMarginDeg)
+            {
+                hipsViolatingFrames++;
+            }
+        }
+
+        GD.Print($"[locomotion-clip]   #287 corridor sweep: {violatingFrames}/{SweepFrameCount} leg-chain frames " +
+                  $"violated ({legChainBones.Count} bones checked); mixamorig_Hips control violated " +
+                  $"{hipsViolatingFrames}/{SweepFrameCount} frames.");
+        if (violatingFrames > 0)
+        {
+            GD.Print($"[locomotion-clip]   #287 worst: '{worstBone}' @ frame {worstFrame} " +
+                      $"(t={worstFrame * SweepDt:F3}s, blend={6.0 * System.Math.Min(worstFrame * SweepDt / SweepDurationSeconds, 1.0):F2}) " +
+                      $"angle_vs_ref0={worstAngle0:F1} angle_vs_ref6={worstAngle6:F1} ref_gap={worstGap:F1} " +
+                      $"excess={worstExcessDeg:F1} deg.");
+        }
+
+        if (violatingFrames > 0)
+        {
+            Fail($"clip 'idle'/'run' BlendSpace1D corridor sweep: {violatingFrames}/{SweepFrameCount} frames had " +
+                 "a leg-chain bone pose further from BOTH phase-matched idle/run reference rigs than " +
+                 $"(reference gap + {CorridorMarginDeg} deg) during a continuous 0->6 ramp -- the human-visible " +
+                 "start/stop-run twitch (issue #287, a mixer-accumulation degeneracy distinct from #275's " +
+                 "data-level defect).");
+            return false;
+        }
+
+        GD.Print("[locomotion-clip]   #287 PASS — no frame's leg-chain pose exits the idle/run corridor across the continuous ramp.");
+        return true;
+    }
+
+    // Shared per-bone/per-frame corridor math: returns false (skip, don't
+    // fail) if the bone doesn't resolve on all three skeletons — every bone
+    // this is called with is pre-filtered against `sharedBones` by the
+    // caller, so a miss here would indicate a rig-instantiation bug, not a
+    // real data gap; skipping (not failing) keeps this helper's contract
+    // narrow (pose math only) while RunCorridorSweep's own resolution guard
+    // above already covers "rig failed to instantiate at all".
+    private static bool TryCorridorCheck(
+        Skeleton3D testSkel, Skeleton3D ref0Skel, Skeleton3D ref6Skel, string bone,
+        out double angleVsRef0, out double angleVsRef6, out double refGap)
+    {
+        angleVsRef0 = angleVsRef6 = refGap = 0.0;
+
+        int testIdx = testSkel.FindBone(bone);
+        int ref0Idx = ref0Skel.FindBone(bone);
+        int ref6Idx = ref6Skel.FindBone(bone);
+        if (testIdx < 0 || ref0Idx < 0 || ref6Idx < 0) return false;
+
+        Quaternion testPose = testSkel.GetBonePoseRotation(testIdx);
+        Quaternion ref0Pose = ref0Skel.GetBonePoseRotation(ref0Idx);
+        Quaternion ref6Pose = ref6Skel.GetBonePoseRotation(ref6Idx);
+
+        angleVsRef0 = QuaternionAngleDeg(testPose, ref0Pose);
+        angleVsRef6 = QuaternionAngleDeg(testPose, ref6Pose);
+        refGap = QuaternionAngleDeg(ref0Pose, ref6Pose);
+        return true;
     }
 
     private static int FindRotationTrack(Animation anim, string boneName)

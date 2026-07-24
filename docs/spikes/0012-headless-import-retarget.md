@@ -175,3 +175,115 @@ to Y Bot's rests, on the same footing as idle/run's rest-fixer pass — track
 *binding* and rest-anchored *pose* are both proven by the harness. Only
 whether the pose *looks right* remains open, deferred to the human feel pass
 (#178/#173, ADR-0021).
+
+---
+
+## Addendum (issue #287, 2026-07-23) — the idle<->run BlendSpace1D mixer degeneracy, closed
+
+#275/PR #286 fixed the *data-level* half of the idle<->run start/stop-run
+twitch (RightUpLeg's 180° retarget twist + hemisphere-sign normalization).
+A dedicated continuous-drive probe then proved that half insufficient: the
+LIVE `AnimationNodeBlendSpace1D` mixer still produced out-of-corridor leg
+poses at INTERMEDIATE blend weights during a real 0->6 ramp — 53/90 sampled
+frames (1/60s steps over 1.5s) violated a (reference-gap + 10°) corridor
+around phase-matched idle/run reference rigs, worst `mixamorig_RightUpLeg` @
+blend 3.0: 175.9° from BOTH references vs a 31.9° reference-to-reference gap
+(134.0° excess). This is a genuinely different bug class from #275's: stored
+key *data* was already hemisphere-clean per #286's own inertness proof
+(whole-track sign flips give byte-identical blend output), yet the LIVE
+blend output still misbehaved.
+
+### Mechanism
+
+Godot's `AnimationTree` mixer blends multiple simultaneous contributions
+(here: the two `AnimationNodeAnimation` children a `BlendSpace1D` weights
+between) via a REST-ANCHORED accumulation, not a naive two-point SLERP of
+absolute poses. A #287 diagnostic probe measured `mixamorig_LeftUpLeg`/
+`RightUpLeg`'s own rest-relative deviation across each clip's FULL timeline
+independently: `idle` sits 162–177° from Y Bot's raw T-pose rest, `run` sits
+131–180° — i.e. **both** clips individually sit near the ANTIPODE of rest
+for these two bones, not merely far apart from each other. When two
+contributions both sit near rest's antipode along different great circles,
+their rest-relative components partially cancel at intermediate blend
+weights, producing a pose on NEITHER clip's arc — exactly the observed
+134° excess.
+
+### Rejected alternatives (tried, in order, before the authorized fix)
+
+1. **Synthesized intermediate blend-point clips** (the issue's own first
+   recommendation): a `mid` clip built as per-shared-track
+   `slerp(idle_key, run_key, 0.5)` (20-sample uniform grid, timeline-
+   normalized), inserted as a third `BlendSpace1D` point at pos 3.0.
+   Empirically **made it WORSE**: 65/90 violated (up from the 53/90
+   baseline). Bisecting further (adding `lo_mid`/`hi_mid` at 1.5/4.5, five
+   total blend points) improved but did not close it: 28/90 violated, worst
+   excess 107.3°. Explained by the mechanism above: because BOTH idle and
+   run individually sit near rest's antipode across their ENTIRE timeline,
+   the "both contributions near antipode" degeneracy condition holds for
+   *any* pair of points drawn from this same pose family, not just the
+   idle/run endpoints — absolute-space slerp midpoints give diminishing but
+   non-closing returns (53 -> 65 -> 28, not converging toward 0) no matter
+   how many are added.
+2. **RESET-track anchoring**: found byte-inert to the mixer output (0/90
+   unchanged either way) — Godot's built-in `RESET` animation is an
+   editor/tooling convention with no runtime effect on `AnimationTree`
+   blending; it does not participate in the mixer's rest-relative
+   accumulation at all.
+3. **Re-representing stored quats (sign/hemisphere)**: already proven inert
+   to blend output in #286 (whole-track sign flips give byte-identical blend
+   output) — ruled out again here for the same reason.
+
+### Authorized fix: scoped runtime rest-normalization (`BlendRestAnchor.cs`)
+
+`scripts/Player/BlendRestAnchor.cs`, wired as a node into `scenes/Player.tscn`
+(single-concern scene-edit commit, ADR-0011), re-anchors EXACTLY TWO
+`Skeleton3D` bone rests — `mixamorig_LeftUpLeg` and `mixamorig_RightUpLeg`,
+and no others — to `locomotion/idle`'s own first ROTATION_3D key (read from
+the live `AnimationLibrary` at runtime, never hardcoded, so it stays
+self-maintaining if the clips are ever rebuilt), instead of Y Bot's raw
+T-pose import rest. This removes the "both contributions near rest's
+antipode" condition at its source, rather than trying to shrink the gap
+between two antipodal contributions.
+
+Why this is safe (state-checkable, not a feel judgment):
+- `ROTATION_3D` animation tracks are ABSOLUTE local rotations in Godot, so
+  any bone driven at full weight by a single clip never consults rest at
+  all — both `BlendSpace1D` endpoints (full idle @ blend 0, full run @
+  blend 6) are UNCHANGED, confirmed byte-identical before/after (same key
+  values, same output) by the harness.
+- `pivot` (the plant/turn clip) animates both UpLeg bones directly on its
+  own 4 rotation tracks and always plays at full weight — its own dedicated
+  `AnimationNodeStateMachine` state, never blended with anything else — so
+  its rendered pose is unaffected. The `LocomotionClipTest` #273 family
+  (pivot rest-delta) is still green with numbers UNCHANGED from before this
+  fix (Hips 7.999956°, Spine 6.000054°, LeftUpLeg 10.000049°, RightUpLeg
+  10.000049°) — but only because that family was updated to compare against
+  a SEPARATE, freshly-instantiated raw `Y Bot.fbx` reference skeleton
+  instead of `Player.tscn`'s own (now rest-anchored) skeleton copy; the
+  #271 T-pose-anchor family was updated the same way for the same reason.
+  Without that reference-source fix, #273's pivot LeftUpLeg/RightUpLeg
+  checks would have started silently grading against the fix's own output
+  instead of Y Bot's true rest — a false-negative sinkhole.
+- Every `AnimationNodeStateMachineTransition` in `scenes/Player.tscn` has an
+  unset (Godot-default 0) `xfade_time` — verified directly by grepping the
+  `.tscn` text for `xfade`, zero matches — so every state-to-state switch
+  (Locomotion/Startup/Active/Recovery/Pivot/FadeawayActive) is a hard cut,
+  never a cross-blend. The Locomotion `BlendSpace1D` (idle<->run) is
+  therefore the ONLY multi-contribution blend surface in the whole
+  `AnimationTree`; this fix cannot expose any new partial-weight surface.
+- `PlayerRigScaler.CaptureBaseline()` (#170) reads ONLY `GetBoneRest(i)
+  .Basis.Scale` for every bone, and its own writes go to the ANIMATED POSE
+  (`SetBonePoseScale`), never rest. `BlendRestAnchor` mutates ONLY rest's
+  ROTATION (rebuilding the basis from a pure anchor quaternion, then
+  re-scaling by the ORIGINAL rest's own `Basis.Scale` so the value
+  `RigScaler` reads back is byte-identical either way) and leaves Origin
+  untouched — the two nodes' `_Ready()` order is provably irrelevant.
+
+Result, confirmed by `LocomotionClipTest`'s #287 corridor-sweep family:
+**0/90 violations** (down from 53/90), `mixamorig_Hips` control still 0/90
+(the sweep stayed discriminating throughout), all four other families
+(#271/#273/#275 track-resolution/loop-mode/T-pose-anchor/pivot-rest-delta/
+blend-compatibility) green with numbers unchanged from the pre-fix baseline.
+Pose *quality* (whether the corrected blend *looks* right, beyond staying
+in-corridor) remains the deferred human feel judgment (#178/#173,
+ADR-0021) — this addendum only closes the state-checkable defect.
