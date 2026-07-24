@@ -213,8 +213,11 @@ current milestone unless asked.
   (BlendSpace points, state-machine nodes/transitions) is now **AFK** — spike #87
   proved a hand-authored tree loads and runs identically to an editor-authored one
   (see `docs/spikes/0011-animationtree-text-authoring.md` for the authoring gotchas,
-  esp. the fragile flat `transitions` array). One structural exclusion remains HITL:
-  editor **import-dialog** settings not already scriptable headlessly. Scene edits
+  esp. the fragile flat `transitions` array). The FBX **retarget** subset (a
+  `BoneMap` + `SkeletonProfile` assigned in a `.fbx.import` `_subresources` block)
+  is also **AFK** — proven headless in #267 (see
+  `docs/spikes/0012-headless-import-retarget.md`); only import operations with no
+  headless path at all remain HITL. Scene edits
   are fragile (`ext_resource`/
   `sub_resource` IDs, `uid`, load-step counts) — so they ship in their own
   single-concern commit with a headless load check where a Godot binary is available.

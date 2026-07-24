@@ -26,7 +26,7 @@
       files via Compile Include, keeping BallController.cs out because it
       references Node3D which requires GodotSharpEditor support not present here.
     -->
-    <PackageReference Include="GodotSharp" Version="4.6.3" />
+    <PackageReference Include="GodotSharp" Version="4.7.1" />
   </ItemGroup>
 
   <!--

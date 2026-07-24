@@ -78,6 +78,16 @@ single-frame advance can't be driven headlessly without a custom `MainLoop` runn
 `DisplayServer`. This was time-boxed out. It is exactly the "confirm the runs-identically
 judgment" step the issue earmarks as the **HITL tail** (see below).
 
+> **Superseded (issue #287, 2026-07-23):** the "not proven headlessly" claim above
+> no longer holds. `tests/integration/LocomotionClipTest`'s corridor-sweep family
+> drives a live `AnimationTree` (`active = true`, `advance(dt)`) and samples
+> `Skeleton3D` bone poses per frame **headlessly** — no custom `MainLoop`, no
+> `DisplayServer` — by attaching the tree to an ordinary `Node`'s `_PhysicsProcess`
+> under `--headless`. Two gotchas made it work: the first `advance(dt)` after
+> `active = true` only *primes* at t=0 and swallows `dt` (call `advance(0.0)` then
+> `advance(dt)`), and a `SceneTree`-rooted scene runs physics frames without a
+> display. Live-blend pose verification is now an ordinary AFK harness capability.
+
 ## Gotchas found while text-authoring (the durable value)
 
 1. **`transitions` is a flat interleaved `Array`**, not a typed array:
