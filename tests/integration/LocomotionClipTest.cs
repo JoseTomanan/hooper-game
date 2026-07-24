@@ -25,7 +25,7 @@ namespace HOOPERGAME.Tests.Integration;
 // disposable diagnostic probe proved `AnimationTree.Advance(dt)` pumps and
 // samples real `Skeleton3D` bone poses perfectly headlessly from an ordinary
 // Node's _Ready/_PhysicsProcess — no custom MainLoop needed — and family 5
-// below now does exactly that, in this same harness. Five bounded
+// below now does exactly that, in this same harness. Six bounded
 // clip-property/pose assertion families sit on top of track resolution:
 //   1. loop_mode (#271 — the import default LOOP_NONE shipped once, freezing
 //      run after a single pass);
@@ -33,10 +33,12 @@ namespace HOOPERGAME.Tests.Integration;
 //      rotation key must sit well off the skeleton's rest, because the rest
 //      fixer without fix_silhouette anchors clips at the target rest);
 //   3. a rest-delta guard for pivot (#273 — every rotation key on pivot's 4
-//      tracks must sit NEAR Y Bot's rest instead of far from it — the
+//      AUTHORED PLANT tracks (Hips/Spine/LeftUpLeg/RightUpLeg, matched by
+//      name) must sit NEAR Y Bot's rest instead of far from it — the
 //      OPPOSITE polarity of (2) — because pivot's hand-authored keys were
 //      Kenney-rest-relative and Godot's absolute ROTATION_3D tracks handed
-//      Y Bot's bones the raw Kenney rest orientations verbatim);
+//      Y Bot's bones the raw Kenney rest orientations verbatim. Scoped to the
+//      plant bones because family 6 added off-rest upper-body hold tracks);
 //   4. an idle<->run blend-compatibility guard (#275 — cross-clip signed-dot
 //      >= 0 on shared rotation tracks, an anatomical <= 90 deg bound on the
 //      UpLeg bones' cross-clip angle, and intra-track consecutive-key
@@ -52,6 +54,13 @@ namespace HOOPERGAME.Tests.Integration;
 //      90-frame/1.5s ramp and asserts every leg-chain bone pose stays within
 //      (reference-gap + 10 deg) of at least one of two phase-matched
 //      reference rigs pinned at blend 0 and blend 6).
+//   6. a pivot upper-body completeness guard (turning-T-pose bug — the Pivot
+//      state is a single clip at full weight, so every bone pivot did NOT
+//      track was reset to Y Bot's REST = a Mixamo T-pose, snapping the arms
+//      horizontal the instant a turn began. pivot now carries idle's frame-0
+//      hold pose for the arm chain / upper body; assert those tracks exist and
+//      sit clearly OFF rest, plus a minimum total track count so it can't
+//      silently revert to the 4-track clip).
 // Whether the corrected pose actually looks RIGHT remains the deferred human
 // feel judgment (#178/#173, ADR-0021) — but as of #273, pivot's pose is now
 // numerically anchored to Y Bot's own rests via the rest-delta correction,
@@ -362,31 +371,45 @@ public partial class LocomotionClipTest : Node
         // 3 deg leaves margin against floating-point noise while still ruling
         // out a degenerate all-keys-equal "fix".
         const double PivotMinPairwiseMotionDeg = 3.0;
-        // Guards against a "fix" that silently drops/merges tracks — pivot is
-        // documented (root-cause table) as exactly 4 rotation tracks.
-        const int PivotExpectedRotationTrackCount = 4;
+        // SCOPE (turning-T-pose fix, 2026-07-25): this rest-delta/motion guard
+        // now applies to pivot's FOUR AUTHORED PLANT BONES only, by name.
+        // pivot originally carried exactly these four rotation tracks; the
+        // fix (tools/rebuild_pivot_upperbody.gd) added ~25 upper-body/limb
+        // "hold" tracks that are INTENTIONALLY far off rest (they hold idle's
+        // arms-down stance so a turn no longer reveals the T-pose rest), so a
+        // blanket "every pivot key near rest" assertion is no longer correct —
+        // the completeness family below checks those added tracks with the
+        // OPPOSITE polarity. The plant bones remain the #273 subject: their
+        // Kenney-rest-relative keys had to be corrected to sit NEAR Y Bot rest.
+        string[] pivotPlantBones =
+        {
+            "mixamorig_Hips", "mixamorig_Spine",
+            "mixamorig_LeftUpLeg", "mixamorig_RightUpLeg",
+        };
 
         var pivotAnim = lib.GetAnimation("pivot");
-        var pivotRotationTracks = new List<(int TrackIdx, string BoneName)>();
+        var pivotRotBoneToTrack = new Dictionary<string, int>();
         for (int i = 0; i < pivotAnim.GetTrackCount(); i++)
         {
             if (pivotAnim.TrackGetType(i) != Animation.TrackType.Rotation3D) continue;
             var path = pivotAnim.TrackGetPath(i);
             if (path.GetSubNameCount() == 0) continue;
-            pivotRotationTracks.Add((i, path.GetSubName(0)));
+            pivotRotBoneToTrack[path.GetSubName(0)] = i;
         }
 
-        GD.Print($"[locomotion-clip]   'pivot': rotation_track_count={pivotRotationTracks.Count}");
-        if (pivotRotationTracks.Count != PivotExpectedRotationTrackCount)
-        {
-            Fail($"clip 'pivot': expected {PivotExpectedRotationTrackCount} rotation tracks, " +
-                 $"found {pivotRotationTracks.Count}.");
-            allPass = false;
-        }
+        GD.Print($"[locomotion-clip]   'pivot': rotation_track_count={pivotRotBoneToTrack.Count}");
 
-        foreach (var (trackIdx, boneName) in pivotRotationTracks)
+        foreach (var boneName in pivotPlantBones)
         {
-            // #287: pivot's own rotation tracks include mixamorig_LeftUpLeg/
+            if (!pivotRotBoneToTrack.TryGetValue(boneName, out int trackIdx))
+            {
+                Fail($"clip 'pivot': missing authored plant rotation track for '{boneName}' " +
+                     "(issue #273 — the 4 plant bones must always be present).");
+                allPass = false;
+                continue;
+            }
+
+            // #287: pivot's plant tracks include mixamorig_LeftUpLeg/
             // RightUpLeg — the EXACT two bones BlendRestAnchor re-anchors on
             // Player.tscn's own skeleton. This assertion's whole point is
             // "pivot's authored keys sit near Y BOT'S REAL REST", so it must
@@ -436,21 +459,94 @@ public partial class LocomotionClipTest : Node
                 }
             }
 
-            GD.Print($"[locomotion-clip]   'pivot' '{boneName}': max_vs_ybot_rest={maxRestDeviationDeg:F6} deg, " +
+            GD.Print($"[locomotion-clip]   'pivot' plant '{boneName}': max_vs_ybot_rest={maxRestDeviationDeg:F6} deg, " +
                       $"max_pairwise_key_deviation={maxPairwiseDeviationDeg:F6} deg");
 
             if (maxRestDeviationDeg >= PivotRestDeltaThresholdDeg)
             {
-                Fail($"clip 'pivot': '{boneName}' has a key {maxRestDeviationDeg:F6} deg from Y Bot's rest — " +
+                Fail($"clip 'pivot': plant '{boneName}' has a key {maxRestDeviationDeg:F6} deg from Y Bot's rest — " +
                      $"expected < {PivotRestDeltaThresholdDeg} deg (issue #273 Kenney-rest-relative bug).");
                 allPass = false;
             }
 
             if (maxPairwiseDeviationDeg < PivotMinPairwiseMotionDeg)
             {
-                Fail($"clip 'pivot': '{boneName}' keys only span {maxPairwiseDeviationDeg:F6} deg pairwise — " +
+                Fail($"clip 'pivot': plant '{boneName}' keys only span {maxPairwiseDeviationDeg:F6} deg pairwise — " +
                      $"expected >= {PivotMinPairwiseMotionDeg} deg (clip must still actually animate, not " +
                      "collapse to static rests).");
+                allPass = false;
+            }
+        }
+
+        // --- Turning-T-pose assertion family: pivot upper-body completeness -
+        // Root cause of the "turning T-poses the arms" bug (confirmed headless,
+        // Godot 4.7.1): the Pivot state is a SINGLE clip played at FULL WEIGHT.
+        // Godot's AnimationMixer writes every bone the active clip does NOT
+        // track to the skeleton's REST transform — and Y Bot's rest is a
+        // Mixamo T-pose. pivot originally tracked only the 4 plant bones above,
+        // so the entire upper body (arms/shoulders/spine chain/head) snapped to
+        // the T-pose the instant a turn entered the Pivot state. idle/run were
+        // immune because they DO track the arms.
+        //
+        // Fix (tools/rebuild_pivot_upperbody.gd): copy idle's frame-0 pose for
+        // every rotation bone pivot lacked, held as a constant key, so the
+        // upper body holds the neutral idle stance through the plant. Assert
+        // pivot now drives the arm chain with each first key clearly OFF rest
+        // (same >= 10 deg polarity as #271's idle/run T-pose-anchor guard —
+        // the observed pre-fix value is effectively 0 deg / rest). A minimum
+        // total rotation-track count guards against silently reverting to the
+        // 4-track clip. Whether the held pose LOOKS right stays the deferred
+        // human feel judgment (#178/#173, ADR-0021).
+        const double PivotArmOffRestThresholdDeg = 10.0;
+        const int PivotMinRotationTrackCount = 20; // 4 plant + full upper/limb hold (observed: 29)
+        string[] pivotArmChain =
+        {
+            "mixamorig_LeftShoulder", "mixamorig_RightShoulder",
+            "mixamorig_LeftArm", "mixamorig_RightArm",
+            "mixamorig_LeftForeArm", "mixamorig_RightForeArm",
+        };
+
+        if (pivotRotBoneToTrack.Count < PivotMinRotationTrackCount)
+        {
+            Fail($"clip 'pivot': only {pivotRotBoneToTrack.Count} rotation tracks — expected >= " +
+                 $"{PivotMinRotationTrackCount} (turning-T-pose fix: pivot must carry the upper-body/limb " +
+                 "hold tracks, not just the 4 plant bones, or the Pivot state resets untracked bones to the " +
+                 "T-pose rest).");
+            allPass = false;
+        }
+
+        foreach (var boneName in pivotArmChain)
+        {
+            if (!pivotRotBoneToTrack.TryGetValue(boneName, out int trackIdx))
+            {
+                Fail($"clip 'pivot': no rotation track for arm-chain bone '{boneName}' — the Pivot state " +
+                     "would reset it to Y Bot's T-pose rest during a turn (turning-T-pose bug).");
+                allPass = false;
+                continue;
+            }
+            int boneIdx = _rawYBotSkeleton.FindBone(boneName);
+            if (boneIdx < 0)
+            {
+                Fail($"clip 'pivot': raw Y Bot reference skeleton has no bone '{boneName}' to check against.");
+                allPass = false;
+                continue;
+            }
+            if (pivotAnim.TrackGetKeyCount(trackIdx) <= 0)
+            {
+                Fail($"clip 'pivot': arm-chain track for '{boneName}' has zero keys — vacuous, not proof.");
+                allPass = false;
+                continue;
+            }
+            Quaternion armRestRot = _rawYBotSkeleton.GetBoneRest(boneIdx).Basis.GetRotationQuaternion();
+            var armFirstKey = (Quaternion)pivotAnim.TrackGetKeyValue(trackIdx, 0);
+            double armDeviationDeg = QuaternionAngleDeg(armFirstKey, armRestRot);
+            GD.Print($"[locomotion-clip]   'pivot' arm '{boneName}': first-key-vs-ybot-rest={armDeviationDeg:F6} deg");
+
+            if (armDeviationDeg < PivotArmOffRestThresholdDeg)
+            {
+                Fail($"clip 'pivot': arm-chain '{boneName}' first key is only {armDeviationDeg:F6} deg from Y Bot's " +
+                     $"rest (T-pose) — expected >= {PivotArmOffRestThresholdDeg} deg (turning-T-pose bug: the arm " +
+                     "would sit horizontal during a turn).");
                 allPass = false;
             }
         }
