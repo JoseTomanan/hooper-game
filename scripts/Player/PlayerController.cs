@@ -653,17 +653,28 @@ public partial class PlayerController : CharacterBody3D
 	private AnimationNodeStateMachinePlayback _animPlayback;
 
 	/// <summary>
-	/// The committed-move animation state currently traveled to. Tracked so
-	/// ApplyAnimation only calls Travel() on an actual state change, not every
-	/// tick — repeated Travel() to the current state would restart the clip.
+	/// The committed-move animation state NAME currently traveled to. Tracked
+	/// so ApplyAnimation only calls Travel() on an actual state change, not
+	/// every tick — repeated Travel() to the current state would restart the
+	/// clip.
+	///
+	/// A string, not a <see cref="MoveAnimState"/> (#277): since
+	/// <see cref="MoveAnimResolver.ResolveStateName"/> can map the SAME generic
+	/// enum value to different concrete states depending on the committed
+	/// move's Id (e.g. an unclipped jab's Active stays "Active", but a
+	/// clipped crossover's Active resolves to "CrossoverActive"), de-dup must
+	/// compare the resolved name, not the generic enum — an enum-based
+	/// comparison would see Active == Active across that transition, skip
+	/// Travel(), and leave the mesh stuck on the wrong clip.
 	/// </summary>
-	private MoveAnimState _currentAnimState = MoveAnimState.Locomotion;
+	private string _currentAnimStateName = "Locomotion";
 
 	/// <summary>
-	/// Harness observability (issue #242, ADR-0016): the display anim state
-	/// ApplyAnimation last Traveled the state machine to. Not read by any
-	/// gameplay or netcode path — cosmetic-only, same as <see cref="_currentAnimState"/>
-	/// it mirrors.
+	/// Harness observability (issue #242, ADR-0016; string since #277): the
+	/// display anim state NAME ApplyAnimation last Traveled the state machine
+	/// to (e.g. "Locomotion", "Active", or a per-move name like
+	/// "CrossoverActive"). Not read by any gameplay or netcode path —
+	/// cosmetic-only, same as <see cref="_currentAnimStateName"/> it mirrors.
 	///
 	/// NOTE this is the RESOLVER'S decision, not proof the AnimationTree
 	/// actually entered that state — <c>Travel()</c> to a missing/misnamed
@@ -673,7 +684,7 @@ public partial class PlayerController : CharacterBody3D
 	/// #257's code review). Use <see cref="ActiveAnimNodeForHarness"/> to
 	/// assert what the state machine actually did.
 	/// </summary>
-	internal MoveAnimState CurrentAnimStateForHarness => _currentAnimState;
+	internal string CurrentAnimStateForHarness => _currentAnimStateName;
 
 	/// <summary>
 	/// Harness observability (issue #242 code review, ADR-0016): the state
@@ -2843,10 +2854,15 @@ public partial class PlayerController : CharacterBody3D
 		float horizontalSpeed = new Vector2(Velocity.X, Velocity.Z).Length();
 		_animTree.Set("parameters/Locomotion/blend_position", horizontalSpeed);
 
-		// Committed-move state (#41/#69): map the DISPLAY phase to an anim state
-		// and Travel() only when it changes. Enum names match the AnimationTree's
-		// state names by contract (EDITOR_TASKS.md M7b), so ToString() is the
-		// state id — Locomotion/Startup/Active/Recovery.
+		// Committed-move state (#41/#69, per-move state names #277): map the
+		// DISPLAY phase to a generic anim state, then resolve THAT plus the
+		// DISPLAY move Id to the exact state name to Travel() to — a clipped
+		// move (jumpshot/crossover/behindtheback/steal/block) gets its own
+		// per-phase state (e.g. "CrossoverActive"), everything else falls
+		// back to the generic enum name (Locomotion/Startup/Active/Recovery)
+		// by contract (EDITOR_TASKS.md M7b). Travel() only when the resolved
+		// NAME changes — see _currentAnimStateName's doc for why the de-dup
+		// must be string-based, not enum-based.
 		if (_animPlayback == null) return;
 		(MovePhase displayPhase, _) = DisplayMove();
 		// (#243) isFadeaway only ever changes MoveAnimResolver's answer during
@@ -2861,11 +2877,12 @@ public partial class PlayerController : CharacterBody3D
 		// itself exists to provide for MovePhase (issue #242). The two flags
 		// never both matter for the same call: isFadeaway only bites on
 		// Active, isPivotingInPlace only bites on Inactive.
-		MoveAnimState target = MoveAnimResolver.Resolve(displayPhase, DisplayFadeaway(), IsPivotingInPlace);
-		if (target != _currentAnimState)
+		MoveAnimState generic = MoveAnimResolver.Resolve(displayPhase, DisplayFadeaway(), IsPivotingInPlace);
+		string target = MoveAnimResolver.ResolveStateName(generic, DisplayMoveId());
+		if (target != _currentAnimStateName)
 		{
-			_animPlayback.Travel(target.ToString());
-			_currentAnimState = target;
+			_animPlayback.Travel(target);
+			_currentAnimStateName = target;
 		}
 	}
 

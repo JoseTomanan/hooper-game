@@ -194,4 +194,101 @@ public class MoveAnimResolverTests
             Assert.Equal(first, second);
         }
     }
+
+    // ── ResolveStateName: per-move display-state names (issue #277) ─────────
+    //
+    // ResolveStateName maps a MoveAnimState + moveId onto the actual
+    // AnimationTree state name to Travel() to. The clipped-move table (SoT
+    // for the .tscn state names) currently covers jumpshot/crossover/
+    // behindtheback/steal/block; every other moveId — and every non-per-move-
+    // eligible MoveAnimState — falls back to the generic phase name.
+
+    [Fact]
+    public void ResolveStateName_ClippedMoveActive_ReturnsPerMoveName()
+    {
+        // The base clipped-move case: a moveId in the table combined with
+        // Active concatenates PascalCase prefix + phase name.
+        Assert.Equal("CrossoverActive", MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "crossover"));
+    }
+
+    [Fact]
+    public void ResolveStateName_ClippedMultiWordMoveActive_PinsCasing()
+    {
+        // Multi-word PascalCase prefix ("BehindTheBack") must not collapse or
+        // re-case — the .tscn state name mirrors this table exactly, so a
+        // casing slip here would silently break Travel() at runtime.
+        Assert.Equal("BehindTheBackActive", MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "behindtheback"));
+    }
+
+    [Fact]
+    public void ResolveStateName_ClippedMoveStartup_ReturnsPerMoveName()
+    {
+        Assert.Equal("JumpshotStartup", MoveAnimResolver.ResolveStateName(MoveAnimState.Startup, "jumpshot"));
+    }
+
+    [Fact]
+    public void ResolveStateName_ClippedMoveRecovery_ReturnsPerMoveName()
+    {
+        Assert.Equal("StealRecovery", MoveAnimResolver.ResolveStateName(MoveAnimState.Recovery, "steal"));
+    }
+
+    [Fact]
+    public void ResolveStateName_ClippedMoveFadeawayActive_ReturnsGenericFadeawayActive()
+    {
+        // Issue #243 exemption: even though "jumpshot" is clipped and a
+        // fadeaway release is a jumpshot outcome, FadeawayActive must stay the
+        // single shared fadeaway clip — NOT "JumpshotFadeawayActive" — because
+        // there is only one fadeaway clip regardless of which move triggered it.
+        Assert.Equal("FadeawayActive", MoveAnimResolver.ResolveStateName(MoveAnimState.FadeawayActive, "jumpshot"));
+    }
+
+    [Fact]
+    public void ResolveStateName_ClippedMoveLocomotion_ReturnsGenericLocomotion()
+    {
+        // Locomotion has no committed move in progress by definition, so a
+        // stray clipped moveId must never leak a per-move name onto it.
+        Assert.Equal("Locomotion", MoveAnimResolver.ResolveStateName(MoveAnimState.Locomotion, "crossover"));
+    }
+
+    [Fact]
+    public void ResolveStateName_ClippedMovePivot_ReturnsGenericPivot()
+    {
+        // Pivot is the in-place turn, not a committed move — never per-move.
+        Assert.Equal("Pivot", MoveAnimResolver.ResolveStateName(MoveAnimState.Pivot, "block"));
+    }
+
+    [Fact]
+    public void ResolveStateName_UnclippedMoveActive_ReturnsGenericFallback()
+    {
+        // "jab" is a real committed move (RequestBeginMove sends it) but is NOT
+        // in the clipped-move table, so it must fall back to the shared Active
+        // clip rather than throwing or resolving to a nonexistent state name.
+        Assert.Equal("Active", MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "jab"));
+    }
+
+    [Fact]
+    public void ResolveStateName_NullMoveIdActive_ReturnsGenericFallback()
+    {
+        // No move in flight (own player's own-role reconstruction can pass
+        // null) must degrade to the generic name, not throw.
+        Assert.Equal("Active", MoveAnimResolver.ResolveStateName(MoveAnimState.Active, null));
+    }
+
+    [Fact]
+    public void ResolveStateName_EmptyMoveIdActive_ReturnsGenericFallback()
+    {
+        Assert.Equal("Active", MoveAnimResolver.ResolveStateName(MoveAnimState.Active, string.Empty));
+    }
+
+    [Fact]
+    public void ResolveStateName_CalledRepeatedlyWithSameInput_IsDeterministic()
+    {
+        // Purity guarantee mirrors Resolve_CalledRepeatedlyWithSameInput_IsDeterministic:
+        // same (MoveAnimState, moveId) pair must always yield the same name, with
+        // no I/O or hidden state — the renderer can call this every tick safely.
+        string first  = MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "crossover");
+        string second = MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "crossover");
+
+        Assert.Equal(first, second);
+    }
 }

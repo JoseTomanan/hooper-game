@@ -832,6 +832,33 @@ jobs:
           godot --headless --path . res://tests/integration/PivotAnimTest.tscn -- --harness-scenario=pivot-enters-exits
           godot --headless --path . res://tests/integration/PivotAnimTest.tscn -- --harness-scenario=control-locomotion
 
+      # Per-move AnimationTree display layer (issue #277). MoveAnimResolverTests
+      # (dotnet) already pins ResolveStateName's pure dictionary lookup; this
+      # proves the REAL scenes/Player.tscn state machine actually Travels into
+      # a per-move state end-to-end, not just that the resolver returns the
+      # right string in isolation — the same #257 trap PivotAnimTest's own
+      # header documents (Travel() to a missing/misnamed state only logs an
+      # engine error, it never throws), so both scenarios assert
+      # ActiveAnimNodeForHarness (GetCurrentNode()), never the resolver's own
+      # decision. Needs a live ball + Dribbling possession, not just a bare
+      # PlayerController: BehindTheBack/BetweenTheLegs are dribble-family
+      # committed moves gated by #193's Held-holder dead-dribble check.
+      # 'clipped-reaches-permove' begins a BehindTheBack (listed in
+      # MoveAnimResolver.ClippedMovePrefixes) and latches that the tree
+      # actually entered "BehindTheBackActive" while MovePhase.Active was
+      # live, then settled back onto "Locomotion". 'unclipped-stays-generic'
+      # is the control: the identical setup with a BetweenTheLegs (deliberately
+      # NOT in ClippedMovePrefixes) instead — proves the generic "Active" node
+      # is reached and "BetweenTheLegsActive" (a node that doesn't exist in
+      # the tree) never appears, which is what makes the first scenario's pass
+      # meaningful rather than a harness premise that could never fail.
+      # Whether either clip LOOKS right stays #279/#173's deferred human feel
+      # judgment (ADR-0021) — only reachability is asserted here.
+      - name: Run movekind-anim harness
+        run: |
+          godot --headless --path . res://tests/integration/MoveKindAnimTest.tscn -- --harness-scenario=clipped-reaches-permove
+          godot --headless --path . res://tests/integration/MoveKindAnimTest.tscn -- --harness-scenario=unclipped-stays-generic
+
       # Independent height/wingspan rig scaling (issue #170), the engine-glue
       # half. RigScaleTests (dotnet) pins the pure RigScale classifier; this
       # proves PlayerRigScaler runs against the REAL imported Y Bot Skeleton3D:
