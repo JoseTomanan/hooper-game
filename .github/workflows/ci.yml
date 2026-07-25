@@ -859,6 +859,21 @@ jobs:
           godot --headless --path . res://tests/integration/MoveKindAnimTest.tscn -- --harness-scenario=clipped-reaches-permove
           godot --headless --path . res://tests/integration/MoveKindAnimTest.tscn -- --harness-scenario=unclipped-stays-generic
 
+      # Rebound-grab cosmetic one-shot (issue #284). Proves the ReboundGrab
+      # display state is actually REACHED after a live rebound (grab-fires),
+      # and — the load-bearing controls — that it never fires on a clean-catch
+      # tipoff or a real made-basket inbound (made-basket-no-grab), plus that
+      # the latch re-arms per recovery (consecutive-rebounds). grab-fires is the
+      # positive that makes the "no grab" control non-vacuous; made-basket-no-grab
+      # runs a genuine cleared make (asserted InFlight -> make-it-take-it) so its
+      # "no grab" is meaningful, not a shot that simply never made. Whether the
+      # catch clip LOOKS right stays #173's deferred feel judgment (ADR-0021).
+      - name: Run rebound-grab harness
+        run: |
+          godot --headless --path . res://tests/integration/ReboundGrabTest.tscn -- --harness-scenario=grab-fires
+          godot --headless --path . res://tests/integration/ReboundGrabTest.tscn -- --harness-scenario=made-basket-no-grab
+          godot --headless --path . res://tests/integration/ReboundGrabTest.tscn -- --harness-scenario=consecutive-rebounds
+
       # Independent height/wingspan rig scaling (issue #170), the engine-glue
       # half. RigScaleTests (dotnet) pins the pure RigScale classifier; this
       # proves PlayerRigScaler runs against the REAL imported Y Bot Skeleton3D:
