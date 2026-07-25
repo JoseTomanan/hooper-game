@@ -68,11 +68,19 @@ public static class MoveAnimResolver
     /// same call.
     /// </param>
     /// <returns>The display animation state for that phase.</returns>
-    public static MoveAnimState Resolve(MovePhase phase, bool isFadeaway = false, bool isPivotingInPlace = false)
+    public static MoveAnimState Resolve(MovePhase phase, bool isFadeaway = false, bool isPivotingInPlace = false, bool isPlayingReboundGrab = false)
     {
         switch (phase)
         {
             case MovePhase.Inactive:
+                // Inactive-flourish precedence (grill decision + #284):
+                // ReboundGrab > Pivot > Locomotion. The rebound grab is the
+                // fresher, more specific event, so its short latch out-ranks a
+                // sustained turn latch; both only ever apply during Inactive
+                // (a committed move — Startup/Active/Recovery — never reaches
+                // this branch, so neither flourish can steal the display from a
+                // move in flight, exactly as isPivotingInPlace already couldn't).
+                if (isPlayingReboundGrab) return MoveAnimState.ReboundGrab;
                 return isPivotingInPlace ? MoveAnimState.Pivot : MoveAnimState.Locomotion;
             case MovePhase.Startup:
                 return MoveAnimState.Startup;
