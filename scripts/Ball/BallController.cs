@@ -2232,8 +2232,8 @@ public partial class BallController : Node3D
 				defender.EndResolvedDefensiveMove();
 
 				GD.Print($"[BallController] Block success: defender {defender.Name}, " +
-				         $"defActive [{defActiveStart},{defActiveEnd}), " +
-				         $"vulnWindow [{_inFlightStartTick},{_inFlightStartTick + BlockGraceTicks})");
+						 $"defActive [{defActiveStart},{defActiveEnd}), " +
+						 $"vulnWindow [{_inFlightStartTick},{_inFlightStartTick + BlockGraceTicks})");
 
 				// No shot is in flight any more. ApplyShootLocally re-arms this
 				// on the next release; clearing it here keeps the field's
