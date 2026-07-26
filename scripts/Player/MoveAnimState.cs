@@ -49,6 +49,20 @@ namespace Hooper.Player;
 ///                mutually exclusive with FadeawayActive by phase: Fadeaway
 ///                only ever applies during Active, Pivot only during
 ///                Inactive, so the two states never compete for one frame.
+///
+///   ReboundGrab — (issue #284) the cosmetic reach-and-secure one-shot the mesh
+///                shows for a short latch after this player secures a LIVE
+///                rebound (a possession gain off an observably-Loose ball —
+///                PlayerController's grab latch). Like Pivot it is an "Inactive
+///                flourish" anchored OUTSIDE the MovePhase mapping — it is a
+///                momentary event, not a committed move (Rebound has no
+///                MovePhase arc; ReboundContest resolves possession
+///                instantaneously). Precedence (grill decision + #284): a
+///                committed move ALWAYS interrupts it (beginning a move ends
+///                the flourish, never vice versa), but for its own lifetime it
+///                out-ranks Pivot — the fresh, specific "just grabbed a board"
+///                read wins over a sustained turn latch. So within Inactive the
+///                order is ReboundGrab > Pivot > Locomotion.
 /// </summary>
 public enum MoveAnimState
 {
@@ -58,4 +72,5 @@ public enum MoveAnimState
     Recovery,
     FadeawayActive,
     Pivot,
+    ReboundGrab,
 }

@@ -1144,6 +1144,31 @@ public partial class BallController : Node3D
 	/// </summary>
 	internal float LastContestFactorForHarness { get; private set; } = 1f;
 
+	/// <summary>
+	/// Test-only (issue #284): stage a live loose ball resting at
+	/// <paramref name="position"/> so the next <see cref="TickLoose"/> runs the
+	/// real rebound scramble (<see cref="ResolveLooseBallRecovery"/> →
+	/// <see cref="AwardPossession"/> with cleared:false) and a player within
+	/// <see cref="PickupRadius"/> genuinely recovers it. Exists because there is
+	/// no non-shot way to reach a Loose ball from the harness: every production
+	/// path into Loose comes FROM InFlight (a shot) or a steal/block knock, and
+	/// TickLoose dereferences <c>_arc</c> on its first line — a bare
+	/// <c>StateMachine.GoLoose()</c> with an unseeded arc NREs on the next tick
+	/// (issue #96). Seeds <c>_arc</c> at rest with the same degenerate
+	/// release==target ShotArc the steal-knock path uses to obtain a valid
+	/// Gravity-carrying instance (Velocity collapses to Zero), then flips the
+	/// discrete state to Loose (which clears HolderPeerId to 0, so the recoverer
+	/// is a genuine rising-edge new holder). Purely a staging hook — it drives
+	/// only the same public transition a real missed shot would; it never
+	/// touches the rebound-grab display path, which is the thing under test.
+	/// </summary>
+	internal void SeedLooseBallForHarness(Vector3 position)
+	{
+		GlobalPosition = position;
+		_arc = new ShotArc(position, position, position.Y, Gravity);
+		StateMachine.GoLoose();
+	}
+
 	// ── Shot scatter RNG (issue #62, ADR-0009) ─────────────────────────────
 
 	/// <summary>

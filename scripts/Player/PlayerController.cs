@@ -154,6 +154,20 @@ public partial class PlayerController : CharacterBody3D
 	[Export] public float PivotThresholdDeg { get; set; } = 90f;
 
 	/// <summary>
+	/// (#284) How many physics ticks the cosmetic rebound-grab flourish stays
+	/// latched once a live rebound is secured — the on-screen lifetime of the
+	/// reach-and-secure one-shot (MoveAnimState.ReboundGrab). Purely cosmetic
+	/// (ADR-0004): it selects only which clip the mesh shows and never feeds
+	/// gameplay. 30 ticks ≈ 0.5 s at the 60 Hz physics rate — a brief grab beat,
+	/// long enough to read but short enough to yield to the next action; exact
+	/// duration is a feel judgment deferred to #173 (ADR-0021). Kept a non-zero
+	/// C# default (not only a .tscn override) so the headless harness, which
+	/// builds trees in code and sees raw C# defaults, still exercises a live
+	/// latch (harness code-defaults gotcha, #217).
+	/// </summary>
+	[Export] public int ReboundGrabDisplayTicks { get; set; } = 30;
+
+	/// <summary>
 	/// Ground acceleration in m/s². 45 (issue #183 retune, up from the M1a
 	/// default of 30): 0 → top speed in ≈ 0.13 s instead of 0.20 s — the
 	/// NBA-2K-style snappier start the human picked for the arcade-relaxed
@@ -544,6 +558,43 @@ public partial class PlayerController : CharacterBody3D
 	/// exactly on the tick that matters most (an empty-replay reconcile).
 	/// </summary>
 	public bool IsPivotingInPlace => _pivot.HasLatch;
+
+	// ── Rebound-grab flourish latch (M8b, issue #284) ─────────────────────────
+
+	/// <summary>
+	/// Physics ticks remaining on the cosmetic rebound-grab flourish. Set to
+	/// <see cref="ReboundGrabDisplayTicks"/> on the live-rebound edge
+	/// (<see cref="TickReboundGrabLatch"/>), decremented each cosmetic tick,
+	/// and forced to 0 the instant a committed move begins (a move permanently
+	/// interrupts the flourish, never vice versa — #284). Purely display state
+	/// (ADR-0004): nothing in gameplay/netcode reads it.
+	/// </summary>
+	private int _reboundGrabTicksRemaining;
+
+	/// <summary>
+	/// Ball state this node observed on the PREVIOUS cosmetic tick — the memory
+	/// that lets <see cref="TickReboundGrabLatch"/> tell a LIVE rebound (the ball
+	/// was visibly <see cref="BallState.Loose"/> for many ticks as it fell/rolled,
+	/// THEN Held) apart from a made basket (the server collapses InFlight→Held in
+	/// one tick, so a Loose frame is never observed). Seeded to Held (the ball's
+	/// constructor default and the pre-tipoff state) so the very first tick can
+	/// never read a phantom Loose→Held edge.
+	/// </summary>
+	private BallState _prevObservedBallState = BallState.Held;
+
+	/// <summary>Holder peer id this node observed on the PREVIOUS cosmetic tick, so
+	/// <see cref="TickReboundGrabLatch"/> fires only on the RISING edge of "this
+	/// player became the holder", not every tick they already hold it.</summary>
+	private int _prevObservedHolderPeerId;
+
+	/// <summary>
+	/// (#284) True while the cosmetic rebound-grab one-shot should be shown. Read
+	/// by <see cref="ApplyAnimation"/> to feed <see cref="MoveAnimResolver.Resolve"/>;
+	/// like <see cref="IsPivotingInPlace"/> it is an Inactive-only flourish the
+	/// resolver ranks above Pivot but below any committed move. Public for the
+	/// headless harness to observe the latch, mirroring IsPivotingInPlace.
+	/// </summary>
+	public bool IsPlayingReboundGrab => _reboundGrabTicksRemaining > 0;
 
 	// ── Authoritative ball-hand (M9, issue #83, ADR-0012) ─────────────────────
 
@@ -1542,6 +1593,7 @@ public partial class PlayerController : CharacterBody3D
 
 		ApplySmoothCorrection();
 		ApplyCosmetics();
+		TickReboundGrabLatch();
 		ApplyAnimation();
 		ApplyBeatenCue();
 	}
@@ -2830,6 +2882,68 @@ public partial class PlayerController : CharacterBody3D
 	}
 
 	/// <summary>
+	/// (#284) Maintains the cosmetic rebound-grab flourish latch each cosmetic
+	/// tick — the display-only counterpart to a rebound, which (unlike a
+	/// committed move) has no MovePhase arc to key off because ReboundContest
+	/// resolves loose-ball possession instantaneously.
+	///
+	/// Fires the latch on the LIVE-REBOUND edge: this node's player just became
+	/// the ball's holder (rising edge), the ball was observably
+	/// <see cref="BallState.Loose"/> the previous tick, AND the new possession is
+	/// uncleared. That triple is the whole discriminator (doubt-cycle #284):
+	///
+	///   • "was Loose last tick" separates a live rebound — where the ball is
+	///     visibly Loose for many ticks as it falls/rolls before someone secures
+	///     it — from a made basket, which the SERVER collapses InFlight→Held in a
+	///     single tick (ResolveServerMake runs synchronously inside the make
+	///     tick), so a Loose frame is never sampled there.
+	///   • "!IsCleared" is the belt-and-braces guard for the CLIENT, where a
+	///     made shot's predicted GoLoose() DOES expose a transient Loose window
+	///     before the server's make-it-take-it broadcast arrives. A counting make
+	///     awards cleared:true and the tipoff starts cleared:true, whereas every
+	///     live rebound / loose-ball recovery / turnover is cleared:false — so the
+	///     replicated clear flag independently rejects both non-rebound Loose→Held
+	///     paths. The residual ≤1-RTT window on a client (where its own prediction
+	///     briefly shows cleared:false for a counting make before the broadcast
+	///     corrects it) is the SAME accepted cosmetic artefact BallController.
+	///     AwardPossession already documents for the "take it back" HUD; it
+	///     self-corrects within a round trip and is display-only.
+	///
+	/// Runs for EVERY role/node (same "cosmetics apply everywhere" posture as
+	/// ApplyCosmetics/ApplyAnimation), keyed on <see cref="OwnPeerId"/>, so the
+	/// grab shows on a remote peer's copy of whoever grabbed the board too — off
+	/// already-replicated possession state, no new networked field. Pure read of
+	/// ball state; no path back into ReboundContest, possession, or replication.
+	/// </summary>
+	private void TickReboundGrabLatch()
+	{
+		BallController ball = GetBall();
+		if (ball != null)
+		{
+			int curHolder = ball.StateMachine.HolderPeerId;
+			bool becameHolder = curHolder == OwnPeerId && _prevObservedHolderPeerId != OwnPeerId;
+
+			if (becameHolder && _prevObservedBallState == BallState.Loose && !ball.IsCleared)
+				_reboundGrabTicksRemaining = ReboundGrabDisplayTicks;
+
+			_prevObservedBallState = ball.State;
+			_prevObservedHolderPeerId = curHolder;
+		}
+
+		// A committed move permanently interrupts the flourish (#284): drop the
+		// latch the instant a move is in flight so it does NOT resume when the
+		// move returns to Inactive. The resolver already refuses to SHOW the grab
+		// during Startup/Active/Recovery; this makes the interruption stick.
+		// Keyed on the DISPLAY phase so it is correct for the remote copy too
+		// (which reads the broadcast phase, not a live local machine).
+		if (DisplayMove().phase != MovePhase.Inactive)
+			_reboundGrabTicksRemaining = 0;
+
+		if (_reboundGrabTicksRemaining > 0)
+			_reboundGrabTicksRemaining--;
+	}
+
+	/// <summary>
 	/// Drives the rigged AnimationTree each frame (M7b): the idle↔run locomotion
 	/// blend from horizontal speed (#68), and the committed-move state machine
 	/// (Locomotion/Startup/Active/Recovery) from the DISPLAY phase (#41 + #69).
@@ -2877,7 +2991,12 @@ public partial class PlayerController : CharacterBody3D
 		// itself exists to provide for MovePhase (issue #242). The two flags
 		// never both matter for the same call: isFadeaway only bites on
 		// Active, isPivotingInPlace only bites on Inactive.
-		MoveAnimState generic = MoveAnimResolver.Resolve(displayPhase, DisplayFadeaway(), IsPivotingInPlace);
+		// isPlayingReboundGrab (#284): the rebound-grab flourish latch, maintained
+		// by TickReboundGrabLatch just above this call. Like isPivotingInPlace it
+		// only ever bites during Inactive (the resolver ranks it above Pivot but
+		// below any committed move), and the latch is already zeroed the instant a
+		// move begins, so the two never fight for a committed-move frame.
+		MoveAnimState generic = MoveAnimResolver.Resolve(displayPhase, DisplayFadeaway(), IsPivotingInPlace, IsPlayingReboundGrab);
 		string target = MoveAnimResolver.ResolveStateName(generic, DisplayMoveId());
 		if (target != _currentAnimStateName)
 		{

@@ -157,6 +157,84 @@ public class MoveAnimResolverTests
             MoveAnimResolver.Resolve(MovePhase.Inactive, isFadeaway: true, isPivotingInPlace: true));
     }
 
+    // ── Rebound grab flourish (issue #284) ───────────────────────────────────
+    //
+    // ReboundGrab is a cosmetic "Inactive flourish" like Pivot: it shows for a
+    // short latch after a live rebound is secured, is anchored OUTSIDE the
+    // MovePhase mapping, and a committed move always interrupts it. Precedence
+    // within Inactive (grill decision + #284): ReboundGrab > Pivot > Locomotion.
+
+    [Fact]
+    public void Resolve_InactiveAndGrabbing_ReturnsReboundGrab()
+    {
+        // Tracer: while the grab latch holds during Inactive, the reach-and-
+        // secure one-shot overrides the plain Locomotion display.
+        Assert.Equal(MoveAnimState.ReboundGrab,
+            MoveAnimResolver.Resolve(MovePhase.Inactive, isPlayingReboundGrab: true));
+    }
+
+    [Fact]
+    public void Resolve_InactiveGrabbingAndPivoting_ReturnsReboundGrab()
+    {
+        // The load-bearing precedence call (user decision, #284): when a fresh
+        // grab latch and a sustained pivot latch coincide, the grab wins for its
+        // lifetime — the "just grabbed a board" read is fresher and more specific
+        // than a turn-in-place. ReboundGrab > Pivot within Inactive.
+        Assert.Equal(MoveAnimState.ReboundGrab,
+            MoveAnimResolver.Resolve(MovePhase.Inactive, isPivotingInPlace: true, isPlayingReboundGrab: true));
+    }
+
+    [Theory]
+    [InlineData(MovePhase.Startup, MoveAnimState.Startup)]
+    [InlineData(MovePhase.Active, MoveAnimState.Active)]
+    [InlineData(MovePhase.Recovery, MoveAnimState.Recovery)]
+    public void Resolve_CommittedMoveAndGrabbing_IgnoresGrabFlag(MovePhase phase, MoveAnimState expected)
+    {
+        // "Beginning a move interrupts the flourish, never vice versa" (#284):
+        // a committed-move phase must never yield the display to a stray grab
+        // latch — the flourish is anchored strictly within Inactive, exactly as
+        // Pivot is. In practice PlayerController drops the latch the instant a
+        // move begins, but the resolver enforces the precedence itself rather
+        // than trusting the caller.
+        Assert.Equal(expected,
+            MoveAnimResolver.Resolve(phase, isPlayingReboundGrab: true));
+    }
+
+    [Fact]
+    public void Resolve_InactiveNotGrabbingNotPivoting_ReturnsLocomotion()
+    {
+        // Control anchoring the two guards above: with neither flourish latched,
+        // Inactive maps to plain Locomotion — the grab flag defaults off and does
+        // not perturb the ordinary idle/run game.
+        Assert.Equal(MoveAnimState.Locomotion,
+            MoveAnimResolver.Resolve(MovePhase.Inactive, isPivotingInPlace: false, isPlayingReboundGrab: false));
+    }
+
+    [Fact]
+    public void Resolve_GrabDefaultParameter_MatchesExplicitFalse()
+    {
+        // Every pre-#284 call site omits isPlayingReboundGrab; it must behave
+        // exactly as false so existing callers (and the #242/#243 tests above)
+        // are unaffected.
+        Assert.Equal(MoveAnimResolver.Resolve(MovePhase.Inactive, isPivotingInPlace: true, isPlayingReboundGrab: false),
+            MoveAnimResolver.Resolve(MovePhase.Inactive, isPivotingInPlace: true));
+    }
+
+    [Fact]
+    public void ResolveStateName_ReboundGrab_ReturnsGenericReboundGrab()
+    {
+        // ReboundGrab is a single shared flourish clip, not a committed move, so
+        // it is never per-move-eligible (only Startup/Active/Recovery are) — even
+        // if a stale moveId is passed alongside it, the name stays the generic
+        // "ReboundGrab", mirroring how Pivot/Locomotion resolve. A per-move name
+        // like "CrossoverReboundGrab" is a state the tree never has; Travel() to
+        // it would silently no-op.
+        Assert.Equal("ReboundGrab",
+            MoveAnimResolver.ResolveStateName(MoveAnimState.ReboundGrab, "crossover"));
+        Assert.Equal("ReboundGrab",
+            MoveAnimResolver.ResolveStateName(MoveAnimState.ReboundGrab, null));
+    }
+
     // ── Unknown phase fallback ────────────────────────────────────────────────
 
     [Fact]
