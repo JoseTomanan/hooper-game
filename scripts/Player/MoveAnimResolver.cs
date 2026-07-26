@@ -36,10 +36,15 @@ public static class MoveAnimResolver
     /// given committed-move <paramref name="phase"/>.
     ///
     /// The four committed-move phases map one-to-one onto display states;
-    /// <see cref="MovePhase.Inactive"/> maps to <see cref="MoveAnimState.Locomotion"/>
-    /// (the neutral idle/run game, blended separately from velocity) — UNLESS
-    /// <paramref name="isPivotingInPlace"/> is true, in which case Inactive
-    /// maps to <see cref="MoveAnimState.Pivot"/> instead (issue #242).
+    /// <see cref="MovePhase.Inactive"/> maps to the NEUTRAL stance — either
+    /// <see cref="MoveAnimState.Locomotion"/> (the possession-blind idle/run
+    /// game) or <see cref="MoveAnimState.Dribble"/> when
+    /// <paramref name="isDribbling"/> is true (issue #285) — and either can be
+    /// overridden by an Inactive flourish: <see cref="MoveAnimState.Pivot"/>
+    /// (issue #242) or <see cref="MoveAnimState.ReboundGrab"/> (issue #284).
+    /// Both neutral stances blend on velocity separately, inside their own
+    /// BlendSpace1D. Full Inactive precedence: ReboundGrab > Pivot > Dribble >
+    /// Locomotion.
     /// </summary>
     /// <param name="phase">Current phase of the committed-move state machine
     /// (own player) or the broadcast phase (remote copy, issue #69).</param>
@@ -67,21 +72,49 @@ public static class MoveAnimResolver
     /// governs, Inactive is what this governs, so they never compete for the
     /// same call.
     /// </param>
+    /// <param name="isDribbling">
+    /// (Issue #285) True when the player this frame is in LIVE-dribble
+    /// possession for DISPLAY purposes — <c>PlayerController.DisplayDribbling</c>,
+    /// which reads the single replicated ball's <c>BallState.Dribbling</c> +
+    /// holder, so it is already correct for every role. Changes the result only
+    /// during <see cref="MovePhase.Inactive"/>, where it replaces the neutral
+    /// <see cref="MoveAnimState.Locomotion"/> with
+    /// <see cref="MoveAnimState.Dribble"/>; it ranks BELOW both Inactive
+    /// flourishes (see below) and a committed move ignores it entirely, so an
+    /// offensive move's telegraph is never overwritten by the stance. Defaults
+    /// to false so every pre-#285 call site is unaffected.
+    /// </param>
     /// <returns>The display animation state for that phase.</returns>
-    public static MoveAnimState Resolve(MovePhase phase, bool isFadeaway = false, bool isPivotingInPlace = false, bool isPlayingReboundGrab = false)
+    public static MoveAnimState Resolve(MovePhase phase, bool isFadeaway = false, bool isPivotingInPlace = false, bool isPlayingReboundGrab = false, bool isDribbling = false)
     {
         switch (phase)
         {
             case MovePhase.Inactive:
-                // Inactive-flourish precedence (grill decision + #284):
-                // ReboundGrab > Pivot > Locomotion. The rebound grab is the
-                // fresher, more specific event, so its short latch out-ranks a
-                // sustained turn latch; both only ever apply during Inactive
-                // (a committed move — Startup/Active/Recovery — never reaches
-                // this branch, so neither flourish can steal the display from a
-                // move in flight, exactly as isPivotingInPlace already couldn't).
+                // Inactive precedence (grill decision + #284, extended by #285):
+                // ReboundGrab > Pivot > Dribble > Locomotion.
+                //
+                // The two flourishes come first: the rebound grab is the
+                // freshest, most specific event, so its short latch out-ranks a
+                // sustained turn latch. Dribble is NOT a flourish — it is the
+                // neutral stance that REPLACES Locomotion for a live-dribbling
+                // holder — so it slots in directly above Locomotion, below both.
+                //
+                // Keeping Pivot above Dribble is deliberate (#285): a pivot is a
+                // discrete footwork event and the dribble loop is a sustained
+                // stance, so #284's "fresher/more specific event wins" reasoning
+                // applies unchanged — and ranking Dribble higher would silently
+                // regress #242's shipped pivot display for every ball-handler
+                // who turns in place. Possession stays readable during a pivot
+                // via the in-hand ball mesh (ADR-0012).
+                //
+                // All three only ever apply during Inactive: a committed move
+                // (Startup/Active/Recovery) never reaches this branch, so none of
+                // them can steal the display from a move in flight — which
+                // matters most for isDribbling, since a ball-handler is dribbling
+                // for essentially every offensive committed move.
                 if (isPlayingReboundGrab) return MoveAnimState.ReboundGrab;
-                return isPivotingInPlace ? MoveAnimState.Pivot : MoveAnimState.Locomotion;
+                if (isPivotingInPlace) return MoveAnimState.Pivot;
+                return isDribbling ? MoveAnimState.Dribble : MoveAnimState.Locomotion;
             case MovePhase.Startup:
                 return MoveAnimState.Startup;
             case MovePhase.Active:
@@ -143,7 +176,11 @@ public static class MoveAnimResolver
     /// behind-the-back at a glance. Locomotion and Pivot are never per-move
     /// because neither one IS a committed move (Locomotion is the no-move
     /// neutral game; Pivot is the in-place turn latch, orthogonal to
-    /// CommittedMoveMachine — see MoveAnimState's doc). FadeawayActive is
+    /// CommittedMoveMachine — see MoveAnimState's doc). Dribble (#285) is
+    /// exempt for the same reason as Locomotion, which it replaces: it is the
+    /// no-move neutral stance for a live-dribbling holder, not a move — so
+    /// "CrossoverDribble" is a state the tree deliberately does not have.
+    /// FadeawayActive is
     /// exempt for the opposite reason: it IS tied to a committed move
     /// (JumpShot) but issue #243 deliberately built ONE shared fadeaway clip
     /// regardless of which move triggered it, so even though "jumpshot" is in

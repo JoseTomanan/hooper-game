@@ -63,6 +63,32 @@ namespace Hooper.Player;
 ///                out-ranks Pivot — the fresh, specific "just grabbed a board"
 ///                read wins over a sustained turn latch. So within Inactive the
 ///                order is ReboundGrab > Pivot > Locomotion.
+///
+///   Dribble    — (issue #285) the neutral stance for a player in LIVE-dribble
+///                possession: a speed-blended dribble-idle/dribble-moving
+///                BlendSpace1D, structurally the same shape as Locomotion but
+///                with the two dribble clips. Unlike Pivot and ReboundGrab this
+///                is NOT a flourish — it REPLACES Locomotion as the neutral, so
+///                an opponent can read who has the ball and that they can still
+///                drive (ADR-0003 makes that legibility a competitive
+///                requirement; before this, a stationary ball-handler rendered
+///                identically to an off-ball defender).
+///
+///                Gated on <c>BallState.Dribbling</c> specifically, NOT on
+///                "holds the ball": a <c>Held</c> (cradled / dead-dribble)
+///                holder keeps Locomotion, because showing a live-dribble loop
+///                once the dribble is dead would advertise a drive the holder
+///                can no longer legally make — an actively FALSE read, which is
+///                worse than no signal when the opponent's whole read is that
+///                the dribble is spent. Possession itself stays visible either
+///                way via the in-hand ball mesh (ADR-0012).
+///
+///                Precedence within Inactive: it sits directly above Locomotion
+///                and below both flourishes, so the full order is
+///                ReboundGrab > Pivot > Dribble > Locomotion. Keeping Pivot
+///                above it preserves #242 unchanged for ball-handlers (a pivot
+///                is a discrete footwork event; the dribble loop is a sustained
+///                stance), and a committed move still always wins over all four.
 /// </summary>
 public enum MoveAnimState
 {
@@ -73,4 +99,5 @@ public enum MoveAnimState
     FadeawayActive,
     Pivot,
     ReboundGrab,
+    Dribble,
 }
