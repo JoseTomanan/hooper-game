@@ -88,6 +88,17 @@ public partial class LocomotionClipTest : Node
     private PlayerController _sweepRef0;
     private PlayerController _sweepRef6;
 
+    // #285 adds a SECOND BlendSpace1D (the Dribble neutral stance,
+    // dribbleidle@0 <-> dribblemove@6), so the #287 corridor sweep now runs
+    // twice. Separate rigs rather than reuse: the Locomotion sweep leaves its
+    // three rigs pinned mid-ramp at blend 6 with an already-elapsed animation
+    // clock, and the "first Advance() only primes" gotcha InstantiateSweepRig
+    // documents can only be reproduced honestly on a tree that has never been
+    // advanced.
+    private PlayerController _dribbleSweepTest;
+    private PlayerController _dribbleSweepRef0;
+    private PlayerController _dribbleSweepRef6;
+
     // #287 (BlendRestAnchor): scenes/Player.tscn now mutates TWO bone rests
     // (mixamorig_LeftUpLeg/RightUpLeg) at _Ready, on every instance including
     // `_player` above. The #271 T-pose-anchor and #273 pivot rest-delta
@@ -121,6 +132,10 @@ public partial class LocomotionClipTest : Node
         _sweepTest = InstantiateSweepRig("SweepTest");
         _sweepRef0 = InstantiateSweepRig("SweepRef0");
         _sweepRef6 = InstantiateSweepRig("SweepRef6");
+
+        _dribbleSweepTest = InstantiateSweepRig("DribbleSweepTest");
+        _dribbleSweepRef0 = InstantiateSweepRig("DribbleSweepRef0");
+        _dribbleSweepRef6 = InstantiateSweepRig("DribbleSweepRef6");
     }
 
     // Sets up a Player.tscn instance for #287's manual-drive corridor sweep.
@@ -203,11 +218,15 @@ public partial class LocomotionClipTest : Node
         var clipNames = lib.GetAnimationList();
         GD.Print($"[locomotion-clip] locomotion.res clips: {string.Join(", ", clipNames)}");
 
-        // Vacuous-pass guard #1: the library itself must carry the three
-        // clips Player.tscn's AnimationTree references (locomotion/idle,
-        // locomotion/run, locomotion/pivot) — an empty or renamed library
-        // would trivially "pass" a bare per-clip loop below.
-        string[] expected = { "idle", "run", "pivot" };
+        // Vacuous-pass guard #1: the library itself must carry the clips
+        // Player.tscn's AnimationTree references (locomotion/idle,
+        // locomotion/run, locomotion/pivot, and #285's locomotion/dribbleidle +
+        // locomotion/dribblemove) — an empty or renamed library would
+        // trivially "pass" a bare per-clip loop below. The per-clip track
+        // resolution loop that follows iterates the WHOLE library, so the two
+        // dribble clips get #271's bone-track-match proof automatically; this
+        // list is what stops that loop from silently iterating nothing.
+        string[] expected = { "idle", "run", "pivot", "dribbleidle", "dribblemove" };
         var missingClips = expected.Where(e => !clipNames.Contains(e)).ToArray();
         if (missingClips.Length > 0)
         {
@@ -264,7 +283,15 @@ public partial class LocomotionClipTest : Node
         // correctly and acts as the CONTROL that proves this assertion itself
         // is discriminating (if pivot ever failed here, the assertion logic —
         // not the fix — would be the suspect).
-        string[] mustLoop = { "idle", "run", "pivot" };
+        //
+        // #285 adds dribbleidle/dribblemove here for exactly the #271 reason:
+        // both were extracted straight out of a stock Mixamo FBX, whose per-clip
+        // import default IS LOOP_NONE, and a dribble stance that plays once and
+        // freezes is the most obvious possible regression — a ball-handler
+        // standing still would visibly stop bouncing after 2.1s. The rebuild
+        // tool (tools/rebuild_dribble_clips.gd) sets LoopModeEnum.Linear
+        // explicitly; this is the assertion that keeps it set.
+        string[] mustLoop = { "idle", "run", "pivot", "dribbleidle", "dribblemove" };
         foreach (var clipName in mustLoop)
         {
             var anim = lib.GetAnimation(clipName);
@@ -741,7 +768,51 @@ public partial class LocomotionClipTest : Node
                  "expected >= 5; the sweep would be vacuous.");
             allPass = false;
         }
-        else if (RunCorridorSweep(legChainBones))
+        else if (RunCorridorSweep(legChainBones, "Locomotion", _sweepTest, _sweepRef0, _sweepRef6))
+        {
+            // pass — printed inside RunCorridorSweep
+        }
+        else
+        {
+            allPass = false;
+        }
+
+        // --- Issue #285: the Dribble BlendSpace1D gets the same sweep --------
+        // The dribble neutral is a SECOND partial-weight blend surface, so it
+        // is exposed to the exact #287 rest-anchored-accumulation degeneracy
+        // the Locomotion sweep above exists to catch — and it is exposed on a
+        // rig whose two UpLeg rests BlendRestAnchor deliberately moved to
+        // idle's frame-0 pose, i.e. a rest that belongs to a DIFFERENT clip
+        // family (Kenney-retargeted) than these two stock-Mixamo clips.
+        //
+        // Both endpoints derive from the same source clip, differing only by a
+        // 20-degree forward lean on mixamorig_Spine, so unlike idle/run they
+        // are a short arc apart and the blend SHOULD be trivially well-behaved.
+        // That expectation is precisely why it is worth asserting: it is the
+        // rest-independence claim the whole two-clip-from-one-source design
+        // rests on, and it is the thing a future swap-in of a genuinely
+        // distinct dribble-run clip (from some other rig/family) would break
+        // silently.
+        //
+        // Swept over ALL shared rotation bones, not just the leg chain: with
+        // identical leg keys on both endpoints the reference gap is ~0 there,
+        // which makes the corridor its TIGHTEST (10 deg flat) exactly where a
+        // degeneracy would show, and the spine chain that actually carries the
+        // lean is included rather than excluded.
+        var dribbleIdleAnim = lib.GetAnimation("dribbleidle");
+        var dribbleMoveAnim = lib.GetAnimation("dribblemove");
+        var dribbleSharedBones = SharedRotationBones(dribbleIdleAnim, dribbleMoveAnim);
+
+        // Vacuous-pass guard: both clips carry the full 53-track stock Mixamo
+        // skeleton, so a near-empty overlap means the extraction regressed.
+        if (dribbleSharedBones.Count < 20)
+        {
+            Fail($"#285 dribble corridor sweep: only {dribbleSharedBones.Count} shared ROTATION_3D bone tracks " +
+                 "between 'dribbleidle'/'dribblemove' -- expected >= 20; the sweep would be vacuous.");
+            allPass = false;
+        }
+        else if (RunCorridorSweep(dribbleSharedBones, "Dribble",
+                     _dribbleSweepTest, _dribbleSweepRef0, _dribbleSweepRef6))
         {
             // pass — printed inside RunCorridorSweep
         }
@@ -768,19 +839,28 @@ public partial class LocomotionClipTest : Node
     private const double SweepDt = 1.0 / 60.0;
     private const double SweepDurationSeconds = 1.5; // 90 * 1/60
 
-    private bool RunCorridorSweep(List<string> legChainBones)
+    // `state` is the AnimationTree state-machine node whose BlendSpace1D is
+    // under test ("Locomotion", or #285's "Dribble"). For anything other than
+    // Locomotion the rigs must first be travelled there and PROVEN to have
+    // arrived — sweeping the wrong state would silently re-run the Locomotion
+    // sweep under a Dribble label, the most plausible vacuous pass here.
+    private bool RunCorridorSweep(
+        List<string> legChainBones,
+        string state,
+        PlayerController testRig, PlayerController ref0Rig, PlayerController ref6Rig)
     {
-        var testTree = _sweepTest.GetNodeOrNull<AnimationTree>("AnimationTree");
-        var ref0Tree = _sweepRef0.GetNodeOrNull<AnimationTree>("AnimationTree");
-        var ref6Tree = _sweepRef6.GetNodeOrNull<AnimationTree>("AnimationTree");
-        var testSkel = FindSkeleton(_sweepTest);
-        var ref0Skel = FindSkeleton(_sweepRef0);
-        var ref6Skel = FindSkeleton(_sweepRef6);
+        string param = $"parameters/{state}/blend_position";
+        var testTree = testRig.GetNodeOrNull<AnimationTree>("AnimationTree");
+        var ref0Tree = ref0Rig.GetNodeOrNull<AnimationTree>("AnimationTree");
+        var ref6Tree = ref6Rig.GetNodeOrNull<AnimationTree>("AnimationTree");
+        var testSkel = FindSkeleton(testRig);
+        var ref0Skel = FindSkeleton(ref0Rig);
+        var ref6Skel = FindSkeleton(ref6Rig);
 
         if (testTree == null || ref0Tree == null || ref6Tree == null ||
             testSkel == null || ref0Skel == null || ref6Skel == null)
         {
-            Fail("#287 corridor sweep: could not resolve AnimationTree/Skeleton3D on one or more sweep rigs.");
+            Fail($"#287 corridor sweep [{state}]: could not resolve AnimationTree/Skeleton3D on one or more sweep rigs.");
             return false;
         }
 
@@ -793,15 +873,59 @@ public partial class LocomotionClipTest : Node
         ref0Tree.Advance(0.0);
         ref6Tree.Advance(0.0);
 
-        // Pin the two reference rigs at the BlendSpace1D's endpoints (idle@0,
-        // run@6, matching scenes/Player.tscn's AnimationNodeBlendSpace1D_cw2d6)
-        // for their entire run. Test starts the ramp at 0.
-        testTree.Set("parameters/Locomotion/blend_position", 0.0);
-        ref0Tree.Set("parameters/Locomotion/blend_position", 0.0);
-        ref6Tree.Set("parameters/Locomotion/blend_position", 6.0);
+        var trees = new[] { testTree, ref0Tree, ref6Tree };
+        if (state != "Locomotion")
+        {
+            // Start->Locomotion is the tree's only auto-advance edge, so every
+            // rig primes into Locomotion; walk them across the one-hop
+            // Locomotion->Dribble transition (#285 authored it with the default
+            // xfade of 0, hence an immediate switch) and give the machine a few
+            // manual Advances to actually process the travel.
+            foreach (var t in trees)
+            {
+                var pb = t.Get("parameters/playback").As<AnimationNodeStateMachinePlayback>();
+                if (pb == null)
+                {
+                    Fail($"#287 corridor sweep [{state}]: no AnimationNodeStateMachinePlayback on a sweep rig.");
+                    return false;
+                }
+                pb.Travel(state);
+            }
+            for (int i = 0; i < 4; i++)
+                foreach (var t in trees)
+                    t.Advance(SweepDt);
+
+            // Arrival guard — this is what makes the sweep non-vacuous.
+            foreach (var t in trees)
+            {
+                string current = t.Get("parameters/playback").As<AnimationNodeStateMachinePlayback>().GetCurrentNode();
+                if (current != state)
+                {
+                    Fail($"#287 corridor sweep [{state}]: a sweep rig is in state '{current}', not '{state}' — " +
+                         "the sweep would silently measure the wrong BlendSpace1D and pass vacuously.");
+                    return false;
+                }
+            }
+        }
+
+        // Pin the two reference rigs at the BlendSpace1D's endpoints (0 and 6,
+        // matching both blend spaces' authored blend_point positions in
+        // scenes/Player.tscn) for their entire run. Test starts the ramp at 0.
+        testTree.Set(param, 0.0);
+        ref0Tree.Set(param, 0.0);
+        ref6Tree.Set(param, 6.0);
 
         int violatingFrames = 0;
         int hipsViolatingFrames = 0;
+        // Endpoint-separation witness (#285): the corridor threshold is
+        // refGap + margin, i.e. self-referential — if the two reference rigs
+        // ever collapsed onto the SAME pose (blend parameter not reaching the
+        // blend space, both rigs stuck on one clip, a mis-typed `param` path),
+        // every gap would be ~0 and "no violations" would mean "nothing was
+        // measured". Track the largest gap observed and require it to be
+        // genuinely nonzero below.
+        double maxRefGapDeg = 0.0;
+        string maxRefGapBone = "";
         double worstExcessDeg = 0.0;
         string worstBone = "";
         int worstFrame = -1;
@@ -811,7 +935,7 @@ public partial class LocomotionClipTest : Node
         {
             double t = frame * SweepDt;
             double blend = 6.0 * System.Math.Min(t / SweepDurationSeconds, 1.0);
-            testTree.Set("parameters/Locomotion/blend_position", blend);
+            testTree.Set(param, blend);
 
             testTree.Advance(SweepDt);
             ref0Tree.Advance(SweepDt);
@@ -823,6 +947,12 @@ public partial class LocomotionClipTest : Node
                 if (!TryCorridorCheck(testSkel, ref0Skel, ref6Skel, bone,
                         out double angle0, out double angle6, out double gap))
                     continue;
+
+                if (gap > maxRefGapDeg)
+                {
+                    maxRefGapDeg = gap;
+                    maxRefGapBone = bone;
+                }
 
                 double threshold = gap + CorridorMarginDeg;
                 if (angle0 > threshold && angle6 > threshold)
@@ -851,28 +981,45 @@ public partial class LocomotionClipTest : Node
             }
         }
 
-        GD.Print($"[locomotion-clip]   #287 corridor sweep: {violatingFrames}/{SweepFrameCount} leg-chain frames " +
+        GD.Print($"[locomotion-clip]   #287 corridor sweep [{state}]: {violatingFrames}/{SweepFrameCount} leg-chain frames " +
                   $"violated ({legChainBones.Count} bones checked); mixamorig_Hips control violated " +
-                  $"{hipsViolatingFrames}/{SweepFrameCount} frames.");
+                  $"{hipsViolatingFrames}/{SweepFrameCount} frames; widest endpoint gap " +
+                  $"{maxRefGapDeg:F1} deg on '{maxRefGapBone}'.");
         if (violatingFrames > 0)
         {
-            GD.Print($"[locomotion-clip]   #287 worst: '{worstBone}' @ frame {worstFrame} " +
+            GD.Print($"[locomotion-clip]   #287 worst [{state}]: '{worstBone}' @ frame {worstFrame} " +
                       $"(t={worstFrame * SweepDt:F3}s, blend={6.0 * System.Math.Min(worstFrame * SweepDt / SweepDurationSeconds, 1.0):F2}) " +
                       $"angle_vs_ref0={worstAngle0:F1} angle_vs_ref6={worstAngle6:F1} ref_gap={worstGap:F1} " +
                       $"excess={worstExcessDeg:F1} deg.");
         }
 
+        // Non-vacuity: the two endpoint rigs must actually render DIFFERENT
+        // poses, or the corridor (refGap + margin) measured nothing at all.
+        // 5 deg floor: Locomotion's idle-vs-run legs are tens of degrees apart
+        // and Dribble's authored spine lean is 20 deg, so both clear this by a
+        // wide margin — it only rules out the degenerate ~0 case.
+        const double MinEndpointGapDeg = 5.0;
+        if (maxRefGapDeg < MinEndpointGapDeg)
+        {
+            Fail($"'{state}' BlendSpace1D corridor sweep: the two endpoint reference rigs never differed by more " +
+                 $"than {maxRefGapDeg:F3} deg on any swept bone (< {MinEndpointGapDeg} deg) — the corridor " +
+                 "threshold is (endpoint gap + margin), so a 'no violations' result here would be vacuous. " +
+                 $"Most likely the '{param}' blend parameter is not reaching the blend space, or both rigs are " +
+                 "playing the same clip.");
+            return false;
+        }
+
         if (violatingFrames > 0)
         {
-            Fail($"clip 'idle'/'run' BlendSpace1D corridor sweep: {violatingFrames}/{SweepFrameCount} frames had " +
-                 "a leg-chain bone pose further from BOTH phase-matched idle/run reference rigs than " +
+            Fail($"'{state}' BlendSpace1D corridor sweep: {violatingFrames}/{SweepFrameCount} frames had " +
+                 "a bone pose further from BOTH phase-matched endpoint reference rigs than " +
                  $"(reference gap + {CorridorMarginDeg} deg) during a continuous 0->6 ramp -- the human-visible " +
-                 "start/stop-run twitch (issue #287, a mixer-accumulation degeneracy distinct from #275's " +
+                 "start/stop twitch (issue #287, a mixer-accumulation degeneracy distinct from #275's " +
                  "data-level defect).");
             return false;
         }
 
-        GD.Print("[locomotion-clip]   #287 PASS — no frame's leg-chain pose exits the idle/run corridor across the continuous ramp.");
+        GD.Print($"[locomotion-clip]   #287 PASS [{state}] — no frame's pose exits the endpoint corridor across the continuous ramp.");
         return true;
     }
 
@@ -902,6 +1049,32 @@ public partial class LocomotionClipTest : Node
         angleVsRef6 = QuaternionAngleDeg(testPose, ref6Pose);
         refGap = QuaternionAngleDeg(ref0Pose, ref6Pose);
         return true;
+    }
+
+    // Bones carrying a ROTATION_3D track in BOTH clips — the set a BlendSpace1D
+    // between them actually mixes. (#285; the idle/run family above computes the
+    // same intersection inline, kept as-is to hold that shipped code still.)
+    private static List<string> SharedRotationBones(Animation a, Animation b)
+    {
+        var inA = new List<string>();
+        for (int i = 0; i < a.GetTrackCount(); i++)
+        {
+            if (a.TrackGetType(i) != Animation.TrackType.Rotation3D) continue;
+            var path = a.TrackGetPath(i);
+            if (path.GetSubNameCount() == 0) continue;
+            inA.Add(path.GetSubName(0));
+        }
+
+        var shared = new List<string>();
+        for (int i = 0; i < b.GetTrackCount(); i++)
+        {
+            if (b.TrackGetType(i) != Animation.TrackType.Rotation3D) continue;
+            var path = b.TrackGetPath(i);
+            if (path.GetSubNameCount() == 0) continue;
+            var bone = path.GetSubName(0);
+            if (inA.Contains(bone)) shared.Add(bone);
+        }
+        return shared;
     }
 
     private static int FindRotationTrack(Animation anim, string boneName)
