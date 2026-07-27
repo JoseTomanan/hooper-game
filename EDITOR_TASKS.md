@@ -70,6 +70,25 @@ none of it is needed to prove the game works.
 
 ---
 
+## Godot .NET MCP — enabling it on a new checkout (optional, per-machine)
+
+`addons/godot_dotnet_mcp/` ships in the repo (see `CLAUDE.md` §3) but plugin
+*enablement* is an editor click, not something Claude can do headlessly:
+
+1. Open this project in the Godot .NET editor.
+2. `Project Settings > Plugins > Godot .NET MCP > Enable`.
+3. Open the `MCPDock` and start the service (default
+   `http://127.0.0.1:3000/mcp`).
+4. From a Claude Code session whose working directory is this repo:
+   `claude mcp add --transport http --scope local godot-mcp http://127.0.0.1:3000/mcp`,
+   then restart the session (or run `/mcp`) so its tools load.
+
+Steps 1–2 write an `[autoload]` singleton and `[editor_plugins]/enabled` entry
+into `project.godot` the first time you enable it on a fresh checkout — that's
+expected and already reflected in the tracked file, not a local diff you made.
+
+---
+
 ## Milestone 1a editor tasks (DONE — issue #3, closed)
 
 These were completed when the single-player movement was proven. They are kept

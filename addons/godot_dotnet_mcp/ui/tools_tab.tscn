@@ -1,0 +1,157 @@
+[gd_scene format=3 uid="uid://cxcsjc8225x3f"]
+
+[ext_resource type="Script" path="res://addons/godot_dotnet_mcp/ui/tools_tab.gd" id="1"]
+
+[node name="ToolsTab" type="VBoxContainer" unique_id=1359971748]
+auto_translate_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("1")
+theme_override_constants/separation = 8
+
+[node name="HeaderCard" type="PanelContainer" parent="." unique_id=1375338534]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="HeaderMargin" type="MarginContainer" parent="HeaderCard" unique_id=1844552649]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 10
+
+[node name="HeaderContent" type="VBoxContainer" parent="HeaderCard/HeaderMargin" unique_id=84731291]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ToolCountLabel" type="Label" parent="HeaderCard/HeaderMargin/HeaderContent" unique_id=150408818]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="ContentSplit" type="VSplitContainer" parent="." unique_id=1069031372]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+split_offsets = PackedInt32Array(-45)
+split_offset = -45
+
+[node name="TopPane" type="VBoxContainer" parent="ContentSplit" unique_id=2110740705]
+clip_contents = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="SearchSeparator" type="HSeparator" parent="ContentSplit/TopPane" unique_id=1772924504]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SearchOuterMargin" type="MarginContainer" parent="ContentSplit/TopPane" unique_id=1080900856]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 6
+
+[node name="ToolSearchEdit" type="LineEdit" parent="ContentSplit/TopPane/SearchOuterMargin" unique_id=1258423127]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ToolListOuterMargin" type="MarginContainer" parent="ContentSplit/TopPane" unique_id=1243648683]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 2
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 6
+
+[node name="ToolListPanel" type="PanelContainer" parent="ContentSplit/TopPane/ToolListOuterMargin" unique_id=1581494068]
+unique_name_in_owner = true
+clip_contents = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="ToolListOverlay" type="Control" parent="ContentSplit/TopPane/ToolListOuterMargin/ToolListPanel" unique_id=2096812922]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ToolListMargin" type="MarginContainer" parent="ContentSplit/TopPane/ToolListOuterMargin/ToolListPanel/ToolListOverlay" unique_id=612716343]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 0
+theme_override_constants/margin_bottom = 6
+
+[node name="ToolTree" type="Tree" parent="ContentSplit/TopPane/ToolListOuterMargin/ToolListPanel/ToolListOverlay/ToolListMargin" unique_id=59884650]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+columns = 2
+allow_reselect = true
+hide_root = true
+select_mode = 1
+
+[node name="PreviewSeparator" type="HSeparator" parent="ContentSplit/TopPane" unique_id=491142597]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="BottomPane" type="VBoxContainer" parent="ContentSplit" unique_id=1730397027]
+clip_contents = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="PreviewOuterMargin" type="MarginContainer" parent="ContentSplit/BottomPane" unique_id=550482415]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 2
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 6
+
+[node name="ToolPreviewPanel" type="PanelContainer" parent="ContentSplit/BottomPane/PreviewOuterMargin" unique_id=1363009670]
+unique_name_in_owner = true
+clip_contents = true
+custom_minimum_size = Vector2(0, 148)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="ToolPreviewMargin" type="MarginContainer" parent="ContentSplit/BottomPane/PreviewOuterMargin/ToolPreviewPanel" unique_id=1852566438]
+layout_mode = 2
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_top = 2
+theme_override_constants/margin_right = 0
+theme_override_constants/margin_bottom = 12
+
+[node name="ToolPreviewContent" type="VBoxContainer" parent="ContentSplit/BottomPane/PreviewOuterMargin/ToolPreviewPanel/ToolPreviewMargin" unique_id=1749691677]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ToolPreviewTitle" type="Label" parent="ContentSplit/BottomPane/PreviewOuterMargin/ToolPreviewPanel/ToolPreviewMargin/ToolPreviewContent" unique_id=89596792]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="ToolPreviewText" type="TextEdit" parent="ContentSplit/BottomPane/PreviewOuterMargin/ToolPreviewPanel/ToolPreviewMargin/ToolPreviewContent" unique_id=1899959149]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+editable = false
+wrap_mode = 1
+scroll_fit_content_width = true

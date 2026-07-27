@@ -1,0 +1,154 @@
+@tool
+extends "res://addons/godot_dotnet_mcp/tools/plugin_shared.gd"
+
+
+func get_registration() -> Dictionary:
+	return {
+		"category": "plugin_evolution",
+		"domain_key": "plugin",
+		"hot_reloadable": false
+	}
+
+
+func get_tools() -> Array[Dictionary]:
+	return [
+		{
+			"name": "list_user_tools",
+			"description": "PLUGIN EVOLUTION LIST: Return all registered User-category tools.",
+			"inputSchema": {
+				"type": "object",
+				"properties": {}
+			}
+		},
+		{
+			"name": "scaffold_user_tool",
+			"description": "PLUGIN EVOLUTION SCAFFOLD: Preview or create a User-category tool scaffold through explicit authorization.",
+			"inputSchema": {
+				"type": "object",
+				"properties": {
+					"tool_name": {"type": "string"},
+					"display_name": {"type": "string"},
+					"description": {"type": "string"},
+					"authorized": {"type": "boolean"},
+					"agent_hint": {"type": "string"}
+				},
+				"required": ["tool_name"]
+			}
+		},
+		{
+			"name": "delete_user_tool",
+			"description": "PLUGIN EVOLUTION DELETE: Preview or delete a User-category tool script.",
+			"inputSchema": {
+				"type": "object",
+				"properties": {
+					"script_path": {"type": "string"},
+					"authorized": {"type": "boolean"},
+					"agent_hint": {"type": "string"}
+				},
+				"required": ["script_path"]
+			}
+		},
+		{
+			"name": "restore_user_tool",
+			"description": "PLUGIN EVOLUTION RESTORE: Preview or restore the most recently deleted User-category tool script.",
+			"inputSchema": {
+				"type": "object",
+				"properties": {
+					"authorized": {"type": "boolean"},
+					"agent_hint": {"type": "string"}
+				}
+			}
+		},
+		{
+			"name": "user_tool_audit",
+			"description": "PLUGIN EVOLUTION AUDIT: Read recent user tool audit entries.",
+			"inputSchema": {
+				"type": "object",
+				"properties": {
+					"limit": {"type": "integer"},
+					"filter_action": {"type": "string"},
+					"filter_session": {"type": "string"}
+				}
+			}
+		},
+		{
+			"name": "check_compatibility",
+			"description": "PLUGIN EVOLUTION COMPATIBILITY: Compare existing User tools against the current scaffold version.",
+			"inputSchema": {
+				"type": "object",
+				"properties": {}
+			}
+		},
+		{
+			"name": "runtime_diagnostics",
+			"description": "PLUGIN EVOLUTION RUNTIME DIAGNOSTICS: Summarize User-tool discovery, load failures, watcher state, compatibility, and recent audit entries.",
+			"inputSchema": {
+				"type": "object",
+				"properties": {
+					"limit": {"type": "integer", "minimum": 1, "maximum": 50}
+				}
+			}
+		},
+		{
+			"name": "usage_guide",
+			"description": "PLUGIN EVOLUTION USAGE GUIDE: Return the recommended authorization and User-tool workflow for this plugin.",
+			"inputSchema": {
+				"type": "object",
+				"properties": {}
+			}
+		}
+	]
+
+
+func execute(tool_name: String, args: Dictionary) -> Dictionary:
+	match tool_name:
+		"list_user_tools":
+			var plugin = _get_plugin()
+			if plugin == null or not plugin.has_method("get_user_tool_summaries"):
+				return _error("Plugin evolution bridge is unavailable")
+			return _success({"user_tools": plugin.get_user_tool_summaries()}, "User tools listed")
+		"scaffold_user_tool":
+			return _call_plugin_method("create_user_tool_from_tools", [args], "Plugin evolution bridge is unavailable")
+		"delete_user_tool":
+			return _call_plugin_method(
+				"delete_user_tool_from_tools",
+				[str(args.get("script_path", "")), bool(args.get("authorized", false)), str(args.get("agent_hint", ""))],
+				"Plugin evolution bridge is unavailable"
+			)
+		"restore_user_tool":
+			return _call_plugin_method(
+				"restore_user_tool_from_tools",
+				[bool(args.get("authorized", false)), str(args.get("agent_hint", ""))],
+				"Plugin evolution restore bridge is unavailable"
+			)
+		"user_tool_audit":
+			var plugin = _get_plugin()
+			if plugin == null or not plugin.has_method("get_user_tool_audit"):
+				return _error("Plugin evolution bridge is unavailable")
+			return _success({
+				"entries": plugin.get_user_tool_audit(
+					int(args.get("limit", 20)),
+					str(args.get("filter_action", "")),
+					str(args.get("filter_session", ""))
+				)
+			}, "User tool audit fetched")
+		"check_compatibility":
+			return _call_plugin_method(
+				"get_user_tool_compatibility_from_tools",
+				[],
+				"Plugin evolution compatibility bridge is unavailable"
+			)
+		"runtime_diagnostics":
+			var runtime_state: Array = []
+			var tool_loader = _get_loader()
+			if tool_loader != null and tool_loader.has_method("get_user_tool_runtime_snapshot"):
+				runtime_state = tool_loader.get_user_tool_runtime_snapshot()
+			return _call_plugin_method(
+				"get_user_tool_runtime_diagnostics_from_tools",
+				[clamp(int(args.get("limit", 10)), 1, 50), runtime_state],
+				"Plugin evolution runtime diagnostics bridge is unavailable"
+			)
+		"usage_guide":
+			return _call_plugin_method("get_evolution_usage_guide_from_tools", [], "Plugin evolution guide bridge is unavailable")
+		_:
+			return _error("Unknown plugin evolution tool: %s" % tool_name)
