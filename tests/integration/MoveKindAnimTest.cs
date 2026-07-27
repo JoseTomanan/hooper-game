@@ -179,8 +179,10 @@ public partial class MoveKindAnimTest : Node
     // -> "BehindTheBack"). Asserts the AnimationTree's state machine really
     // Travels into "BehindTheBackActive" while MovePhase.Active is live (event
     // -time latch, not an end-of-run check — matches PivotAnimTest's
-    // discipline), then settles back onto "Locomotion" once the move's full
-    // lifecycle returns to Inactive.
+    // discipline), then settles back onto the possession-correct NEUTRAL once
+    // the move's full lifecycle returns to Inactive — "Dribble" here, since the
+    // scenario starts a live dribble first and BehindTheBack does not end it
+    // (see ExpectedNeutralAnimNode; pre-#285 this was always "Locomotion").
     private void TickClippedReachesPerMove()
     {
         PlayerController holder;
@@ -253,21 +255,23 @@ public partial class MoveKindAnimTest : Node
     {
         PlayerController holder = NodeForPeer(_holderId);
         string finalAnimNode = holder.ActiveAnimNodeForHarness;
-        bool settledLocomotion = finalAnimNode == "Locomotion";
+        string expectedNeutral = ExpectedNeutralAnimNode();
+        bool settledNeutral = finalAnimNode == expectedNeutral;
 
-        bool pass = _sawActivePhase && _latchedTargetAnimState && settledLocomotion;
+        bool pass = _sawActivePhase && _latchedTargetAnimState && settledNeutral;
 
         if (pass)
         {
-            GD.Print("[movekind-anim] PASS clipped-reaches-permove — the AnimationTree state " +
+            GD.Print($"[movekind-anim] PASS clipped-reaches-permove — the AnimationTree state " +
                      "machine actually entered \"BehindTheBackActive\" while MovePhase.Active was " +
-                     "live, then settled back onto \"Locomotion\" once the move's lifecycle finished.");
+                     $"live, then settled back onto \"{expectedNeutral}\" once the move's lifecycle finished.");
         }
         else
         {
             Fail($"clipped-reaches-permove: expected the tree to enter \"BehindTheBackActive\" " +
-                 $"during Active and settle on \"Locomotion\" after; got sawActivePhase={_sawActivePhase}, " +
-                 $"latchedTargetAnimState={_latchedTargetAnimState}, finalAnimNode={finalAnimNode}.");
+                 $"during Active and settle on \"{expectedNeutral}\" after; got sawActivePhase={_sawActivePhase}, " +
+                 $"latchedTargetAnimState={_latchedTargetAnimState}, finalAnimNode={finalAnimNode}, " +
+                 $"ballState={_ball.State}.");
         }
         Finish(pass ? 0 : 1);
     }
@@ -368,27 +372,50 @@ public partial class MoveKindAnimTest : Node
     {
         PlayerController holder = NodeForPeer(_holderId);
         string finalAnimNode = holder.ActiveAnimNodeForHarness;
-        bool settledLocomotion = finalAnimNode == "Locomotion";
+        string expectedNeutral = ExpectedNeutralAnimNode();
+        bool settledNeutral = finalAnimNode == expectedNeutral;
 
-        bool pass = _sawActivePhase && _latchedTargetAnimState && settledLocomotion;
+        bool pass = _sawActivePhase && _latchedTargetAnimState && settledNeutral;
 
         if (pass)
         {
             GD.Print("[movekind-anim] PASS unclipped-stays-generic — the AnimationTree state " +
                      "machine reached the generic \"Active\" node during MovePhase.Active (never a " +
-                     "per-move state — \"BetweenTheLegsActive\" never appeared), then settled back " +
-                     "onto \"Locomotion\" once the move's lifecycle finished.");
+                     $"per-move state — \"BetweenTheLegsActive\" never appeared), then settled back " +
+                     $"onto \"{expectedNeutral}\" once the move's lifecycle finished.");
         }
         else
         {
             Fail($"unclipped-stays-generic: expected the tree to enter generic \"Active\" during " +
-                 $"Active and settle on \"Locomotion\" after; got sawActivePhase={_sawActivePhase}, " +
-                 $"latchedTargetAnimState={_latchedTargetAnimState}, finalAnimNode={finalAnimNode}.");
+                 $"Active and settle on \"{expectedNeutral}\" after; got sawActivePhase={_sawActivePhase}, " +
+                 $"latchedTargetAnimState={_latchedTargetAnimState}, finalAnimNode={finalAnimNode}, " +
+                 $"ballState={_ball.State}.");
         }
         Finish(pass ? 0 : 1);
     }
 
     private PlayerController NodeForPeer(int peerId) => peerId == 1 ? _p1 : _p2;
+
+    // The neutral display state the holder SHOULD settle onto once the move's
+    // lifecycle returns to Inactive.
+    //
+    // Before #285 this was unconditionally "Locomotion". It is now possession-
+    // dependent: a live-dribbling holder settles onto the Dribble stance
+    // instead (MoveAnimResolver's Inactive branch). Both scenarios here call
+    // TryStartDribble before their move — BehindTheBack and BetweenTheLegs
+    // cannot Begin from Held (#193) — and neither move ends the dribble, so in
+    // practice both now settle on "Dribble".
+    //
+    // Derived from live ball state rather than hardcoded to "Dribble" so the
+    // assertion keeps its meaning if a scenario is ever pointed at a move that
+    // DOES end the dribble (a JumpShot leaves the ball InFlight, so its holder
+    // would correctly settle back onto "Locomotion") — and so a bug that
+    // silently killed the dribble mid-move would still be caught here rather
+    // than absorbed by a loosened "either name is fine" check.
+    private string ExpectedNeutralAnimNode() =>
+        _ball.State == BallState.Dribbling && _ball.StateMachine.HolderPeerId == _holderId
+            ? "Dribble"
+            : "Locomotion";
 
     private void Fail(string message) => GD.PrintErr($"[movekind-anim] FAIL: {message}");
 

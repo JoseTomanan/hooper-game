@@ -235,6 +235,99 @@ public class MoveAnimResolverTests
             MoveAnimResolver.ResolveStateName(MoveAnimState.ReboundGrab, null));
     }
 
+    // ── Dribbling stance (issue #285) ────────────────────────────────────────
+    //
+    // Dribble is NOT a flourish — it REPLACES Locomotion as the neutral stance
+    // for a player in live-dribble possession, so an opponent can read who has
+    // the ball and that they can still drive (ADR-0003 legibility). It therefore
+    // slots in directly above Locomotion and below both Inactive flourishes:
+    // ReboundGrab > Pivot > Dribble > Locomotion.
+    //
+    // Why Pivot stays ABOVE Dribble (the load-bearing precedence call): a pivot
+    // is a discrete footwork EVENT and the dribble loop is a sustained STANCE, so
+    // the same reasoning #284 used for ReboundGrab applies unchanged. Decisively,
+    // ranking Dribble higher would silently regress the shipped, harness-proven
+    // #242 pivot display for every ball-handler who pivots — i.e. most of them —
+    // and PivotAnimTest would be right to fail. Possession stays legible during a
+    // pivot regardless, because the ball mesh renders in-hand off authoritative
+    // hand-side (ADR-0012); the footwork read is the scarcer signal.
+
+    [Fact]
+    public void Resolve_InactiveAndDribbling_ReturnsDribble()
+    {
+        // Tracer: a live-dribbling holder in the neutral phase shows the dribble
+        // stance instead of the possession-blind idle/run game.
+        Assert.Equal(MoveAnimState.Dribble,
+            MoveAnimResolver.Resolve(MovePhase.Inactive, isDribbling: true));
+    }
+
+    [Fact]
+    public void Resolve_InactiveDribblingAndPivoting_ReturnsPivot()
+    {
+        // Pivot > Dribble (see the block comment): a dribbler turning in place
+        // shows the plant/turn clip, preserving #242 unchanged.
+        Assert.Equal(MoveAnimState.Pivot,
+            MoveAnimResolver.Resolve(MovePhase.Inactive, isPivotingInPlace: true, isDribbling: true));
+    }
+
+    [Fact]
+    public void Resolve_InactiveDribblingAndGrabbing_ReturnsReboundGrab()
+    {
+        // ReboundGrab > Dribble. These genuinely coincide in play: securing a
+        // live rebound MAKES you the holder, so the grab latch and dribble
+        // possession overlap for the latch's whole lifetime. The grab must win,
+        // then settle into the dribble stance once it expires.
+        Assert.Equal(MoveAnimState.ReboundGrab,
+            MoveAnimResolver.Resolve(MovePhase.Inactive, isPlayingReboundGrab: true, isDribbling: true));
+    }
+
+    [Theory]
+    [InlineData(MovePhase.Startup, MoveAnimState.Startup)]
+    [InlineData(MovePhase.Active, MoveAnimState.Active)]
+    [InlineData(MovePhase.Recovery, MoveAnimState.Recovery)]
+    public void Resolve_CommittedMoveAndDribbling_IgnoresDribbleFlag(MovePhase phase, MoveAnimState expected)
+    {
+        // A committed move ALWAYS owns the display (ADR-0003: the startup/active/
+        // recovery arc is the telegraph an opponent reads). Since a ball-handler
+        // is dribbling for essentially every offensive committed move, this is the
+        // common case rather than a defensive edge — if the flag leaked past the
+        // phase mapping, every crossover would render as a dribble stance.
+        Assert.Equal(expected, MoveAnimResolver.Resolve(phase, isDribbling: true));
+    }
+
+    [Fact]
+    public void Resolve_InactiveNotDribbling_ReturnsLocomotion()
+    {
+        // Control: an off-ball defender (and a Held/dead-dribble holder, which
+        // PlayerController reports as not-dribbling) keeps the existing neutral.
+        Assert.Equal(MoveAnimState.Locomotion,
+            MoveAnimResolver.Resolve(MovePhase.Inactive, isDribbling: false));
+    }
+
+    [Fact]
+    public void Resolve_DribbleDefaultParameter_MatchesExplicitFalse()
+    {
+        // Every pre-#285 call site omits isDribbling; it must behave exactly as
+        // false so the #242/#243/#284 mappings above are untouched.
+        foreach (MovePhase phase in System.Enum.GetValues<MovePhase>())
+        {
+            Assert.Equal(MoveAnimResolver.Resolve(phase, isDribbling: false),
+                MoveAnimResolver.Resolve(phase));
+        }
+    }
+
+    [Fact]
+    public void ResolveStateName_Dribble_ReturnsGenericDribble()
+    {
+        // Dribble is the neutral stance, not a committed move, so it is never
+        // per-move-eligible (only Startup/Active/Recovery are) — exactly like
+        // Locomotion and Pivot. A stale moveId alongside it must not produce
+        // "CrossoverDribble", a state the tree does not have and that Travel()
+        // would silently no-op against.
+        Assert.Equal("Dribble", MoveAnimResolver.ResolveStateName(MoveAnimState.Dribble, "crossover"));
+        Assert.Equal("Dribble", MoveAnimResolver.ResolveStateName(MoveAnimState.Dribble, null));
+    }
+
     // ── Unknown phase fallback ────────────────────────────────────────────────
 
     [Fact]

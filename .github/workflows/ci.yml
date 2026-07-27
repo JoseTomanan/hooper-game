@@ -874,6 +874,33 @@ jobs:
           godot --headless --path . res://tests/integration/ReboundGrabTest.tscn -- --harness-scenario=made-basket-no-grab
           godot --headless --path . res://tests/integration/ReboundGrabTest.tscn -- --harness-scenario=consecutive-rebounds
 
+      # Live-dribble neutral stance (issue #285). Proves the Dribble
+      # BlendSpace1D display state is actually REACHED when a holder starts a
+      # real dribble (dribble-entered, via the production BallController.
+      # TryStartDribble path), and — the load-bearing controls — that it never
+      # appears for the player WITHOUT the ball (no-ball-locomotion) or for a
+      # holder whose ball is merely Held (held-no-dribble). That last one is the
+      # ADR-0014 design call #285 recorded, made assertable: the stance is gated
+      # on BallState.Dribbling, not on possession, because a live-dribble loop on
+      # a dead dribble advertises a drive the holder cannot legally make — an
+      # actively false read. move-outranks-dribble pins the precedence and proves
+      # the Dribble -> per-move Startup edge really exists in the .tscn (a
+      # missing transition would only make Travel() silently no-op).
+      #
+      # Both controls assert their own premise in the same run (the holder
+      # genuinely reached "Dribble"; the ball genuinely stayed Held), so neither
+      # can pass on a rig where nothing happened. Two mutations were used to
+      # confirm they discriminate: forcing DisplayDribbling false kills all but
+      # held-no-dribble, and re-gating it on possession instead of Dribbling
+      # kills ONLY held-no-dribble. Whether the dribble clip LOOKS right stays
+      # #173's deferred feel judgment (ADR-0021).
+      - name: Run dribble-loop harness
+        run: |
+          godot --headless --path . res://tests/integration/DribbleLoopTest.tscn -- --harness-scenario=dribble-entered
+          godot --headless --path . res://tests/integration/DribbleLoopTest.tscn -- --harness-scenario=no-ball-locomotion
+          godot --headless --path . res://tests/integration/DribbleLoopTest.tscn -- --harness-scenario=held-no-dribble
+          godot --headless --path . res://tests/integration/DribbleLoopTest.tscn -- --harness-scenario=move-outranks-dribble
+
       # Independent height/wingspan rig scaling (issue #170), the engine-glue
       # half. RigScaleTests (dotnet) pins the pure RigScale classifier; this
       # proves PlayerRigScaler runs against the REAL imported Y Bot Skeleton3D:
@@ -898,6 +925,14 @@ jobs:
       # library's clip keys and each clip's track count. It does not (and per
       # spike #87 cannot cheaply) assert the pose LOOKS right — that stays
       # the deferred human feel judgment (#178/#173, ADR-0021).
+      #
+      # It has since accreted the rest of the clip-asset guarantees for
+      # assets/locomotion.res: loop modes (#271 — the FBX import default is
+      # LOOP_NONE), pivot's rest-delta correction (#273) and upper-body
+      # completeness (the turning-T-pose bug), idle<->run blend compatibility
+      # (#275), and the #287 continuous-drive corridor sweep. #285 adds the two
+      # dribble clips to the resolution/loop families and runs a second corridor
+      # sweep against the Dribble BlendSpace1D.
       - name: Run locomotion-clip retarget harness
         run: godot --headless --path . res://tests/integration/LocomotionClipTest.tscn
 
