@@ -953,15 +953,39 @@ jobs:
       # second control: while the same real jumpshot runs, the tree must never be
       # observed on the shared generic "Startup"/"Active"/"Recovery" states #279
       # moved jumpshot OFF of (again asserting its own premise — the jumpshot
-      # genuinely ran end to end). Proven red under two complementary temporary
-      # mutations (reverted before commit): removing "jumpshot" from
-      # MoveAnimResolver.ClippedMovePrefixes reddened jumpshot-phases AND
-      # no-placeholder-leak (the requested state silently fell back to the shared
-      # placeholder — a genuine leak, not a Travel-no-op); inverting
-      # FadeawayTriggerResolver.IsFadeaway's angle comparison reddened
-      # fadeaway-active AND no-fadeaway-when-squared-up (the classification flipped
-      # for both the mid-pivot and the squared-up shooter). Whether either clip
-      # LOOKS right stays #279/#173's deferred human feel judgment (ADR-0021).
+      # genuinely ran end to end).
+      #
+      # Proven red under two complementary temporary mutations (both reverted
+      # before commit). Each one reddens ALL FOUR scenarios — the four share one
+      # setup path, so any break in it fails every scenario. What makes them
+      # complementary is therefore not WHICH scenarios go red but the DIAGNOSTIC
+      # each reports, and those are what the controls exist to distinguish:
+      #
+      #   (A) drop "jumpshot" from MoveAnimResolver.ClippedMovePrefixes —
+      #       no-placeholder-leak fails on its OWN leak assertion
+      #       (sawGenericPlaceholder=True), i.e. the requested state silently fell
+      #       back to the shared placeholder. That is the failure mode no unit
+      #       test on the resolver can catch: ResolveStateName still returns a
+      #       string naming a state that really exists, so Travel() succeeds and
+      #       the mesh animates the WRONG clip with nothing logged.
+      #       fadeaway-active still observes FadeawayActive here (that state name
+      #       is unprefixed and shared, so this mutation cannot touch it) and
+      #       fails only on the missing JumpshotStartup — confirming the prefix
+      #       table and the fadeaway axis are independent.
+      #
+      #   (B) invert FadeawayTriggerResolver.IsFadeaway's angle comparison — the
+      #       two fadeaway scenarios flip in OPPOSITE directions: fadeaway-active
+      #       loses FadeawayActive and gains JumpshotActive, while
+      #       no-fadeaway-when-squared-up loses JumpshotActive and gains
+      #       FadeawayActive. That opposite flip is the proof they are genuinely
+      #       complementary rather than two spellings of one assertion — neither
+      #       could be deleted without losing coverage. no-placeholder-leak fails
+      #       on its PREMISE here (sawGenericPlaceholder=False), the exact
+      #       complement of how it failed under (A), so both halves of that
+      #       control are exercised across the pair.
+      #
+      # Whether either clip LOOKS right stays #279/#173's deferred human feel
+      # judgment (ADR-0021).
       - name: Run jumpshot-animation state harness
         run: |
           godot --headless --path . res://tests/integration/JumpshotAnimTest.tscn -- --harness-scenario=jumpshot-phases
