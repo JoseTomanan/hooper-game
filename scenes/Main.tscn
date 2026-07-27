@@ -37,7 +37,7 @@ size = Vector3(20.542, 5, 0.240625)
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_wall"]
 render_priority = 0
 shader = ExtResource("11_gridcutout")
-shader_parameter/albedo_color = Color(1, 1, 1, 1)
+shader_parameter/albedo_color = Color(0.62, 0.64, 0.66, 1)
 shader_parameter/uv_scale_u = 28.0
 shader_parameter/uv_scale_v = 7.0
 shader_parameter/strand_width = 0.09
@@ -68,7 +68,7 @@ height = 0.4
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_net"]
 render_priority = 0
 shader = ExtResource("11_gridcutout")
-shader_parameter/albedo_color = Color(1, 1, 1, 1)
+shader_parameter/albedo_color = Color(0.93, 0.93, 0.93, 1)
 shader_parameter/uv_scale_u = 14.0
 shader_parameter/uv_scale_v = 9.0
 shader_parameter/strand_width = 0.17
