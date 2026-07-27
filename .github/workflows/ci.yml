@@ -936,6 +936,39 @@ jobs:
       - name: Run locomotion-clip retarget harness
         run: godot --headless --path . res://tests/integration/LocomotionClipTest.tscn
 
+      # Jumpshot animation states, the state-machine half of #279 (LocomotionClipTest
+      # just above pins the four clips' own PROPERTIES; FadeawayTriggerTest pins the
+      # pure classification decision against a code-built tree with no AnimationTree
+      # at all — neither can see whether scenes/Player.tscn's real state machine
+      # actually REACHES JumpshotStartup/JumpshotActive/JumpshotRecovery/
+      # FadeawayActive). 'jumpshot-phases' latches all three per-move states in
+      # order on a real JumpShot begun through BeginJumpShotForHarness (the same
+      # BeginCommittedMove choke point production input reaches). 'fadeaway-active'
+      # forces a mid-pivot Heading before release and asserts FadeawayActive
+      # appears instead of JumpshotActive; 'no-fadeaway-when-squared-up' is its
+      # REQUIRED control (identical setup, Heading squared to the rim instead,
+      # asserting JumpshotActive appears and FadeawayActive never does — and
+      # asserting its own premise that JumpshotActive was genuinely reached, so it
+      # cannot pass on a rig where nothing happened). 'no-placeholder-leak' is a
+      # second control: while the same real jumpshot runs, the tree must never be
+      # observed on the shared generic "Startup"/"Active"/"Recovery" states #279
+      # moved jumpshot OFF of (again asserting its own premise — the jumpshot
+      # genuinely ran end to end). Proven red under two complementary temporary
+      # mutations (reverted before commit): removing "jumpshot" from
+      # MoveAnimResolver.ClippedMovePrefixes reddened jumpshot-phases AND
+      # no-placeholder-leak (the requested state silently fell back to the shared
+      # placeholder — a genuine leak, not a Travel-no-op); inverting
+      # FadeawayTriggerResolver.IsFadeaway's angle comparison reddened
+      # fadeaway-active AND no-fadeaway-when-squared-up (the classification flipped
+      # for both the mid-pivot and the squared-up shooter). Whether either clip
+      # LOOKS right stays #279/#173's deferred human feel judgment (ADR-0021).
+      - name: Run jumpshot-animation state harness
+        run: |
+          godot --headless --path . res://tests/integration/JumpshotAnimTest.tscn -- --harness-scenario=jumpshot-phases
+          godot --headless --path . res://tests/integration/JumpshotAnimTest.tscn -- --harness-scenario=fadeaway-active
+          godot --headless --path . res://tests/integration/JumpshotAnimTest.tscn -- --harness-scenario=no-fadeaway-when-squared-up
+          godot --headless --path . res://tests/integration/JumpshotAnimTest.tscn -- --harness-scenario=no-placeholder-leak
+
       # Moving crossover — momentum-aware burst with left-stick exit (issue
       # #198, ADR-0003 amendment). CrossoverBurstMathTests already pin the
       # pure composition function; this drives a REAL PlayerController
