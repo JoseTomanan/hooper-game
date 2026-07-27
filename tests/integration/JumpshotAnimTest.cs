@@ -266,7 +266,13 @@ public partial class JumpshotAnimTest : Node
         if (!_sawJumpshotStartup && node == "JumpshotStartup") _sawJumpshotStartup = true;
         if (_sawJumpshotStartup && !_sawJumpshotActive && node == "JumpshotActive") _sawJumpshotActive = true;
         if (_sawJumpshotActive && !_sawJumpshotRecovery && node == "JumpshotRecovery") _sawJumpshotRecovery = true;
-        if (node == "FadeawayActive") _sawFadeawayActive = true;
+        // Chained behind Startup for the same reason the three above are: it makes
+        // the verdict's "reached JumpshotStartup THEN showed FadeawayActive"
+        // literally what was observed rather than an inference from JumpShot's
+        // phase order. It also guards a real edge — Locomotion -> FadeawayActive
+        // exists in the .tscn (fdw01), so a spurious entry that skipped the
+        // wind-up entirely would otherwise still satisfy this latch.
+        if (_sawJumpshotStartup && node == "FadeawayActive") _sawFadeawayActive = true;
         if (node == "Startup" || node == "Active" || node == "Recovery") _sawGenericPlaceholder = true;
     }
 
