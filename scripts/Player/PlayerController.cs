@@ -3010,7 +3010,13 @@ public partial class PlayerController : CharacterBody3D
 		// replicated ball rather than this node's machine, so it needs no
 		// per-role branch at all; see DisplayDribbling's own doc.
 		MoveAnimState generic = MoveAnimResolver.Resolve(displayPhase, DisplayFadeaway(), IsPivotingInPlace, IsPlayingReboundGrab, DisplayDribbling());
-		string target = MoveAnimResolver.ResolveStateName(generic, DisplayMoveId());
+		// (#280) HandSide needs no per-role branch the way DisplayMove/
+		// DisplayMoveId do: it is server-authoritative, predicted on the owning
+		// client, and broadcast on ReceiveState (ADR-0012), so this node's copy
+		// is already the right value for whichever role is asking — the same
+		// property DisplayDribbling relies on. The resolver corrects for the
+		// fact that a crossover FLIPS it at Active-entry; see OriginHand.
+		string target = MoveAnimResolver.ResolveStateName(generic, DisplayMoveId(), HandSide);
 		if (target != _currentAnimStateName)
 		{
 			_animPlayback.Travel(target);
