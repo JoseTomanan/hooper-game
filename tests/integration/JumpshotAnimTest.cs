@@ -67,6 +67,27 @@ namespace HOOPERGAME.Tests.Integration;
 // Heading for its whole duration (Move() is skipped once a move starts), so
 // a Heading forced before Begin cannot drift mid-shot.
 //
+// ── What this harness CANNOT prove: individual transition EDGES ─────────────
+// Measured, not assumed (#279). Deleting the FadeawayActive -> JumpshotRecovery
+// edge (tr_js_fdw2re) from Player.tscn's `transitions` array does NOT redden any
+// scenario here, and is not observable through ActiveAnimNodeForHarness at all:
+// AnimationNodeStateMachinePlayback.Travel() is a PATHFINDER over the transition
+// graph, not a single-hop switch, so with a direct edge gone it still arrives at
+// the target — and it does so without ever reporting an intermediate state on the
+// tick boundaries this harness samples. Two stronger assertions were written and
+// BOTH stayed green under that mutation: "JumpshotRecovery was reached after
+// FadeawayActive", and "…with no other state observed in between". Neither was
+// kept, because an assertion that cannot be made to fail is exactly the vacuous
+// kind this repo forbids.
+//
+// So: what IS proven here is that each state is REACHABLE and that the resolver
+// asks for the right one. What is NOT proven is the shape of the graph that gets
+// it there. Anyone extending this pattern to the remaining per-move families
+// (#280-#283) should not spend effort on edge-level assertions via
+// GetCurrentNode() — they will pass regardless. Proving an edge needs a different
+// instrument (inspecting the AnimationNodeStateMachine resource's transition list
+// directly, the way LocomotionClipTest inspects clip properties).
+//
 // ── Why the controls carry the real weight here ─────────────────────────────
 // "no-fadeaway-when-squared-up" and "no-placeholder-leak" both assert their
 // OWN PREMISE first — that a real JumpShot genuinely ran and reached its
