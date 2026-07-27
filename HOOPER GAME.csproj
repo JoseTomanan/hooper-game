@@ -18,4 +18,13 @@
     <Compile Remove="tests/**/*.cs" />
     <Compile Include="tests/integration/**/*.cs" />
   </ItemGroup>
+  <!--
+    Addons are third-party editor tooling with their own .csproj files (e.g.
+    addons/godot_dotnet_mcp/dotnet_bridge, which references Roslyn packages the
+    game assembly does not have). Never glob them into the game assembly — same
+    reasoning as tests/ above.
+  -->
+  <ItemGroup>
+    <Compile Remove="addons/**/*.cs" />
+  </ItemGroup>
 </Project>

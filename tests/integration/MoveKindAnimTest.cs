@@ -128,11 +128,19 @@ public partial class MoveKindAnimTest : Node
         // node (and a legit Startup->Recovery pump-fake shortcut edge then lets
         // the lagging walk skip Active entirely). Physics callback makes tree
         // advancement lockstep with the sim so GetCurrentNode() reflects what
-        // was Travelled within the same tick cadence. This is a harness-only
-        // observation fidelity choice (same reason LocomotionClipTest takes
-        // manual control of Advance()); it does not change WHICH states the
-        // graph can reach, only when the reach becomes observable — production
-        // keeps the shipped Idle callback and keeps up at 60fps.
+        // was Travelled within the same tick cadence. It does not change WHICH
+        // states the graph can reach, only when the reach becomes observable
+        // (same reason LocomotionClipTest takes manual control of Advance()).
+        //
+        // This used to add "production keeps the shipped Idle callback and keeps
+        // up at 60fps", framing the override as a harness-only fidelity choice.
+        // That is no longer true: #280 set callback_mode_process=0 on
+        // scenes/Player.tscn precisely BECAUSE the harness was proving tick
+        // alignment under a mode the game did not use. Verified against Godot
+        // 4.7.1: PHYSICS=0, IDLE=1, and a fresh AnimationTree reports 1. So this
+        // line now agrees with the shipped scene rather than diverging from it.
+        // It is kept explicit anyway, matching every sibling anim harness, so a
+        // scenario never silently depends on a scene-level default.
         foreach (var p in new[] { p1, p2 })
             p.GetNode<AnimationTree>("AnimationTree").CallbackModeProcess =
                 AnimationMixer.AnimationCallbackModeProcess.Physics;

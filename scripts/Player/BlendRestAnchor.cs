@@ -68,8 +68,13 @@ namespace Hooper.Player;
 /// free: EVERY node's _Ready() in a freshly-instantiated scene subtree runs
 /// synchronously (depth-first) during the "add to tree" call, strictly before
 /// the SceneTree's next _process/_physics_process pass — and AnimationTree's
-/// own automatic advance (its default CallbackModeProcess=Physics) only fires
-/// on that later pass. No explicit node-order dependency is required, but this
+/// own automatic advance only fires on that later pass, under either callback
+/// mode. (This used to say "its default CallbackModeProcess=Physics". That was
+/// wrong twice over: Godot's default is IDLE, and scenes/Player.tscn did not
+/// override it until #280 set callback_mode_process=0. The timing conclusion is
+/// unaffected — _Ready() precedes the first process pass of either kind — but
+/// the stated reason was false, and this comment is load-bearing for #287.)
+/// No explicit node-order dependency is required, but this
 /// node is still placed before AnimationPlayer/AnimationTree in
 /// scenes/Player.tscn's node list for readability, matching RigScaler's own
 /// existing position.

@@ -222,6 +222,22 @@ current milestone unless asked.
   `sub_resource` IDs, `uid`, load-step counts) — so they ship in their own
   single-concern commit with a headless load check where a Godot binary is available.
 - **`assets/`** — models, textures, sounds. Placeholder/gray is fine for now.
+- **`addons/godot_dotnet_mcp/`** — vendored in-repo (MIT,
+  [LuoxuanLove/godot-dotnet-mcp](https://github.com/LuoxuanLove/godot-dotnet-mcp)
+  v1.3.0). An editor plugin, not game code: it runs an HTTP MCP server *inside
+  the running Godot editor process* so a Claude Code session can read live
+  editor/scene/runtime state (selected node, output, diagnostics) that a
+  filesystem snapshot can't see. To use it in a session: open the project in
+  the Godot .NET editor, enable it under `Project Settings > Plugins`, open the
+  `MCPDock` and start the service (default `http://127.0.0.1:3000/mcp`), then
+  from a session whose cwd is this repo run
+  `claude mcp add --transport http --scope local godot-mcp http://127.0.0.1:3000/mcp`
+  (a new server needs a session restart, or `/mcp`, before its tools load).
+  Its `dotnet_bridge/` subproject is excluded from the game assembly the same
+  way `tests/` is (see `HOOPER GAME.csproj`) — never remove that exclusion, the
+  bridge references Roslyn packages the game assembly doesn't have. Enabling
+  the plugin writes an `[autoload]` singleton and `[editor_plugins]/enabled`
+  entry into `project.godot`; that's expected, not a stray edit.
 - **Physics colliders (the project runs Jolt — `3d/physics_engine="Jolt Physics"`):**
   never apply a **non-uniform scale** to a `CylinderShape3D`, `CapsuleShape3D`, or
   `SphereShape3D`. Their cross-section is a single *radius*, so a mismatched X/Z
@@ -402,6 +418,12 @@ verified the hard way, gotchas, and remaining `hitl` editor steps. See
 - Godot C# API churn + GDScript-centric examples: use the **Context7 MCP
   server** to fetch live Godot docs before writing unfamiliar engine-facing
   calls. Don't copy GDScript patterns without translating.
+- `addons/godot_dotnet_mcp/` (see §3) is a third-party editor plugin whose
+  author states its code is 100% AI-generated; it gets write access to scenes
+  and scripts through the live editor. Its CI only caches Godot 4.6 mono while
+  this project runs 4.7 — treat editor-mutating MCP tool calls the same as any
+  other risky automated edit: don't run them with uncommitted work you'd hate
+  to lose.
 
 ---
 

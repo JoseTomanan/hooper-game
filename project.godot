@@ -15,9 +15,17 @@ run/main_scene="uid://c047mrir711mo"
 config/features=PackedStringArray("4.7", "C#", "Mobile")
 config/icon="res://icon.svg"
 
+[autoload]
+
+MCPRuntimeBridge="*uid://wk2yhw3winuo"
+
 [dotnet]
 
 project/assembly_name="HOOPER GAME"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/godot_dotnet_mcp/plugin.cfg")
 
 [input]
 

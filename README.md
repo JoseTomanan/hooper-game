@@ -53,6 +53,7 @@ hooper-game/
 │   └── Systems/      # Cross-cutting systems
 ├── scenes/           # .tscn files (human-authored in the Godot editor)
 ├── assets/           # Models, textures, sounds (placeholder/gray for now)
+├── addons/           # Godot editor plugins — see CLAUDE.md §3 (godot_dotnet_mcp)
 └── docs/
     ├── adr/          # Architecture Decision Records — read before changing engine-facing code
     └── handoffs/     # Cross-session scratch notes (gitignored)

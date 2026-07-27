@@ -149,6 +149,24 @@ animation = &"locomotion/jumpshotactive"
 [sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_js279re"]
 animation = &"locomotion/jumpshotrecovery"
 
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_cr280sul"]
+animation = &"locomotion/crossoverstartupleft"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_cr280acl"]
+animation = &"locomotion/crossoveractiveleft"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_cr280rel"]
+animation = &"locomotion/crossoverrecoveryleft"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_cr280sur"]
+animation = &"locomotion/crossoverstartupright"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_cr280acr"]
+animation = &"locomotion/crossoveractiveright"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_cr280rer"]
+animation = &"locomotion/crossoverrecoveryright"
+
 [sub_resource type="AnimationNodeStateMachineTransition" id="tr_js_lo2su"]
 
 [sub_resource type="AnimationNodeStateMachineTransition" id="tr_js_su2ac"]
@@ -165,17 +183,35 @@ animation = &"locomotion/jumpshotrecovery"
 
 [sub_resource type="AnimationNodeStateMachineTransition" id="tr_js_fdw2re"]
 
-[sub_resource type="AnimationNodeStateMachineTransition" id="tr_cr_lo2su"]
+[sub_resource type="AnimationNodeStateMachineTransition" id="tr_crl_lo2su"]
 
-[sub_resource type="AnimationNodeStateMachineTransition" id="tr_cr_su2ac"]
+[sub_resource type="AnimationNodeStateMachineTransition" id="tr_crl_su2ac"]
 
-[sub_resource type="AnimationNodeStateMachineTransition" id="tr_cr_ac2re"]
+[sub_resource type="AnimationNodeStateMachineTransition" id="tr_crl_ac2re"]
 
-[sub_resource type="AnimationNodeStateMachineTransition" id="tr_cr_re2lo"]
+[sub_resource type="AnimationNodeStateMachineTransition" id="tr_crl_re2lo"]
 
-[sub_resource type="AnimationNodeStateMachineTransition" id="tr_cr_su2re"]
+[sub_resource type="AnimationNodeStateMachineTransition" id="tr_crl_su2re"]
 
-[sub_resource type="AnimationNodeStateMachineTransition" id="tr_cr_su2lo"]
+[sub_resource type="AnimationNodeStateMachineTransition" id="tr_crl_su2lo"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="tr_crr_lo2su"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="tr_crr_su2ac"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="tr_crr_ac2re"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="tr_crr_re2lo"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="tr_crr_su2re"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="tr_crr_su2lo"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="tr_crr_dr2su"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="tr_crr_re2dr"]
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="tr_crr_su2dr"]
 
 [sub_resource type="AnimationNodeStateMachineTransition" id="tr_bb_lo2su"]
 
@@ -263,11 +299,11 @@ animation = &"locomotion/jumpshotrecovery"
 
 [sub_resource type="AnimationNodeStateMachineTransition" id="tr_dr_jssu2dr"]
 
-[sub_resource type="AnimationNodeStateMachineTransition" id="tr_dr_dr2crsu"]
+[sub_resource type="AnimationNodeStateMachineTransition" id="tr_crl_dr2su"]
 
-[sub_resource type="AnimationNodeStateMachineTransition" id="tr_dr_crre2dr"]
+[sub_resource type="AnimationNodeStateMachineTransition" id="tr_crl_re2dr"]
 
-[sub_resource type="AnimationNodeStateMachineTransition" id="tr_dr_crsu2dr"]
+[sub_resource type="AnimationNodeStateMachineTransition" id="tr_crl_su2dr"]
 
 [sub_resource type="AnimationNodeStateMachineTransition" id="tr_dr_dr2bbsu"]
 
@@ -312,12 +348,18 @@ states/JumpshotActive/node = SubResource("AnimationNodeAnimation_js279ac")
 states/JumpshotActive/position = Vector2(460, 420)
 states/JumpshotRecovery/node = SubResource("AnimationNodeAnimation_js279re")
 states/JumpshotRecovery/position = Vector2(620, 420)
-states/CrossoverStartup/node = SubResource("AnimationNodeAnimation_mv277ph")
-states/CrossoverStartup/position = Vector2(300, 500)
-states/CrossoverActive/node = SubResource("AnimationNodeAnimation_mv277ph")
-states/CrossoverActive/position = Vector2(460, 500)
-states/CrossoverRecovery/node = SubResource("AnimationNodeAnimation_mv277ph")
-states/CrossoverRecovery/position = Vector2(620, 500)
+states/CrossoverStartupLeft/node = SubResource("AnimationNodeAnimation_cr280sul")
+states/CrossoverStartupLeft/position = Vector2(300, 500)
+states/CrossoverActiveLeft/node = SubResource("AnimationNodeAnimation_cr280acl")
+states/CrossoverActiveLeft/position = Vector2(460, 500)
+states/CrossoverRecoveryLeft/node = SubResource("AnimationNodeAnimation_cr280rel")
+states/CrossoverRecoveryLeft/position = Vector2(620, 500)
+states/CrossoverStartupRight/node = SubResource("AnimationNodeAnimation_cr280sur")
+states/CrossoverStartupRight/position = Vector2(300, 540)
+states/CrossoverActiveRight/node = SubResource("AnimationNodeAnimation_cr280acr")
+states/CrossoverActiveRight/position = Vector2(460, 540)
+states/CrossoverRecoveryRight/node = SubResource("AnimationNodeAnimation_cr280rer")
+states/CrossoverRecoveryRight/position = Vector2(620, 540)
 states/BehindTheBackStartup/node = SubResource("AnimationNodeAnimation_mv277ph")
 states/BehindTheBackStartup/position = Vector2(300, 580)
 states/BehindTheBackActive/node = SubResource("AnimationNodeAnimation_mv277ph")
@@ -336,7 +378,7 @@ states/BlockActive/node = SubResource("AnimationNodeAnimation_mv277ph")
 states/BlockActive/position = Vector2(460, 740)
 states/BlockRecovery/node = SubResource("AnimationNodeAnimation_mv277ph")
 states/BlockRecovery/position = Vector2(620, 740)
-transitions = ["Start", "Locomotion", SubResource("AnimationNodeStateMachineTransition_khinc"), "Locomotion", "Startup", SubResource("AnimationNodeStateMachineTransition_bruh7"), "Locomotion", "Active", SubResource("AnimationNodeStateMachineTransition_6eyey"), "Locomotion", "Recovery", SubResource("AnimationNodeStateMachineTransition_d3wef"), "Startup", "Active", SubResource("AnimationNodeStateMachineTransition_o4126"), "Active", "Recovery", SubResource("AnimationNodeStateMachineTransition_lkdrv"), "Startup", "Recovery", SubResource("AnimationNodeStateMachineTransition_p7iby"), "Startup", "Locomotion", SubResource("AnimationNodeStateMachineTransition_su2lo"), "Active", "Locomotion", SubResource("AnimationNodeStateMachineTransition_ac2lo"), "Recovery", "Locomotion", SubResource("AnimationNodeStateMachineTransition_re2lo"), "Active", "Startup", SubResource("AnimationNodeStateMachineTransition_ac2su"), "Recovery", "Startup", SubResource("AnimationNodeStateMachineTransition_re2su"), "Recovery", "Active", SubResource("AnimationNodeStateMachineTransition_re2ac"), "Pivot", "Locomotion", SubResource("AnimationNodeStateMachineTransition_pvt2lo"), "Locomotion", "Pivot", SubResource("AnimationNodeStateMachineTransition_lo2pvt"), "Pivot", "Startup", SubResource("AnimationNodeStateMachineTransition_pvt2su"), "Startup", "Pivot", SubResource("AnimationNodeStateMachineTransition_su2pvt"), "Pivot", "Active", SubResource("AnimationNodeStateMachineTransition_pvt2ac"), "Active", "Pivot", SubResource("AnimationNodeStateMachineTransition_ac2pvt"), "Pivot", "Recovery", SubResource("AnimationNodeStateMachineTransition_pvt2re"), "Recovery", "Pivot", SubResource("AnimationNodeStateMachineTransition_re2pvt"), "Locomotion", "FadeawayActive", SubResource("AnimationNodeStateMachineTransition_fdw01"), "FadeawayActive", "Locomotion", SubResource("AnimationNodeStateMachineTransition_fdw02"), "Startup", "FadeawayActive", SubResource("AnimationNodeStateMachineTransition_fdw03"), "FadeawayActive", "Startup", SubResource("AnimationNodeStateMachineTransition_fdw04"), "Active", "FadeawayActive", SubResource("AnimationNodeStateMachineTransition_fdw05"), "FadeawayActive", "Active", SubResource("AnimationNodeStateMachineTransition_fdw06"), "Recovery", "FadeawayActive", SubResource("AnimationNodeStateMachineTransition_fdw07"), "FadeawayActive", "Recovery", SubResource("AnimationNodeStateMachineTransition_fdw08"), "Locomotion", "JumpshotStartup", SubResource("tr_js_lo2su"), "JumpshotStartup", "JumpshotActive", SubResource("tr_js_su2ac"), "JumpshotActive", "JumpshotRecovery", SubResource("tr_js_ac2re"), "JumpshotRecovery", "Locomotion", SubResource("tr_js_re2lo"), "JumpshotStartup", "JumpshotRecovery", SubResource("tr_js_su2re"), "JumpshotStartup", "Locomotion", SubResource("tr_js_su2lo"), "JumpshotStartup", "FadeawayActive", SubResource("tr_js_su2fdw"), "FadeawayActive", "JumpshotRecovery", SubResource("tr_js_fdw2re"), "Locomotion", "CrossoverStartup", SubResource("tr_cr_lo2su"), "CrossoverStartup", "CrossoverActive", SubResource("tr_cr_su2ac"), "CrossoverActive", "CrossoverRecovery", SubResource("tr_cr_ac2re"), "CrossoverRecovery", "Locomotion", SubResource("tr_cr_re2lo"), "CrossoverStartup", "CrossoverRecovery", SubResource("tr_cr_su2re"), "CrossoverStartup", "Locomotion", SubResource("tr_cr_su2lo"), "Locomotion", "BehindTheBackStartup", SubResource("tr_bb_lo2su"), "BehindTheBackStartup", "BehindTheBackActive", SubResource("tr_bb_su2ac"), "BehindTheBackActive", "BehindTheBackRecovery", SubResource("tr_bb_ac2re"), "BehindTheBackRecovery", "Locomotion", SubResource("tr_bb_re2lo"), "BehindTheBackStartup", "BehindTheBackRecovery", SubResource("tr_bb_su2re"), "BehindTheBackStartup", "Locomotion", SubResource("tr_bb_su2lo"), "Locomotion", "StealStartup", SubResource("tr_st_lo2su"), "StealStartup", "StealActive", SubResource("tr_st_su2ac"), "StealActive", "StealRecovery", SubResource("tr_st_ac2re"), "StealRecovery", "Locomotion", SubResource("tr_st_re2lo"), "StealStartup", "StealRecovery", SubResource("tr_st_su2re"), "StealStartup", "Locomotion", SubResource("tr_st_su2lo"), "Locomotion", "BlockStartup", SubResource("tr_bl_lo2su"), "BlockStartup", "BlockActive", SubResource("tr_bl_su2ac"), "BlockActive", "BlockRecovery", SubResource("tr_bl_ac2re"), "BlockRecovery", "Locomotion", SubResource("tr_bl_re2lo"), "BlockStartup", "BlockRecovery", SubResource("tr_bl_su2re"), "BlockStartup", "Locomotion", SubResource("tr_bl_su2lo"), "Locomotion", "ReboundGrab", SubResource("tr_rg_lo2rg"), "ReboundGrab", "Locomotion", SubResource("tr_rg_rg2lo"), "Startup", "ReboundGrab", SubResource("tr_rg_su2rg"), "ReboundGrab", "Startup", SubResource("tr_rg_rg2su"), "Active", "ReboundGrab", SubResource("tr_rg_ac2rg"), "ReboundGrab", "Active", SubResource("tr_rg_rg2ac"), "Recovery", "ReboundGrab", SubResource("tr_rg_re2rg"), "ReboundGrab", "Recovery", SubResource("tr_rg_rg2re"), "Locomotion", "Dribble", SubResource("tr_dr_lo2dr"), "Dribble", "Locomotion", SubResource("tr_dr_dr2lo"), "Dribble", "Startup", SubResource("tr_dr_dr2su"), "Startup", "Dribble", SubResource("tr_dr_su2dr"), "Dribble", "Active", SubResource("tr_dr_dr2ac"), "Active", "Dribble", SubResource("tr_dr_ac2dr"), "Dribble", "Recovery", SubResource("tr_dr_dr2re"), "Recovery", "Dribble", SubResource("tr_dr_re2dr"), "Dribble", "Pivot", SubResource("tr_dr_dr2pvt"), "Pivot", "Dribble", SubResource("tr_dr_pvt2dr"), "Dribble", "FadeawayActive", SubResource("tr_dr_dr2fdw"), "FadeawayActive", "Dribble", SubResource("tr_dr_fdw2dr"), "Dribble", "ReboundGrab", SubResource("tr_dr_dr2rg"), "ReboundGrab", "Dribble", SubResource("tr_dr_rg2dr"), "Dribble", "JumpshotStartup", SubResource("tr_dr_dr2jssu"), "JumpshotRecovery", "Dribble", SubResource("tr_dr_jsre2dr"), "JumpshotStartup", "Dribble", SubResource("tr_dr_jssu2dr"), "Dribble", "CrossoverStartup", SubResource("tr_dr_dr2crsu"), "CrossoverRecovery", "Dribble", SubResource("tr_dr_crre2dr"), "CrossoverStartup", "Dribble", SubResource("tr_dr_crsu2dr"), "Dribble", "BehindTheBackStartup", SubResource("tr_dr_dr2bbsu"), "BehindTheBackRecovery", "Dribble", SubResource("tr_dr_bbre2dr"), "BehindTheBackStartup", "Dribble", SubResource("tr_dr_bbsu2dr"), "Dribble", "StealStartup", SubResource("tr_dr_dr2stsu"), "StealRecovery", "Dribble", SubResource("tr_dr_stre2dr"), "StealStartup", "Dribble", SubResource("tr_dr_stsu2dr"), "Dribble", "BlockStartup", SubResource("tr_dr_dr2blsu"), "BlockRecovery", "Dribble", SubResource("tr_dr_blre2dr"), "BlockStartup", "Dribble", SubResource("tr_dr_blsu2dr")]
+transitions = ["Start", "Locomotion", SubResource("AnimationNodeStateMachineTransition_khinc"), "Locomotion", "Startup", SubResource("AnimationNodeStateMachineTransition_bruh7"), "Locomotion", "Active", SubResource("AnimationNodeStateMachineTransition_6eyey"), "Locomotion", "Recovery", SubResource("AnimationNodeStateMachineTransition_d3wef"), "Startup", "Active", SubResource("AnimationNodeStateMachineTransition_o4126"), "Active", "Recovery", SubResource("AnimationNodeStateMachineTransition_lkdrv"), "Startup", "Recovery", SubResource("AnimationNodeStateMachineTransition_p7iby"), "Startup", "Locomotion", SubResource("AnimationNodeStateMachineTransition_su2lo"), "Active", "Locomotion", SubResource("AnimationNodeStateMachineTransition_ac2lo"), "Recovery", "Locomotion", SubResource("AnimationNodeStateMachineTransition_re2lo"), "Active", "Startup", SubResource("AnimationNodeStateMachineTransition_ac2su"), "Recovery", "Startup", SubResource("AnimationNodeStateMachineTransition_re2su"), "Recovery", "Active", SubResource("AnimationNodeStateMachineTransition_re2ac"), "Pivot", "Locomotion", SubResource("AnimationNodeStateMachineTransition_pvt2lo"), "Locomotion", "Pivot", SubResource("AnimationNodeStateMachineTransition_lo2pvt"), "Pivot", "Startup", SubResource("AnimationNodeStateMachineTransition_pvt2su"), "Startup", "Pivot", SubResource("AnimationNodeStateMachineTransition_su2pvt"), "Pivot", "Active", SubResource("AnimationNodeStateMachineTransition_pvt2ac"), "Active", "Pivot", SubResource("AnimationNodeStateMachineTransition_ac2pvt"), "Pivot", "Recovery", SubResource("AnimationNodeStateMachineTransition_pvt2re"), "Recovery", "Pivot", SubResource("AnimationNodeStateMachineTransition_re2pvt"), "Locomotion", "FadeawayActive", SubResource("AnimationNodeStateMachineTransition_fdw01"), "FadeawayActive", "Locomotion", SubResource("AnimationNodeStateMachineTransition_fdw02"), "Startup", "FadeawayActive", SubResource("AnimationNodeStateMachineTransition_fdw03"), "FadeawayActive", "Startup", SubResource("AnimationNodeStateMachineTransition_fdw04"), "Active", "FadeawayActive", SubResource("AnimationNodeStateMachineTransition_fdw05"), "FadeawayActive", "Active", SubResource("AnimationNodeStateMachineTransition_fdw06"), "Recovery", "FadeawayActive", SubResource("AnimationNodeStateMachineTransition_fdw07"), "FadeawayActive", "Recovery", SubResource("AnimationNodeStateMachineTransition_fdw08"), "Locomotion", "JumpshotStartup", SubResource("tr_js_lo2su"), "JumpshotStartup", "JumpshotActive", SubResource("tr_js_su2ac"), "JumpshotActive", "JumpshotRecovery", SubResource("tr_js_ac2re"), "JumpshotRecovery", "Locomotion", SubResource("tr_js_re2lo"), "JumpshotStartup", "JumpshotRecovery", SubResource("tr_js_su2re"), "JumpshotStartup", "Locomotion", SubResource("tr_js_su2lo"), "JumpshotStartup", "FadeawayActive", SubResource("tr_js_su2fdw"), "FadeawayActive", "JumpshotRecovery", SubResource("tr_js_fdw2re"), "Locomotion", "CrossoverStartupLeft", SubResource("tr_crl_lo2su"), "CrossoverStartupLeft", "CrossoverActiveLeft", SubResource("tr_crl_su2ac"), "CrossoverActiveLeft", "CrossoverRecoveryLeft", SubResource("tr_crl_ac2re"), "CrossoverRecoveryLeft", "Locomotion", SubResource("tr_crl_re2lo"), "CrossoverStartupLeft", "CrossoverRecoveryLeft", SubResource("tr_crl_su2re"), "CrossoverStartupLeft", "Locomotion", SubResource("tr_crl_su2lo"), "Locomotion", "BehindTheBackStartup", SubResource("tr_bb_lo2su"), "BehindTheBackStartup", "BehindTheBackActive", SubResource("tr_bb_su2ac"), "BehindTheBackActive", "BehindTheBackRecovery", SubResource("tr_bb_ac2re"), "BehindTheBackRecovery", "Locomotion", SubResource("tr_bb_re2lo"), "BehindTheBackStartup", "BehindTheBackRecovery", SubResource("tr_bb_su2re"), "BehindTheBackStartup", "Locomotion", SubResource("tr_bb_su2lo"), "Locomotion", "StealStartup", SubResource("tr_st_lo2su"), "StealStartup", "StealActive", SubResource("tr_st_su2ac"), "StealActive", "StealRecovery", SubResource("tr_st_ac2re"), "StealRecovery", "Locomotion", SubResource("tr_st_re2lo"), "StealStartup", "StealRecovery", SubResource("tr_st_su2re"), "StealStartup", "Locomotion", SubResource("tr_st_su2lo"), "Locomotion", "BlockStartup", SubResource("tr_bl_lo2su"), "BlockStartup", "BlockActive", SubResource("tr_bl_su2ac"), "BlockActive", "BlockRecovery", SubResource("tr_bl_ac2re"), "BlockRecovery", "Locomotion", SubResource("tr_bl_re2lo"), "BlockStartup", "BlockRecovery", SubResource("tr_bl_su2re"), "BlockStartup", "Locomotion", SubResource("tr_bl_su2lo"), "Locomotion", "ReboundGrab", SubResource("tr_rg_lo2rg"), "ReboundGrab", "Locomotion", SubResource("tr_rg_rg2lo"), "Startup", "ReboundGrab", SubResource("tr_rg_su2rg"), "ReboundGrab", "Startup", SubResource("tr_rg_rg2su"), "Active", "ReboundGrab", SubResource("tr_rg_ac2rg"), "ReboundGrab", "Active", SubResource("tr_rg_rg2ac"), "Recovery", "ReboundGrab", SubResource("tr_rg_re2rg"), "ReboundGrab", "Recovery", SubResource("tr_rg_rg2re"), "Locomotion", "Dribble", SubResource("tr_dr_lo2dr"), "Dribble", "Locomotion", SubResource("tr_dr_dr2lo"), "Dribble", "Startup", SubResource("tr_dr_dr2su"), "Startup", "Dribble", SubResource("tr_dr_su2dr"), "Dribble", "Active", SubResource("tr_dr_dr2ac"), "Active", "Dribble", SubResource("tr_dr_ac2dr"), "Dribble", "Recovery", SubResource("tr_dr_dr2re"), "Recovery", "Dribble", SubResource("tr_dr_re2dr"), "Dribble", "Pivot", SubResource("tr_dr_dr2pvt"), "Pivot", "Dribble", SubResource("tr_dr_pvt2dr"), "Dribble", "FadeawayActive", SubResource("tr_dr_dr2fdw"), "FadeawayActive", "Dribble", SubResource("tr_dr_fdw2dr"), "Dribble", "ReboundGrab", SubResource("tr_dr_dr2rg"), "ReboundGrab", "Dribble", SubResource("tr_dr_rg2dr"), "Dribble", "JumpshotStartup", SubResource("tr_dr_dr2jssu"), "JumpshotRecovery", "Dribble", SubResource("tr_dr_jsre2dr"), "JumpshotStartup", "Dribble", SubResource("tr_dr_jssu2dr"), "Dribble", "CrossoverStartupLeft", SubResource("tr_crl_dr2su"), "CrossoverRecoveryLeft", "Dribble", SubResource("tr_crl_re2dr"), "CrossoverStartupLeft", "Dribble", SubResource("tr_crl_su2dr"), "Dribble", "BehindTheBackStartup", SubResource("tr_dr_dr2bbsu"), "BehindTheBackRecovery", "Dribble", SubResource("tr_dr_bbre2dr"), "BehindTheBackStartup", "Dribble", SubResource("tr_dr_bbsu2dr"), "Dribble", "StealStartup", SubResource("tr_dr_dr2stsu"), "StealRecovery", "Dribble", SubResource("tr_dr_stre2dr"), "StealStartup", "Dribble", SubResource("tr_dr_stsu2dr"), "Dribble", "BlockStartup", SubResource("tr_dr_dr2blsu"), "BlockRecovery", "Dribble", SubResource("tr_dr_blre2dr"), "BlockStartup", "Dribble", SubResource("tr_dr_blsu2dr"), "Locomotion", "CrossoverStartupRight", SubResource("tr_crr_lo2su"), "CrossoverStartupRight", "CrossoverActiveRight", SubResource("tr_crr_su2ac"), "CrossoverActiveRight", "CrossoverRecoveryRight", SubResource("tr_crr_ac2re"), "CrossoverRecoveryRight", "Locomotion", SubResource("tr_crr_re2lo"), "CrossoverStartupRight", "CrossoverRecoveryRight", SubResource("tr_crr_su2re"), "CrossoverStartupRight", "Locomotion", SubResource("tr_crr_su2lo"), "Dribble", "CrossoverStartupRight", SubResource("tr_crr_dr2su"), "CrossoverRecoveryRight", "Dribble", SubResource("tr_crr_re2dr"), "CrossoverStartupRight", "Dribble", SubResource("tr_crr_su2dr")]
 graph_offset = Vector2(56.084297, 0)
 
 [node name="CharacterBody3D" type="CharacterBody3D" unique_id=700308040]
@@ -382,6 +424,7 @@ libraries/locomotion = ExtResource("4_mdl7e")
 [node name="AnimationTree" type="AnimationTree" parent="." unique_id=686892176]
 root_node = NodePath("../CharacterModel")
 tree_root = SubResource("AnimationNodeStateMachine_bruh7")
+callback_mode_process = 0
 anim_player = NodePath("../AnimationPlayer")
 parameters/Locomotion/blend_position = 0.0
 parameters/Dribble/blend_position = 0.0

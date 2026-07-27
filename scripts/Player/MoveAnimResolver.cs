@@ -164,6 +164,77 @@ public static class MoveAnimResolver
     };
 
     /// <summary>
+    /// (Issue #280) The moves whose per-phase states are additionally split by
+    /// hand side, so their clip name carries a "Left"/"Right" suffix naming the
+    /// hand the ball STARTED in. A subset of
+    /// <see cref="ClippedMovePrefixes"/> — a move must have its own clips before
+    /// it can have handed ones.
+    ///
+    /// Why an explicit allowlist rather than "this move carries a burst
+    /// direction": the burst param is populated for crossover, behindtheback,
+    /// betweenthelegs AND inandout (see PlayerController.DisplayMove), and only
+    /// some of those are hand-directional at all — an in-and-out never crosses
+    /// the ball. Keying off the param would resolve a behind-the-back to
+    /// "BehindTheBackStartupLeft", a state the tree does not have, and
+    /// <c>Travel()</c> to a missing state only LOGS (#257) rather than throwing,
+    /// so a shipped move would silently stop animating. Membership here is a
+    /// promise that scenes/Player.tscn actually holds both variants.
+    ///
+    /// Equally important, and the reason this is not simply
+    /// <c>ClippedMovePrefixes.Keys</c>: <see cref="OriginHand"/>'s
+    /// phase-conditioned formula is only valid for a move that swaps the ball
+    /// hand exactly at Active-entry. Crossover, BehindTheBack and BetweenTheLegs
+    /// do (PlayerController's JustEnteredActive branch); Spin swaps on the LAST
+    /// Active tick instead, and InAndOut never swaps. Adding a move here without
+    /// checking its swap TIMING would produce a clip that is correct in Startup
+    /// and inverted afterwards.
+    ///
+    /// #281 adds "behindtheback"; #282 adds "steal", which will need its own
+    /// origin rule because a steal has no ball to swap — its handedness is the
+    /// TARGET hand, not an origin.
+    /// </summary>
+    private static readonly HashSet<string> HandedMoves = new() { "crossover" };
+
+    /// <summary>
+    /// (Issue #280) The hand the ball was in when the currently-displayed move
+    /// BEGAN, derived from the phase being displayed and the authoritative
+    /// hand side as of this same frame.
+    ///
+    /// A crossover is the act of changing hands, so
+    /// <c>PlayerController.HandSide</c> is NOT constant across the move: it
+    /// flips on <c>JustEnteredActive</c>, the first Active tick. Reading it
+    /// per-tick without this correction would display Startup on one polarity
+    /// and Active/Recovery on the other — the wind-up telegraphing one direction
+    /// and the cross itself playing the mirror of it, which is precisely the
+    /// false read ADR-0003 forbids. Inverting the post-swap phases recovers the
+    /// constant origin hand.
+    ///
+    /// Why derive rather than latch the hand at move-begin: the client's copy of
+    /// a remote opponent has no local machine to latch on, and a latch set on
+    /// the Inactive→Startup edge would simply be wrong if that peer dropped the
+    /// Startup packets (6 ticks is ~100 ms). Deriving needs no history at all,
+    /// and phase and hand side ride the SAME broadcast payload (see
+    /// PlayerController's ReceiveState call), so the pair a remote peer reads is
+    /// always a mutually-consistent server snapshot rather than two values that
+    /// could arrive a tick apart.
+    ///
+    /// Why this is safe on the locally-simulated roles too: _PhysicsProcess runs
+    /// the role tick — which advances the machine and applies the swap — strictly
+    /// before ApplyAnimation, so on the Active-entry tick the resolver already
+    /// sees the post-swap hand, which is exactly what this inversion assumes.
+    ///
+    /// Accepted imprecision: if possession is lost mid-move,
+    /// BallController resets the holder's hand to Left and the remaining frames
+    /// may show the wrong polarity. Per the #189 ruling the committed move plays
+    /// to completion regardless, and with the ball gone there is no true
+    /// direction left to telegraph.
+    /// </summary>
+    /// <param name="generic">The display state already resolved by <see cref="Resolve"/>.</param>
+    /// <param name="ballHand">The holder's authoritative <see cref="HandSide"/> this frame.</param>
+    public static HandSide OriginHand(MoveAnimState generic, HandSide ballHand) =>
+        generic == MoveAnimState.Startup ? ballHand : HandStateResolver.Opposite(ballHand);
+
+    /// <summary>
     /// Returns the exact AnimationTree state name the mesh's state machine
     /// should <c>Travel()</c> to, given the generic display state from
     /// <see cref="Resolve"/> and the moveId of the committed move currently
@@ -203,8 +274,25 @@ public static class MoveAnimResolver
     /// <param name="moveId">The <c>CommittedMove.Id</c> of the move currently
     /// (or, for display purposes, notionally) running — may be null or empty
     /// when no move is in flight.</param>
+    /// <param name="ballHand">
+    /// (Issue #280) The holder's authoritative <see cref="HandSide"/> as of this
+    /// frame — <c>PlayerController.HandSide</c>, which is server-authoritative,
+    /// predicted and broadcast (ADR-0012), so it is already correct for every
+    /// role without a per-role branch. Read ONLY for a move in
+    /// <see cref="HandedMoves"/>; every other move ignores it entirely.
+    ///
+    /// Deliberately REQUIRED rather than defaulted, unlike this class's other
+    /// discriminators. Those degrade safely: a wrong <c>isFadeaway</c> falls
+    /// back to the generic Active state, which exists and reads correctly. A
+    /// wrong hand does not degrade — it resolves to a state that exists, plays
+    /// cleanly, and telegraphs the WRONG DIRECTION. That is the false read this
+    /// whole split exists to prevent, and a silent default is how the #255
+    /// mirror bug shipped. Making it required turns "forgot the hand" into a
+    /// compile error, which matters most for #281/#282 adding to
+    /// <see cref="HandedMoves"/> later.
+    /// </param>
     /// <returns>The AnimationTree state name to Travel() to.</returns>
-    public static string ResolveStateName(MoveAnimState generic, string? moveId)
+    public static string ResolveStateName(MoveAnimState generic, string? moveId, HandSide ballHand)
     {
         bool phaseIsPerMoveEligible = generic is MoveAnimState.Startup or MoveAnimState.Active or MoveAnimState.Recovery;
 
@@ -212,7 +300,15 @@ public static class MoveAnimResolver
             && !string.IsNullOrEmpty(moveId)
             && ClippedMovePrefixes.TryGetValue(moveId, out string? prefix))
         {
-            return prefix + generic;
+            // (#280) A handed move's three phase states are split in two, and
+            // the suffix names the hand the ball STARTED in — so "Left" is the
+            // crossover that carries the ball toward the body's RIGHT. There is
+            // no unsuffixed fallback: scenes/Player.tscn holds only the six
+            // handed states, because HandSide is a two-valued enum and
+            // OriginHand is total over it, so no third case can arise.
+            return HandedMoves.Contains(moveId)
+                ? prefix + generic + OriginHand(generic, ballHand)
+                : prefix + generic;
         }
 
         return generic.ToString();

@@ -26,7 +26,7 @@ namespace HOOPERGAME.Tests.Integration;
 // disposable diagnostic probe proved `AnimationTree.Advance(dt)` pumps and
 // samples real `Skeleton3D` bone poses perfectly headlessly from an ordinary
 // Node's _Ready/_PhysicsProcess — no custom MainLoop needed — and family 5
-// below now does exactly that, in this same harness. Six bounded
+// below now does exactly that, in this same harness. Eight bounded
 // clip-property/pose assertion families sit on top of track resolution:
 //   1. loop_mode (#271 — the import default LOOP_NONE shipped once, freezing
 //      run after a single pass);
@@ -66,7 +66,27 @@ namespace HOOPERGAME.Tests.Integration;
 //      horizontal the instant a turn began. pivot now carries idle's frame-0
 //      hold pose for the arm chain / upper body; assert those tracks exist and
 //      sit clearly OFF rest, plus a minimum total track count so it can't
-//      silently revert to the 4-track clip).
+//      silently revert to the 4-track clip);
+//   7. the jump-shot clip family (#279 — four one-shots sliced from `Goalkeeper
+//      Catch Stationary`: segment lengths must equal JumpShot.DefaultFrameData's
+//      own tick windows read from the C# side (which is what makes the rebuild
+//      tool's duplicated 18/4/20 safe rather than merely regrettable), full-body
+//      track coverage and an off-rest upper body against the a45bd1d trap, and
+//      fadeawayactive must differ measurably from jumpshotactive or the separate
+//      #243 state would be decorative);
+//   8. the crossover clip family (#280 — the same three checks over SIX clips,
+//      three phases x two hand-side polarities, against
+//      Crossover.DefaultFrameData; PLUS two the jump shot had no need for,
+//      because a crossover is DIRECTIONAL and ball-hand-side is authoritative
+//      (ADR-0012), so a wrong polarity is a FALSE TELEGRAPH rather than a
+//      blemish: each phase's two variants must differ by >= 15 deg (the asset
+//      could be corrupted long after the tool proved the direction at build
+//      time), and each of the six .tscn states must point at its OWN clip —
+//      read off the AnimationNodeStateMachine resource directly, because a
+//      copy-pasted SubResource id leaves every state NAME correct and is
+//      therefore invisible to CrossoverAnimTest. Note families 7 and 8 grade
+//      different bone sets off rest: see (c)'s comment for why the crossover
+//      excludes the clavicles that the jump shot legitimately elevates).
 // Whether the corrected pose actually looks RIGHT remains the deferred human
 // feel judgment (#178/#173, ADR-0021) — but as of #273, pivot's pose is now
 // numerically anchored to Y Bot's own rests via the rest-delta correction,
@@ -835,6 +855,335 @@ public partial class LocomotionClipTest : Node
                  "an off-balance shot would be indistinguishable from a squared-up one (#243). Check the " +
                  "spine lean in tools/rebuild_jumpshot_clips.gd.");
             allPass = false;
+        }
+
+        // --- Issue #280 assertion family: the crossover clip family ---------
+        // #280 drafted SIX one-shots (tools/rebuild_crossover_clips.gd) by
+        // slicing `Dribble` and composing a signed cross-body swing onto each
+        // slice: three phases x two hand-side polarities. The suffix names the
+        // hand the ball STARTED in, so 'left' carries the ball toward the body's
+        // RIGHT.
+        //
+        // Blocks (a)-(c) are the #279 family re-pointed at six clips and one
+        // move's frame data; they are the same three failures and need no fresh
+        // argument. Blocks (d) and (e) are what is genuinely new here, and both
+        // exist because a crossover is DIRECTIONAL: ball-hand-side is
+        // authoritative (ADR-0012) and a clip that plays the wrong polarity is
+        // not a blemish but a FALSE TELEGRAPH, which ADR-0003 treats as a
+        // competitive defect. Both are NON-SYMMETRIC under an L<->R swap on
+        // purpose — the #255 mirror bug shipped because its test was symmetric
+        // and passed on a broken mirror.
+        //
+        // As with #279, nothing here asserts the pose LOOKS like a crossover;
+        // that is #173's deferred human judgment (ADR-0021) and does not gate.
+
+        // (a) Segment lengths == the move's real tick windows.
+        // Read from Crossover.DefaultFrameData, not hardcoded, for the same
+        // reason as the jump shot's: rebuild_crossover_clips.gd must duplicate
+        // 6/3/12 because GDScript cannot read the C# constant, and this is what
+        // makes that duplication safe. The pending #238 consolidated tuning pass
+        // is expected to touch these magnitudes, so this tripwire is not
+        // hypothetical — retune without re-running the tool and this goes red
+        // and names the tool.
+        var crFrames = Crossover.DefaultFrameData;
+        (string Clip, int Ticks)[] crossoverWindows =
+        {
+            ("crossoverstartupleft", crFrames.StartupFrames),
+            ("crossoveractiveleft", crFrames.ActiveFrames),
+            ("crossoverrecoveryleft", crFrames.RecoveryFrames),
+            ("crossoverstartupright", crFrames.StartupFrames),
+            ("crossoveractiveright", crFrames.ActiveFrames),
+            ("crossoverrecoveryright", crFrames.RecoveryFrames),
+        };
+        foreach (var (clipName, ticks) in crossoverWindows)
+        {
+            if (!lib.HasAnimation(clipName))
+            {
+                Fail($"AnimationLibrary has no clip '{clipName}' — run " +
+                     "tools/rebuild_crossover_clips.gd.");
+                allPass = false;
+                continue;
+            }
+            double expectedSeconds = ticks / tps;
+            double actualSeconds = lib.GetAnimation(clipName).Length;
+            GD.Print($"[locomotion-clip]   '{clipName}': length={actualSeconds:F6}s " +
+                     $"expected={expectedSeconds:F6}s ({ticks} ticks @ {tps} tps)");
+            if (System.Math.Abs(actualSeconds - expectedSeconds) > LengthToleranceSeconds)
+            {
+                Fail($"clip '{clipName}' is {actualSeconds:F6}s, expected {expectedSeconds:F6}s " +
+                     $"({ticks} ticks at {tps} tps — Crossover.DefaultFrameData). Re-run " +
+                     "tools/rebuild_crossover_clips.gd after retuning the move's frame data.");
+                allPass = false;
+            }
+        }
+
+        // (b) One-shots must not loop. A looping 3-tick Active would re-play the
+        // cross for as long as the state was held, reading as a stutter rather
+        // than a single commitment. The FBX import default happens to be
+        // LOOP_NONE and the tool sets it explicitly anyway; this pins it,
+        // because `dribbleidle`/`dribblemove` needed the OPPOSITE default and
+        // that silent asymmetry was the easiest thing to get wrong in #285.
+        foreach (var (clipName, _) in crossoverWindows)
+        {
+            if (!lib.HasAnimation(clipName)) continue;
+            var loopMode = lib.GetAnimation(clipName).LoopMode;
+            if (loopMode != Animation.LoopModeEnum.None)
+            {
+                Fail($"clip '{clipName}' has loop_mode={loopMode}, expected None — a committed-move " +
+                     "phase clip is a one-shot (#279's rule, unchanged).");
+                allPass = false;
+            }
+        }
+
+        // (c) Full-body coverage + upper body posed, not at rest (a45bd1d).
+        // Same threshold as the jump-shot family, and the whole arm chain is
+        // still asserted PRESENT and non-empty — that is the structural a45bd1d
+        // guard, since only an UNTRACKED bone gets written to rest.
+        //
+        // The off-rest POSE grade, though, applies to the Arm bones only. This
+        // family carves out the CLAVICLES on top of #279's ForeArm carve-out,
+        // and for the same kind of reason — a measurement, not a threshold
+        // relaxed to turn a red green.
+        //
+        // Measured on the committed clips, the clavicles sit 2.6-8.3 deg from Y
+        // Bot's rest at the first Startup key while the humerus sits 57-120 deg
+        // off it. That is anatomy, not a T-pose: a real clavicle has very little
+        // range, and in a low dribble stance it barely leaves neutral, whereas a
+        // jump shot passes the same assertion only because reaching overhead
+        // genuinely elevates it. Grading it here would assert that a
+        // ball-handler's collarbone must be wrenched >= 10 deg from neutral.
+        //
+        // What proves these tracks are live rather than stuck at rest is that
+        // the SAME clavicle tracks measure 20.9 / 25.5 / 21.8 / 17.2 deg in the
+        // Recovery clips, where the composed swing has ramped up. A bone written
+        // to rest reads identically in every clip; one that varies 2.6 -> 25 deg
+        // across the family is demonstrably tracked. The Arm bones, still
+        // graded, carry the "upper body is posed" proof on their own.
+        //
+        // Worth knowing when this one goes red: BlendRestAnchor re-anchors both
+        // UpLeg rests to `idle`'s first key (#287), so a clip that lost those
+        // two tracks would pose into idle's crouch rather than a visible T-pose.
+        // The track-count assertion, not a visual check, is what catches it.
+        string[] crossoverElevationBones = { "mixamorig_LeftArm", "mixamorig_RightArm" };
+        foreach (var (clipName, _) in crossoverWindows)
+        {
+            if (!lib.HasAnimation(clipName)) continue;
+            var anim = lib.GetAnimation(clipName);
+
+            int rotTrackCount = 0;
+            for (int i = 0; i < anim.GetTrackCount(); i++)
+            {
+                if (anim.TrackGetType(i) == Animation.TrackType.Rotation3D) rotTrackCount++;
+            }
+            GD.Print($"[locomotion-clip]   '{clipName}': rotation_track_count={rotTrackCount}");
+            if (rotTrackCount < JumpshotMinRotationTrackCount)
+            {
+                Fail($"clip '{clipName}': only {rotTrackCount} rotation tracks — expected >= " +
+                     $"{JumpshotMinRotationTrackCount}. A per-move state plays ONE clip at FULL " +
+                     "weight, so every bone the clip omits is written to rest (a45bd1d).");
+                allPass = false;
+            }
+
+            foreach (var boneName in jumpshotArmChain)
+            {
+                int trackIdx = FindRotationTrack(anim, boneName);
+                if (trackIdx < 0)
+                {
+                    Fail($"clip '{clipName}': no rotation track for arm-chain bone '{boneName}' — " +
+                         "that bone would sit at rest for the whole phase.");
+                    allPass = false;
+                    continue;
+                }
+                if (anim.TrackGetKeyCount(trackIdx) <= 0)
+                {
+                    Fail($"clip '{clipName}': arm-chain track for '{boneName}' has zero keys — " +
+                         "vacuous, not proof.");
+                    allPass = false;
+                    continue;
+                }
+                if (!crossoverElevationBones.Contains(boneName)) continue;
+
+                int boneIdx = _rawYBotSkeleton.FindBone(boneName);
+                if (boneIdx < 0)
+                {
+                    Fail($"clip '{clipName}': raw Y Bot reference skeleton has no bone '{boneName}'.");
+                    allPass = false;
+                    continue;
+                }
+                Quaternion crRestRot = _rawYBotSkeleton.GetBoneRest(boneIdx).Basis.GetRotationQuaternion();
+                var crFirstKey = (Quaternion)anim.TrackGetKeyValue(trackIdx, 0);
+                double crDeviationDeg = QuaternionAngleDeg(crFirstKey, crRestRot);
+                GD.Print($"[locomotion-clip]   '{clipName}' arm '{boneName}': " +
+                         $"first-key-vs-ybot-rest={crDeviationDeg:F6} deg");
+                if (crDeviationDeg < JumpshotArmOffRestThresholdDeg)
+                {
+                    Fail($"clip '{clipName}': arm-chain '{boneName}' first key is only " +
+                         $"{crDeviationDeg:F6} deg from Y Bot's rest (T-pose) — expected >= " +
+                         $"{JumpshotArmOffRestThresholdDeg} deg (#276 temp-draft bar: the upper body " +
+                         "must be POSED, not at rest).");
+                    allPass = false;
+                }
+            }
+        }
+
+        // (d) The two polarities must actually be mirrors, not copies.
+        //
+        // This is the assertion the #255 lesson demands, and the reason it is
+        // phrased as a per-phase comparison rather than a single number: the
+        // rebuild tool proves the cross DIRECTION geometrically at build time
+        // (signed hand-midpoint travel, opposite signs, measured +0.2376 m and
+        // -0.2704 m), but a build-time proof only covers the moment the asset
+        // was generated. If someone later re-pointed one polarity's clip, copied
+        // a clip over its twin, or shipped a tool change that dropped the sign,
+        // the ASSET would be wrong and every state-name assertion in
+        // CrossoverAnimTest would still pass — because the state names would
+        // remain perfectly correct while both states played the same motion.
+        //
+        // Deliberately compares each phase against its OWN twin rather than
+        // comparing, say, both Actives against a stored constant. Two clips
+        // being far apart is only meaningful pairwise.
+        const double CrossoverMinPolarityDeltaDeg = 15.0;
+        (string Left, string Right)[] crossoverTwins =
+        {
+            ("crossoverstartupleft", "crossoverstartupright"),
+            ("crossoveractiveleft", "crossoveractiveright"),
+            ("crossoverrecoveryleft", "crossoverrecoveryright"),
+        };
+        foreach (var (leftName, rightName) in crossoverTwins)
+        {
+            if (!lib.HasAnimation(leftName) || !lib.HasAnimation(rightName)) continue;
+            var leftAnim = lib.GetAnimation(leftName);
+            var rightAnim = lib.GetAnimation(rightName);
+
+            double worstPolarityDeltaDeg = 0.0;
+            int polarityComparedTracks = 0;
+            for (int i = 0; i < leftAnim.GetTrackCount(); i++)
+            {
+                if (leftAnim.TrackGetType(i) != Animation.TrackType.Rotation3D) continue;
+                var path = leftAnim.TrackGetPath(i);
+                if (path.GetSubNameCount() == 0) continue;
+                int j = FindRotationTrack(rightAnim, path.GetSubName(0));
+                if (j < 0) continue;
+                polarityComparedTracks++;
+                int keys = System.Math.Min(leftAnim.TrackGetKeyCount(i), rightAnim.TrackGetKeyCount(j));
+                for (int k = 0; k < keys; k++)
+                {
+                    double d = QuaternionAngleDeg(
+                        (Quaternion)leftAnim.TrackGetKeyValue(i, k),
+                        (Quaternion)rightAnim.TrackGetKeyValue(j, k));
+                    if (d > worstPolarityDeltaDeg) worstPolarityDeltaDeg = d;
+                }
+            }
+            GD.Print($"[locomotion-clip]   '{leftName}' vs '{rightName}': compared " +
+                     $"{polarityComparedTracks} shared rotation tracks, max key delta=" +
+                     $"{worstPolarityDeltaDeg:F3} deg");
+            // Vacuous-pass guard, same shape as the fadeaway's: with zero shared
+            // tracks the max would be 0 and this would fail for the wrong reason.
+            if (polarityComparedTracks < JumpshotMinRotationTrackCount)
+            {
+                Fail($"'{leftName}' and '{rightName}' share only {polarityComparedTracks} rotation " +
+                     $"tracks — expected >= {JumpshotMinRotationTrackCount}; both polarities are built " +
+                     "from the same source, so a small overlap means one of them lost tracks.");
+                allPass = false;
+            }
+            else if (worstPolarityDeltaDeg < CrossoverMinPolarityDeltaDeg)
+            {
+                Fail($"'{leftName}' and '{rightName}' differ by only {worstPolarityDeltaDeg:F3} deg — " +
+                     $"expected >= {CrossoverMinPolarityDeltaDeg} deg. The two hand-side variants would " +
+                     "play the same motion, so a crossover would telegraph the same direction whichever " +
+                     "way the ball actually went (ADR-0012/ADR-0003). Check the cross_sign handling in " +
+                     "tools/rebuild_crossover_clips.gd.");
+                allPass = false;
+            }
+        }
+
+        // (e) Each of the six .tscn states must point at its OWN clip.
+        //
+        // The gap this closes, and the reason it reads the SCENE rather than the
+        // library: every other crossover assertion — here and in
+        // CrossoverAnimTest — verifies either the clips or the state NAMES. None
+        // of them verifies the mapping BETWEEN them. Hand-authoring six
+        // near-identical AnimationNodeAnimation sub-resources makes a
+        // copy-pasted SubResource id the single most likely mistake in the whole
+        // change, and its symptom is invisible to both: GetCurrentNode() would
+        // still report "CrossoverStartupRight", the clips would still be
+        // provably distinct by (d), and the player would still play the wrong
+        // one. A wrong mapping is exactly as bad as a wrong clip.
+        //
+        // This is also the instrument #279 concluded was needed for facts about
+        // the tree that Travel() cannot expose: inspect the
+        // AnimationNodeStateMachine resource directly instead of driving it.
+        var playerScene = GD.Load<PackedScene>("res://scenes/Player.tscn");
+        var sceneState = playerScene.GetState();
+        AnimationNodeStateMachine stateMachine = null;
+        for (int i = 0; i < sceneState.GetNodeCount(); i++)
+        {
+            if (sceneState.GetNodeType(i) != "AnimationTree") continue;
+            for (int p = 0; p < sceneState.GetNodePropertyCount(i); p++)
+            {
+                if (sceneState.GetNodePropertyName(i, p) != "tree_root") continue;
+                stateMachine = sceneState.GetNodePropertyValue(i, p).As<AnimationNodeStateMachine>();
+            }
+        }
+        if (stateMachine == null)
+        {
+            Fail("could not read an AnimationNodeStateMachine off scenes/Player.tscn's AnimationTree " +
+                 "tree_root — the state<->clip mapping is unverified.");
+            allPass = false;
+        }
+        else
+        {
+            (string State, string Clip)[] expectedStateClips =
+            {
+                ("CrossoverStartupLeft", "locomotion/crossoverstartupleft"),
+                ("CrossoverActiveLeft", "locomotion/crossoveractiveleft"),
+                ("CrossoverRecoveryLeft", "locomotion/crossoverrecoveryleft"),
+                ("CrossoverStartupRight", "locomotion/crossoverstartupright"),
+                ("CrossoverActiveRight", "locomotion/crossoveractiveright"),
+                ("CrossoverRecoveryRight", "locomotion/crossoverrecoveryright"),
+            };
+            var seenClips = new List<string>();
+            foreach (var (stateName, expectedClip) in expectedStateClips)
+            {
+                if (!stateMachine.HasNode(stateName))
+                {
+                    Fail($"scenes/Player.tscn's state machine has no state '{stateName}' — the resolver " +
+                         "emits that name and Travel() to a missing state only LOGS (#257), so the move " +
+                         "would silently keep showing whatever was playing.");
+                    allPass = false;
+                    continue;
+                }
+                var animNode = stateMachine.GetNode(stateName) as AnimationNodeAnimation;
+                if (animNode == null)
+                {
+                    Fail($"state '{stateName}' is not an AnimationNodeAnimation — a per-move state must " +
+                         "be a single full-weight clip, never a blend (#287).");
+                    allPass = false;
+                    continue;
+                }
+                string actualClip = animNode.Animation;
+                seenClips.Add(actualClip);
+                GD.Print($"[locomotion-clip]   state '{stateName}' -> clip '{actualClip}'");
+                if (actualClip != expectedClip)
+                {
+                    Fail($"state '{stateName}' points at clip '{actualClip}', expected '{expectedClip}'. " +
+                         "The state name and the clip disagree, so the tree would enter the correctly-" +
+                         "named state and play the wrong polarity — invisible to every state-name " +
+                         "assertion.");
+                    allPass = false;
+                }
+            }
+            // Distinctness as its own check rather than as a consequence of the
+            // six equality checks above: if all six expectations were ever
+            // edited to the same value in one careless sweep, the loop would
+            // pass. This cannot.
+            if (seenClips.Count == expectedStateClips.Length &&
+                seenClips.Distinct().Count() != expectedStateClips.Length)
+            {
+                Fail($"the six crossover states point at only {seenClips.Distinct().Count()} distinct " +
+                     "clips — at least two share one, so at least one polarity or phase is duplicated.");
+                allPass = false;
+            }
         }
 
         // --- Issue #275 assertion family: idle<->run blend-compatibility ----
