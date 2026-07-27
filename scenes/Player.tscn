@@ -424,6 +424,7 @@ libraries/locomotion = ExtResource("4_mdl7e")
 [node name="AnimationTree" type="AnimationTree" parent="." unique_id=686892176]
 root_node = NodePath("../CharacterModel")
 tree_root = SubResource("AnimationNodeStateMachine_bruh7")
+callback_mode_process = 0
 anim_player = NodePath("../AnimationPlayer")
 parameters/Locomotion/blend_position = 0.0
 parameters/Dribble/blend_position = 0.0
