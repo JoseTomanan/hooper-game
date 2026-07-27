@@ -968,10 +968,15 @@ jobs:
       #       test on the resolver can catch: ResolveStateName still returns a
       #       string naming a state that really exists, so Travel() succeeds and
       #       the mesh animates the WRONG clip with nothing logged.
-      #       fadeaway-active still observes FadeawayActive here (that state name
-      #       is unprefixed and shared, so this mutation cannot touch it) and
-      #       fails only on the missing JumpshotStartup — confirming the prefix
-      #       table and the fadeaway axis are independent.
+      #       fadeaway-active fails here too, reporting sawStartup=False AND
+      #       sawFadeawayActive=False. Read that second False carefully: it does
+      #       NOT mean this mutation broke the fadeaway axis. FadeawayActive is an
+      #       unprefixed, shared state name, so ClippedMovePrefixes cannot reach
+      #       it — and before _sawFadeawayActive was chained behind
+      #       _sawJumpshotStartup it did latch True under this exact mutation.
+      #       The chain is what masks it: the mutation breaks Startup, so the
+      #       gate never opens. Worth knowing before diagnosing a future red here
+      #       as a fadeaway regression when it is really a prefix-table break.
       #
       #   (B) invert FadeawayTriggerResolver.IsFadeaway's angle comparison — the
       #       two fadeaway scenarios flip in OPPOSITE directions: fadeaway-active

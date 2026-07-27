@@ -56,11 +56,14 @@ extends SceneTree
 # nonsense if the source FBX were ever re-exported; a derivation fails loudly
 # instead. The measured arc on the committed FBX is:
 #
-#   t=0.00-0.34  hands -0.10 -> -0.17 m   the dip into the gather
-#   t=0.34-0.80  hands -0.17 -> +0.86 m   the extension  <- Startup
-#   t~0.80       hands +0.86 m (peak)     full extension <- Active begins here
-#   t=0.80-1.37  hands +0.86 -> +0.08 m   the descent    <- Recovery
-#   t=1.37-2.73  hands ~+0.02 m, static   idle tail, discarded
+#   t=0.00-0.31  hands -0.10 -> -0.17 m   the dip into the gather
+#   t=0.31-0.82  hands -0.17 -> +0.86 m   the extension  <- Startup
+#   t~0.82       hands +0.86 m (peak)     full extension <- Active begins here
+#   t=0.82-1.35  hands +0.86 -> +0.08 m   the descent    <- Recovery
+#   t=1.35-2.73  hands ~+0.02 m, static   idle tail, discarded
+#
+# Those boundaries are the derived landmarks below, rounded to 2dp — keep the two
+# in agreement if the source FBX is ever re-exported.
 #
 # Startup begins at the GATHER BOTTOM, not at t=0 (human call on #279, 2026-07-27,
 # recorded here per ADR-0014). Both readings are defensible: including the dip

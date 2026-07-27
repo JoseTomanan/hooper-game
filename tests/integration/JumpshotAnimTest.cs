@@ -63,9 +63,17 @@ namespace HOOPERGAME.Tests.Integration;
 // Same reasoning as FadeawayTriggerTest: forcing Heading directly isolates
 // "does the classification correctly key off Heading-at-release" from "can
 // HeadingMath.RotateToward turn a player to a given yaw" (already proven
-// elsewhere by PivotPlantTest/DriveGatherTest). A committed move freezes
-// Heading for its whole duration (Move() is skipped once a move starts), so
-// a Heading forced before Begin cannot drift mid-shot.
+// elsewhere by PivotPlantTest/DriveGatherTest). A Heading forced before Begin
+// cannot drift mid-shot HERE because (a) no stick input reaches this harness, so
+// Move() has nothing to turn toward, and (b) JumpShot's own branch in
+// TickCommittedMoveBehavior never writes Heading.
+//
+// Stated deliberately narrowly: "a committed move freezes Heading" is NOT a
+// general rule of this codebase. Spin's Active phase overwrites Heading every
+// tick via SpinHeadingMath.ArcHeading — an explicit ADR-0010 SANCTIONED
+// EXCEPTION in PlayerController — so any future harness that reuses this setup
+// for a different move must re-check that move's own branch rather than
+// inheriting this guarantee.
 //
 // ── What this harness CANNOT prove: individual transition EDGES ─────────────
 // Measured, not assumed (#279). Deleting the FadeawayActive -> JumpshotRecovery
@@ -234,10 +242,11 @@ public partial class JumpshotAnimTest : Node
         }
     }
 
-    // Heading forced BEFORE Begin, exactly like FadeawayTriggerTest — the
-    // shooter never moves after this (no stick input reaches
-    // CheckAutoStartDribble in this harness, and a committed move freezes
-    // Heading for its whole duration), so Heading cannot drift mid-shot.
+    // Heading forced BEFORE Begin, exactly like FadeawayTriggerTest — the shooter
+    // never moves after this (no stick input reaches CheckAutoStartDribble in this
+    // harness, and JumpShot's own TickCommittedMoveBehavior branch never writes
+    // Heading), so Heading cannot drift mid-shot. See the header for why that is
+    // scoped to JumpShot rather than to committed moves in general.
     private void ApplyScenarioHeading()
     {
         // Target yaw: direction from shooter to rim — the SAME Atan2(dx, dz)
