@@ -2967,6 +2967,13 @@ public partial class PlayerController : CharacterBody3D
 		// vertical and irrelevant to a ground idle/run blend.
 		float horizontalSpeed = new Vector2(Velocity.X, Velocity.Z).Length();
 		_animTree.Set("parameters/Locomotion/blend_position", horizontalSpeed);
+		// Dribble blend (#285): the live-dribble neutral is the SAME idle↔moving
+		// speed blend on a second BlendSpace1D, so it is fed the same value. Set
+		// unconditionally, exactly like Locomotion's — an AnimationTree blend
+		// parameter on a state that isn't current costs nothing, and writing it
+		// every tick means the stance is already at the right blend position on
+		// the frame Travel() enters it, rather than ramping up from 0 after.
+		_animTree.Set("parameters/Dribble/blend_position", horizontalSpeed);
 
 		// Committed-move state (#41/#69, per-move state names #277): map the
 		// DISPLAY phase to a generic anim state, then resolve THAT plus the
@@ -2996,7 +3003,13 @@ public partial class PlayerController : CharacterBody3D
 		// only ever bites during Inactive (the resolver ranks it above Pivot but
 		// below any committed move), and the latch is already zeroed the instant a
 		// move begins, so the two never fight for a committed-move frame.
-		MoveAnimState generic = MoveAnimResolver.Resolve(displayPhase, DisplayFadeaway(), IsPivotingInPlace, IsPlayingReboundGrab);
+		// DisplayDribbling (#285): the live-dribble neutral stance. Like the two
+		// flags above it only bites during Inactive — but unlike them it is not a
+		// flourish, it REPLACES Locomotion (the resolver ranks it below both, so
+		// a pivot or a fresh rebound grab still wins). It reads the single
+		// replicated ball rather than this node's machine, so it needs no
+		// per-role branch at all; see DisplayDribbling's own doc.
+		MoveAnimState generic = MoveAnimResolver.Resolve(displayPhase, DisplayFadeaway(), IsPivotingInPlace, IsPlayingReboundGrab, DisplayDribbling());
 		string target = MoveAnimResolver.ResolveStateName(generic, DisplayMoveId());
 		if (target != _currentAnimStateName)
 		{
@@ -3088,6 +3101,42 @@ public partial class PlayerController : CharacterBody3D
 		DisplayPhaseResolver.LocalMachineDrivesDisplay(IsServer, IsLocalPlayer)
 			? _machine.CurrentMove is JumpShot jumpShot && jumpShot.IsFadeaway
 			: _serverMoveId == "jumpshot" && _serverMoveParam != 0f;
+
+	/// <summary>
+	/// (Issue #285) Whether this node should DISPLAY the live-dribble neutral
+	/// stance this frame — i.e. this player is the ball's holder AND the ball is
+	/// in <see cref="BallState.Dribbling"/>.
+	///
+	/// Unlike <see cref="DisplayMove"/>/<see cref="DisplayMoveId"/>/
+	/// <see cref="DisplayFadeaway"/> this deliberately does NOT go through
+	/// <c>DisplayPhaseResolver.LocalMachineDrivesDisplay</c>. Those three read the
+	/// player's OWN CommittedMoveMachine, which a client's copy of the opponent
+	/// never advances — hence their broadcast fallback. Possession is different:
+	/// there is exactly ONE replicated ball node, so <c>ball.State</c> and
+	/// <c>HolderPeerId</c> are already correct on every peer for every player's
+	/// copy. That is the same already-replicated read
+	/// <see cref="TickReboundGrabLatch"/> and <see cref="IsBallHolder"/> use — no
+	/// new networked field, and the stance therefore shows on a remote peer's
+	/// copy of whoever is dribbling, not just locally.
+	///
+	/// Gated on Dribbling specifically, not "holds the ball": a Held (cradled /
+	/// dead-dribble) holder keeps Locomotion, because a live-dribble loop on a
+	/// spent dribble advertises a drive the holder can no longer legally make —
+	/// an actively FALSE read, worse than no signal (see MoveAnimState.Dribble's
+	/// doc for the full ADR-0003 reasoning). Possession itself stays visible
+	/// either way via the in-hand ball mesh (ADR-0012).
+	///
+	/// Cosmetic-only (ADR-0002/0004): a pure read of already-authoritative ball
+	/// state with no path back into possession, prediction, or replication.
+	/// </summary>
+	public bool DisplayDribbling()
+	{
+		BallController ball = GetBall();
+		return ball != null
+			&& OwnPeerId != 0
+			&& ball.StateMachine.HolderPeerId == OwnPeerId
+			&& ball.State == BallState.Dribbling;
+	}
 
 	/// <summary>
 	/// Whether this node should DISPLAY the whiff-punish "beaten" cue
