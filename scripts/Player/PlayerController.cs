@@ -713,7 +713,7 @@ public partial class PlayerController : CharacterBody3D
 	/// <see cref="MoveAnimResolver.ResolveStateName"/> can map the SAME generic
 	/// enum value to different concrete states depending on the committed
 	/// move's Id (e.g. an unclipped jab's Active stays "Active", but a
-	/// clipped crossover's Active resolves to "CrossoverActive"), de-dup must
+	/// clipped crossover's Active resolves to "CrossoverActiveLeft"), de-dup must
 	/// compare the resolved name, not the generic enum — an enum-based
 	/// comparison would see Active == Active across that transition, skip
 	/// Travel(), and leave the mesh stuck on the wrong clip.
@@ -724,7 +724,7 @@ public partial class PlayerController : CharacterBody3D
 	/// Harness observability (issue #242, ADR-0016; string since #277): the
 	/// display anim state NAME ApplyAnimation last Traveled the state machine
 	/// to (e.g. "Locomotion", "Active", or a per-move name like
-	/// "CrossoverActive"). Not read by any gameplay or netcode path —
+	/// "CrossoverActiveLeft"). Not read by any gameplay or netcode path —
 	/// cosmetic-only, same as <see cref="_currentAnimStateName"/> it mirrors.
 	///
 	/// NOTE this is the RESOLVER'S decision, not proof the AnimationTree
@@ -2979,7 +2979,8 @@ public partial class PlayerController : CharacterBody3D
 		// DISPLAY phase to a generic anim state, then resolve THAT plus the
 		// DISPLAY move Id to the exact state name to Travel() to — a clipped
 		// move (jumpshot/crossover/behindtheback/steal/block) gets its own
-		// per-phase state (e.g. "CrossoverActive"), everything else falls
+		// per-phase state, hand-suffixed for a HandedMoves entry (e.g.
+		// "CrossoverActiveLeft", #280), everything else falls
 		// back to the generic enum name (Locomotion/Startup/Active/Recovery)
 		// by contract (EDITOR_TASKS.md M7b). Travel() only when the resolved
 		// NAME changes — see _currentAnimStateName's doc for why the de-dup

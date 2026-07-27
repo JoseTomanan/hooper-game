@@ -26,7 +26,7 @@ namespace HOOPERGAME.Tests.Integration;
 // disposable diagnostic probe proved `AnimationTree.Advance(dt)` pumps and
 // samples real `Skeleton3D` bone poses perfectly headlessly from an ordinary
 // Node's _Ready/_PhysicsProcess — no custom MainLoop needed — and family 5
-// below now does exactly that, in this same harness. Six bounded
+// below now does exactly that, in this same harness. Eight bounded
 // clip-property/pose assertion families sit on top of track resolution:
 //   1. loop_mode (#271 — the import default LOOP_NONE shipped once, freezing
 //      run after a single pass);
@@ -66,7 +66,27 @@ namespace HOOPERGAME.Tests.Integration;
 //      horizontal the instant a turn began. pivot now carries idle's frame-0
 //      hold pose for the arm chain / upper body; assert those tracks exist and
 //      sit clearly OFF rest, plus a minimum total track count so it can't
-//      silently revert to the 4-track clip).
+//      silently revert to the 4-track clip);
+//   7. the jump-shot clip family (#279 — four one-shots sliced from `Goalkeeper
+//      Catch Stationary`: segment lengths must equal JumpShot.DefaultFrameData's
+//      own tick windows read from the C# side (which is what makes the rebuild
+//      tool's duplicated 18/4/20 safe rather than merely regrettable), full-body
+//      track coverage and an off-rest upper body against the a45bd1d trap, and
+//      fadeawayactive must differ measurably from jumpshotactive or the separate
+//      #243 state would be decorative);
+//   8. the crossover clip family (#280 — the same three checks over SIX clips,
+//      three phases x two hand-side polarities, against
+//      Crossover.DefaultFrameData; PLUS two the jump shot had no need for,
+//      because a crossover is DIRECTIONAL and ball-hand-side is authoritative
+//      (ADR-0012), so a wrong polarity is a FALSE TELEGRAPH rather than a
+//      blemish: each phase's two variants must differ by >= 15 deg (the asset
+//      could be corrupted long after the tool proved the direction at build
+//      time), and each of the six .tscn states must point at its OWN clip —
+//      read off the AnimationNodeStateMachine resource directly, because a
+//      copy-pasted SubResource id leaves every state NAME correct and is
+//      therefore invisible to CrossoverAnimTest. Note families 7 and 8 grade
+//      different bone sets off rest: see (c)'s comment for why the crossover
+//      excludes the clavicles that the jump shot legitimately elevates).
 // Whether the corrected pose actually looks RIGHT remains the deferred human
 // feel judgment (#178/#173, ADR-0021) — but as of #273, pivot's pose is now
 // numerically anchored to Y Bot's own rests via the rest-delta correction,
