@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using Hooper.Moves;
 using Hooper.Player;
 
 namespace HOOPERGAME.Tests.Integration;
@@ -231,7 +232,15 @@ public partial class LocomotionClipTest : Node
         // resolution loop that follows iterates the WHOLE library, so the two
         // dribble clips get #271's bone-track-match proof automatically; this
         // list is what stops that loop from silently iterating nothing.
-        string[] expected = { "idle", "run", "pivot", "dribbleidle", "dribblemove" };
+        string[] expected =
+        {
+            "idle", "run", "pivot", "dribbleidle", "dribblemove",
+            // #279's jump-shot family. Listed here for the same reason as the
+            // rest: the per-clip track-resolution loop below iterates the WHOLE
+            // library, so naming them is what stops that loop from silently
+            // iterating nothing if a rebuild ever dropped them.
+            "jumpshotstartup", "jumpshotactive", "jumpshotrecovery", "fadeawayactive",
+        };
         var missingClips = expected.Where(e => !clipNames.Contains(e)).ToArray();
         if (missingClips.Length > 0)
         {
@@ -307,6 +316,31 @@ public partial class LocomotionClipTest : Node
                 Fail($"clip '{clipName}' has loop_mode={mode}, expected Linear (issue #271 — " +
                      "the FBX importer's per-clip default is LOOP_NONE, so run visibly freezes " +
                      "after its first pass unless the import config or rebuild step sets it).");
+                allPass = false;
+            }
+        }
+
+        // The complementary half (#279): the one-shots must NOT loop. Asserting
+        // only the mustLoop side would leave "everything loops" passing, which
+        // is a real regression shape — a jump shot whose release clip looped
+        // would re-play the shooting motion over and over inside a 4-tick state.
+        // `catch` (#284, already shipped LOOP_NONE) rides along as the CONTROL
+        // proving this assertion itself discriminates: if it ever failed here,
+        // the assertion logic — not #279's clips — would be the suspect, the
+        // same role pivot plays in the mustLoop list above.
+        string[] mustNotLoop =
+        {
+            "catch", "jumpshotstartup", "jumpshotactive", "jumpshotrecovery", "fadeawayactive",
+        };
+        foreach (var clipName in mustNotLoop)
+        {
+            var mode = lib.GetAnimation(clipName).LoopMode;
+            GD.Print($"[locomotion-clip]   '{clipName}': loop_mode={mode}");
+            if (mode != Animation.LoopModeEnum.None)
+            {
+                Fail($"clip '{clipName}' has loop_mode={mode}, expected None — these are one-shot " +
+                     "committed-move phase clips (issue #279); a looping release clip would re-play " +
+                     "the shot motion inside its own state.");
                 allPass = false;
             }
         }
@@ -581,6 +615,226 @@ public partial class LocomotionClipTest : Node
                      "would sit horizontal during a turn).");
                 allPass = false;
             }
+        }
+
+        // --- Issue #279 assertion family: the jump-shot clip family ---------
+        // #279 drafted four one-shot clips by slicing `Goalkeeper Catch
+        // Stationary` (tools/rebuild_jumpshot_clips.gd) and repointed
+        // Player.tscn's JumpshotStartup/Active/Recovery + FadeawayActive states
+        // off the shared `locomotion/idle` placeholder onto them. Four
+        // independent things can silently go wrong, one per block below.
+        //
+        // NOTE this family deliberately asserts nothing about whether the pose
+        // LOOKS like a jump shot — that is #173's deferred human feel judgment
+        // (ADR-0021) and does not gate merge (#276). What it pins is that the
+        // clips are structurally incapable of the failures this repo has
+        // actually shipped before.
+
+        // (a) Segment lengths == the move's real tick windows.
+        //
+        // Read from JumpShot.DefaultFrameData and Engine.PhysicsTicksPerSecond
+        // rather than hardcoded here, on purpose. rebuild_jumpshot_clips.gd has
+        // to duplicate 18/4/20 (GDScript cannot read the C# constant), so this
+        // assertion is what makes that duplication SAFE instead of merely
+        // regrettable: retune JumpShot's frame data without re-running the tool
+        // and this goes red and names the tool. A clip longer than its window
+        // gets cut off mid-motion; a clip shorter than it freezes on its last
+        // frame for the remainder — either way the wind-up an opponent reads
+        // stops matching the real window, which is exactly the "no false reads"
+        // requirement (#276 point 4, ADR-0003).
+        var jsFrames = JumpShot.DefaultFrameData;
+        double tps = Engine.PhysicsTicksPerSecond;
+        // Animation.length is a 32-bit float; 20/60 round-trips to ~3e-7 of the
+        // double. 1e-4 is far below one tick (0.0167 s) yet far above that noise.
+        const double LengthToleranceSeconds = 1e-4;
+        (string Clip, int Ticks)[] jumpshotWindows =
+        {
+            ("jumpshotstartup", jsFrames.StartupFrames),
+            ("jumpshotactive", jsFrames.ActiveFrames),
+            ("jumpshotrecovery", jsFrames.RecoveryFrames),
+            // The fadeaway is an Active-phase-only variant (#243's state
+            // contract), so it fills the SAME window as the standard release.
+            ("fadeawayactive", jsFrames.ActiveFrames),
+        };
+        foreach (var (clipName, ticks) in jumpshotWindows)
+        {
+            double expectedSeconds = ticks / tps;
+            double actualSeconds = lib.GetAnimation(clipName).Length;
+            GD.Print($"[locomotion-clip]   '{clipName}': length={actualSeconds:F6}s " +
+                     $"expected={expectedSeconds:F6}s ({ticks} ticks @ {tps} tps)");
+            if (System.Math.Abs(actualSeconds - expectedSeconds) > LengthToleranceSeconds)
+            {
+                Fail($"clip '{clipName}' is {actualSeconds:F6}s, expected {expectedSeconds:F6}s " +
+                     $"({ticks} ticks at {tps} tps — JumpShot.DefaultFrameData). Re-run " +
+                     "tools/rebuild_jumpshot_clips.gd after retuning the move's frame data.");
+                allPass = false;
+            }
+        }
+
+        // (b) Full-body track coverage — the a45bd1d trap, same shape as the
+        // pivot completeness guard above but by construction rather than by
+        // repair: each clip is a SLICE of a 52-rotation-track source, so it
+        // should inherit every one. A slice that lost tracks would rest-pose
+        // (T-pose) the missing bones the instant its state was entered, and
+        // would do so silently. 50 rather than 52 leaves headroom for a source
+        // re-export without leaving room for the arms to go missing.
+        const int JumpshotMinRotationTrackCount = 50;
+        // (c) Upper body posed, not at rest — #276's temp-draft verification
+        // clause names this explicitly. Same >= 10 deg polarity as the #271
+        // idle/run T-pose-anchor guard and the pivot arm-chain guard: the
+        // observed bug value is effectively 0 deg (landing exactly ON rest),
+        // and a real shooting pose puts the arms nowhere near Y Bot's
+        // arms-horizontal rest, so 10 deg is an order of magnitude of margin
+        // without demanding pose correctness.
+        const double JumpshotArmOffRestThresholdDeg = 10.0;
+        string[] jumpshotClips =
+        {
+            "jumpshotstartup", "jumpshotactive", "jumpshotrecovery", "fadeawayactive",
+        };
+        // Every arm-chain bone must be TRACKED — that is the structural
+        // a45bd1d guard, since only an untracked bone gets written to rest.
+        string[] jumpshotArmChain =
+        {
+            "mixamorig_LeftShoulder", "mixamorig_RightShoulder",
+            "mixamorig_LeftArm", "mixamorig_RightArm",
+            "mixamorig_LeftForeArm", "mixamorig_RightForeArm",
+        };
+        // ...but only the SHOULDER and ARM bones are graded on sitting off rest.
+        //
+        // ForeArm is deliberately excluded, and this is a measurement, not a
+        // threshold fudged to turn a red green. ROTATION_3D keys are
+        // PARENT-RELATIVE local rotations, so a forearm's own key encodes only
+        // the ELBOW BEND — arm elevation lives entirely in Shoulder/Arm. At the
+        // top of a shot the elbow is nearly straight, and in Y Bot's T-pose rest
+        // the elbow is ALSO nearly straight, so the two local rotations
+        // genuinely coincide: 'jumpshotactive' measures RightForeArm at 6.4 deg
+        // from rest, which is the anatomically correct answer for a full
+        // extension, not a T-pose symptom. (The same bones sit 32-40 deg off
+        // rest in 'jumpshotrecovery', where the elbows re-bend on the way down —
+        // the value tracks the bend, exactly as it should.) Grading ForeArm here
+        // would mean asserting that a shooter's elbow must never straighten.
+        //
+        // pivot's own arm-chain guard above DOES include ForeArm because it
+        // holds idle's arms-down stance, where the elbows carry a natural bend.
+        // Nothing about that assertion changes.
+        string[] jumpshotElevationBones =
+        {
+            "mixamorig_LeftShoulder", "mixamorig_RightShoulder",
+            "mixamorig_LeftArm", "mixamorig_RightArm",
+        };
+        foreach (var clipName in jumpshotClips)
+        {
+            var anim = lib.GetAnimation(clipName);
+
+            int rotTrackCount = 0;
+            for (int i = 0; i < anim.GetTrackCount(); i++)
+            {
+                if (anim.TrackGetType(i) == Animation.TrackType.Rotation3D) rotTrackCount++;
+            }
+            GD.Print($"[locomotion-clip]   '{clipName}': rotation_track_count={rotTrackCount}");
+            if (rotTrackCount < JumpshotMinRotationTrackCount)
+            {
+                Fail($"clip '{clipName}': only {rotTrackCount} rotation tracks — expected >= " +
+                     $"{JumpshotMinRotationTrackCount}. A per-move state plays ONE clip at FULL " +
+                     "weight, so every bone the clip omits is written to Y Bot's T-pose rest " +
+                     "(a45bd1d).");
+                allPass = false;
+            }
+
+            foreach (var boneName in jumpshotArmChain)
+            {
+                int trackIdx = FindRotationTrack(anim, boneName);
+                if (trackIdx < 0)
+                {
+                    Fail($"clip '{clipName}': no rotation track for arm-chain bone '{boneName}' — " +
+                         "that bone would sit at Y Bot's T-pose rest for the whole phase.");
+                    allPass = false;
+                    continue;
+                }
+                if (anim.TrackGetKeyCount(trackIdx) <= 0)
+                {
+                    Fail($"clip '{clipName}': arm-chain track for '{boneName}' has zero keys — " +
+                         "vacuous, not proof.");
+                    allPass = false;
+                    continue;
+                }
+
+                // Presence + keys is asserted for the whole chain above; the
+                // off-rest POSE grade applies only to the elevation-carrying
+                // bones (see the comment on jumpshotElevationBones).
+                if (!jumpshotElevationBones.Contains(boneName)) continue;
+
+                int boneIdx = _rawYBotSkeleton.FindBone(boneName);
+                if (boneIdx < 0)
+                {
+                    Fail($"clip '{clipName}': raw Y Bot reference skeleton has no bone '{boneName}'.");
+                    allPass = false;
+                    continue;
+                }
+                Quaternion jsRestRot = _rawYBotSkeleton.GetBoneRest(boneIdx).Basis.GetRotationQuaternion();
+                var jsFirstKey = (Quaternion)anim.TrackGetKeyValue(trackIdx, 0);
+                double jsDeviationDeg = QuaternionAngleDeg(jsFirstKey, jsRestRot);
+                GD.Print($"[locomotion-clip]   '{clipName}' arm '{boneName}': " +
+                         $"first-key-vs-ybot-rest={jsDeviationDeg:F6} deg");
+                if (jsDeviationDeg < JumpshotArmOffRestThresholdDeg)
+                {
+                    Fail($"clip '{clipName}': arm-chain '{boneName}' first key is only " +
+                         $"{jsDeviationDeg:F6} deg from Y Bot's rest (T-pose) — expected >= " +
+                         $"{JumpshotArmOffRestThresholdDeg} deg (#276 temp-draft bar: the upper body " +
+                         "must be POSED, not at rest).");
+                    allPass = false;
+                }
+            }
+        }
+
+        // (d) The fadeaway must actually differ from the squared-up release.
+        // FadeawayActive exists as a separate state precisely so an off-balance
+        // shot READS as one (#243); if the rebuild tool's spine lean were ever
+        // dropped, both states would play identical clips and the state would be
+        // decorative. rebuild_jumpshot_clips.gd applies a 22 deg lean and proves
+        // its DIRECTION geometrically at build time (head displacement against
+        // the facing axis); this pins the MAGNITUDE surviving into the asset.
+        // 5 deg is well under the authored 22 while ruling out "identical".
+        const double FadeawayMinPoseDeltaDeg = 5.0;
+        var standardActive = lib.GetAnimation("jumpshotactive");
+        var fadeawayActive = lib.GetAnimation("fadeawayactive");
+        double worstFadeawayDeltaDeg = 0.0;
+        int comparedTracks = 0;
+        for (int i = 0; i < standardActive.GetTrackCount(); i++)
+        {
+            if (standardActive.TrackGetType(i) != Animation.TrackType.Rotation3D) continue;
+            var path = standardActive.TrackGetPath(i);
+            if (path.GetSubNameCount() == 0) continue;
+            int j = FindRotationTrack(fadeawayActive, path.GetSubName(0));
+            if (j < 0) continue;
+            comparedTracks++;
+            int keys = System.Math.Min(standardActive.TrackGetKeyCount(i), fadeawayActive.TrackGetKeyCount(j));
+            for (int k = 0; k < keys; k++)
+            {
+                double d = QuaternionAngleDeg(
+                    (Quaternion)standardActive.TrackGetKeyValue(i, k),
+                    (Quaternion)fadeawayActive.TrackGetKeyValue(j, k));
+                if (d > worstFadeawayDeltaDeg) worstFadeawayDeltaDeg = d;
+            }
+        }
+        GD.Print($"[locomotion-clip]   'fadeawayactive' vs 'jumpshotactive': compared {comparedTracks} shared " +
+                 $"rotation tracks, max key delta={worstFadeawayDeltaDeg:F3} deg");
+        // Vacuous-pass guard: with zero compared tracks the max would be 0 and
+        // this would fail for the wrong reason, so say which reason it is.
+        if (comparedTracks < JumpshotMinRotationTrackCount)
+        {
+            Fail($"'fadeawayactive' and 'jumpshotactive' share only {comparedTracks} rotation tracks — " +
+                 $"expected >= {JumpshotMinRotationTrackCount}; the fadeaway is built as a copy of the " +
+                 "standard release, so a small overlap means one of them lost tracks.");
+            allPass = false;
+        }
+        else if (worstFadeawayDeltaDeg < FadeawayMinPoseDeltaDeg)
+        {
+            Fail($"'fadeawayactive' differs from 'jumpshotactive' by only {worstFadeawayDeltaDeg:F3} deg — " +
+                 $"expected >= {FadeawayMinPoseDeltaDeg} deg. The two states would show the same pose, so " +
+                 "an off-balance shot would be indistinguishable from a squared-up one (#243). Check the " +
+                 "spine lean in tools/rebuild_jumpshot_clips.gd.");
+            allPass = false;
         }
 
         // --- Issue #275 assertion family: idle<->run blend-compatibility ----

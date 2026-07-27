@@ -73,7 +73,7 @@ animation = &"locomotion/idle"
 animation = &"locomotion/pivot"
 
 [sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_fdwy1"]
-animation = &"locomotion/idle"
+animation = &"locomotion/fadeawayactive"
 
 [sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_rg284"]
 animation = &"locomotion/catch"
@@ -139,6 +139,15 @@ advance_mode = 2
 
 [sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_mv277ph"]
 animation = &"locomotion/idle"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_js279su"]
+animation = &"locomotion/jumpshotstartup"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_js279ac"]
+animation = &"locomotion/jumpshotactive"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_js279re"]
+animation = &"locomotion/jumpshotrecovery"
 
 [sub_resource type="AnimationNodeStateMachineTransition" id="tr_js_lo2su"]
 
@@ -297,11 +306,11 @@ states/Recovery/position = Vector2(496.0843, 179)
 states/Start/position = Vector2(179, 100)
 states/Startup/node = SubResource("AnimationNodeAnimation_khinc")
 states/Startup/position = Vector2(277.0843, 179)
-states/JumpshotStartup/node = SubResource("AnimationNodeAnimation_mv277ph")
+states/JumpshotStartup/node = SubResource("AnimationNodeAnimation_js279su")
 states/JumpshotStartup/position = Vector2(300, 420)
-states/JumpshotActive/node = SubResource("AnimationNodeAnimation_mv277ph")
+states/JumpshotActive/node = SubResource("AnimationNodeAnimation_js279ac")
 states/JumpshotActive/position = Vector2(460, 420)
-states/JumpshotRecovery/node = SubResource("AnimationNodeAnimation_mv277ph")
+states/JumpshotRecovery/node = SubResource("AnimationNodeAnimation_js279re")
 states/JumpshotRecovery/position = Vector2(620, 420)
 states/CrossoverStartup/node = SubResource("AnimationNodeAnimation_mv277ph")
 states/CrossoverStartup/position = Vector2(300, 500)
