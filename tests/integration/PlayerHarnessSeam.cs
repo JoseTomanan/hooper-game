@@ -55,4 +55,18 @@ public partial class PlayerController
     /// setup as ContestScatterTest assigning GlobalPosition post-construction.
     /// </summary>
     internal void SetHeadingForHarness(float yaw) => Heading = yaw;
+
+    /// <summary>
+    /// Test-only (issue #280): forces this player's server-authoritative
+    /// <see cref="HandSide"/> directly, so a harness can set up a "the ball
+    /// began in the RIGHT hand" precondition without spending frames driving
+    /// a real hand-swapping move first. Needed because <see cref="ResetHandSide"/>
+    /// only ever restores the LEFT default (the possession-change convention,
+    /// issue #73/#83) — no existing seam reaches the OTHER polarity, and
+    /// CrossoverAnimTest's right-origin scenario needs <see cref="HandSide.Right"/>
+    /// set BEFORE <c>Begin()</c> so <see cref="MoveAnimResolver.OriginHand"/>'s
+    /// Startup branch has something non-default to read. Same category of
+    /// direct setup as <see cref="SetHeadingForHarness"/> immediately above.
+    /// </summary>
+    internal void SetHandSideForHarness(HandSide handSide) => HandSide = handSide;
 }

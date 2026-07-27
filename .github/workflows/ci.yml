@@ -998,6 +998,45 @@ jobs:
           godot --headless --path . res://tests/integration/JumpshotAnimTest.tscn -- --harness-scenario=no-fadeaway-when-squared-up
           godot --headless --path . res://tests/integration/JumpshotAnimTest.tscn -- --harness-scenario=no-placeholder-leak
 
+      # Crossover hand-side animation states (issue #280). Player.tscn now
+      # carries SIX crossover states (Crossover{Startup,Active,Recovery}
+      # {Left,Right}) instead of three unsuffixed ones, because
+      # MoveAnimResolver.OriginHand corrects for a crossover flipping
+      # PlayerController.HandSide mid-move (at Active-entry) so the suffix
+      # names the hand the ball STARTED in and stays constant for the whole
+      # move. 'crossover-left-origin' / 'crossover-right-origin' each prove
+      # the tree is observed on that polarity's Startup -> Active -> Recovery
+      # states, in order, for a crossover begun in that starting hand (the
+      # right-origin precondition is forced via the new
+      # PlayerController.SetHandSideForHarness seam, since a fresh possession
+      # always resets HandSide to Left). 'crossover-single-polarity' is the
+      # LOAD-BEARING scenario: over one crossover it latches every DISTINCT
+      # crossover state name the live tree actually reported and asserts they
+      # all carry the SAME hand suffix — this is what catches a per-tick
+      # HandSide read (the exact bug OriginHand exists to prevent), which
+      # would show Startup on one polarity and Active/Recovery on the other.
+      # It does not re-derive the expected names from the resolver; it only
+      # compares what was observed against itself. 'no-unsuffixed-crossover-
+      # state' is a CONTROL: the old unsuffixed "CrossoverStartup"/
+      # "CrossoverActive"/"CrossoverRecovery" states were renamed away by
+      # #280, so this asserts the tree is NEVER observed on one of those bare
+      # names during a crossover (after first proving, as its own premise,
+      # that a crossover genuinely produced some crossover-state observation
+      # at all) — guarding against a regression that reintroduced them, which
+      # would let Travel() silently bypass the mirror entirely. All four were
+      # verified RED under a temporary mutation of MoveAnimResolver.OriginHand
+      # to a naive per-tick HandSide read: the two origin scenarios failed
+      # (never reached their Active/Recovery state), crossover-single-polarity
+      # failed on a genuine Left/Right mix, and no-unsuffixed-crossover-state
+      # stayed green (an orthogonal control, unaffected by this mutation) —
+      # then GREEN again after reverting. Each exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run crossover hand-side animation state harness
+        run: |
+          godot --headless --path . res://tests/integration/CrossoverAnimTest.tscn -- --harness-scenario=crossover-left-origin
+          godot --headless --path . res://tests/integration/CrossoverAnimTest.tscn -- --harness-scenario=crossover-right-origin
+          godot --headless --path . res://tests/integration/CrossoverAnimTest.tscn -- --harness-scenario=crossover-single-polarity
+          godot --headless --path . res://tests/integration/CrossoverAnimTest.tscn -- --harness-scenario=no-unsuffixed-crossover-state
+
       # Moving crossover — momentum-aware burst with left-stick exit (issue
       # #198, ADR-0003 amendment). CrossoverBurstMathTests already pin the
       # pure composition function; this drives a REAL PlayerController
