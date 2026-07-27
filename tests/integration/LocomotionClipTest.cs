@@ -53,7 +53,12 @@ namespace HOOPERGAME.Tests.Integration;
 //      live Player.tscn AnimationTree with real Advance() calls across a
 //      90-frame/1.5s ramp and asserts every leg-chain bone pose stays within
 //      (reference-gap + 10 deg) of at least one of two phase-matched
-//      reference rigs pinned at blend 0 and blend 6).
+//      reference rigs pinned at blend 0 and blend 6. #285 runs this a SECOND
+//      time against the Dribble BlendSpace1D — a second partial-weight blend
+//      surface is exposed to the same degeneracy — on its own never-advanced
+//      rig trio, travelled into the Dribble state and proven to have arrived
+//      before sweeping. Both passes also require the two endpoint rigs to
+//      genuinely differ, since the corridor threshold is self-referential).
 //   6. a pivot upper-body completeness guard (turning-T-pose bug — the Pivot
 //      state is a single clip at full weight, so every bone pivot did NOT
 //      track was reset to Y Bot's REST = a Mixamo T-pose, snapping the arms
@@ -845,7 +850,7 @@ public partial class LocomotionClipTest : Node
     // arrived — sweeping the wrong state would silently re-run the Locomotion
     // sweep under a Dribble label, the most plausible vacuous pass here.
     private bool RunCorridorSweep(
-        List<string> legChainBones,
+        List<string> sweptBones,
         string state,
         PlayerController testRig, PlayerController ref0Rig, PlayerController ref6Rig)
     {
@@ -942,7 +947,7 @@ public partial class LocomotionClipTest : Node
             ref6Tree.Advance(SweepDt);
 
             bool frameViolated = false;
-            foreach (var bone in legChainBones)
+            foreach (var bone in sweptBones)
             {
                 if (!TryCorridorCheck(testSkel, ref0Skel, ref6Skel, bone,
                         out double angle0, out double angle6, out double gap))
@@ -981,8 +986,8 @@ public partial class LocomotionClipTest : Node
             }
         }
 
-        GD.Print($"[locomotion-clip]   #287 corridor sweep [{state}]: {violatingFrames}/{SweepFrameCount} leg-chain frames " +
-                  $"violated ({legChainBones.Count} bones checked); mixamorig_Hips control violated " +
+        GD.Print($"[locomotion-clip]   #287 corridor sweep [{state}]: {violatingFrames}/{SweepFrameCount} frames " +
+                  $"violated ({sweptBones.Count} bones swept); mixamorig_Hips control violated " +
                   $"{hipsViolatingFrames}/{SweepFrameCount} frames; widest endpoint gap " +
                   $"{maxRefGapDeg:F1} deg on '{maxRefGapBone}'.");
         if (violatingFrames > 0)
