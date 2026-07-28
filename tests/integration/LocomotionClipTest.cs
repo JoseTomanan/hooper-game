@@ -125,6 +125,19 @@ public partial class LocomotionClipTest : Node
     private PlayerController _dribbleSweepRef0;
     private PlayerController _dribbleSweepRef6;
 
+    // #298 adds a THIRD family of rigs — a foot-stride measurement, not a
+    // corridor sweep. `dribble-corridor` above asserts poses stay NEAR two
+    // near-identical endpoints, which frozen legs satisfy trivially (both
+    // endpoints are ~static, so "close to both" is cheap); this trio exists
+    // to measure actual fore/aft foot travel instead. Separate, never-
+    // advanced rigs for the same reason #285's trio is separate from #287's:
+    // an already-advanced tree cannot honestly reproduce the "first
+    // Advance() only primes" gotcha InstantiateSweepRig documents, and these
+    // three must each start from a genuinely fresh AnimationTree.
+    private PlayerController _strideDribbleMove;
+    private PlayerController _strideDribbleIdle;
+    private PlayerController _strideRun;
+
     // #287 (BlendRestAnchor): scenes/Player.tscn now mutates TWO bone rests
     // (mixamorig_LeftUpLeg/RightUpLeg) at _Ready, on every instance including
     // `_player` above. The #271 T-pose-anchor and #273 pivot rest-delta
@@ -162,6 +175,10 @@ public partial class LocomotionClipTest : Node
         _dribbleSweepTest = InstantiateSweepRig("DribbleSweepTest");
         _dribbleSweepRef0 = InstantiateSweepRig("DribbleSweepRef0");
         _dribbleSweepRef6 = InstantiateSweepRig("DribbleSweepRef6");
+
+        _strideDribbleMove = InstantiateSweepRig("StrideDribbleMove");
+        _strideDribbleIdle = InstantiateSweepRig("StrideDribbleIdle");
+        _strideRun = InstantiateSweepRig("StrideRun");
     }
 
     // Sets up a Player.tscn instance for #287's manual-drive corridor sweep.
@@ -1393,20 +1410,35 @@ public partial class LocomotionClipTest : Node
         // idle's frame-0 pose, i.e. a rest that belongs to a DIFFERENT clip
         // family (Kenney-retargeted) than these two stock-Mixamo clips.
         //
-        // Both endpoints derive from the same source clip, differing only by a
-        // 20-degree forward lean on mixamorig_Spine, so unlike idle/run they
-        // are a short arc apart and the blend SHOULD be trivially well-behaved.
-        // That expectation is precisely why it is worth asserting: it is the
-        // rest-independence claim the whole two-clip-from-one-source design
-        // rests on, and it is the thing a future swap-in of a genuinely
-        // distinct dribble-run clip (from some other rig/family) would break
-        // silently.
+        // This comment used to say the two endpoints "differ only by a
+        // 20-degree forward lean on mixamorig_Spine", were therefore "a short
+        // arc apart", and that the blend "SHOULD be trivially well-behaved".
+        // All three statements are now false, and the third one inverted, so
+        // the reasoning is restated rather than patched:
         //
-        // Swept over ALL shared rotation bones, not just the leg chain: with
-        // identical leg keys on both endpoints the reference gap is ~0 there,
-        // which makes the corridor its TIGHTEST (10 deg flat) exactly where a
-        // degeneracy would show, and the spine chain that actually carries the
-        // lean is included rather than excluded.
+        //   * the lean is 38 deg, not 20 (commit 0e3c519), and it is paired
+        //     with a 0.12 m mixamorig_Hips POSITION crouch;
+        //   * #298 then baked a REAL leg stride into dribblemove (run's leg
+        //     motion transplanted as a world-frame delta), so the endpoints
+        //     are no longer a short arc apart at all — the measured widest
+        //     endpoint gap is ~88 deg, on mixamorig_LeftLeg;
+        //   * consequently the old claim that "identical leg keys on both
+        //     endpoints" make the corridor TIGHTEST on the legs is exactly
+        //     backwards. The leg chain now carries the LARGEST endpoint gap,
+        //     which means the corridor is at its most generous there and at
+        //     its tightest (10 deg flat) on the bones that barely move.
+        //
+        // The sweep is therefore a far stronger test than when it was written:
+        // it now exercises a genuinely wide partial-weight blend over the two
+        // UpLeg bones whose rests BlendRestAnchor moved into a different clip
+        // family, which is precisely the #287 degeneracy condition. It was
+        // expected to be the assertion most likely to break under #298. It did
+        // not (0/90 frames violated) — but it is now load-bearing rather than a
+        // formality, so a future change here should not be assumed safe.
+        //
+        // Swept over ALL shared rotation bones, not just the leg chain, so the
+        // spine chain carrying the lean and the near-static bones holding the
+        // tightest corridor are both included rather than excluded.
         var dribbleIdleAnim = lib.GetAnimation("dribbleidle");
         var dribbleMoveAnim = lib.GetAnimation("dribblemove");
         var dribbleSharedBones = SharedRotationBones(dribbleIdleAnim, dribbleMoveAnim);
@@ -1427,6 +1459,102 @@ public partial class LocomotionClipTest : Node
         else
         {
             allPass = false;
+        }
+
+        // --- Issue #298: moving-dribble stride detection ---------------------
+        // `dribble-corridor` above (the #285 RunCorridorSweep pass) cannot
+        // detect the #298 defect: it asserts poses stay NEAR two near-
+        // identical endpoints, and frozen legs satisfy that trivially (a
+        // motionless pose is "near" a motionless reference by construction).
+        // This family measures actual hips-relative fore/aft foot travel
+        // instead, ported from the throwaway tools/_probe_dribble_legs.gd
+        // probe that produced the reference numbers: run's legs travel
+        // 0.6418 m peak-to-peak; locomotion/dribblemove's travel only
+        // 0.0101 m — frozen in all but name.
+        //
+        // Three cases, run in a fixed order because the first is a
+        // methodology gate for the other two:
+        //   1. NON-VACUITY CONTROL — Locomotion/run at blend 6. If the
+        //      measurement can't detect a REAL stride here, a red or green
+        //      verdict on dribblemove below proves nothing about dribblemove
+        //      and everything about a broken probe.
+        //   2. THE #298 SUBJECT — Dribble/dribblemove at blend 6 (the actual
+        //      moving endpoint of the Dribble BlendSpace1D).
+        //   3. DISCRIMINATING CONTROL — Dribble/dribbleidle at blend 0 (the
+        //      standing dribble stance), which must stay static — this is
+        //      what would catch a future fix that bleeds the stride into the
+        //      wrong BlendSpace1D endpoint instead of fixing dribblemove
+        //      itself.
+        bool strideControlOk = MeasureStride(_strideRun, "Locomotion", 6.0f, "run (control)",
+            out double runPtpLeft, out double runPtpRight, out double runSplitMin, out double runSplitMax);
+        if (!strideControlOk)
+        {
+            allPass = false;
+        }
+        else
+        {
+            bool strideControlPass = runPtpLeft >= StrideMinPeakToPeakM && runPtpRight >= StrideMinPeakToPeakM &&
+                                      runSplitMin < 0.0 && runSplitMax > 0.0;
+            if (!strideControlPass)
+            {
+                Fail($"#298 stride NON-VACUITY CONTROL failed on Locomotion/run (L_ptp={runPtpLeft:F4} " +
+                     $"R_ptp={runPtpRight:F4} split=[{runSplitMin:F4},{runSplitMax:F4}], floor=" +
+                     $"{StrideMinPeakToPeakM} m) — run is a KNOWN-GOOD real stride (measured 0.6418 m " +
+                     "peak-to-peak by the #298 probe), so this means the MEASUREMENT ITSELF is broken, " +
+                     "not that run stopped striding. Every #298 verdict below is therefore MEANINGLESS " +
+                     "until this control passes — do not report a red or green dribblemove result as a " +
+                     "confirmed finding while this control is red.");
+                allPass = false;
+            }
+
+            // Both remaining cases still run and report, even if the control
+            // above failed — the point is exactly to surface the numbers so a
+            // reviewer can see whether dribblemove looks frozen in the same
+            // log where the probe's own credibility is being questioned,
+            // rather than silently skipping straight to an unexplained
+            // overall FAIL.
+            bool strideMoveOk = MeasureStride(_strideDribbleMove, "Dribble", 6.0f, "dribblemove (#298 subject)",
+                out double dmPtpLeft, out double dmPtpRight, out double dmSplitMin, out double dmSplitMax);
+            if (!strideMoveOk)
+            {
+                allPass = false;
+            }
+            else
+            {
+                if (!(dmPtpLeft >= StrideMinPeakToPeakM && dmPtpRight >= StrideMinPeakToPeakM))
+                {
+                    Fail($"#298: locomotion/dribblemove's feet do not clear the peak-to-peak stride floor " +
+                         $"(L_ptp={dmPtpLeft:F4} R_ptp={dmPtpRight:F4} m, floor={StrideMinPeakToPeakM} m) — " +
+                         "the moving-dribble BlendSpace1D endpoint's legs are frozen.");
+                    allPass = false;
+                }
+                if (!(dmSplitMin < 0.0 && dmSplitMax > 0.0))
+                {
+                    Fail($"#298: locomotion/dribblemove's fore/aft foot split never changes sign " +
+                         $"(split=[{dmSplitMin:F4},{dmSplitMax:F4}]) — the lead foot never alternates. " +
+                         "Peak-to-peak alone is not sufficient here: a static one-foot-forward stance " +
+                         "(measured: a constant 0.6598 m split that never changes sign) can clear a " +
+                         "peak-to-peak floor with both feet sliding the same direction together, which " +
+                         "is not a stride.");
+                    allPass = false;
+                }
+            }
+
+            bool strideIdleOk = MeasureStride(_strideDribbleIdle, "Dribble", 0.0f, "dribbleidle (discriminating control)",
+                out double diPtpLeft, out double diPtpRight, out double diSplitMin, out double diSplitMax);
+            if (!strideIdleOk)
+            {
+                allPass = false;
+            }
+            else if (!(diPtpLeft <= StrideStaticMaxPeakToPeakM && diPtpRight <= StrideStaticMaxPeakToPeakM))
+            {
+                Fail($"#298: locomotion/dribbleidle (the standing dribble stance) strides more than the " +
+                     $"static ceiling allows (L_ptp={diPtpLeft:F4} R_ptp={diPtpRight:F4} m, ceiling=" +
+                     $"{StrideStaticMaxPeakToPeakM} m) — a future #298 fix must land the stride on " +
+                     "dribblemove, not bleed it into dribbleidle too (the #285a 'the real clip verbatim' " +
+                     "contract this control protects).");
+                allPass = false;
+            }
         }
 
         Finish(allPass ? 0 : 1);
@@ -1628,6 +1756,167 @@ public partial class LocomotionClipTest : Node
         }
 
         GD.Print($"[locomotion-clip]   #287 PASS [{state}] — no frame's pose exits the endpoint corridor across the continuous ramp.");
+        return true;
+    }
+
+    // #298: 2.1 s at 1/60 -- exactly one full dribble-clip loop, long enough
+    // for a real stride to complete at least one full fore/aft cycle on
+    // either foot regardless of phase offset at the moment sampling starts.
+    private const int StrideFrameCount = 126;
+    private const double StrideDt = 1.0 / 60.0;
+
+    // Measured by tools/_probe_dribble_legs.gd: run 0.6418 m, frozen
+    // locomotion/dribblemove 0.0101 m. 0.15 m sits far above the ~0.01 m
+    // noise floor a frozen/near-static pose produces and far below a real
+    // stride, so it cleanly separates "moving" from "frozen" without being
+    // sensitive to exactly how large a real stride is.
+    private const double StrideMinPeakToPeakM = 0.15;
+
+    // dribbleidle is the STANDING dribble stance and must stay static. 5x
+    // the ~0.0101 m measured noise floor on the (currently frozen)
+    // dribblemove endpoint -- generous enough that ordinary floating-point/
+    // interpolation jitter on a genuinely static pose can never trip it, but
+    // tight enough that a real stride bleeding into this endpoint would.
+    private const double StrideStaticMaxPeakToPeakM = 0.05;
+
+    // #298: measures actual fore/aft foot travel (as opposed to #287's
+    // RunCorridorSweep, which only checks a pose stays NEAR a reference —
+    // trivially true for a frozen pose near an equally-frozen reference).
+    // `rig` must be one of the three fresh #298 stride rigs (never advanced
+    // before this call — see the field-level comment on _strideDribbleMove
+    // et al. for why). `state`/`blendPos` select the BlendSpace1D endpoint
+    // under test ("Locomotion"@6 for run, "Dribble"@6 for dribblemove,
+    // "Dribble"@0 for dribbleidle). Returns false (with a Fail already
+    // logged) on any setup/arrival problem; the four `out` measurements are
+    // only meaningful when this returns true.
+    private bool MeasureStride(
+        PlayerController rig, string state, float blendPos, string label,
+        out double ptpLeft, out double ptpRight, out double splitMin, out double splitMax)
+    {
+        ptpLeft = ptpRight = splitMin = splitMax = 0.0;
+
+        var tree = rig.GetNodeOrNull<AnimationTree>("AnimationTree");
+        var skel = FindSkeleton(rig);
+        if (tree == null || skel == null)
+        {
+            Fail($"#298 stride sweep [{label}]: could not resolve AnimationTree/Skeleton3D on the rig.");
+            return false;
+        }
+
+        string param = $"parameters/{state}/blend_position";
+        tree.Set(param, blendPos);
+
+        var pb = tree.Get("parameters/playback").As<AnimationNodeStateMachinePlayback>();
+        if (pb == null)
+        {
+            Fail($"#298 stride sweep [{label}]: no AnimationNodeStateMachinePlayback on the rig.");
+            return false;
+        }
+        pb.Travel(state);
+
+        // Prime: InstantiateSweepRig flips CallbackModeProcess to Manual
+        // before this rig's tree has processed even one physics frame, so
+        // this genuinely IS the tree's first-ever Advance() call — it only
+        // primes playback at t=0 and swallows dt (the same confirmed gotcha
+        // RunCorridorSweep's own prime call above guards against).
+        tree.Advance(0.0);
+
+        // RunCorridorSweep's own Dribble-state arrival needs only 4 pumped
+        // advances after Travel(); this cap is a generous multiple of that so
+        // a genuine non-arrival trips it rather than an ordinary timing
+        // fluke.
+        const int ArrivalAttemptCap = 30;
+        int attempts = 0;
+        string current = pb.GetCurrentNode();
+        while (current != state && attempts < ArrivalAttemptCap)
+        {
+            tree.Advance(StrideDt);
+            attempts++;
+            current = pb.GetCurrentNode();
+        }
+        if (current != state)
+        {
+            Fail($"#298 stride sweep [{label}]: rig never arrived in state '{state}' (stuck in '{current}') " +
+                 $"after {ArrivalAttemptCap} pumped advances — the sweep would silently measure the wrong " +
+                 "BlendSpace1D and pass vacuously.");
+            return false;
+        }
+        tree.Set(param, blendPos); // defensive re-pin post-transition, mirrors the probe's own re-pin
+
+        // Facing axis from the RAW, un-anchored Y Bot reference — NOT from
+        // `rig`'s own skeleton. scenes/Player.tscn's BlendRestAnchor node
+        // mutates two bone rests (mixamorig_Left/RightUpLeg) on every
+        // Player.tscn instance, including this rig, so `rig`'s own rest is a
+        // moving target for a pure rest-geometry question; _rawYBotSkeleton
+        // is a bare res://assets/Y Bot.fbx instance with no BlendRestAnchor
+        // of its own and is the stable ground truth (same reasoning as the
+        // class-level comment on _rawYBotSkeleton, and matches
+        // tools/rebuild_dribble_clips.gd:203-223 exactly: toe-minus-foot,
+        // flattened to the XZ plane, normalized).
+        int rawFoot = _rawYBotSkeleton.FindBone("mixamorig_LeftFoot");
+        int rawToe = _rawYBotSkeleton.FindBone("mixamorig_LeftToeBase");
+        if (rawFoot < 0 || rawToe < 0)
+        {
+            Fail($"#298 stride sweep [{label}]: could not find mixamorig_LeftFoot/LeftToeBase on the raw " +
+                 "Y Bot reference to derive a facing axis.");
+            return false;
+        }
+        Vector3 forward = _rawYBotSkeleton.GetBoneGlobalRest(rawToe).Origin -
+                           _rawYBotSkeleton.GetBoneGlobalRest(rawFoot).Origin;
+        forward.Y = 0.0f;
+        if (forward.Length() < 0.001f)
+        {
+            Fail($"#298 stride sweep [{label}]: LeftFoot->LeftToeBase rest vector is vertical " +
+                 "(length < 0.001) — cannot derive a facing axis.");
+            return false;
+        }
+        Vector3 facing = forward.Normalized();
+
+        int hipsIdx = skel.FindBone("mixamorig_Hips");
+        int leftToeIdx = skel.FindBone("mixamorig_LeftToeBase");
+        int rightToeIdx = skel.FindBone("mixamorig_RightToeBase");
+        if (hipsIdx < 0 || leftToeIdx < 0 || rightToeIdx < 0)
+        {
+            Fail($"#298 stride sweep [{label}]: missing mixamorig_Hips/LeftToeBase/RightToeBase on the " +
+                 "rig's own skeleton.");
+            return false;
+        }
+
+        double leftMin = double.PositiveInfinity, leftMax = double.NegativeInfinity;
+        double rightMin = double.PositiveInfinity, rightMax = double.NegativeInfinity;
+        double diffMin = double.PositiveInfinity, diffMax = double.NegativeInfinity;
+
+        for (int f = 0; f < StrideFrameCount; f++)
+        {
+            tree.Advance(StrideDt);
+
+            Vector3 hipsPos = skel.GetBoneGlobalPose(hipsIdx).Origin;
+            // Relative to hips deliberately: this removes root translation,
+            // so it measures STRIDE (the leg swinging relative to the body)
+            // rather than TRAVEL (the whole rig moving across the floor).
+            double projLeft = (skel.GetBoneGlobalPose(leftToeIdx).Origin - hipsPos).Dot(facing);
+            double projRight = (skel.GetBoneGlobalPose(rightToeIdx).Origin - hipsPos).Dot(facing);
+
+            leftMin = System.Math.Min(leftMin, projLeft);
+            leftMax = System.Math.Max(leftMax, projLeft);
+            rightMin = System.Math.Min(rightMin, projRight);
+            rightMax = System.Math.Max(rightMax, projRight);
+
+            double diff = projLeft - projRight;
+            diffMin = System.Math.Min(diffMin, diff);
+            diffMax = System.Math.Max(diffMax, diff);
+        }
+
+        ptpLeft = leftMax - leftMin;
+        ptpRight = rightMax - rightMin;
+        splitMin = diffMin;
+        splitMax = diffMax;
+
+        // Evidence line printed unconditionally -- pass or fail -- so a
+        // reviewer can see the raw numbers even when every threshold above
+        // happens to clear.
+        GD.Print($"[locomotion-clip] #298 {label}: L_ptp={ptpLeft:F4} R_ptp={ptpRight:F4} " +
+                  $"split=[{splitMin:F4},{splitMax:F4}]");
         return true;
     }
 
