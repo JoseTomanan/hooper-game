@@ -250,14 +250,14 @@ public partial class BetweenTheLegsTest : Node
             Input.ActionPress("move_finesse", 1.0f);
             _flickStarted = true;
             _flickStartFrame = _frame;
-            Input.ActionPress("aim_right", 1.0f); // flickSign +1 (crossover-classified vs. default HandSide.Left)
-            GD.Print($"[between-the-legs] frame {_frame}: pressed move_finesse + aim_right (player stationary)");
+            Input.ActionPress("aim_left", 1.0f); // flickSign -1 (crossover-classified vs. default HandSide.Right, ADR-0012's 2026-07-28 amendment)
+            GD.Print($"[between-the-legs] frame {_frame}: pressed move_finesse + aim_left (player stationary)");
         }
 
         if (_flickStarted && _frame == _flickStartFrame + FlickHoldTicks)
         {
-            Input.ActionRelease("aim_right");
-            GD.Print($"[between-the-legs] frame {_frame}: released aim_right (BetweenTheLegs should have committed)");
+            Input.ActionRelease("aim_left");
+            GD.Print($"[between-the-legs] frame {_frame}: released aim_left (BetweenTheLegs should have committed)");
         }
 
         var (phase, _) = _p1.DisplayMove();

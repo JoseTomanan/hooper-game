@@ -761,7 +761,7 @@ public partial class SpinTest : Node
             case Step.Start:
                 Input.ActionPress("move_size_up", 1.0f);
                 Input.ActionPress("move_finesse", 1.0f);
-                Input.ActionPress("aim_right", 1.0f); // flickSign +1: empty hand (HandSide.Left default)
+                Input.ActionPress("aim_left", 1.0f); // flickSign -1: empty hand (HandSide.Right default, ADR-0012's 2026-07-28 amendment)
                 _flickStartFrame = _frame;
                 _step = Step.RealInputFlickStarted;
                 return;
@@ -774,16 +774,16 @@ public partial class SpinTest : Node
                     // fixed FlickHoldTicks deadline, and this case is left the
                     // very same tick the move commits, so a frame-counted
                     // release scheduled for later would never fire (the bug
-                    // an earlier draft of this scenario had: aim_right stayed
+                    // an earlier draft of this scenario had: aim_left stayed
                     // HELD through the whole rest of the scenario, corrupting
                     // the later control flick's stick reading).
-                    Input.ActionRelease("aim_right");
+                    Input.ActionRelease("aim_left");
                     GD.Print($"[spin] PASS real-input-trigger — holding move_size_up+move_finesse during a real flick began Spin at frame {_frame}.");
                     _step = Step.RealInputAwaitInactive;
                 }
                 else if (_p1.CurrentMoveIdForHarness is "behindtheback" or "betweenthelegs" or "crossover")
                 {
-                    Input.ActionRelease("aim_right");
+                    Input.ActionRelease("aim_left");
                     Fail($"real-input-trigger: expected Spin, got '{_p1.CurrentMoveIdForHarness}' — the modifier-combo dispatch did not fire correctly.");
                     Finish();
                     return;
@@ -793,7 +793,7 @@ public partial class SpinTest : Node
                     // Safety valve: the gesture never committed at all within
                     // a generous margin past FlickHoldTicks — fail loudly
                     // instead of relying on the outer timeout to explain why.
-                    Input.ActionRelease("aim_right");
+                    Input.ActionRelease("aim_left");
                     Fail($"real-input-trigger: the flick never committed to any move within {FlickHoldTicks + ActionMarginFrames} ticks (moveId='{_p1.CurrentMoveIdForHarness}').");
                     Finish();
                     return;
@@ -810,15 +810,16 @@ public partial class SpinTest : Node
                 // must still begin a BehindTheBack — the pre-existing
                 // single-modifier dispatch is unaffected by adding the
                 // modifier-combo branch above it. Spin's own effect swapped
-                // HandSide (Left -> Right), so the EMPTY hand is now on the
-                // LEFT (HandStateResolver.EmptyHandSign(Right) == -1) — the
+                // HandSide (Right -> Left, from the Right default), so the
+                // EMPTY hand is now on the RIGHT
+                // (HandStateResolver.EmptyHandSign(Left) == +1) — the
                 // "toward the empty hand" flick that reads as a held crossover
-                // gesture is therefore aim_LEFT this time, not aim_right
+                // gesture is therefore aim_RIGHT this time, not aim_left
                 // (using the stale sign here would silently resolve to
                 // Hesitation instead, since the flick would read as "toward
                 // the ball hand" against the NEW HandSide).
                 Input.ActionPress("move_size_up", 1.0f);
-                Input.ActionPress("aim_left", 1.0f);
+                Input.ActionPress("aim_right", 1.0f);
                 _flickStartFrame = _frame;
                 _step = Step.RealInputControlFlickStarted;
                 return;
@@ -829,7 +830,7 @@ public partial class SpinTest : Node
                     // Release NOW — see RealInputFlickStarted's identical
                     // reasoning: a frame-counted release scheduled past the
                     // tick this case is left on would never fire.
-                    Input.ActionRelease("aim_left");
+                    Input.ActionRelease("aim_right");
                     Input.ActionRelease("move_size_up");
                     GD.Print("[spin] PASS control — move_size_up ALONE under the same flick still begins BehindTheBack, unaffected by the new modifier-combo branch.");
                     GD.Print("[spin] RESULT: PASS (exit 0)");
@@ -837,14 +838,14 @@ public partial class SpinTest : Node
                 }
                 else if (_p1.CurrentMoveIdForHarness == "spin")
                 {
-                    Input.ActionRelease("aim_left");
+                    Input.ActionRelease("aim_right");
                     Fail("real-input-trigger: control move_size_up-alone wrongly began Spin instead of BehindTheBack.");
                     Finish();
                     return;
                 }
                 else if (_frame > _flickStartFrame + FlickHoldTicks + ActionMarginFrames)
                 {
-                    Input.ActionRelease("aim_left");
+                    Input.ActionRelease("aim_right");
                     Fail($"real-input-trigger: control flick never committed to any move within {FlickHoldTicks + ActionMarginFrames} ticks (moveId='{_p1.CurrentMoveIdForHarness}').");
                     Finish();
                     return;

@@ -22,7 +22,10 @@ namespace HOOPERGAME.Tests.Integration;
 // player "1" (unused by this proof). CLIENT joins via JoinGame and becomes
 // player "2" — a player the SERVER sees as REMOTE (TickServerRemotePlayer).
 // The CLIENT drives a REAL Crossover through the UNMODIFIED production input
-// path: it holds the right-stick gesture (aim_right) past
+// path: it holds the right-stick gesture (aim_left, toward player "2"'s
+// EMPTY hand — HandSide defaults to Right per ADR-0012's 2026-07-28
+// amendment, so the empty hand is Left; aim_right would read as a Hesitation
+// instead, per HandStateResolver.IsCrossover) past
 // RightStickGestureRecognizer's FeintWindowTicks so SampleMoveInput commits a
 // genuine Crossover (no BeginXForHarness seam involved for the move itself —
 // see the orchestrator's explicit "not merely exercised through
@@ -94,7 +97,7 @@ public partial class NetExitVectorRpcTest : Node3D
 	// (4) so the gesture commits as the "hold" Crossover on tick 5, never a
 	// QuickReturn — and NOT held any longer than that: Startup (6 ticks)
 	// begins the instant the gesture commits regardless of how much longer
-	// aim_right stays held, so overholding here burns Startup ticks with a
+	// aim_left stays held, so overholding here burns Startup ticks with a
 	// zero exit vector and leaves less margin for move_right to register
 	// before Active begins (a doubt-cycle re-run of this harness caught this
 	// RED: AimHoldFrames=10 left only ~1 Startup tick of margin, which lost
@@ -276,7 +279,7 @@ public partial class NetExitVectorRpcTest : Node3D
 		if (_frame % 15 == 0 && _myPeerId > 0)
 		{
 			var me = _players.GetNodeOrNull<PlayerController>(_myPeerId.ToString());
-			GD.Print($"[net-exitvec] client DIAG frame={_frame} step={_clientStep} aimRightStrength={Input.GetActionStrength("aim_right"):F2} myPhase={me?.DisplayMove().phase}");
+			GD.Print($"[net-exitvec] client DIAG frame={_frame} step={_clientStep} aimLeftStrength={Input.GetActionStrength("aim_left"):F2} myPhase={me?.DisplayMove().phase}");
 		}
 		switch (_clientStep)
 		{
@@ -300,8 +303,8 @@ public partial class NetExitVectorRpcTest : Node3D
 				if (_frame - _clientStepStartFrame < ClientWaitFrames) break;
 				_clientStep = ClientStep.HoldAim;
 				_clientStepStartFrame = _frame;
-				Input.ActionPress("aim_right", 1.0f);
-				GD.Print($"[net-exitvec] client: holding aim_right from frame {_frame} to commit a real Crossover gesture.");
+				Input.ActionPress("aim_left", 1.0f);
+				GD.Print($"[net-exitvec] client: holding aim_left from frame {_frame} to commit a real Crossover gesture.");
 				break;
 
 			case ClientStep.HoldAim:
@@ -314,7 +317,7 @@ public partial class NetExitVectorRpcTest : Node3D
 				// fires the REAL RequestBeginMove RPC, no seam involved.
 				if (_frame - _clientStepStartFrame >= AimHoldFrames)
 				{
-					Input.ActionRelease("aim_right");
+					Input.ActionRelease("aim_left");
 					// Only NOW start pressing the TRUE exit vector — never
 					// before the Crossover has begun (Startup freezes
 					// Heading and skips Move() entirely for the move's
