@@ -2397,7 +2397,7 @@ public partial class BallController : Node3D
 	/// Null holder (pre-tipoff / loose) defaults to Left.
 	/// </summary>
 	private static float HandSign(PlayerController holder) =>
-		(holder?.HandSide ?? HandSide.Left) == HandSide.Right ? 1f : -1f;
+		(holder?.HandSide ?? HandSide.Right) == HandSide.Right ? 1f : -1f;
 
 	/// <summary>
 	/// Drives both the once-per-possession hand reset (M9, #83/ADR-0012, the
