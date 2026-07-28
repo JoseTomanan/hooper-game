@@ -85,11 +85,16 @@ public partial class BallController : Node3D
 	/// Lateral offset (metres) from the holder's centerline to the ball,
 	/// displaying which hand it's currently in (M7b, issue #73). Stacks with
 	/// DribbleForwardOffset — the ball sits forward-AND-to-the-side, not
-	/// directly on the centerline. Exact value is hitl visual sign-off, the
-	/// same as FacingResolver/LeanResolver's tilt — the human verifies
-	/// in-editor that the offset reads as a believable hand position.
+	/// directly on the centerline. MEASURED (not guessed) 2026-07-28 by
+	/// tools/measure_dribble_hand_offset.gd: it sampled the right hand bone
+	/// across the dribbleidle clip (240 samples) in the model-origin frame —
+	/// relative to holder.GlobalPosition, the frame BallController actually
+	/// places the ball in — and found a lateral station with mean 0.4429m
+	/// (full-cycle range 0.3668-0.5153m). This value IS that mean; HandSign
+	/// supplies the sign (left/right hand), this constant supplies the
+	/// magnitude only.
 	/// </summary>
-	[Export] public float HandOffset { get; set; } = 0.18f;
+	[Export] public float HandOffset { get; set; } = 0.4429f;
 
 	/// <summary>
 	/// Duration (seconds) of the crossover's authoritative cross-body ball
