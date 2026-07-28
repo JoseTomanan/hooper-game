@@ -21,6 +21,11 @@ obj/
 # Godot exported builds
 build/
 
+# Scratch source-asset drops (raw re-exports pulled in for one-off
+# investigation, e.g. the Jul 2026 dribble-offset probing session) — not
+# wired into any scene/script, not durable, don't ship them.
+assets/raw/
+
 # Godot resource UID sidecar files (auto-generated, not source)
 *.uid
 # Exception: locomotion.res is a hand-saved AnimationLibrary with no importer,
