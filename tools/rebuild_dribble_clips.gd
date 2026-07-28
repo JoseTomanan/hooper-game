@@ -125,7 +125,15 @@ extends SceneTree
 # CENTRE_STANCE_STAGGER=false restores the old, uncentred behaviour so the two
 # can be compared directly.
 #
-# ── fix/298 (round 2): the SAME centring must also apply to dribbleidle ─────
+# ── fix/298 (round 2): REJECTED -- centring dribbleidle too ─────────────────
+# ⚠ THIS SECTION DOCUMENTS A PATH THAT WAS TRIED AND ABANDONED. It is written
+# in the present tense because it was drafted while the change was live; the
+# change did NOT ship. `CENTRE_IDLE_ENDPOINT` is false, PROOF 4 receives
+# identity rotations, and dribbleidle's leg chain is verbatim. What actually
+# resolved the corridor failure described below was lowering STRIDE_AMPLITUDE
+# from 0.70 to 0.50 (0/90 frames), not centring both endpoints (2/90). Read to
+# the end of the section before acting on any of it.
+#
 # Applying C_leg to dribblemove alone (the previous section) traded the base-
 # stance squeeze for a NEW, worse defect: DribbleLoopTest's #287 corridor
 # sweep (the `dribble-corridor` scenario) went from 0/90 to 1/90 frames
