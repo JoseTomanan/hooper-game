@@ -71,8 +71,18 @@ const MOVE_NAME := &"dribblemove"
 # Forward torso lean applied to the moving endpoint. Big enough to read as a
 # drive posture at a glance (ADR-0003 legibility), small enough that the two
 # blendspace endpoints stay a short arc apart — see the corridor argument above.
-const LEAN_DEGREES := 20.0
+# Raised from 20 to 38 (#286 legibility fix): 20 degrees was too subtle to read
+# against dribbleidle at a glance -- a sprinting player looked like a standing one.
+const LEAN_DEGREES := 38.0
 const LEAN_BONE := "mixamorig_Spine"
+
+# Crouch applied to the moving endpoint's Hips POSITION_3D track (#286). A lean
+# alone reads as "leaning", not "moving" -- pairing it with a lower stance is
+# what makes the drive posture unmistakable. This is a POSITION delta, not a
+# rotation, so it needs none of the parent-frame conjugation rotations require;
+# subtracting from Y directly lowers the root in its own (world-aligned) space.
+const CROUCH_DROP_M := 0.12
+const CROUCH_BONE := "mixamorig_Hips"
 
 func bone_of(np: NodePath) -> String:
 	return "" if np.get_subname_count() == 0 else String(np.get_subname(0))
@@ -128,6 +138,13 @@ func _initialize() -> void:
 		quit(1)
 		return
 
+	var crouched := _apply_crouch(move_clip, CROUCH_BONE, CROUCH_DROP_M)
+	if crouched <= 0:
+		push_error("[rebuild-dribble] no '%s' position track found to crouch -- refusing to save a "
+			% CROUCH_BONE + "moving endpoint without the drive stance.")
+		quit(1)
+		return
+
 	# Prove the lean goes FORWARD, geometrically, instead of trusting the
 	# cross-product order: pose a real skeleton with each clip and check the head
 	# actually moved along the facing axis. A sign error here would draft a
@@ -144,8 +161,8 @@ func _initialize() -> void:
 	# Guard the "distinct silhouette" bar with a real measurement rather than
 	# trusting the edit landed (the repo's prove-match-count-> 0 convention).
 	var spread := _max_pose_delta(idle_clip, move_clip)
-	print("[rebuild-dribble] leaned %d key(s) on '%s' by %.0f deg about %s; "
-		% [leaned, LEAN_BONE, LEAN_DEGREES, lean_axis]
+	print("[rebuild-dribble] leaned %d key(s) on '%s' by %.0f deg about %s, crouched %d key(s) on '%s' by %.2f m; "
+		% [leaned, LEAN_BONE, LEAN_DEGREES, lean_axis, crouched, CROUCH_BONE, CROUCH_DROP_M]
 		+ "max endpoint-to-endpoint pose delta = %.1f deg" % spread)
 	if spread < 5.0:
 		push_error("[rebuild-dribble] endpoints differ by only %.1f deg -- not a distinct silhouette." % spread)
@@ -219,6 +236,23 @@ func _apply_lean(anim: Animation, bone: String, lean: Quaternion) -> int:
 		for k in anim.track_get_key_count(i):
 			var q: Quaternion = anim.track_get_key_value(i, k)
 			anim.track_set_key_value(i, k, (lean * q).normalized())
+			touched += 1
+	return touched
+
+# Lowers every key of `bone`'s POSITION_3D track by `drop` meters on Y. This is
+# a straight component subtraction, not a rotation -- POSITION_3D keys are
+# already in the bone's own (parent-relative) space, so no basis conjugation is
+# needed the way rotations require (see the header's Y Bot antipode warning).
+func _apply_crouch(anim: Animation, bone: String, drop: float) -> int:
+	var touched := 0
+	for i in anim.get_track_count():
+		if anim.track_get_type(i) != Animation.TYPE_POSITION_3D:
+			continue
+		if bone_of(anim.track_get_path(i)) != bone:
+			continue
+		for k in anim.track_get_key_count(i):
+			var p: Vector3 = anim.track_get_key_value(i, k)
+			anim.track_set_key_value(i, k, Vector3(p.x, p.y - drop, p.z))
 			touched += 1
 	return touched
 
