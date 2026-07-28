@@ -75,21 +75,53 @@ public partial class BallController : Node3D
 
 	// ── Dribble tunables ──────────────────────────────────────────────────
 
-	/// <summary>Hand height the dribble bounces up to (metres).</summary>
+	/// <summary>
+	/// Hand height the dribble bounces up to (metres). CONFIRMED by
+	/// measurement 2026-07-28 (same tool/clip/frame as HandOffset —
+	/// tools/measure_dribble_hand_offset.gd, dribbleidle, model-origin frame):
+	/// measured world-Y hand height 1.1261m minus BallRadius (0.12) gives a
+	/// measured DribbleHandHeight of 1.0061m, within 0.6cm of the shipped
+	/// 1.0f. NOT changed to the measured value — BetweenTheLegsDipDepth (see
+	/// its own doc) is calibrated as a subtraction FROM this baseline to hit
+	/// a specific documented peak geometry (near-floor without clipping); a
+	/// few-mm shift here would need BetweenTheLegsDipDepth re-derived to
+	/// preserve that geometry. A delta this small is feel-pass territory
+	/// (#173 / ADR-0021), not a correctness bug.
+	/// </summary>
 	[Export] public float DribbleHandHeight { get; set; } = 1.0f;
 
-	/// <summary>How far (metres) in front of the holder the ball is positioned while Held or Dribbling.</summary>
+	/// <summary>
+	/// How far (metres) in front of the holder the ball is positioned while
+	/// Held or Dribbling. CONFIRMED by measurement 2026-07-28 (same
+	/// tool/clip/frame as HandOffset — tools/measure_dribble_hand_offset.gd,
+	/// dribbleidle, model-origin frame): measured forward station mean
+	/// 0.4636m (full-cycle range 0.4115-0.5238m), within 3.6cm of the shipped
+	/// 0.5f. NOT changed to the measured value — BehindTheBackSweepDepth and
+	/// SpinBodyShieldDepth (see their own docs) are both calibrated as
+	/// differences AGAINST this baseline to hit specific documented peak
+	/// geometry, and moving the baseline would require re-deriving those to
+	/// preserve it. In particular, SpinBodyShieldDepth documents that its
+	/// peak stays POSITIVE / hugs the centerline with a 0.05m margin off of
+	/// 0.5 — naively substituting the measured 0.4636 would thin that margin
+	/// to 0.0136m. A delta this small is feel-pass territory (#173 /
+	/// ADR-0021), not a correctness bug.
+	/// </summary>
 	[Export] public float DribbleForwardOffset { get; set; } = 0.5f;
 
 	/// <summary>
 	/// Lateral offset (metres) from the holder's centerline to the ball,
 	/// displaying which hand it's currently in (M7b, issue #73). Stacks with
 	/// DribbleForwardOffset — the ball sits forward-AND-to-the-side, not
-	/// directly on the centerline. Exact value is hitl visual sign-off, the
-	/// same as FacingResolver/LeanResolver's tilt — the human verifies
-	/// in-editor that the offset reads as a believable hand position.
+	/// directly on the centerline. MEASURED (not guessed) 2026-07-28 by
+	/// tools/measure_dribble_hand_offset.gd: it sampled the right hand bone
+	/// across the dribbleidle clip (240 samples) in the model-origin frame —
+	/// relative to holder.GlobalPosition, the frame BallController actually
+	/// places the ball in — and found a lateral station with mean 0.4429m
+	/// (full-cycle range 0.3668-0.5153m). This value IS that mean; HandSign
+	/// supplies the sign (left/right hand), this constant supplies the
+	/// magnitude only.
 	/// </summary>
-	[Export] public float HandOffset { get; set; } = 0.18f;
+	[Export] public float HandOffset { get; set; } = 0.4429f;
 
 	/// <summary>
 	/// Duration (seconds) of the crossover's authoritative cross-body ball
