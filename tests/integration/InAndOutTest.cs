@@ -680,11 +680,14 @@ public partial class InAndOutTest : Node
     // headless cannot exercise (see RequestMoveForHarness/
     // LayupRangeHarnessSeam's identical rationale).
     // ═══════════════════════════════════════════════════════════════════════
+    private HandSide _handSideBeforeReconstruct;
+
     private void TickReconstruct()
     {
         switch (_step)
         {
             case Step.Start:
+                _handSideBeforeReconstruct = _p1.HandSide;
                 _p1.RequestMoveForHarness("inandout", 1f);
                 if (_p1.CurrentMoveIdForHarness != "inandout")
                 {
@@ -715,13 +718,13 @@ public partial class InAndOutTest : Node
 
             case Step.AwaitLifecycleDone:
                 if (_p1.PhaseForHarness != MovePhase.Inactive) return;
-                if (_p1.HandSide != HandSide.Left)
+                if (_p1.HandSide != _handSideBeforeReconstruct)
                 {
-                    Fail($"reconstruct: expected HandSide to stay Left (InAndOut never swaps, AC-2) after a reconstructed lifecycle; got {_p1.HandSide}.");
+                    Fail($"reconstruct: expected HandSide to stay {_handSideBeforeReconstruct} (InAndOut never swaps, AC-2) after a reconstructed lifecycle; got {_p1.HandSide}.");
                     Finish();
                     return;
                 }
-                GD.Print("[in-and-out] PASS reconstruct-lifecycle — the reconstructed InAndOut ran to Inactive with HandSide untouched.");
+                GD.Print($"[in-and-out] PASS reconstruct-lifecycle — the reconstructed InAndOut ran to Inactive with HandSide untouched ({_handSideBeforeReconstruct}).");
                 GD.Print("[in-and-out] RESULT: PASS (exit 0)");
                 Finish(0);
                 return;

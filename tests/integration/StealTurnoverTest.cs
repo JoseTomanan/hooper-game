@@ -58,6 +58,7 @@ public partial class StealTurnoverTest : Node
     private string _scenario = "success";
 
     private BallController _ball;
+    private PlayerController _holder;
     private PlayerController _defender;
 
     private int _frame;
@@ -130,9 +131,9 @@ public partial class StealTurnoverTest : Node
         // Child order under Players decides the tipoff: BallController.
         // TryAssignTipoffHolder awards possession to the first child whose name
         // parses to a nonzero peer id. "1" first → holder; "2" second → defender.
-        var holder = new PlayerController { Name = "1" };
+        _holder = new PlayerController { Name = "1" };
         _defender = new PlayerController { Name = "2" };
-        players.AddChild(holder);
+        players.AddChild(_holder);
         players.AddChild(_defender);
 
         _ball = new BallController { Name = "Ball", Players = players };
@@ -230,12 +231,16 @@ public partial class StealTurnoverTest : Node
         // defender tick this frame (tree pre-order guarantees Root runs first).
         if (!_stealBegun && _frame == _beginFrame)
         {
-            // The holder's HandSide is the invariant default HandSide.Left for a
-            // plain in-place dribble (it only ever changes on a possession edge
-            // or a crossover, neither of which the idle holder does), so aiming
-            // the steal at Left guarantees the hand axis passes and the test
-            // isolates the timing axis.
-            bool begun = _defender.BeginMoveForHarness(new StealMove(HandSide.Left));
+            // The holder's HandSide never changes for a plain in-place dribble
+            // (it only ever changes on a possession edge or a crossover,
+            // neither of which the idle holder does here), so reading it live
+            // — rather than hardcoding whichever hand happens to be the
+            // current default (ADR-0012's 2026-07-28 amendment moved that
+            // default from Left to Right) — guarantees the hand axis passes
+            // and the test isolates the timing axis regardless of a future
+            // default change.
+            HandSide holderHand = _holder.HandSide;
+            bool begun = _defender.BeginMoveForHarness(new StealMove(holderHand));
             _stealBegun = true;
             if (!begun)
             {
@@ -243,13 +248,13 @@ public partial class StealTurnoverTest : Node
                 Finish();
                 return;
             }
-            GD.Print($"[steal-turnover] frame {_frame}: steal begun (target Left)");
+            GD.Print($"[steal-turnover] frame {_frame}: steal begun (target {holderHand})");
 
             // (#175) Shadow client: begins the IDENTICAL StealMove the same
             // frame, mirroring what a real client's local prediction would be
             // running right now — see the field doc above for the full rationale.
             if (_scenario == "success")
-                _shadowClient.Begin(new StealMove(HandSide.Left));
+                _shadowClient.Begin(new StealMove(holderHand));
         }
 
         // Latch the turnover: catch the Loose state even if the loose-ball
@@ -339,7 +344,7 @@ public partial class StealTurnoverTest : Node
                 // instant. The phase-reset assertion above is what protects
                 // the moment Recovery DOES elapse and a genuine re-attempt
                 // becomes legal.
-                _reattemptBeganAtRecovery = _defender.BeginMoveForHarness(new StealMove(HandSide.Left));
+                _reattemptBeganAtRecovery = _defender.BeginMoveForHarness(new StealMove(_holder.HandSide));
 
                 Verdict();
                 return;

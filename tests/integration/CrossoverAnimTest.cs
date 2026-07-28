@@ -222,11 +222,17 @@ public partial class CrossoverAnimTest : Node
 
                 var holder = HolderNode();
 
-                // Only crossover-right-origin needs a forced precondition —
-                // every other scenario runs the shipped default (Left), which
-                // the tipoff's possession-award already leaves the holder in
-                // (see PlayerController.HandSide's field doc).
-                if (_scenario == "crossover-right-origin")
+                // Both origin polarities are forced explicitly rather than
+                // relying on either polarity being "the shipped default" —
+                // ADR-0012's 2026-07-28 amendment moved the possession-reset
+                // default from Left to Right, so a scenario that assumed the
+                // tipoff's possession-award would leave the holder on a
+                // PARTICULAR hand went stale the moment that default changed.
+                // Forcing both explicitly makes this scenario immune to any
+                // future default flip.
+                if (_scenario == "crossover-left-origin")
+                    holder.SetHandSideForHarness(HandSide.Left);
+                else if (_scenario == "crossover-right-origin")
                     holder.SetHandSideForHarness(HandSide.Right);
 
                 // The flick sign must point at the EMPTY hand, or this would not

@@ -58,10 +58,12 @@ namespace HOOPERGAME.Tests.Integration;
 //   render itself uses (NOT a naive "Right hand = world +X" assumption —
 //   Godot's +Z-forward, right-handed convention makes a facing-+Z player's
 //   actual right point toward world -X; this file's first version had this
-//   backwards and code review caught it before merge): default HandSide.Left
-//   at heading 0 carries the ball toward world +X. Times a real StealMove
-//   Active window; the turnover must connect via the NEW static term alone —
-//   proving the previously-untouchable staller now loses the ball.
+//   backwards and code review caught it before merge): default HandSide.Right
+//   (ADR-0012's 2026-07-28 amendment moved the possession-reset default from
+//   Left) at heading 0 carries the ball toward world -X. Times a real
+//   StealMove Active window; the turnover must connect via the NEW static
+//   term alone — proving the previously-untouchable staller now loses the
+//   ball.
 // held-static-immune-out-of-reach: CONTROL. Identical on-axis geometry and
 //   timing, but the defender is placed well beyond HeldStealReachRadius —
 //   the steal must NOT connect, ball stays Held (without this control,
@@ -240,17 +242,18 @@ public partial class HeldStealTest : Node
                 // Issue #255 headline: NO JumpShot ever begins (a plain idle
                 // "dead-Held staller" — HeldStealVulnerableWindow stays null
                 // for the whole run, so success can ONLY come from the new
-                // static term). Holder's default HandSide is Left and
-                // Heading is 0 (Forward == +Z); the exposed hand-side
-                // direction is LOCKED to the same formula the ball render
-                // uses (BallController.HandRight/HandSign, code-review-
+                // static term). Holder's default HandSide is Right (ADR-0012's
+                // 2026-07-28 amendment moved the possession-reset default from
+                // Left) and Heading is 0 (Forward == +Z); the exposed
+                // hand-side direction is LOCKED to the same formula the ball
+                // render uses (BallController.HandRight/HandSign, code-review-
                 // caught: an earlier version of this predicate/scenario had
-                // this mirrored) — forward==(0,1) -> right==(-1,0) -> Left's
-                // handSign(-1) flips it to world +X. Place the defender
+                // this mirrored) — forward==(0,1) -> right==(-1,0) -> Right's
+                // handSign(+1) leaves it at world -X. Place the defender
                 // squarely on that axis, well inside the default
                 // HeldStealReachRadius (2.2m).
                 _jumpShotBeginFrame = int.MaxValue; // disabled
-                _defender.GlobalPosition = new Vector3(1, 0, 0);
+                _defender.GlobalPosition = new Vector3(-1, 0, 0);
                 _stealBeginFrame = 5;
                 _verdictFrame = _stealBeginFrame
                     + StealMove.DefaultFrameData.StartupFrames
@@ -274,8 +277,8 @@ public partial class HeldStealTest : Node
 
             case "held-static-immune-shielded":
                 // CONTROL: identical in-reach, on-original-axis geometry to
-                // held-static-vulnerable (defender at world +X, the holder's
-                // actual Left-hand carry side at heading 0), but the
+                // held-static-vulnerable (defender at world -X, the holder's
+                // actual Right-hand carry side at heading 0), but the
                 // holder's Heading is force-rotated 180 degrees BEFORE the
                 // steal resolves (SetHeadingForHarness — a bare headless
                 // second node has no input path that would ever advance
@@ -283,11 +286,11 @@ public partial class HeldStealTest : Node
                 // it directly, same rationale as FadeawayTriggerTest's use
                 // of the same seam). The exposed hand-side direction rotates
                 // WITH Heading (forward(pi)==(0,-1) -> right==(1,0) ->
-                // Left's handSign(-1) flips it to world -X), so the SAME
+                // Right's handSign(+1) leaves it at world +X), so the SAME
                 // defender position that was on-axis is now squarely
                 // off-cone — the "turn the body to shield the ball" counter.
                 _jumpShotBeginFrame = int.MaxValue; // disabled
-                _defender.GlobalPosition = new Vector3(1, 0, 0);
+                _defender.GlobalPosition = new Vector3(-1, 0, 0);
                 _holder.SetHeadingForHarness(Mathf.Pi);
                 _stealBeginFrame = 5;
                 _verdictFrame = _stealBeginFrame
@@ -301,16 +304,17 @@ public partial class HeldStealTest : Node
                 // this scenario file's first version had): identical
                 // heading/timing to held-static-vulnerable, defender WITHIN
                 // HeldStealReachRadius, but on the PROTECTED off-hand side
-                // (world -X — the RIGHT-hand axis, since the ball is
-                // actually carried Left/+X) rather than the exposed side.
-                // Unlike held-static-immune-shielded (which is symmetric
-                // under a left/right mirror-up — a flipped convention would
-                // still pass it), this control is NOT axis-symmetric: it
-                // fails to discriminate only if the facing term is dropped
-                // entirely, and it fails to PASS if the exposed axis is
-                // computed on the wrong side. The steal must NOT connect.
+                // (world +X — the LEFT-hand axis, since the ball is
+                // actually carried Right/-X, ADR-0012's 2026-07-28 amendment)
+                // rather than the exposed side. Unlike held-static-immune-
+                // shielded (which is symmetric under a left/right mirror-up
+                // — a flipped convention would still pass it), this control
+                // is NOT axis-symmetric: it fails to discriminate only if
+                // the facing term is dropped entirely, and it fails to PASS
+                // if the exposed axis is computed on the wrong side. The
+                // steal must NOT connect.
                 _jumpShotBeginFrame = int.MaxValue; // disabled
-                _defender.GlobalPosition = new Vector3(-1, 0, 0);
+                _defender.GlobalPosition = new Vector3(1, 0, 0);
                 _stealBeginFrame = 5;
                 _verdictFrame = _stealBeginFrame
                     + StealMove.DefaultFrameData.StartupFrames
