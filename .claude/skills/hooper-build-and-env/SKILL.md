@@ -1,6 +1,6 @@
 ---
 name: hooper-build-and-env
-description: Recreate the hooper-game build environment from scratch and know its traps — use when setting up a fresh clone/machine, when `dotnet build`/`dotnet test` fails or behaves unexpectedly, when you need the exact quoted build/test/harness commands, when reconciling a "dotnet test is green but CI is red" (or vice versa) confusion, when you need the Godot version pin or how to obtain a local Godot binary, when touching `HOOPER GAME.csproj`/`tests/Hooper.Ball.Tests.csproj`/`.github/workflows/ci.yml`/`.claude/hooks/verify-green.sh`, or when you hit gitignore/worktree/path-with-spaces surprises.
+description: Recreate the hooper-game build environment from scratch and know its traps — use when setting up a fresh clone/machine, when `dotnet build`/`dotnet test` fails or behaves unexpectedly, when you need the exact quoted build/test/harness commands, when reconciling a "dotnet test is green but CI is red" (or vice versa) confusion, when you need the Godot version pin or how to obtain a local Godot binary, when you need to obtain or invoke headless Blender for `bpy`-scripted animation tooling, when touching `HOOPER GAME.csproj`/`tests/Hooper.Ball.Tests.csproj`/`.github/workflows/ci.yml`/`.claude/hooks/verify-green.sh`, or when you hit gitignore/worktree/path-with-spaces surprises.
 ---
 
 # hooper-build-and-env
@@ -22,6 +22,7 @@ NOT to use this" section below before assuming this is the right skill.
 |---|---|---|
 | .NET SDK | 8.0.x (verified locally: 8.0.421) | Both csprojs target `net8.0`. Verify with `dotnet --list-sdks`. |
 | Godot editor/runtime | **4.6.3 STABLE, MONO build** | `HOOPER GAME.csproj` pins `Sdk="Godot.NET.Sdk/4.6.3"` and the test csproj pins `PackageReference Include="GodotSharp" Version="4.6.3"`. A mismatched Godot binary will not load the project correctly or will disagree with the C# bindings. Get the **mono** variant, not the standard (GDScript-only) build — Godot ships separate binaries and only the mono one carries .NET support. |
+| Blender (**optional** — animation tooling only) | Any current stable (verified 2026-07-29: 5.2.0 LTS) | Not required to build, test, or run the game — only needed for headless `bpy`-scripted animation-clip work (retargeting/editing/blending motion onto the Y Bot rig), the same shape as `tools/rebuild_dribble_clips.gd` but for Blender instead of Godot. No version pin exists because nothing in this repo depends on a specific Blender API version yet. |
 
 Godot is **not** an SDK/NuGet dependency you `dotnet restore` — it's a
 separate engine binary you download yourself. It is normal for it to be
@@ -53,6 +54,37 @@ location and MUST NOT be treated as a stable contract. Instead:
   `& $GODOT --version` must print `4.6.3.stable.mono.official.<hash>`. Any
   other version string is a real risk — Godot's C# API has churned across
   minor versions.
+
+### Headless Blender (animation tooling — optional, not a build dependency)
+
+Same philosophy as Godot: **no fixed install path, no installer/admin
+requirement, an env-var convention.** Use the official **portable ZIP**
+build (`https://download.blender.org/release/Blender<major.minor>/blender-<version>-windows-x64.zip`),
+not the MSI installer — the MSI installs to `Program Files` and typically
+needs elevation, which hangs a non-interactive shell. The ZIP just extracts,
+same shape as dropping a Godot `_console.exe` somewhere stable.
+
+Verified 2026-07-29 on this machine:
+- Downloaded `blender-5.2.0-windows-x64.zip` and extracted to
+  `%LOCALAPPDATA%\BlenderPortable\blender-5.2.0-windows-x64\` (a per-user,
+  no-admin, non-repo location — never inside the git working tree).
+- Set `BLENDER` (`$env:BLENDER` on PowerShell) as a **User**-scope env var to
+  the full path of `blender.exe` inside that folder, via
+  `[Environment]::SetEnvironmentVariable("BLENDER", <path>, "User")` — same
+  idea as `$GODOT`, don't invent a second convention.
+- **Gotcha:** setting a User-scope env var does not appear in `$env:` inside
+  a shell process that was already running (or a tool-launched subprocess
+  whose host process predates the change). Re-read it explicitly with
+  `[Environment]::GetEnvironmentVariable("BLENDER", "User")` rather than
+  assuming `$env:BLENDER` is populated, until you've confirmed a fresh shell
+  picks it up.
+- Verify with two commands (both must exit 0):
+  - `& $BLENDER --background --version` → expect a `Blender <version> LTS`
+    banner.
+  - `& $BLENDER --background --python-expr "import bpy; print('BPY_OK', bpy.app.version)"`
+    → expect `BPY_OK (<major>, <minor>, <patch>)`. This is the capability
+    that actually matters — headless Python scripting against `bpy`, not
+    just "Blender launches."
 
 ## The exact commands (verified 2026-07-12)
 
@@ -313,6 +345,10 @@ from digests); reviewed and corrected 2026-07-15 (CI harness invocation count
 - A local Godot 4.6.3 mono binary reported
   `4.6.3.stable.mono.official.7d41c59c4` and ran SmokeTest.tscn to
   `[harness] PASS`, exit 0 (verified 2026-07-12 per discovery).
+- Blender 5.2.0 LTS portable ZIP installed under `%LOCALAPPDATA%\BlenderPortable\`,
+  `$BLENDER` env var set; `--background --version` and
+  `--background --python-expr "import bpy; ..."` both verified live, exit 0
+  (verified 2026-07-29).
 
 Re-verification one-liners (run from repo root whenever this skill feels
 stale, especially after any Godot / GodotSharp / .NET bump):
