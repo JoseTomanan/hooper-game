@@ -6,13 +6,18 @@ extends SceneTree
 # Idempotent: re-running overwrites both clips with freshly-derived ones.
 #
 # Produces:
-#   dribbleidle — the REAL stock-Mixamo clip (#285a), LOOPED; fix/298 amends
-#                 this to verbatim EXCEPT the leg chain, which now gets the
-#                 same static stance-centring correction as dribblemove's legs
-#                 (see "the SAME centring must also apply to dribbleidle"
-#                 below) -- torso/arms/Hips remain byte-for-byte verbatim.
-#   dribblemove — (#285b originally a torso-lean-only temp-draft; #298 grafts a
-#                 real leg stride on top) LOOPED, SAME LENGTH.
+#   dribbleidle — the REAL stock-Mixamo clip (#285a), LOOPED, VERBATIM.
+#                 fix/298 round 2 proposed amending this contract for the leg
+#                 chain; that was MEASURED, REJECTED and gated off behind
+#                 CENTRE_IDLE_ENDPOINT := false (see that section below, which
+#                 documents a rejected path -- read its closing paragraph, not
+#                 just its premise). PROOF 4 is handed identity rotations and
+#                 therefore asserts plain verbatim-ness today.
+#   dribblemove — LOOPED, SAME LENGTH. As of #300 it is AUTHORED in headless
+#                 Blender (tools/author_dribble_move.py) and loaded verbatim
+#                 from AUTHORED_MOVE_FBX; the #285b lean-only draft and #298's
+#                 run-delta leg transplant are superseded and survive only
+#                 behind USE_AUTHORED_MOVE_CLIP := false.
 #
 # ── Why both endpoints are derived from `Dribble`, not `Dribble` + `run` ──────
 # #276's table suggested deriving the moving endpoint by remixing `Dribble` with
@@ -120,7 +125,15 @@ extends SceneTree
 # CENTRE_STANCE_STAGGER=false restores the old, uncentred behaviour so the two
 # can be compared directly.
 #
-# ── fix/298 (round 2): the SAME centring must also apply to dribbleidle ─────
+# ── fix/298 (round 2): REJECTED -- centring dribbleidle too ─────────────────
+# ⚠ THIS SECTION DOCUMENTS A PATH THAT WAS TRIED AND ABANDONED. It is written
+# in the present tense because it was drafted while the change was live; the
+# change did NOT ship. `CENTRE_IDLE_ENDPOINT` is false, PROOF 4 receives
+# identity rotations, and dribbleidle's leg chain is verbatim. What actually
+# resolved the corridor failure described below was lowering STRIDE_AMPLITUDE
+# from 0.70 to 0.50 (0/90 frames), not centring both endpoints (2/90). Read to
+# the end of the section before acting on any of it.
+#
 # Applying C_leg to dribblemove alone (the previous section) traded the base-
 # stance squeeze for a NEW, worse defect: DribbleLoopTest's #287 corridor
 # sweep (the `dribble-corridor` scenario) went from 0/90 to 1/90 frames
@@ -172,6 +185,30 @@ const YBOT_FBX := "res://assets/Y Bot.fbx"
 
 const IDLE_NAME := &"dribbleidle"
 const MOVE_NAME := &"dribblemove"
+
+# ── #300: the moving endpoint is now AUTHORED, not derived ───────────────────
+# `tools/author_dribble_move.py` keyframes a drive-dribble gait cycle in
+# headless Blender and exports this FBX; see that script's header for the
+# method (foot trajectory + two-link IK) and for why it supersedes #298's
+# delta transplant rather than tuning it.
+#
+# When true, `dribblemove` is taken verbatim from AUTHORED_MOVE_FBX and the
+# entire #298 derivation below (lean -> crouch -> leg-stride transplant ->
+# stance centring) is skipped. `dribbleidle` is unaffected either way: it is
+# extracted from SRC_FBX exactly as before, and deliberately never makes the
+# Blender round trip (measured 0.396 deg pose error -- below
+# LOOP_SEAM_TOLERANCE_DEG but NOT zero, and #285a's contract is *verbatim*).
+#
+# The #298 path is retained behind `false` rather than deleted so the two can
+# be A/B'd during the #301 feel verify. DELETE IT once #301 passes -- it is
+# superseded by human direction, not a falsified hypothesis anyone would
+# re-derive, so it earns its keep only until the replacement is accepted.
+const USE_AUTHORED_MOVE_CLIP := true
+const AUTHORED_MOVE_FBX := "res://assets/dribble_move_authored.fbx"
+# Godot names the clip after the FBX take, which Blender names after the
+# SCENE (not the action) when bake_anim_use_all_actions is false. The authoring
+# script renames both to match this.
+const AUTHORED_MOVE_CLIP := "dribblemove"
 
 # Forward torso lean applied to the moving endpoint. Big enough to read as a
 # drive posture at a glance (ADR-0003 legibility), small enough that the two
@@ -319,6 +356,150 @@ const CENTRE_IDLE_ENDPOINT := false
 # than a licence to hop.
 const SUPPORT_BAND_TOLERANCE := 1.25
 
+# ── #300: load the Blender-authored moving endpoint ──────────────────────────
+# Returns null (after push_error) rather than crashing, so the caller can quit
+# non-zero without saving -- the same refuse-to-save discipline as the proofs.
+func _load_authored_move_clip(reference: Animation) -> Animation:
+	var packed = load(AUTHORED_MOVE_FBX)
+	if packed == null:
+		push_error(("[rebuild-dribble] #300: failed to load %s. Regenerate it with:\n" +
+			"  \"$BLENDER\" --background --python-exit-code 1 " +
+			"--python tools/author_dribble_move.py -- assets/Dribble.fbx %s")
+			% [AUTHORED_MOVE_FBX, AUTHORED_MOVE_FBX])
+		return null
+	var root: Node = packed.instantiate()
+	var ap: AnimationPlayer = root.get_node_or_null("AnimationPlayer")
+	if ap == null:
+		push_error("[rebuild-dribble] #300: %s has no AnimationPlayer." % AUTHORED_MOVE_FBX)
+		return null
+	if not ap.has_animation(AUTHORED_MOVE_CLIP):
+		push_error(("[rebuild-dribble] #300: %s has no clip named '%s' (found %s). Godot names the " +
+			"clip after the FBX take, which Blender names after the SCENE -- check that " +
+			"author_dribble_move.py renamed BOTH the action and the scene.")
+			% [AUTHORED_MOVE_FBX, AUTHORED_MOVE_CLIP, ap.get_animation_list()])
+		return null
+	var clip: Animation = ap.get_animation(AUTHORED_MOVE_CLIP).duplicate(true)
+	print("[rebuild-dribble] #300: authored move clip '%s': len=%.3f tracks=%d"
+		% [AUTHORED_MOVE_CLIP, clip.length, clip.get_track_count()])
+	if not _retarget_track_paths(clip, reference):
+		return null
+	_normalize_loop_grid(clip)
+	return clip
+
+
+# ── #300: put the authored clip on locomotion.res's track-path convention ────
+# Blender's FBX export wraps the skeleton in an extra `Armature` node, so Godot
+# imports the authored clip with track paths one level deeper than every other
+# clip in the library:
+#
+#   authored : "Armature/Skeleton3D:mixamorig_Hips"
+#   library  : "Skeleton3D:mixamorig_Hips"
+#
+# On scenes/Player.tscn's live rig the deeper paths resolve to NOTHING, so every
+# bone silently falls back to skeleton REST and the character renders a frozen
+# stance. That is the a45bd1d rest-fallback trap arriving by a new route -- not a
+# MISSING track, a MISADDRESSED one -- and it is invisible to a bone-name check,
+# because `get_concatenated_subnames()` discards exactly the part that is wrong.
+# (LocomotionClipTest's reassuring "total_bone_tracks=53 resolved=53" line
+# resolves by bone name and reported this clip healthy while it rendered static.)
+#
+# So rewrite the node prefix to match the reference clip, and PROVE the result:
+# every remapped path must exist in the reference. A bone the reference does not
+# have means the rigs have diverged, which is a real problem worth failing on
+# rather than papering over with a string edit.
+func _retarget_track_paths(clip: Animation, reference: Animation) -> bool:
+	var ref_paths := {}
+	for i in reference.get_track_count():
+		ref_paths[String(reference.track_get_path(i))] = true
+
+	var prefix := ""
+	for i in reference.get_track_count():
+		var parts := String(reference.track_get_path(i)).split(":")
+		if parts.size() >= 2:
+			prefix = parts[0]
+			break
+	if prefix == "":
+		push_error("[rebuild-dribble] #300: could not derive a node prefix from the reference clip.")
+		return false
+
+	var rewritten := 0
+	var unknown: Array[String] = []
+	for i in clip.get_track_count():
+		var parts := String(clip.track_get_path(i)).split(":")
+		if parts.size() < 2:
+			continue
+		var want := "%s:%s" % [prefix, parts[1]]
+		if String(clip.track_get_path(i)) != want:
+			clip.track_set_path(i, NodePath(want))
+			rewritten += 1
+		if not ref_paths.has(want):
+			unknown.append(want)
+
+	if not unknown.is_empty():
+		push_error(("[rebuild-dribble] #300: %d authored track(s) address bones the reference clip does " +
+			"not have, e.g. %s. The authoring rig and %s have diverged -- re-authoring against the " +
+			"wrong source FBX would silently rest-pose those bones.")
+			% [unknown.size(), unknown.slice(0, 4), SRC_FBX])
+		return false
+
+	print(("[rebuild-dribble] #300: track-path retarget -- rewrote %d/%d path(s) onto the '%s:' prefix; " +
+		"all resolve against the reference clip.") % [rewritten, clip.get_track_count(), prefix])
+	return true
+
+
+# ── #300: put the authored clip on the tool's own loop-key convention ────────
+# There are two legitimate ways to represent a loop, and this repo uses the
+# second:
+#   (a) INCLUDE the duplicate endpoint -- a key at t == length equal to key 0.
+#       Blender bakes 64 frames over [0, 2.100] and naturally produces this.
+#   (b) OMIT it -- the last key sits one grid interval BEFORE length (2.0667 s)
+#       and LOOP_LINEAR synthesises the wrap. This is what RESAMPLE_KEY_COUNT
+#       (63) builds, and what PROOF 3a/3b are calibrated against.
+#
+# Both play back identically. But (a) silently DISARMS PROOF 3a: that gate's
+# power comes from `angle(last_key, key0)` being one ordinary gait step, and
+# under (a) it is zero by construction, so the gate can no longer tell a
+# LOOP_LINEAR clip from a LOOP_NONE one. The proof correctly refused to pass
+# rather than report a meaningless green -- measured, on the first authored
+# clip.
+#
+# So convert (a) -> (b) here: drop a final key that sits at `length` AND is
+# redundant with key 0. The redundancy test is what makes this safe -- a track
+# whose endpoint genuinely differs from its start is not a duplicate and is
+# left alone, so this can never quietly delete real motion.
+func _normalize_loop_grid(clip: Animation) -> void:
+	const TIME_EPS := 1e-4
+	const ROT_EPS_DEG := 0.01
+	const POS_EPS_M := 1e-4
+	var dropped := 0
+	var inspected := 0
+	for i in clip.get_track_count():
+		var n := clip.track_get_key_count(i)
+		if n < 3:
+			continue
+		inspected += 1
+		if absf(clip.track_get_key_time(i, n - 1) - clip.length) > TIME_EPS:
+			continue
+		var redundant := false
+		match clip.track_get_type(i):
+			Animation.TYPE_ROTATION_3D:
+				var qa: Quaternion = clip.track_get_key_value(i, 0)
+				var qb: Quaternion = clip.track_get_key_value(i, n - 1)
+				redundant = _quat_angle_deg(qa, qb) < ROT_EPS_DEG
+			Animation.TYPE_POSITION_3D:
+				var pa: Vector3 = clip.track_get_key_value(i, 0)
+				var pb: Vector3 = clip.track_get_key_value(i, n - 1)
+				redundant = pa.distance_to(pb) < POS_EPS_M
+			_:
+				continue
+		if redundant:
+			clip.track_remove_key(i, n - 1)
+			dropped += 1
+	print(("[rebuild-dribble] #300: loop-grid normalisation -- dropped %d redundant end key(s) " +
+		"across %d track(s), restoring the omit-the-endpoint convention PROOF 3a's gate-power " +
+		"check depends on.") % [dropped, inspected])
+
+
 func bone_of(np: NodePath) -> String:
 	return "" if np.get_subname_count() == 0 else String(np.get_subname(0))
 
@@ -351,13 +532,33 @@ func _initialize() -> void:
 	var idle_clip: Animation = src.duplicate(true)
 	idle_clip.loop_mode = Animation.LOOP_LINEAR
 
-	# ── #285b / #298: the temp-draft moving endpoint ─────────────────────────
-	var move_clip: Animation = src.duplicate(true)
+	# ── the moving endpoint ──────────────────────────────────────────────────
+	# #285b/#298 derived it from `src`; #300 authors it in Blender instead.
+	# Either way it MUST come out the same length as the idle endpoint:
+	# equal-length blend points advance by the same delta and so stay
+	# phase-locked, which means the two contributions differ ONLY by the drive
+	# posture at every frame -- never by dribble cycle phase. That is what keeps
+	# the blended arc short at all times, and it is the corridor argument's
+	# load-bearing assumption.
+	var move_clip: Animation
+	if USE_AUTHORED_MOVE_CLIP:
+		move_clip = _load_authored_move_clip(src)
+		if move_clip == null:
+			quit(1)
+			return
+		if not is_equal_approx(move_clip.length, src.length):
+			push_error(("[rebuild-dribble] #300: authored clip is %.4f s but the idle endpoint is " +
+				"%.4f s. Unequal-length blendspace endpoints drift out of phase, so the two " +
+				"contributions would differ by dribble PHASE as well as by posture -- which is " +
+				"exactly what the #287 corridor argument assumes cannot happen.")
+				% [move_clip.length, src.length])
+			quit(1)
+			return
+	else:
+		move_clip = src.duplicate(true)
+	# FBX import defaults to LOOP_NONE for the authored clip too -- set it
+	# explicitly in both paths rather than relying on the import.
 	move_clip.loop_mode = Animation.LOOP_LINEAR
-	# Same length as the idle endpoint, deliberately: equal-length blend points
-	# advance by the same delta and so stay phase-locked, which means the two
-	# contributions differ ONLY by the lean/crouch/stride at every frame -- never
-	# by dribble cycle phase. That is what keeps the blended arc short at all times.
 
 	var lean_axis := _derive_body_right_axis()
 	if lean_axis == Vector3.ZERO:
@@ -366,19 +567,24 @@ func _initialize() -> void:
 		return
 	var lean := Quaternion(lean_axis, deg_to_rad(LEAN_DEGREES))
 
-	var leaned := _apply_lean(move_clip, LEAN_BONE, lean)
-	if leaned <= 0:
-		push_error("[rebuild-dribble] no '%s' rotation track found to lean -- refusing to save a "
-			% LEAN_BONE + "moving endpoint identical to the idle one.")
-		quit(1)
-		return
+	# The authored clip already carries its own lean, crouch and bob, keyframed
+	# in Blender -- re-applying them here would double them.
+	var leaned := 0
+	var crouched := 0
+	if not USE_AUTHORED_MOVE_CLIP:
+		leaned = _apply_lean(move_clip, LEAN_BONE, lean)
+		if leaned <= 0:
+			push_error("[rebuild-dribble] no '%s' rotation track found to lean -- refusing to save a "
+				% LEAN_BONE + "moving endpoint identical to the idle one.")
+			quit(1)
+			return
 
-	var crouched := _apply_crouch(move_clip, CROUCH_BONE, CROUCH_DROP_M)
-	if crouched <= 0:
-		push_error("[rebuild-dribble] no '%s' position track found to crouch -- refusing to save a "
-			% CROUCH_BONE + "moving endpoint without the drive stance.")
-		quit(1)
-		return
+		crouched = _apply_crouch(move_clip, CROUCH_BONE, CROUCH_DROP_M)
+		if crouched <= 0:
+			push_error("[rebuild-dribble] no '%s' position track found to crouch -- refusing to save a "
+				% CROUCH_BONE + "moving endpoint without the drive stance.")
+			quit(1)
+			return
 
 	# ── #298: leg-stride transplant onto move_clip ───────────────────────────
 	# Note on ordering (issue #298 point 8): this runs after the lean/crouch
@@ -400,12 +606,21 @@ func _initialize() -> void:
 		return
 
 	var leg_bone_names: Array = LEG_CHAIN_LEFT + LEG_CHAIN_RIGHT
-	var leg_stride_result := _apply_leg_stride(move_clip, src, run_anim, raw_skel, lean_axis, _facing)
-	if not leg_stride_result["ok"]:
-		quit(1)
-		return
-	var c_leg_left_d: Array = leg_stride_result["c_leg_left_d"]
-	var c_leg_right_d: Array = leg_stride_result["c_leg_right_d"]
+	var identity_q: Array = [1.0, 0.0, 0.0, 0.0]
+	# #300: the authored clip's legs are keyframed absolutely, so there is no
+	# transplanted delta and -- more importantly -- no static stagger left to
+	# cancel. Authoring absolute foot positions overwrites the source clip's
+	# +0.6881 m baked-in fore/aft stagger outright, which is what makes
+	# `C_leg` (and its whole bisection solve) unnecessary rather than retuned.
+	var c_leg_left_d: Array = identity_q
+	var c_leg_right_d: Array = identity_q
+	if not USE_AUTHORED_MOVE_CLIP:
+		var leg_stride_result := _apply_leg_stride(move_clip, src, run_anim, raw_skel, lean_axis, _facing)
+		if not leg_stride_result["ok"]:
+			quit(1)
+			return
+		c_leg_left_d = leg_stride_result["c_leg_left_d"]
+		c_leg_right_d = leg_stride_result["c_leg_right_d"]
 
 	# fix/298 (round 2): apply the IDENTICAL static stance-centring correction
 	# to dribbleidle BEFORE the head-shift/pose-delta measurements below, so
@@ -453,9 +668,14 @@ func _initialize() -> void:
 	# Guard the "distinct silhouette" bar with a real measurement rather than
 	# trusting the edit landed (the repo's prove-match-count-> 0 convention).
 	var spread := _max_pose_delta(idle_clip, move_clip)
-	print(("[rebuild-dribble] leaned %d key(s) on '%s' by %.0f deg about %s, crouched %d key(s) on '%s' by %.2f m; " +
-		"max endpoint-to-endpoint pose delta = %.1f deg (PROOF 5 -- print only, the corridor question is the " +
-		"harness's job)") % [leaned, LEAN_BONE, LEAN_DEGREES, lean_axis, crouched, CROUCH_BONE, CROUCH_DROP_M, spread])
+	if USE_AUTHORED_MOVE_CLIP:
+		print(("[rebuild-dribble] #300: moving endpoint taken verbatim from %s (clip '%s'); " +
+			"max endpoint-to-endpoint pose delta = %.1f deg (PROOF 5 -- print only, the corridor " +
+			"question is the harness's job)") % [AUTHORED_MOVE_FBX, AUTHORED_MOVE_CLIP, spread])
+	else:
+		print(("[rebuild-dribble] leaned %d key(s) on '%s' by %.0f deg about %s, crouched %d key(s) on '%s' by %.2f m; " +
+			"max endpoint-to-endpoint pose delta = %.1f deg (PROOF 5 -- print only, the corridor question is the " +
+			"harness's job)") % [leaned, LEAN_BONE, LEAN_DEGREES, lean_axis, crouched, CROUCH_BONE, CROUCH_DROP_M, spread])
 	if spread < 5.0:
 		push_error("[rebuild-dribble] endpoints differ by only %.1f deg -- not a distinct silhouette." % spread)
 		quit(1)
@@ -475,7 +695,6 @@ func _initialize() -> void:
 	# "dribbleidle == C_leg * source" check then reduces to "dribbleidle ==
 	# source", i.e. #285a's original verbatim contract, with no second code path
 	# to keep in sync.
-	var identity_q: Array = [1.0, 0.0, 0.0, 0.0]
 	var proof4_left: Array = c_leg_left_d if CENTRE_IDLE_ENDPOINT else identity_q
 	var proof4_right: Array = c_leg_right_d if CENTRE_IDLE_ENDPOINT else identity_q
 	if not _proof_idle_stance_centred(idle_clip, src, raw_skel, leg_bone_names, proof4_left, proof4_right):
