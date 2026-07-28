@@ -107,7 +107,8 @@ cosmetic-only discipline for hand-side (and the deferred-to-M9 pointer in #73).*
 - **Ownership & mutation.** `PlayerController` holds the authoritative `HandSide`.
   It changes *only* inside the authoritative simulation, on the tick a
   **crossover** enters Active (the swap), to the opposite hand. A hesitation does
-  not change it. It resets to a default (Left) when the player gains possession.
+  not change it. It resets to a default when the player gains possession — **Left
+  as originally decided, amended to Right on 2026-07-28 (see Amendment below).**
 
 - **Broadcast.** Hand-side is piggybacked on the existing `ReceiveState`
   broadcast, exactly like `Heading` (ADR-0010) — same UnreliableOrdered
@@ -163,3 +164,81 @@ cosmetic-only discipline for hand-side (and the deferred-to-M9 pointer in #73).*
 - **Reversible.** If authoritative hand-side proves not worth the payload, the
   crossover/hesi model would have to change with it (alternative 1) — so this is
   reversible only together with the M9 mind-game design, not in isolation.
+
+---
+
+## Amendment — 2026-07-28: the possession-reset default is **Right**, not Left
+
+**Status:** Accepted. Amends the Ownership & mutation bullet above. The rest of
+this ADR (authority, broadcast, prediction/reconciliation) is unchanged.
+
+### Why
+
+The reset default was never chosen on the merits — Left was picked in #73 when
+hand-side was still cosmetic and nothing read it. Two facts, both established on
+2026-07-28, make it the wrong default now.
+
+**1. It is measurably wrong against the art.** `assets/locomotion.res`'s
+`dribbleidle`/`dribblemove` clips are a **right-handed** dribble. Measured, not
+asserted, by `tools/probe_dribble_hand.gd`: vertical pump range 0.0087 m on the
+left hand vs **0.3450 m** on the right, a 39.58x ratio, against a probe that is
+allowed to answer "I cannot tell" and declines to below a 3x margin. The
+`Dribble` AnimationTree state has no hand-side split, so it plays that one
+right-handed clip regardless of `HandSide`. The ball, meanwhile, is placed at
+`HandRight(forward) * HandOffset * HandSign(holder)` and *does* follow the
+authoritative value. With the default at Left the two disagree on every fresh
+possession: `tests/integration/DribbleHandAlignmentTest.cs` measured the ball at
+−0.18 m lateral while the animated hand pumped at +0.40 m — 0.54 m apart, on
+opposite sides of the body. Setting the hand to Right on the same rig closes it
+to 0.23 m and the scenario passes.
+
+**2. Real ball says right.** ADR-0014 tier 1 (real half-court basketball): a
+right-handed player receives and carries the ball in the right hand, and their
+crossover runs right-to-left. Left-as-default modelled a left-handed player by
+accident.
+
+### What it costs, accepted deliberately
+
+Flipping the default **inverts which physical stick flick produces a crossover
+versus a hesitation, for the first possession of a game** — until the player
+crosses over once, after which `HandSide` is driven by play rather than by the
+default.
+
+This is not a regression; it is this ADR's model working as specified.
+`HandStateResolver.IsCrossover` is defined *relative to the hand holding the
+ball* ("flick toward the empty hand → crossover"), so the starting hand and the
+starting crossover direction cannot be chosen independently. Changing one
+changes the other, necessarily.
+
+Measured blast radius (full sweep, clean baseline of 1130 xUnit + 122 integration
++ 8 dual-instance, zero pre-existing red): **29 newly red integration scenarios,
+0 crashes, 0 xUnit failures.** The xUnit suite is immune because it passes
+`HandSide` explicitly to the pure resolvers rather than relying on the default.
+Of the 29, roughly 18 hardcoded the literal `HandSide.Left` as "the starting
+hand" and are stale constants; roughly 11 drive a fixed right-stick direction and
+genuinely change which move they produce — the clearest being the mirror pair
+`InAndOutTest::quick-return-empty-hand` (expected InAndOut, got hesitation) and
+`quick-return-ball-hand` (expected Hesitation, got InAndOut), a complete
+truth-table inversion rather than an isolated failure.
+
+Those 11 are repaired by flipping the **input direction** they drive, never the
+expected move — the design contract ("toward the empty hand crosses over") is
+what the tests exist to pin, and it is unchanged by this amendment.
+
+Human ruling 2026-07-28: proceed, with the input-direction consequence understood
+and accepted.
+
+### What this does NOT fix
+
+Only the *fresh possession* case. After a crossover, `HandSide` is Left and the
+single right-handed clip is wrong again — the ball renders on the correct side
+per this ADR, and the animation does not follow it. The real fix is a genuine
+left-hand dribble source plus a `DribbleLeft`/`DribbleRight` state split, which
+would make this default cosmetically irrelevant (both polarities would render
+correctly). This amendment is the honest interim, not the destination; the
+residual case is tracked and its harness scenarios stay red on purpose rather
+than being weakened to pass.
+
+A programmatic mirror of the existing clip is **not** an acceptable substitute:
+`tools/rebuild_crossover_clips.gd` records why the naive L↔R bone-swap plus axis
+negation is mathematically wrong, and #280 rejected it.

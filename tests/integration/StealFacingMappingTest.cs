@@ -42,18 +42,22 @@ namespace HOOPERGAME.Tests.Integration;
 // BeginStealFromAimForHarness's call into HandStateResolver.TargetHandFromAim.
 //
 // ── The two scenarios ───────────────────────────────────────────────────────
+// (Signs below reflect ADR-0012's 2026-07-28 amendment: the possession-reset
+// default hand moved from Left to Right. TargetHandFromAim's geometry is
+// unaffected by that change — it never reads HandSide — but which literal
+// aimSign resolves to the holder's actual hand moved with the default.)
 // face-to-face: defender Heading = π, holder Heading = 0 (holder's default) —
 //   ~180° relative, the exact repro geometry from #254's dual-instance session.
-//   Holder's ball stays on the spawn-default HandSide.Left. aimSign = +1
-//   (aim-right, the defender's own body-right) is chosen so the OLD naive
-//   mapping (`aim.X > 0 ? Right : Left`) would resolve Right — WRONG, since
-//   the ball is on Left, so the pre-fix code would whiff here. The FIX
-//   (cos(defenderHeading - holderHeading) = cos(π) = -1) flips it to Left —
+//   Holder's ball stays on the spawn-default HandSide.Right. aimSign = -1
+//   (aim-left, the defender's own body-left) is chosen so the OLD naive
+//   mapping (`aim.X > 0 ? Right : Left`) would resolve Left — WRONG, since
+//   the ball is on Right, so the pre-fix code would whiff here. The FIX
+//   (cos(defenderHeading - holderHeading) = cos(π) = -1) flips it to Right —
 //   CORRECT, so the steal must succeed. This is the actual regression
 //   discriminator: a reverted/naive mapping fails this scenario RED.
 // side-by-side: defender and holder both sit at the spawn-default Heading 0 —
-//   ~0° relative, the "no inversion" control. aimSign = -1 (aim-left) is
-//   chosen to match the actual Left hand under the UNCHANGED naive mapping —
+//   ~0° relative, the "no inversion" control. aimSign = +1 (aim-right) is
+//   chosen to match the actual Right hand under the UNCHANGED naive mapping —
 //   proving the fix is a no-op at 0° relative, exactly the requirement that
 //   rules out a blanket unconditional inversion (which would flip this
 //   control's result too, and fail it).
@@ -143,7 +147,23 @@ public partial class StealFacingMappingTest : Node
             // of why each value discriminates the fix from the bug/a blanket
             // flip. TargetHand is DERIVED here, not hand-picked — the point
             // of this harness (issue #254's "required harness coverage").
-            float aimSign = _scenario == "face-to-face" ? +1f : -1f;
+            //
+            // Signs flipped from this test's original values (ADR-0012's
+            // 2026-07-28 amendment moved the possession-reset default hand
+            // from Left to Right; TargetHandFromAim's geometry itself is
+            // unchanged — it never reads HandSide at all — but which literal
+            // aimSign resolves to the holder's NOW-actual hand flipped along
+            // with the default). face-to-face: aimSign=-1 (aim-left, the
+            // defender's own body-left) at 180 degrees relative
+            // (cos(pi)=-1) resolves to (-1)*(-1)=+1>0 -> Right, matching the
+            // holder's actual (new default) Right hand — the OLD naive
+            // mapping (no facing transform) would read aim.X<0 -> Left,
+            // WRONG, so the pre-fix code would still whiff here exactly as
+            // before. side-by-side: aimSign=+1 (aim-right) at 0 degrees
+            // relative (cos(0)=+1) resolves to (+1)*(+1)=+1>0 -> Right,
+            // matching the unchanged naive mapping too (the "no inversion"
+            // control).
+            float aimSign = _scenario == "face-to-face" ? -1f : +1f;
             bool begun = _defender.BeginStealFromAimForHarness(aimSign, _ball);
             _stealBegun = true;
             if (!begun)

@@ -137,16 +137,19 @@ public partial class InAndOutTest : Node
 
     // ═══════════════════════════════════════════════════════════════════════
     // Scenario: "quick-return-empty-hand" (AC-1 + control)
-    // Flick toward the EMPTY hand (default HandSide.Left -> aim_right),
-    // released to deadzone WITHIN the recognizer's window -> InAndOut begins.
-    // Control: the SAME flick HELD past the window -> Crossover begins.
+    // Flick toward the EMPTY hand (default HandSide.Right -> aim_left;
+    // ADR-0012's 2026-07-28 amendment moved the possession-reset default from
+    // Left, which flips which physical stick direction points at the empty
+    // hand — see that ADR's amendment section), released to deadzone WITHIN
+    // the recognizer's window -> InAndOut begins. Control: the SAME flick
+    // HELD past the window -> Crossover begins.
     // ═══════════════════════════════════════════════════════════════════════
     private void TickQuickReturnEmptyHand()
     {
         switch (_step)
         {
             case Step.Start:
-                Input.ActionPress("aim_right", 1.0f); // flickSign +1: empty hand (HandSide.Left default)
+                Input.ActionPress("aim_left", 1.0f); // flickSign -1: empty hand (HandSide.Right default)
                 _flickStartFrame = _frame;
                 _step = Step.FlickStarted;
                 return;
@@ -156,7 +159,7 @@ public partial class InAndOutTest : Node
                 // one tick above threshold is enough to start timing, then back
                 // to the deadzone commits the "quick" gesture.
                 if (_frame == _flickStartFrame + 1)
-                    Input.ActionRelease("aim_right");
+                    Input.ActionRelease("aim_left");
                 if (_p1.CurrentMoveIdForHarness == "inandout")
                 {
                     GD.Print($"[in-and-out] PASS quick-return-empty-hand — real gesture input began InAndOut at frame {_frame}.");
@@ -176,14 +179,14 @@ public partial class InAndOutTest : Node
                 // Control: the SAME flick, HELD past the window, must begin a
                 // Crossover instead — proving the retarget is a QUICK-RETURN-
                 // specific effect, not a change to what the hold gesture does.
-                Input.ActionPress("aim_right", 1.0f);
+                Input.ActionPress("aim_left", 1.0f);
                 _flickStartFrame = _frame;
                 _step = Step.HeldFlickStarted;
                 return;
 
             case Step.HeldFlickStarted:
                 if (_frame == _flickStartFrame + FlickHoldTicks)
-                    Input.ActionRelease("aim_right");
+                    Input.ActionRelease("aim_left");
                 if (_p1.CurrentMoveIdForHarness == "crossover")
                 {
                     GD.Print("[in-and-out] PASS control — the SAME flick HELD past the window begins a Crossover.");
@@ -201,7 +204,10 @@ public partial class InAndOutTest : Node
 
     // ═══════════════════════════════════════════════════════════════════════
     // Scenario: "quick-return-ball-hand" (AC-8 + control)
-    // Flick toward the BALL hand (default HandSide.Left -> aim_left), quick
+    // Flick toward the BALL hand (default HandSide.Right -> aim_right;
+    // ADR-0012's 2026-07-28 amendment moved the possession-reset default from
+    // Left, which flips which physical stick direction points at the ball
+    // hand — the mirror image of quick-return-empty-hand's flip), quick
     // return -> Hesitation, IDENTICAL to the held gesture (the control).
     // ═══════════════════════════════════════════════════════════════════════
     private void TickQuickReturnBallHand()
@@ -209,14 +215,14 @@ public partial class InAndOutTest : Node
         switch (_step)
         {
             case Step.Start:
-                Input.ActionPress("aim_left", 1.0f); // flickSign -1: ball hand (HandSide.Left default)
+                Input.ActionPress("aim_right", 1.0f); // flickSign +1: ball hand (HandSide.Right default)
                 _flickStartFrame = _frame;
                 _step = Step.FlickStarted;
                 return;
 
             case Step.FlickStarted:
                 if (_frame == _flickStartFrame + 1)
-                    Input.ActionRelease("aim_left");
+                    Input.ActionRelease("aim_right");
                 if (_p1.CurrentMoveIdForHarness == "hesitation")
                 {
                     GD.Print($"[in-and-out] PASS quick-return-ball-hand — real gesture input began Hesitation at frame {_frame}.");
@@ -235,14 +241,14 @@ public partial class InAndOutTest : Node
                 // Control: the SAME flick HELD past the window must ALSO begin
                 // a Hesitation (AC-8) — flick direction picks the family; hold
                 // duration only disambiguates the empty-hand column.
-                Input.ActionPress("aim_left", 1.0f);
+                Input.ActionPress("aim_right", 1.0f);
                 _flickStartFrame = _frame;
                 _step = Step.HeldFlickStarted;
                 return;
 
             case Step.HeldFlickStarted:
                 if (_frame == _flickStartFrame + FlickHoldTicks)
-                    Input.ActionRelease("aim_left");
+                    Input.ActionRelease("aim_right");
                 if (_p1.CurrentMoveIdForHarness == "hesitation")
                 {
                     GD.Print("[in-and-out] PASS control — the SAME flick HELD past the window ALSO begins a Hesitation.");
@@ -674,11 +680,14 @@ public partial class InAndOutTest : Node
     // headless cannot exercise (see RequestMoveForHarness/
     // LayupRangeHarnessSeam's identical rationale).
     // ═══════════════════════════════════════════════════════════════════════
+    private HandSide _handSideBeforeReconstruct;
+
     private void TickReconstruct()
     {
         switch (_step)
         {
             case Step.Start:
+                _handSideBeforeReconstruct = _p1.HandSide;
                 _p1.RequestMoveForHarness("inandout", 1f);
                 if (_p1.CurrentMoveIdForHarness != "inandout")
                 {
@@ -709,13 +718,13 @@ public partial class InAndOutTest : Node
 
             case Step.AwaitLifecycleDone:
                 if (_p1.PhaseForHarness != MovePhase.Inactive) return;
-                if (_p1.HandSide != HandSide.Left)
+                if (_p1.HandSide != _handSideBeforeReconstruct)
                 {
-                    Fail($"reconstruct: expected HandSide to stay Left (InAndOut never swaps, AC-2) after a reconstructed lifecycle; got {_p1.HandSide}.");
+                    Fail($"reconstruct: expected HandSide to stay {_handSideBeforeReconstruct} (InAndOut never swaps, AC-2) after a reconstructed lifecycle; got {_p1.HandSide}.");
                     Finish();
                     return;
                 }
-                GD.Print("[in-and-out] PASS reconstruct-lifecycle — the reconstructed InAndOut ran to Inactive with HandSide untouched.");
+                GD.Print($"[in-and-out] PASS reconstruct-lifecycle — the reconstructed InAndOut ran to Inactive with HandSide untouched ({_handSideBeforeReconstruct}).");
                 GD.Print("[in-and-out] RESULT: PASS (exit 0)");
                 Finish(0);
                 return;

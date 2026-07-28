@@ -151,14 +151,14 @@ public partial class MovingCrossoverTest : Node
         {
             _flickStarted = true;
             _flickStartFrame = _frame;
-            Input.ActionPress("aim_right", 1.0f); // triggers a right-stick flick, +1 (crossover vs HandSide.Left default)
-            GD.Print($"[moving-crossover] frame {_frame}: speed={_player.Velocity.Length():F2} m/s, pressed aim_right");
+            Input.ActionPress("aim_left", 1.0f); // triggers a right-stick flick, -1 (crossover vs HandSide.Right default, ADR-0012's 2026-07-28 amendment)
+            GD.Print($"[moving-crossover] frame {_frame}: speed={_player.Velocity.Length():F2} m/s, pressed aim_left");
         }
 
         if (_flickStarted && _frame == _flickStartFrame + FlickHoldTicks)
         {
-            Input.ActionRelease("aim_right");
-            GD.Print($"[moving-crossover] frame {_frame}: released aim_right (crossover should have committed)");
+            Input.ActionRelease("aim_left");
+            GD.Print($"[moving-crossover] frame {_frame}: released aim_left (crossover should have committed)");
         }
 
         // Release the left stick to neutral once Startup is confirmed
@@ -219,14 +219,14 @@ public partial class MovingCrossoverTest : Node
         {
             _flickStarted = true;
             _flickStartFrame = _frame;
-            Input.ActionPress("aim_right", 1.0f);
-            GD.Print($"[moving-crossover] frame {_frame}: pressed aim_right (player stationary)");
+            Input.ActionPress("aim_left", 1.0f); // flickSign -1: empty hand (HandSide.Right default, ADR-0012's 2026-07-28 amendment)
+            GD.Print($"[moving-crossover] frame {_frame}: pressed aim_left (player stationary)");
         }
 
         if (_flickStarted && _frame == _flickStartFrame + FlickHoldTicks)
         {
-            Input.ActionRelease("aim_right");
-            GD.Print($"[moving-crossover] frame {_frame}: released aim_right (crossover should have committed)");
+            Input.ActionRelease("aim_left");
+            GD.Print($"[moving-crossover] frame {_frame}: released aim_left (crossover should have committed)");
         }
 
         var (phase, _) = _player.DisplayMove();
@@ -397,17 +397,18 @@ public partial class MovingCrossoverTest : Node
         {
             _flickStarted = true;
             _flickStartFrame = _frame;
-            // aim_left (flickSign -1) flicks TOWARD the ball hand (default
-            // HandSide.Left), which HandStateResolver.IsCrossover classifies
-            // as a Hesitation, not a Crossover — see that class's truth table.
-            Input.ActionPress("aim_left", 1.0f);
-            GD.Print($"[moving-crossover] frame {_frame}: speed={_player.Velocity.Length():F2} m/s, pressed aim_left (hesitation)");
+            // aim_right (flickSign +1) flicks TOWARD the ball hand (default
+            // HandSide.Right, ADR-0012's 2026-07-28 amendment), which
+            // HandStateResolver.IsCrossover classifies as a Hesitation, not a
+            // Crossover — see that class's truth table.
+            Input.ActionPress("aim_right", 1.0f);
+            GD.Print($"[moving-crossover] frame {_frame}: speed={_player.Velocity.Length():F2} m/s, pressed aim_right (hesitation)");
         }
 
         if (_flickStarted && _frame == _flickStartFrame + FlickHoldTicks)
         {
-            Input.ActionRelease("aim_left");
-            GD.Print($"[moving-crossover] frame {_frame}: released aim_left (hesitation should have committed)");
+            Input.ActionRelease("aim_right");
+            GD.Print($"[moving-crossover] frame {_frame}: released aim_right (hesitation should have committed)");
         }
 
         var (phase, _) = _player.DisplayMove();

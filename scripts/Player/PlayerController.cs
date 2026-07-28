@@ -614,7 +614,7 @@ public partial class PlayerController : CharacterBody3D
 	/// (BallController.UpdateHandSide). Broadcast on ReceiveState like Heading;
 	/// the ball mesh's left/right offset READS it (BallController.HandSign).
 	/// </summary>
-	public HandSide HandSide { get; private set; } = HandSide.Left;
+	public HandSide HandSide { get; private set; } = HandSide.Right;
 
 	/// <summary>
 	/// Authoritative ball-hand from the latest server broadcast. Used for the
@@ -623,7 +623,7 @@ public partial class PlayerController : CharacterBody3D
 	/// reverted on reconcile (ReconcileFromServer's force-Inactive branch). It is
 	/// deliberately NOT snapped every tick — see that branch's comment.
 	/// </summary>
-	private HandSide _serverHandSide = HandSide.Left;
+	private HandSide _serverHandSide = HandSide.Right;
 
 	/// <summary>
 	/// Resets the authoritative hand to the default (Left). Called by
@@ -633,7 +633,7 @@ public partial class PlayerController : CharacterBody3D
 	/// the broadcast value. Left is simply *a* deterministic default every peer
 	/// agrees on (issue #73); nothing downstream depends on which side it is.
 	/// </summary>
-	public void ResetHandSide() => HandSide = HandSide.Left;
+	public void ResetHandSide() => HandSide = HandSide.Right;
 
 	// ── Committed-move state (M3, local-only) ─────────────────────────────────
 

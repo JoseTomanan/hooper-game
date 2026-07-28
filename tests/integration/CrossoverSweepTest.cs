@@ -403,13 +403,13 @@ public partial class CrossoverSweepTest : Node
                 if (_frame < _resetObserveDeadlineFrame) break;
 
                 PlayerController newHolder = NodeForPeer(_resetOtherId);
-                if (newHolder.HandSide != HandSide.Left)
+                if (newHolder.HandSide != HandSide.Right)
                 {
-                    Fail($"expected the fresh possession's holder to reset to HandSide.Left; got {newHolder.HandSide}.");
+                    Fail($"expected the fresh possession's holder to reset to HandSide.Right; got {newHolder.HandSide}.");
                     Finish();
                     return;
                 }
-                GD.Print("[crossover-sweep] PASS possession-change-no-sweep — hand reset to Left with SweepActiveForHarness false throughout.");
+                GD.Print("[crossover-sweep] PASS possession-change-no-sweep — hand reset to Right with SweepActiveForHarness false throughout.");
                 GD.Print("[crossover-sweep] RESULT: PASS (exit 0)");
                 Finish(0);
                 return;

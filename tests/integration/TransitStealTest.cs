@@ -136,6 +136,7 @@ public partial class TransitStealTest : Node
     private bool _everLoose;
     private int _toucherAtSteal = -1;
     private HandSide? _holderHandAtSteal;
+    private HandSide _holderStartingHand;
 
     public override void _Ready()
     {
@@ -166,6 +167,12 @@ public partial class TransitStealTest : Node
         _ball.StateMachine.StartDribble();
 
         _holder.GlobalPosition = Vector3.Zero;
+        // Captured once, before any sweep move flips it — the holder's
+        // STARTING hand, whatever the current possession-reset default is
+        // (ADR-0012's 2026-07-28 amendment moved it from Left to Right).
+        // Reading it live rather than hardcoding the literal means this
+        // schedule survives any future default change.
+        _holderStartingHand = _holder.HandSide;
 
         switch (_scenario)
         {
@@ -351,16 +358,16 @@ public partial class TransitStealTest : Node
 
         if (!_stealBegun && _frame == _stealBeginFrame)
         {
-            // TargetHand.Left is the holder's STARTING hand (HandSide
-            // defaults Left). For every sweep-move scenario this is
-            // deliberately the OLD hand — the sweep move flips
-            // holder.HandSide to Right several ticks before this steal's
-            // Active window even opens (see class doc), so the normal
+            // _holderStartingHand is the holder's STARTING hand, captured live
+            // in _Ready before any move ran. For every sweep-move scenario
+            // this is deliberately the OLD hand — the sweep move flips
+            // holder.HandSide to the OPPOSITE hand several ticks before this
+            // steal's Active window even opens (see class doc), so the normal
             // window's side axis is guaranteed to fail for the WHOLE Active
             // window regardless of dribble phase. For normal-window-unchanged
-            // there is no sweep move at all, so Left stays correct
-            // throughout — the union's window (a) branch.
-            bool began = _defender.BeginMoveForHarness(new StealMove(HandSide.Left));
+            // there is no sweep move at all, so the starting hand stays
+            // correct throughout — the union's window (a) branch.
+            bool began = _defender.BeginMoveForHarness(new StealMove(_holderStartingHand));
             _stealBegun = true;
             if (!began)
             {
@@ -414,12 +421,16 @@ public partial class TransitStealTest : Node
         {
             // The steal MUST connect (defender is peer "2"), and — the
             // headline claim — it must have connected while the holder's
-            // authoritative HandSide already reported the NEW hand
-            // (Right), even though the defender targeted the OLD hand
-            // (Left). That combination is only possible via the transit
-            // window; the normal window's hand axis would have refused
-            // every tick of this run.
-            pass = _everLoose && _toucherAtSteal == 2 && _holderHandAtSteal == HandSide.Right;
+            // authoritative HandSide already reported the NEW hand (the
+            // OPPOSITE of _holderStartingHand), even though the defender
+            // targeted the OLD hand (_holderStartingHand). That combination
+            // is only possible via the transit window; the normal window's
+            // hand axis would have refused every tick of this run. Derived
+            // from _holderStartingHand (not a hardcoded literal) so this
+            // survives any future possession-reset default change — see
+            // that field's own doc.
+            HandSide expectedNewHand = HandStateResolver.Opposite(_holderStartingHand);
+            pass = _everLoose && _toucherAtSteal == 2 && _holderHandAtSteal == expectedNewHand;
             detail = $"everLoose={_everLoose}, toucherAtSteal={_toucherAtSteal}, " +
                 $"holderHandAtSteal={_holderHandAtSteal}, finalState={_ball.State}";
         }
