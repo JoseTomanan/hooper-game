@@ -1169,6 +1169,31 @@ public partial class BallController : Node3D
 		StateMachine.GoLoose();
 	}
 
+	/// <summary>
+	/// Test-only: exposes <see cref="HandRight"/> — the SAME lateral-axis
+	/// formula TickDribbling/TickHeld fold the ball's HandOffset into — so a
+	/// harness can compute "which side is the ball's hand on" without
+	/// re-deriving the axis by hand. Re-deriving it independently is exactly
+	/// the failure class that shipped bug #255 (a hand-rolled mirror predicate
+	/// whose only controls were left/right-symmetric, so it passed green while
+	/// actually inverted): a second, slightly-different formula in test code
+	/// could disagree with production and never be caught by symmetric
+	/// scenarios. This is a thin passthrough, not a new implementation — one
+	/// source of truth for the lateral axis, read by both sides.
+	/// </summary>
+	internal static Vector3 HandRightForHarness(Vector3 forward) => HandRight(forward);
+
+	/// <summary>
+	/// Test-only: exposes <see cref="HolderForward"/> — the SAME
+	/// Heading-derived forward vector TickDribbling/TickHeld use to orient the
+	/// ball around the holder — for the same one-source-of-truth reason as
+	/// <see cref="HandRightForHarness"/> immediately above (#255). A harness
+	/// needing "which lateral axis is the ball's offset measured against"
+	/// must derive it from the SAME forward this class actually ticks with,
+	/// not an independently-reasoned one.
+	/// </summary>
+	internal static Vector3 HolderForwardForHarness(PlayerController holder) => HolderForward(holder);
+
 	// ── Shot scatter RNG (issue #62, ADR-0009) ─────────────────────────────
 
 	/// <summary>
