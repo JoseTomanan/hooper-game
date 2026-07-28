@@ -46,10 +46,24 @@ namespace Hooper.Player;
 ///       `xfade_time` unset (Godot default 0 -- verified by reading every
 ///       AnimationNodeStateMachineTransition sub_resource in the .tscn: none
 ///       sets xfade_time), so state-to-state switches (Locomotion/Startup/
-///       Active/Recovery/Pivot/FadeawayActive) are hard cuts, never a blend —
-///       the Locomotion BlendSpace1D (idle&lt;-&gt;run) is the ONLY
-///       multi-contribution blend surface in the whole tree. This fix
-///       therefore cannot expose any new partial-weight surface.
+///       Active/Recovery/Pivot/FadeawayActive) are hard cuts, never a blend.
+///       This fix therefore cannot expose any new partial-weight surface.
+///
+///       This clause used to end "-- the Locomotion BlendSpace1D
+///       (idle&lt;-&gt;run) is the ONLY multi-contribution blend surface in
+///       the whole tree." That has been STALE since #285, which added a
+///       second one: the Dribble BlendSpace1D
+///       (dribbleidle&lt;-&gt;dribblemove). Both UpLeg rests this node moves
+///       are contributed to by that surface too, and its two endpoints are
+///       stock-Mixamo clips whose pose family is NOT the (Kenney-retargeted)
+///       family the anchor moves the rest into — so those bones sit far from
+///       their own rest there. That was survivable while the two dribble
+///       endpoints were a short arc apart on the legs, and #298 has since
+///       widened that arc to ~88 deg by baking a real stride into
+///       dribblemove. LocomotionClipTest's #287 corridor sweep now runs over
+///       the Dribble surface as well as Locomotion (0/90 frames violated on
+///       both) and is the standing proof that this remains safe. Re-run it
+///       before trusting any change to either blendspace or to AnchoredBones.
 ///
 /// ── PlayerRigScaler ordering (scripts/Player/PlayerRigScaler.cs) ────────────
 /// RigScaler.CaptureBaseline() reads ONLY `GetBoneRest(i).Basis.Scale` for
