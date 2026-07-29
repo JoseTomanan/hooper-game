@@ -127,9 +127,15 @@ def main():
     # ---- 6. interp_channels holds absent channels instead of lerping to 0 ---
     # A limb that drifts toward the origin because one keypose omitted a channel
     # is a very easy authoring mistake to make and a hard one to see.
+    #
+    # Pinned to `ease_linear` DELIBERATELY. These three assertions are about
+    # interpolation semantics, not about the easing default, and the midpoint
+    # value only equals 2.0 under a curve that is symmetric at t=0.5. Left on
+    # the default, changing the default would fail this test for an entirely
+    # correct reason -- which reads as an interpolation bug and is not one.
     poses = [lib.Keypose(0.0, "a", fore=1.0, only_in_a=7.0),
              lib.Keypose(1.0, "b", fore=3.0)]
-    mid = lib.interp_channels(poses, 0.5)
+    mid = lib.interp_channels(poses, 0.5, easing=lib.ease_linear)
     check("interp_lerps_shared_channel", abs(mid["fore"] - 2.0) < 1e-9,
           f"expected 2.0 at the midpoint, got {mid.get('fore')}")
     check("interp_holds_absent_channel", mid.get("only_in_a") == 7.0,
@@ -138,6 +144,73 @@ def main():
     check("interp_clamps_outside_range",
           ends[0]["fore"] == 1.0 and ends[1]["fore"] == 3.0,
           f"expected endpoints held, got {ends[0]['fore']} / {ends[1]['fore']}")
+
+    # ---- 6b. the easing curves honour their contract and their direction ----
+    # f(0)=0 and f(1)=1 is the contract every curve must meet, or a keypose is
+    # not actually reached -- the pose the author wrote is not the pose baked.
+    for fn in (lib.ease_linear, lib.ease_in, lib.ease_out, lib.ease_in_out):
+        check(f"easing_endpoints_{fn.__name__}",
+              abs(fn(0.0)) < 1e-12 and abs(fn(1.0) - 1.0) < 1e-12,
+              f"{fn.__name__} does not map 0->0 and 1->1")
+
+    # Direction, not just shape: ease_in must lag linear (the load) and ease_out
+    # must lead it (the release). Endpoint VELOCITY is the property that actually
+    # distinguishes a snap from a glide, so measure it by finite difference
+    # rather than trusting the algebra.
+    h = 1e-6
+    v_in_arrive = (lib.ease_in(1.0) - lib.ease_in(1.0 - h)) / h
+    v_out_arrive = (lib.ease_out(1.0) - lib.ease_out(1.0 - h)) / h
+    check("ease_in_lags_linear", lib.ease_in(0.5) < 0.5 - 1e-9,
+          f"ease_in(0.5)={lib.ease_in(0.5)} should be below linear 0.5")
+    check("ease_out_leads_linear", lib.ease_out(0.5) > 0.5 + 1e-9,
+          f"ease_out(0.5)={lib.ease_out(0.5)} should be above linear 0.5")
+    check("ease_in_arrives_fast", v_in_arrive > 1.5,
+          f"ease_in arrival velocity {v_in_arrive:.4f} should exceed linear's 1.0")
+    check("ease_out_arrives_slow", v_out_arrive < 0.5,
+          f"ease_out arrival velocity {v_out_arrive:.4f} should settle toward 0")
+    lib.report("ease_in_arrival_velocity", f"{v_in_arrive:.4f}")
+    lib.report("ease_out_arrival_velocity", f"{v_out_arrive:.4f}")
+
+    # ---- 6c. PHASE_EASING resolution, with a non-symmetric control ----------
+    # The precedence chain, most specific first.
+    kp_startup = lib.Keypose(0.0, "Startup", fore=0.0)
+    kp_active = lib.Keypose(1.0, "Active", fore=1.0)
+    check("phase_easing_by_label",
+          lib.resolve_easing(kp_startup) is lib.ease_in
+          and lib.resolve_easing(kp_active) is lib.ease_out,
+          "Startup/Active labels did not resolve to ease_in/ease_out")
+    check("phase_easing_label_is_case_insensitive",
+          lib.resolve_easing(lib.Keypose(0.0, "STARTUP")) is lib.ease_in,
+          "label lookup should not depend on case")
+    check("phase_easing_unknown_label_falls_back",
+          lib.resolve_easing(lib.Keypose(0.0, "gait_cycle")) is lib.DEFAULT_EASING,
+          "an unknown label must behave as it did before PHASE_EASING existed")
+    check("phase_easing_keypose_override_wins",
+          lib.resolve_easing(lib.Keypose(0.0, "Startup", easing=lib.ease_linear))
+          is lib.ease_linear,
+          "an explicit per-keypose easing must beat the label default")
+    check("phase_easing_argument_overrides_all",
+          lib.resolve_easing(kp_startup, override=lib.ease_linear) is lib.ease_linear,
+          "the whole-timeline escape hatch must beat everything")
+
+    # THE CONTROL. Every check above would still pass if PHASE_EASING mapped
+    # startup and active to the SAME curve -- the curves themselves are correct
+    # and the lookups all succeed. Only an assertion that two differently
+    # labelled segments produce DIFFERENT baked values can catch that wiring
+    # mistake. Same lesson as the #255 mirror bug: a symmetric assertion cannot
+    # detect a symmetric error.
+    startup_mid = lib.interp_channels([kp_startup, kp_active], 0.5)["fore"]
+    active_mid = lib.interp_channels(
+        [lib.Keypose(0.0, "Active", fore=0.0),
+         lib.Keypose(1.0, "Recovery", fore=1.0)], 0.5)["fore"]
+    check("phase_easing_startup_differs_from_active",
+          abs(startup_mid - active_mid) > 0.1,
+          f"startup and active segments interpolated alike "
+          f"({startup_mid:.4f} vs {active_mid:.4f}) -- PHASE_EASING is miswired")
+    check("phase_easing_startup_loads_first", startup_mid < 0.5,
+          f"a Startup segment should lag at its midpoint, got {startup_mid:.4f}")
+    lib.report("startup_segment_midpoint", f"{startup_mid:.4f}")
+    lib.report("active_segment_midpoint", f"{active_mid:.4f}")
 
     # ---- 7. verify_pose_distinct actually FAILS on identical poses ----------
     # A gate that cannot fail is worse than no gate, so prove this one bites.

@@ -490,34 +490,120 @@ class Keypose:
 
     Channels are metre- and degree-denominated for readability; convert through
     `geom.m()` inside `apply`, never here.
+
+    `easing` shapes the segment from THIS keypose to the next one (Blender's
+    fcurve convention). Leave it None to take the label-driven default from
+    `PHASE_EASING` -- see the note above that mapping.
     """
 
-    def __init__(self, time_s, label, **channels):
+    def __init__(self, time_s, label, easing=None, **channels):
         self.time_s = time_s
         self.label = label
+        self.easing = easing
         self.channels = channels
 
     def __repr__(self):
         return f"Keypose({self.label!r} @ {self.time_s:.3f}s)"
 
 
-def ease(t):
-    """Shape the [0,1] progress between two adjacent keyposes.
+# ── easing: the legibility lever ─────────────────────────────────────────────
+# Each of these maps [0,1] -> [0,1] with f(0)=0 and f(1)=1. What differs is the
+# VELOCITY at the endpoints, and that is the whole legibility decision:
+#
+#   curve        v(0)  v(1)   reads as
+#   ease_in         0     2   a load, then a snap  -- weight gathers, then goes
+#   ease_out        2     0   a release, then a settle
+#   ease_in_out     0     0   a glide (smoothstep)
+#   ease_linear     1     1   mechanical, no weight
+#
+# Smoothstep everywhere is WRONG for a committed move, and specifically wrong on
+# the segment that carries the read. Arriving at the Active pose with zero
+# velocity means the body glides into its commitment and stops there -- which is
+# the visual signature of exactly what ADR-0003 names as the primary anti-goal
+# (arcade decoupling of action from physical commitment). Athletic movement is
+# asymmetric: load slow, release fast, decelerate through the recovery.
+#
+# Quadratic, not cubic, deliberately. These clips are 3-13 ticks long; at 30 fps
+# a 6-tick startup is six frames, so a more dramatic curve buys almost nothing
+# and risks reading as a stutter. Per README-blender.md the read comes from POSE
+# CONTRAST between phases, not from motion inside a phase -- the easing only has
+# to avoid fighting that, not carry it.
+def ease_linear(t):
+    """No shaping. For a channel that must move at constant rate."""
+    return t
 
-    Return 0 at t=0 and 1 at t=1; what happens in between is the legibility
-    decision. See the note in `interp_channels`.
-    """
-    # Smoothstep: ease in and out, zero velocity at both keyposes.
+
+def ease_in(t):
+    """Accelerate: leave the pose slowly, ARRIVE at peak velocity. Load-and-snap."""
+    return t * t
+
+
+def ease_out(t):
+    """Decelerate: LEAVE at peak velocity, settle into the pose. The follow-through."""
+    return t * (2.0 - t)
+
+
+def ease_in_out(t):
+    """Smoothstep: zero velocity at both ends. A glide -- right for cyclic motion."""
     return t * t * (3.0 - 2.0 * t)
 
 
-def interp_channels(keyposes, t_s, easing=ease):
+#: Segment easing chosen by the label of the keypose the segment STARTS from.
+#: This follows Blender's own graph-editor convention -- an fcurve keyframe's
+#: interpolation governs the interval to the NEXT key -- so it is the least
+#: surprising rule for anyone who has touched the fcurve editor.
+#:
+#: The three-phase Startup/Active/Recovery vocabulary is universal across the
+#: twenty clip handoffs (it is the tick table), so this mapping is resolved ONCE
+#: here rather than re-decided in twenty per-move specs -- the whole charter of
+#: #315. `bake_timeline` logs the resolved choice per segment, so a default that
+#: you can read in the run output is a default, not hidden magic.
+#:
+#:   startup  -> ease_in   the weight gathers, then goes: the tell, then the snap
+#:   active   -> ease_out  explode out of the commitment, decelerate into recovery
+#:   recovery -> smoothstep  a settle back toward neutral, if a later pose exists
+#:
+#: Unknown labels fall back to `DEFAULT_EASING`, so a non-three-phase timeline
+#: (a cyclic gait, a held idle) behaves exactly as it did before this mapping
+#: existed. Override per keypose with `Keypose(..., easing=...)`, or for the
+#: whole timeline by passing `easing=` to `bake_timeline`.
+PHASE_EASING = {
+    "startup": ease_in,
+    "active": ease_out,
+    "recovery": ease_in_out,
+}
+
+DEFAULT_EASING = ease_in_out
+
+#: Backwards-compatible alias: `ease` was the single smoothstep before the
+#: per-phase mapping existed. Kept so nothing silently changes meaning.
+ease = ease_in_out
+
+
+def resolve_easing(keypose, override=None):
+    """The easing for the segment starting at `keypose`.
+
+    Precedence, most specific first: an explicit `override` (whole-timeline
+    escape hatch) > the keypose's own `easing` > `PHASE_EASING` by label >
+    `DEFAULT_EASING`.
+    """
+    if override is not None:
+        return override
+    if getattr(keypose, "easing", None) is not None:
+        return keypose.easing
+    return PHASE_EASING.get(str(keypose.label).strip().lower(), DEFAULT_EASING)
+
+
+def interp_channels(keyposes, t_s, easing=None):
     """Channel values at `t_s`, interpolated between the bracketing keyposes.
 
     Holds the endpoints outside the timeline's range rather than extrapolating.
     A channel present in one keypose but absent from its neighbour is HELD at
     the value it has, not treated as zero -- silently lerping an absent channel
     toward 0 is a very easy way to author a limb that drifts to the origin.
+
+    `easing=None` resolves per segment via `resolve_easing`; pass a callable to
+    force one curve across the whole timeline.
     """
     if not keyposes:
         raise SystemExit("FATAL: empty keypose timeline")
@@ -530,7 +616,11 @@ def interp_channels(keyposes, t_s, easing=ease):
     for a, b in zip(ordered, ordered[1:]):
         if a.time_s <= t_s <= b.time_s:
             span = b.time_s - a.time_s
-            u = 0.0 if span <= 0.0 else easing((t_s - a.time_s) / span)
+            # The SEGMENT's easing comes from the keypose it starts at, so a
+            # three-phase move gets load-and-snap into Active and a settle out
+            # of it without the per-move spec restating that every time.
+            shape = resolve_easing(a, easing)
+            u = 0.0 if span <= 0.0 else shape((t_s - a.time_s) / span)
             out = {}
             for key in set(a.channels) | set(b.channels):
                 if key in a.channels and key in b.channels:
@@ -541,13 +631,23 @@ def interp_channels(keyposes, t_s, easing=ease):
     raise SystemExit(f"FATAL: t={t_s} fell through the keypose timeline")
 
 
-def bake_timeline(arm, keyposes, apply, f0, f1, fps, easing=ease):
+def bake_timeline(arm, keyposes, apply, f0, f1, fps, easing=None):
     """Walk frames `f0..f1`, interpolate the timeline, and let `apply` pose+key.
 
     `apply(frame, t_s, channels)` is the move's own spec. It is called with the
     scene already on `frame`, so it can read the source clip's pose for that
     frame and compose onto it.
+
+    Logs the easing resolved for each segment. That log line is what keeps the
+    label-driven `PHASE_EASING` default honest: a wrong curve shows up as a
+    readable line in the authoring run rather than as a clip that feels off.
     """
+    ordered = sorted(keyposes, key=lambda k: k.time_s)
+    for a, b in zip(ordered, ordered[1:]):
+        log(f"segment {a.label!r} -> {b.label!r} "
+            f"({a.time_s:.3f}s..{b.time_s:.3f}s): "
+            f"easing={resolve_easing(a, easing).__name__}")
+
     scene = bpy.context.scene
     for i, f in enumerate(range(f0, f1 + 1)):
         scene.frame_set(f)

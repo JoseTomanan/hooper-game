@@ -158,6 +158,42 @@ Concretely: **Startup and Recovery must never be the same pose.** That identity
 is the defect #296 reports, and `verify_pose_distinct` exists to make it
 impossible rather than something a reviewer has to catch by eye.
 
+## Easing is chosen for you, per phase
+
+You do not pick an easing curve per move. `PHASE_EASING` maps the keypose
+**label** to the curve for the segment starting at it — Blender's own fcurve
+convention, where a keyframe's interpolation governs the interval to the *next*
+key. Label your keyposes `Startup` / `Active` / `Recovery` (case-insensitive) and
+the right curve is applied:
+
+| Segment | Curve | Endpoint velocity | Reads as |
+|---|---|---|---|
+| `Startup` → `Active` | `ease_in` | 0 → 2 | the weight gathers, then goes |
+| `Active` → `Recovery` | `ease_out` | 2 → 0 | explode out, decelerate |
+| `Recovery` → anything | `ease_in_out` | 0 → 0 | a settle back toward neutral |
+
+**Why not smoothstep everywhere.** Smoothstep has zero velocity at *both* ends,
+so the body would glide into the Active pose and arrive at rest. That is the
+visual signature of what [ADR-0003](../docs/adr/0003-input-model-hybrid.md) names
+as the primary anti-goal — arcade decoupling of action from physical commitment.
+The Active frame is the commitment; arriving at it decelerating undoes the read.
+Athletic movement is asymmetric: load slow, release fast, settle.
+
+The curves are quadratic rather than cubic on purpose. A 6-tick startup is six
+frames at 30 fps, so a more dramatic curve buys almost nothing and risks reading
+as a stutter — and per the section above, the read comes from pose contrast
+*between* phases anyway. The easing only has to avoid fighting that.
+
+Overriding, most specific first: `Keypose(..., easing=ease_linear)` for one
+segment, `bake_timeline(..., easing=...)` for a whole timeline (the cyclic-gait
+case — an unrecognised label already falls back to `ease_in_out`, so a gait
+authorer is unaffected). `bake_timeline` **logs the resolved curve per segment**,
+so check the authoring output rather than guessing:
+
+```
+[author] segment 'Startup' -> 'Active' (0.000s..0.200s): easing=ease_in
+```
+
 ## Reach budgets (measured on the Y Bot rig)
 
 | Chain | Length |
