@@ -46,6 +46,12 @@ assets/raw/
 docs/handoffs/*
 !docs/handoffs/README.md
 
+# Python bytecode. `tools/*.py` became importable in #315 (the authoring scripts
+# now share `blender_anim_lib`), so Blender's embedded CPython writes a
+# __pycache__ next to them on every authoring run.
+__pycache__/
+*.py[cod]
+
 # IDE / OS
 .vs/
 .vscode/
