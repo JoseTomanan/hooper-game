@@ -1090,6 +1090,23 @@ jobs:
       # state pointing at a real-but-wrong clip (locomotion/crossoveractive
       # left), which a blocklist waves through and which no reachability
       # assertion can see either, the STATE name being correct in that case.
+      #
+      # 'btb-poses-the-skeleton' closes the gap all the others share. Every
+      # scenario above is upstream of the thing that actually matters: they
+      # assert reachability, duration and the state->clip mapping, none of
+      # which requires the clip's tracks to BIND. All seven passed green while
+      # the six clips carried track paths of the form
+      # "Armature/Skeleton3D:mixamorig_Hips" — one level deeper than the rig,
+      # whose skeleton sits at "Skeleton3D" — so every track bound to nothing
+      # and the clips were silent no-ops. Godot logs "couldn't resolve track"
+      # (2376 times) and carries on; it does not fail. This scenario reads the
+      # live Skeleton3D and asserts the upper body is still posed off rest on
+      # the LAST behind-the-back tick. Both halves matter and both came from
+      # mutation rather than taste: against deliberately-corrupted clips, "max
+      # departure from rest" and "max change across the arc" BOTH passed (110
+      # deg vs 179 working — the Y Bot rest is a T-pose, and an unbound clip's
+      # collapse to rest is itself a large change), while the final-tick
+      # reading separates cleanly at 0.0 deg inert vs 179 deg bound.
       # Each exits 0=PASS/1=FAIL (ADR-0016).
       - name: Run behind-the-back hand-side animation state harness
         run: |
@@ -1100,6 +1117,7 @@ jobs:
           godot --headless --path . res://tests/integration/BehindTheBackAnimTest.tscn -- --harness-scenario=control-unsuffixed-probe
           godot --headless --path . res://tests/integration/BehindTheBackAnimTest.tscn -- --harness-scenario=btb-segment-lengths
           godot --headless --path . res://tests/integration/BehindTheBackAnimTest.tscn -- --harness-scenario=btb-no-placeholder-leak
+          godot --headless --path . res://tests/integration/BehindTheBackAnimTest.tscn -- --harness-scenario=btb-poses-the-skeleton
 
       # Moving crossover — momentum-aware burst with left-stick exit (issue
       # #198, ADR-0003 amendment). CrossoverBurstMathTests already pin the

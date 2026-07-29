@@ -33,6 +33,7 @@ namespace HOOPERGAME.Tests.Integration;
 //   godot --headless --path . res://tests/integration/BehindTheBackAnimTest.tscn -- --harness-scenario=control-unsuffixed-probe
 //   godot --headless --path . res://tests/integration/BehindTheBackAnimTest.tscn -- --harness-scenario=btb-segment-lengths
 //   godot --headless --path . res://tests/integration/BehindTheBackAnimTest.tscn -- --harness-scenario=btb-no-placeholder-leak
+//   godot --headless --path . res://tests/integration/BehindTheBackAnimTest.tscn -- --harness-scenario=btb-poses-the-skeleton
 //   Exit: 0 = PASS, 1 = FAIL (via GetTree().Quit) — the ADR-0016 exit-code contract.
 //   Omitting --harness-scenario defaults to "btb-left-origin".
 //
@@ -114,11 +115,23 @@ namespace HOOPERGAME.Tests.Integration;
 // _Ready() setup below still instantiates them for symmetry with the other
 // five scenarios, but they sit idle for these two.
 //
+// ── Why btb-poses-the-skeleton exists ────────────────────────────────────
+// Because every OTHER scenario here is upstream of the thing that matters.
+// Reachability, duration and the state->clip mapping all hold perfectly well
+// for a clip whose tracks bind to NOTHING: the seven scenarios above were all
+// green while the six clips carried "Armature/Skeleton3D:mixamorig_Hips"
+// paths — one level deeper than this rig, whose skeleton is at "Skeleton3D" —
+// so the clips were silent no-ops and the mesh never moved. Godot logs
+// "couldn't resolve track" and carries on. See that scenario's own comment for
+// why the naive metrics (departure-from-rest, change-across-the-arc) both
+// FAILED to catch it under mutation, and why the final-tick reading does.
+//
 // ── What this harness CANNOT prove ───────────────────────────────────────
 // Whether either clip LOOKS right (correct limbs, no foot-sliding, reads as
 // "behind the back") is #173's deferred human feel judgment (ADR-0021) —
-// this harness only asserts state-machine reachability, suffix consistency,
-// clip duration, and the absence of the #296 placeholder, never clip content.
+// this harness asserts state-machine reachability, suffix consistency, clip
+// duration, the absence of the #296 placeholder, and that the clip physically
+// drives the rig; never whether the resulting pose is any good.
 public partial class BehindTheBackAnimTest : Node
 {
     private const double TimeoutSeconds = 15.0;
@@ -132,7 +145,26 @@ public partial class BehindTheBackAnimTest : Node
         "btb-left-origin", "btb-right-origin", "btb-single-polarity",
         "no-unsuffixed-btb-state", "control-unsuffixed-probe",
         "btb-segment-lengths", "btb-no-placeholder-leak",
+        "btb-poses-the-skeleton",
     };
+
+    // Upper-body bones the wrap must visibly move. Deliberately NOT the legs:
+    // the source clip's own crouch already moves those, so a leg-only check
+    // would pass on a clip that never touched the arms at all.
+    private static readonly string[] UpperBodyBones =
+    {
+        "mixamorig_LeftArm", "mixamorig_RightArm",
+        "mixamorig_LeftForeArm", "mixamorig_RightForeArm",
+        "mixamorig_Spine",
+    };
+
+    // Degrees the upper body must still sit off REST on the final
+    // behind-the-back tick. Set from the measured separation, not by taste: an
+    // unbound clip reads ~0 deg there (the bones have collapsed to rest) and a
+    // bound one reads ~179 deg, so 30 sits in the empty middle with an order of
+    // magnitude of headroom on both sides. It pins no particular pose — which
+    // pose is right is #173's deferred feel call, not this harness's business.
+    private const float PosedMinDeg = 30.0f;
 
     // The two scenarios that need no tipoff/dribble/move setup at all — pure
     // resource/scene inspection, run once and finished.
@@ -176,6 +208,11 @@ public partial class BehindTheBackAnimTest : Node
     // Shared field: only one scenario runs per process invocation, so no
     // cross-talk. Set at event time the tick the probed node is observed.
     private bool _sawProbeTargetNode;
+
+    // ── Observation for btb-poses-the-skeleton ──────────────────────────────
+    // Largest upper-body departure from rest seen on any tick a behind-the-back
+    // state was the tree's active node.
+    private float _worstPosedDeg;
 
     // Gate for "the move genuinely ran" (real-move scenarios only): only once
     // the Active phase has actually been observed does a later return to
@@ -377,6 +414,21 @@ public partial class BehindTheBackAnimTest : Node
                 }
                 break;
 
+            case "btb-poses-the-skeleton":
+                // Latched at event time, on every tick a behind-the-back state
+                // is the ACTIVE node -- sampling afterwards would read whatever
+                // the tree settled back into.
+                if (node.StartsWith("BehindTheBack"))
+                {
+                    _sawAnyBtbState = true;
+                    // OVERWRITE, not Max: the verdict wants the departure on
+                    // the LAST behind-the-back tick, not the largest seen. See
+                    // UpperBodyDepartureFromRest for why the max is the one
+                    // number here that cannot discriminate.
+                    _worstPosedDeg = UpperBodyDepartureFromRest(holder);
+                }
+                break;
+
             case "no-unsuffixed-btb-state":
                 if (node == "BehindTheBackActive") _sawProbeTargetNode = true;
                 break;
@@ -397,6 +449,7 @@ public partial class BehindTheBackAnimTest : Node
             case "btb-left-origin":          VerdictOrigin("Left"); break;
             case "btb-right-origin":         VerdictOrigin("Right"); break;
             case "btb-single-polarity":      VerdictSinglePolarity(); break;
+            case "btb-poses-the-skeleton":   VerdictPosesTheSkeleton(); break;
             case "no-unsuffixed-btb-state":  VerdictProbeUnsuffixed(); break;
             case "control-unsuffixed-probe": VerdictProbeControl(); break;
         }
@@ -446,6 +499,103 @@ public partial class BehindTheBackAnimTest : Node
                  $"distinctSuffixes=[{string.Join(",", suffixes)}]. If the premise broke, this proves nothing, " +
                  "so this fails rather than passes.");
         Finish(pass ? 0 : 1);
+    }
+
+    // ── Scenario: btb-poses-the-skeleton ────────────────────────────────────
+    // The gap every other scenario in this file leaves open. All seven of them
+    // passed green while all six clips were built with track paths of the form
+    // "Armature/Skeleton3D:mixamorig_Hips" -- one level deeper than
+    // scenes/Player.tscn's rig, whose skeleton sits at "Skeleton3D". Every
+    // track bound to nothing, so the clips were silent no-ops: the state
+    // machine still entered the right state, the durations still matched, the
+    // state->clip mapping was still correct, and the mesh never moved. Godot
+    // logs "couldn't resolve track" and carries on; it does not fail.
+    //
+    // Reachability, duration and mapping are all upstream of the thing that
+    // actually matters, which is that the clip MOVES THE RIG. This reads the
+    // live Skeleton3D and asserts an upper-body bone departs from its rest
+    // rotation. It also happens to cover the a45bd1d trap from the other side:
+    // a clip that omitted the arm tracks entirely would leave them AT rest,
+    // which is exactly what this refuses to accept.
+    private void VerdictPosesTheSkeleton()
+    {
+        bool pass = _sawAnyBtbState && _worstPosedDeg >= PosedMinDeg;
+        if (pass)
+            GD.Print($"[behindtheback-anim] PASS btb-poses-the-skeleton — the upper body was still posed {_worstPosedDeg:F2} deg off rest " +
+                     $"(floor {PosedMinDeg:F1}) on the LAST behind-the-back tick, so the clip's tracks bind to this " +
+                     "rig and hold it — rather than collapsing it to rest, which is what an unbound clip does.");
+        else
+            Fail($"btb-poses-the-skeleton: the clip did not move the rig. sawAnyBtbState={_sawAnyBtbState}, " +
+                 $"upperBodyDepartureFromRestOnLastBtbTick={_worstPosedDeg:F4} deg (need >= {PosedMinDeg:F1}). " +
+                 "Most likely the clips' track NODE PATHS do not bind on scenes/Player.tscn (check for an " +
+                 "'Armature/' prefix — Blender's FBX export adds an Armature object wrapper the rig does not " +
+                 "have), or the clip omits the arm tracks entirely and they are sitting at rest.");
+        Finish(pass ? 0 : 1);
+    }
+
+    // Upper-body bone rotations off the holder's live Skeleton3D, this tick.
+    //
+    // Compared against a BASELINE taken on the first behind-the-back tick, not
+    // against the bones' REST. Departure-from-rest was tried first and is NOT a
+    // discriminating measure here: with the clips deliberately corrupted to the
+    // unbindable "Armature/..." paths, the upper body still measured 110 deg
+    // from rest (vs 179 working), because the Y Bot's rest is a T-pose and the
+    // arms are held away from it by other machinery regardless of whether this
+    // clip contributes anything. Both numbers are large, so the gate could not
+    // tell inert from working.
+    //
+    // Pose CHANGE across the move is the honest question: a clip that drives
+    // the rig moves the upper body between Startup and Recovery (the Blender
+    // side authored 62 deg of travel), while an inert clip leaves it frozen at
+    // whatever it was already showing.
+    // Largest upper-body departure from REST, sampled on the LAST tick a
+    // behind-the-back state was active. Both halves of that sentence are
+    // load-bearing, and both were arrived at by mutation rather than by taste
+    // — two earlier metrics were tried against clips deliberately corrupted to
+    // the unbindable "Armature/..." paths, and BOTH passed on them:
+    //
+    //   max departure from rest   inert 110 deg vs working 179 deg — the Y Bot
+    //                             rest is a T-pose and the arms are held off it
+    //                             by other machinery, so "far from rest" is
+    //                             true either way.
+    //   max change across the arc inert 110 deg vs working 179 deg — because a
+    //                             clip whose tracks bind to nothing makes the
+    //                             bones COLLAPSE to rest, and that collapse is
+    //                             itself a large change. "It moved" does not
+    //                             imply "this clip moved it".
+    //
+    // What actually separates the two is WHERE the pose ends up. A bound clip
+    // holds the upper body posed all the way through Recovery; an unbound one
+    // has fully collapsed to rest within a tick of entry (there is no xfade on
+    // any edge, so the collapse is immediate) and stays there. Sampling the
+    // final behind-the-back tick therefore reads ~0 deg when inert and ~179 deg
+    // when driving — a real separation rather than two large numbers.
+    private static float UpperBodyDepartureFromRest(PlayerController holder)
+    {
+        var skel = FindSkeleton(holder);
+        if (skel == null) return 0f;
+
+        float worst = 0f;
+        foreach (string boneName in UpperBodyBones)
+        {
+            int idx = skel.FindBone(boneName);
+            if (idx < 0) continue;
+            Quaternion rest = skel.GetBoneRest(idx).Basis.GetRotationQuaternion().Normalized();
+            Quaternion pose = skel.GetBonePose(idx).Basis.GetRotationQuaternion().Normalized();
+            worst = Math.Max(worst, Mathf.RadToDeg(rest.AngleTo(pose)));
+        }
+        return worst;
+    }
+
+    private static Skeleton3D FindSkeleton(Node root)
+    {
+        if (root is Skeleton3D s) return s;
+        foreach (Node child in root.GetChildren())
+        {
+            Skeleton3D found = FindSkeleton(child);
+            if (found != null) return found;
+        }
+        return null;
     }
 
     private static string SuffixOf(string node) =>
