@@ -85,12 +85,30 @@ bounces per 2.100 s loop, and the human confirmed the target as ~1 bounce per
 2 steps. So one gait cycle = 0.700 s = one bounce, 3 cycles per loop. The ball's
 bounce timing is driven separately in-engine; the stride MUST agree with it or
 the footfalls visibly desync from the ball.
+
+═══════════════════════════════════════════════════════════════════════════════
+THE MACHINERY LIVES IN blender_anim_lib (#315)
+═══════════════════════════════════════════════════════════════════════════════
+The rig geometry, IK, posing primitives, proof helpers and export settings were
+extracted to `tools/blender_anim_lib.py` so the twenty clip handoffs in
+`docs/handoffs/anim-clips/` share them instead of copying them. What remains
+here is this clip's SPEC: the gait function, its constants, and the cadence
+proof. The extraction was verified by re-running this script and comparing poses
+against the committed `assets/dribble_move_authored.fbx` -- exactly 0.000000 deg
+and 0.0 m on every bone of every frame.
 """
 import math
+import os
 import sys
 
 import bpy
-from mathutils import Matrix, Vector
+from mathutils import Matrix
+
+# Blender runs this file as a script, not as a package member, so `tools/` is not
+# importable by default. `--python <path>` does not add the script's own
+# directory to sys.path the way `python <path>` does.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import blender_anim_lib as lib  # noqa: E402  (must follow the sys.path fix)
 
 # ── clip contract (see #300 / rebuild_dribble_clips.gd) ──────────────────────
 FPS = 30
@@ -149,13 +167,23 @@ LEAN_BONE = "mixamorig:Spine"
 # and a large twist would move it far enough to need a big HandOffset change.
 COUNTER_ROTATION_DEG = 5.0
 
-HIPS = "mixamorig:Hips"
-LEG_CHAIN = {
-    "L": ("mixamorig:LeftUpLeg", "mixamorig:LeftLeg",
-          "mixamorig:LeftFoot", "mixamorig:LeftToeBase"),
-    "R": ("mixamorig:RightUpLeg", "mixamorig:RightLeg",
-          "mixamorig:RightFoot", "mixamorig:RightToeBase"),
-}
+# ── proof thresholds (measured, not guessed) ─────────────────────────────────
+# Both are set from the MEASURED value of this construction plus margin, and are
+# reported every run (`ground_band_m`, `pose_distinct_half_cycle_deg`) so drift
+# is visible in the log rather than silent. Do not widen either to make a red run
+# pass -- the point of a gate is that it can fail.
+#
+# Support-level band. MEASURED on this construction: 0.0315 m (reported as
+# `ground_band_m`). 0.05 leaves ~1.6x headroom for float noise while staying an
+# order of magnitude below the both-feet-airborne failure #298 measured at
+# ~0.5 m, so the gate still sits in the gap between "grounded" and "floating".
+GROUND_BAND_TOL_M = 0.05
+# Half-cycle pose divergence. MEASURED: 67.594 deg (reported as
+# `pose_distinct_half_cycle_deg`). The 20 deg floor sits far below that and far
+# above the ~0 deg a frozen-leg regression would produce -- this is the
+# anti-#298 gate, so it must land in the gap between "striding" and "frozen".
+GAIT_DISTINCT_MIN_DEG = 20.0
+
 # Left leg leads; right is half a cycle out of phase.
 PHASE_OFFSET = {"L": 0.0, "R": 0.5}
 
@@ -163,69 +191,7 @@ PHASE_OFFSET = {"L": 0.0, "R": 0.5}
 # looks the clip up by name, so this is a contract, not cosmetic.
 ACTION_NAME = "dribblemove"
 
-
-def log(msg):
-    print(f"[author] {msg}")
-
-
-# ═════════════════════════════════════════════════════════════════════════════
-# rig geometry
-# ═════════════════════════════════════════════════════════════════════════════
-def derive_axes(arm):
-    """Right/up/forward in ARMATURE space, from the REST pose.
-
-    Everything in this script works in armature space, deliberately. Blender's
-    `pose_bone.matrix` and `pose_bone.head` are armature-space, while
-    `arm.matrix_world @ p` is world-space and carries Mixamo's 0.01 cm->m
-    object scale. Straddling the two is a silent 100x error -- and an
-    asymmetric one: a child bone's head is recomputed from its parent, so a
-    bad translation is absorbed and only the rotation survives, whereas on the
-    ROOT bone (Hips) the translation IS the edit and it vanishes without a
-    trace. Measured that the hard way: the legs strode correctly while the
-    crouch track came back with range exactly (0,0,0).
-
-    Derived, never hardcoded: Mixamo rest rolls are arbitrary. Read from the
-    RAW imported FBX -- never from a Player.tscn rig, where BlendRestAnchor
-    rotates both UpLeg rests at _Ready and every foot/toe global rest inherits
-    the error (119.6 deg; cost a 2.17x stride mismeasurement in #298).
-    """
-    rest = arm.data.bones
-    l_hip = rest["mixamorig:LeftUpLeg"].head_local
-    r_hip = rest["mixamorig:RightUpLeg"].head_local
-    hips = rest[HIPS].head_local
-    head = rest["mixamorig:Head"].head_local
-
-    right = (r_hip - l_hip).normalized()
-    up = (head - hips).normalized()
-    forward = right.cross(up).normalized()
-    right = up.cross(forward).normalized()
-
-    # Sign check against anatomy rather than assumption: the toe is ahead of
-    # the ankle on a human.
-    toe = rest["mixamorig:LeftToeBase"].head_local
-    ankle = rest["mixamorig:LeftFoot"].head_local
-    if (toe - ankle).dot(forward) < 0:
-        forward, right = -forward, -right
-    return right, up, forward
-
-
-def units_per_metre(arm):
-    """Armature units per metre.
-
-    A Mixamo FBX is centimetre-scale and Blender puts 0.01 on the object, so
-    `bone.length` reads 40.5994 for a femur that is 0.4060 m. Since this script
-    works in armature space, every metre-denominated constant in the spec is
-    converted through this once, at the top of main().
-    """
-    return 1.0 / arm.matrix_world.to_scale().x
-
-
-def bone_lengths(arm):
-    """Femur / tibia / foot lengths in ARMATURE UNITS (not metres)."""
-    b = arm.data.bones
-    return (b["mixamorig:LeftUpLeg"].length,
-            b["mixamorig:LeftLeg"].length,
-            b["mixamorig:LeftFoot"].length)
+log = lib.log
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -262,72 +228,27 @@ def hip_bob_factor(phase):
     return abs(math.sin(math.pi * phase * 2.0))
 
 
-def solve_two_link(target, l1, l2):
-    """Planar 2-link IK. Returns (knee_pos_factor_unused, hip_dir, knee_angle).
-
-    Standard law-of-cosines solve. Returns the interior knee angle and the
-    angle between the femur and the hip->ankle line, from which both bone
-    directions follow. The knee is forced to bend FORWARD (a human knee has one
-    hinge direction) by the caller's choice of bend axis.
-    """
-    d = target.length
-    reach = l1 + l2
-    if d > reach * 0.999:
-        # Clamp rather than produce NaN from acos(>1). This should not fire
-        # given the spec above; if it does, the stride/height combination is
-        # geometrically impossible and that is worth knowing loudly.
-        log(f"WARNING: IK target {d:.4f} m exceeds reach {reach:.4f} m -- clamping")
-        d = reach * 0.999
-    cos_knee = (l1 * l1 + l2 * l2 - d * d) / (2.0 * l1 * l2)
-    knee_interior = math.acos(max(-1.0, min(1.0, cos_knee)))
-    cos_hip = (l1 * l1 + d * d - l2 * l2) / (2.0 * l1 * d)
-    hip_offset = math.acos(max(-1.0, min(1.0, cos_hip)))
-    return d, hip_offset, knee_interior
-
-
-def aim_matrix(head, tail_dir, side_axis):
-    """Armature-space matrix aiming the bone's local +Y along `tail_dir`.
-
-    Blender bones point along their local +Y. Building the basis by
-    Gram-Schmidt against the rig's own left-right axis sidesteps Mixamo's
-    arbitrary rest roll entirely -- we never need to know what the rest roll
-    was, which is what makes this robust across bones.
-
-    Unit basis, no scale: a scaled basis would stretch the bone rather than
-    just orient it, and the FBX round-trip would carry that into Godot as a
-    SCALE_3D track the clip contract does not expect.
-    """
-    y = tail_dir.normalized()
-    x = (side_axis - y * side_axis.dot(y))
-    if x.length < 1e-6:
-        # Degenerate only if the bone points along the side axis, which no leg
-        # bone does; fall back to any perpendicular rather than emit NaN.
-        x = Vector((1.0, 0.0, 0.0)) - y * y.x
-    x.normalize()
-    z = x.cross(y).normalized()
-    return Matrix((
-        (x.x, y.x, z.x, head.x),
-        (x.y, y.y, z.y, head.y),
-        (x.z, y.z, z.z, head.z),
-        (0.0, 0.0, 0.0, 1.0),
-    ))
-
-
 # ═════════════════════════════════════════════════════════════════════════════
 # main
 # ═════════════════════════════════════════════════════════════════════════════
-def verify_cadence(arm, f0, f1, up):
+def verify_cadence(arm, f0, f1, geom):
     """Re-measure the source clip's bounce count; refuse to author on a change.
 
     GAIT_CYCLES_PER_LOOP is derived from this. If someone swaps the source FBX
     for a clip with different cadence, silently keeping 3 would desync the
     stride from the ball -- so this fails loud instead.
     """
+    # `preserve_frame` per README-blender.md trap 5: anything that samples poses
+    # restores the frame. Harmless here today (this runs before the authoring
+    # loop, which sets every frame it touches), but this is the one sampler in
+    # the PR that was violating the convention the PR itself introduces, and the
+    # trap is that the harm only appears when someone later moves the call.
     vals = []
-    for f in range(f0, f1 + 1):
-        bpy.context.scene.frame_set(f)
-        vals.append((arm.pose.bones["mixamorig:RightHand"].head
-                     - arm.pose.bones[HIPS].head).dot(up))
+    with lib.preserve_frame():
+        for f in range(f0, f1 + 1):
+            bpy.context.scene.frame_set(f)
+            vals.append((arm.pose.bones["mixamorig:RightHand"].head
+                         - arm.pose.bones[lib.HIPS].head).dot(geom.up))
     span = max(vals) - min(vals)
     lo, hi = min(vals) + 0.2 * span, max(vals) - 0.2 * span
     bounces, state = 0, ("high" if vals[0] > hi else "low")
@@ -336,7 +257,12 @@ def verify_cadence(arm, f0, f1, up):
             state, bounces = "low", bounces + 1
         elif state == "low" and v > hi:
             state = "high"
-    log(f"source cadence: {bounces} bounces / loop (hand span {span:.4f} m)")
+    lib.report("source_bounces_per_loop", bounces)
+    # `vals` are armature-space dot products, so the span is in armature units.
+    # Reported in metres via geom to keep every logged length in one unit -- the
+    # pre-#315 version of this line printed the raw armature figure with an "m"
+    # suffix, i.e. 100x, which is precisely the confusion trap 3 warns about.
+    lib.report("source_hand_span_m", f"{geom.to_m(span):.4f}")
     if bounces != GAIT_CYCLES_PER_LOOP:
         raise SystemExit(
             f"FATAL: source clip has {bounces} bounces but GAIT_CYCLES_PER_LOOP "
@@ -348,40 +274,28 @@ def main():
     argv = sys.argv[sys.argv.index("--") + 1:]
     src, dst = argv[0], argv[1]
 
-    bpy.ops.wm.read_factory_settings(use_empty=True)
-    bpy.ops.import_scene.fbx(filepath=src)
-    arm = next(o for o in bpy.data.objects if o.type == "ARMATURE")
+    arm, f0, f1 = lib.load_source(src, FPS)
     scene = bpy.context.scene
-    scene.render.fps = FPS
 
-    act = arm.animation_data.action
-    f0, f1 = (int(v) for v in act.frame_range)
-    scene.frame_start, scene.frame_end = f0, f1
-    n_frames = f1 - f0 + 1
-    log(f"source action {act.name!r} frames {f0}..{f1} ({n_frames} frames)")
+    geom = lib.RigGeometry(arm)
+    geom.log_summary()
+    right, up, forward = geom.right, geom.up, geom.forward
 
-    right, up, forward = derive_axes(arm)
-    l1, l2, lfoot = bone_lengths(arm)
-    U = units_per_metre(arm)
-    log(f"axes right={tuple(round(v,4) for v in right)} "
-        f"up={tuple(round(v,4) for v in up)} fwd={tuple(round(v,4) for v in forward)}")
-    log(f"units/metre={U:.1f}  femur={l1/U:.4f} tibia={l2/U:.4f} "
-        f"foot={lfoot/U:.4f} reach={(l1+l2)/U:.4f} m")
-
-    verify_cadence(arm, f0, f1, up)
+    verify_cadence(arm, f0, f1, geom)
 
     # Spec constants are metre-denominated for readability; convert once, here,
-    # so nothing downstream has to remember which space it is in.
-    stride_u = STRIDE_LENGTH_M * U
-    lift_u = SWING_FOOT_LIFT_M * U
-    neutral_u = HIP_TO_ANKLE_NEUTRAL_M * U
-    crouch_u = CROUCH_DROP_M * U
-    bob_u = HIP_BOB_M * U
-    half_width_u = STANCE_HALF_WIDTH_M * U
+    # so nothing downstream has to remember which space it is in. `geom.m()` IS
+    # that conversion -- never hand-roll the factor (trap 3).
+    stride_u = geom.m(STRIDE_LENGTH_M)
+    lift_u = geom.m(SWING_FOOT_LIFT_M)
+    neutral_u = geom.m(HIP_TO_ANKLE_NEUTRAL_M)
+    crouch_u = geom.m(CROUCH_DROP_M)
+    bob_u = geom.m(HIP_BOB_M)
+    half_width_u = geom.m(STANCE_HALF_WIDTH_M)
 
-    bpy.context.view_layer.objects.active = arm
-    bpy.ops.object.mode_set(mode="POSE")
+    lib.enter_pose_mode(arm)
     lean_q = Matrix.Rotation(math.radians(LEAN_DEGREES), 4, right)
+    worst_ankle_err = 0.0
 
     for i, f in enumerate(range(f0, f1 + 1)):
         scene.frame_set(f)
@@ -389,110 +303,87 @@ def main():
         phase_base = (t / CYCLE_S) % 1.0
 
         # ---- Hips: crouch + gait bob, keyed as a POSITION offset ------------
-        # Applied as a DELTA on the clip's own root motion, not an absolute
-        # position, so whatever the source clip does vertically is preserved
-        # and merely lowered.
-        #
-        # Keep the Hips ROTATION untouched. It is the one bone the two rotation
-        # families disagree on catastrophically (~158 deg), and every leg
-        # solve below hangs off it.
-        pb_hips = arm.pose.bones[HIPS]
+        # `drop_hips` applies this as a DELTA on the clip's own root motion, not
+        # an absolute position, so whatever the source clip does vertically is
+        # preserved and merely lowered -- and it leaves the Hips ROTATION alone,
+        # which matters because that is the one bone the two rotation families
+        # disagree on catastrophically (~158 deg) and every leg solve hangs off
+        # it.
         drop = crouch_u + bob_u * hip_bob_factor(phase_base)
-        mh = pb_hips.matrix.copy()
-        mh.translation = mh.translation - up * drop
-        pb_hips.matrix = mh
-        bpy.context.view_layer.update()
-        pb_hips.keyframe_insert("location", frame=f)
-
-        hips_now = pb_hips.head.copy()
+        lib.drop_hips(arm, -(up * drop), geom, frame=f)
+        hips_now = arm.pose.bones[lib.HIPS].head.copy()
 
         # ---- torso lean + counter-rotation ----------------------------------
-        pb_spine = arm.pose.bones[LEAN_BONE]
         twist = math.radians(COUNTER_ROTATION_DEG) * math.sin(2.0 * math.pi * phase_base)
-        spine_head = pb_spine.head.copy()
-        rot = (Matrix.Translation(spine_head)
-               @ Matrix.Rotation(twist, 4, up)
-               @ lean_q
-               @ Matrix.Translation(-spine_head))
-        pb_spine.matrix = rot @ pb_spine.matrix
-        bpy.context.view_layer.update()
-        pb_spine.keyframe_insert("rotation_quaternion", frame=f)
+        lib.rotate_bone_about_head(
+            arm, LEAN_BONE,
+            (Matrix.Rotation(twist, 4, up), lean_q),
+            frame=f)
 
         # ---- legs: foot trajectory -> two-link IK ---------------------------
-        for side, (up_leg, leg, foot_b, toe_b) in LEG_CHAIN.items():
+        for side in lib.LEG_CHAIN:
             phase = (phase_base + PHASE_OFFSET[side]) % 1.0
             sign = -1.0 if side == "L" else 1.0
 
-            hip_head = arm.pose.bones[up_leg].head.copy()
             fore, vert = foot_target(phase, stride_u, -neutral_u, lift_u)
-
             ankle = (hips_now
                      + forward * fore
                      + up * vert
                      + right * (sign * half_width_u))
-            to_ankle = ankle - hip_head
-            d, hip_offset, knee_interior = solve_two_link(to_ankle, l1, l2)
-
-            # Rotate the hip->ankle direction by `hip_offset` about the rig's
-            # right axis to get the femur direction. Positive sense puts the
-            # knee AHEAD of the hip->ankle line, which is the only way a human
-            # knee bends.
-            dir_ankle = to_ankle.normalized()
-            femur_dir = Matrix.Rotation(-hip_offset, 4, right) @ dir_ankle
-            knee = hip_head + femur_dir * l1
-            tibia_dir = (ankle - knee).normalized()
-
-            arm.pose.bones[up_leg].matrix = aim_matrix(hip_head, femur_dir, right)
-            bpy.context.view_layer.update()
-            # Re-read the knee head AFTER the femur is posed: it is the femur's
-            # tail, so reading it before would aim the tibia from a stale
-            # position and quietly break the IK chain.
-            knee_head = arm.pose.bones[leg].head.copy()
-            arm.pose.bones[leg].matrix = aim_matrix(knee_head, (ankle - knee_head), right)
-            bpy.context.view_layer.update()
 
             # Foot: keep the sole roughly parallel to the ground during stance,
             # and toe-down through swing so the step reads as a real footfall
             # rather than a flat-footed slide.
-            ankle_head = arm.pose.bones[foot_b].head.copy()
             if phase < STANCE_FRACTION:
                 toe_dir = (forward * 0.90 - up * 0.44).normalized()
             else:
                 s = (phase - STANCE_FRACTION) / (1.0 - STANCE_FRACTION)
                 pitch = math.sin(math.pi * s)
                 toe_dir = (forward * 0.90 - up * (0.44 - 0.34 * pitch)).normalized()
-            arm.pose.bones[foot_b].matrix = aim_matrix(ankle_head, toe_dir, right)
-            bpy.context.view_layer.update()
 
-            for bn in (up_leg, leg, foot_b):
-                arm.pose.bones[bn].keyframe_insert("rotation_quaternion", frame=f)
+            _solved, ankle_err = lib.plant_foot(
+                arm, side, ankle, toe_dir, geom, frame=f)
+            worst_ankle_err = max(worst_ankle_err, ankle_err)
 
     bpy.ops.object.mode_set(mode="OBJECT")
 
-    # Godot names the imported clip after the FBX animation TAKE, and with
-    # bake_anim_use_all_actions=False Blender names that take after the SCENE,
-    # not the action -- measured: renaming only the action still imported as
-    # "Scene". The rebuild tool looks the clip up by name, so rename both.
-    arm.animation_data.action.name = ACTION_NAME
-    scene.name = ACTION_NAME
-    log(f"action + scene renamed -> {ACTION_NAME!r}")
+    # Where the ankles actually landed vs where the IK was asked to put them.
+    # Nonzero because `plant_foot`'s hip rotation is inexact for lateral targets
+    # (see its docstring); this gait is nearly planar so it stays tiny, but the
+    # number is now visible instead of assumed.
+    lib.report("worst_ankle_ik_err_m", f"{geom.to_m(worst_ankle_err):.6f}")
 
-    bpy.ops.export_scene.fbx(
-        filepath=dst,
-        use_selection=False,
-        object_types={"ARMATURE"},
-        # Leaf bones would arrive in Godot carrying no clip keys, which is the
-        # a45bd1d rest-fallback T-pose trap wearing a new hat.
-        add_leaf_bones=False,
-        bake_anim=True,
-        bake_anim_use_all_actions=False,
-        bake_anim_use_nla_strips=False,
-        # Any simplification would resample the 63-key / 2.100 s grid the
-        # rebuild tool's loop-seam proof depends on.
-        bake_anim_simplify_factor=0.0,
-        bake_anim_step=1.0,
-    )
-    log(f"exported -> {dst}")
+    # ---- proofs, before the export commits anything --------------------------
+    # These are the library's shared gates (#315), run here both because this
+    # clip should be held to them and because a gate nothing exercises is a gate
+    # nobody trusts. Each raises SystemExit, which `--python-exit-code 1` turns
+    # into a failed build.
+    frames = list(range(f0, f1 + 1))
+    # `expected_count` is what gives this gate teeth. Without it only the
+    # "some bone is unkeyed" branch runs, and that passes by construction on any
+    # healthy Mixamo source. 52 = the Y Bot's 65 bones minus the 13 leaf
+    # terminators; if a source swap or a narrowed export changes that, this is
+    # what says so instead of shipping a clip that T-poses in Godot.
+    lib.verify_all_bones_keyed(arm, expected_count=52)
+    # NOTE: a source-integrity tripwire, NOT an `aim_matrix` guard -- see its
+    # docstring. `aim_matrix` asserts its own orthonormality at construction.
+    lib.verify_pose_unscaled(arm, frames)
+    # A drive gait keeps ground contact (STANCE_FRACTION 0.62 > 0.5 gives a
+    # double-support overlap), so the LOWER toe should never leave the support
+    # level by much. This is #298's PROOF 6 promoted to a shared helper -- it is
+    # the gate that caught the both-feet-0.5 m-airborne cliff.
+    lib.verify_grounded(arm, frames, GROUND_BAND_TOL_M, geom)
+    # The whole reason this clip was re-authored (#300) is that #298's legs read
+    # as frozen. Half a gait cycle apart the pose must genuinely differ, so
+    # assert it rather than trusting the eye.
+    half_cycle_frames = int(round(CYCLE_S * FPS * 0.5))
+    lib.verify_pose_distinct(
+        lib.snapshot_pose(arm, f0),
+        lib.snapshot_pose(arm, f0 + half_cycle_frames),
+        GAIT_DISTINCT_MIN_DEG,
+        label="half_cycle")
+
+    lib.export_fbx(arm, dst, ACTION_NAME)
     print("AUTHOR_OK")
 
 
