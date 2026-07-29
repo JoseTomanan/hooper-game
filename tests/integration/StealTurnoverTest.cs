@@ -240,7 +240,11 @@ public partial class StealTurnoverTest : Node
             // and the test isolates the timing axis regardless of a future
             // default change.
             HandSide holderHand = _holder.HandSide;
-            bool begun = _defender.BeginMoveForHarness(new StealMove(holderHand));
+            // #282: no heading is set anywhere in this scene (both players
+            // default to heading 0, cos(Δ) = +1), so the reach side coincides
+            // with the target hand.
+            float aimSign = holderHand == HandSide.Right ? 1f : -1f;
+            bool begun = _defender.BeginMoveForHarness(new StealMove(holderHand, aimSign));
             _stealBegun = true;
             if (!begun)
             {
@@ -254,7 +258,7 @@ public partial class StealTurnoverTest : Node
             // frame, mirroring what a real client's local prediction would be
             // running right now — see the field doc above for the full rationale.
             if (_scenario == "success")
-                _shadowClient.Begin(new StealMove(holderHand));
+                _shadowClient.Begin(new StealMove(holderHand, aimSign));
         }
 
         // Latch the turnover: catch the Loose state even if the loose-ball
@@ -344,7 +348,14 @@ public partial class StealTurnoverTest : Node
                 // instant. The phase-reset assertion above is what protects
                 // the moment Recovery DOES elapse and a genuine re-attempt
                 // becomes legal.
-                _reattemptBeganAtRecovery = _defender.BeginMoveForHarness(new StealMove(_holder.HandSide));
+                // #282: same no-heading-set arrangement as the first attempt
+                // above (cos(Δ) = +1) — reach side coincides with the target
+                // hand. The reattempt is expected to no-op (Begin returns
+                // false) regardless of polarity, but the constructor now
+                // requires a coherent value.
+                HandSide reattemptHand = _holder.HandSide;
+                float reattemptAimSign = reattemptHand == HandSide.Right ? 1f : -1f;
+                _reattemptBeganAtRecovery = _defender.BeginMoveForHarness(new StealMove(reattemptHand, reattemptAimSign));
 
                 Verdict();
                 return;

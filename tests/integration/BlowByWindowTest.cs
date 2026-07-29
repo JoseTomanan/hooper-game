@@ -168,7 +168,10 @@ public partial class BlowByWindowTest : Node
     {
         if (!_stealBegun && _frame == _beginFrame)
         {
-            bool began = _defender.BeginMoveForHarness(new StealMove(HandSide.Left));
+            // #282: neither player's heading is set in this scenario (both
+            // default to 0, cos(Δ) = +1), so the reach side coincides with the
+            // target hand — Left → -1f.
+            bool began = _defender.BeginMoveForHarness(new StealMove(HandSide.Left, -1f));
             _stealBegun = true;
             if (!began)
             {

@@ -81,7 +81,11 @@ public partial class PlayerController
     /// <param name="ball">The live BallController, so the holder can be
     /// looked up exactly like ResolveStealTargetHand does in production.</param>
     internal bool BeginStealFromAimForHarness(float aimSign, BallController ball) =>
-        BeginCommittedMove(new StealMove(ResolveStealTargetHand(aimSign, ball)));
+        // #282: aimSign is already the defender's own raw aim sign in scope
+        // here — thread it straight through as StealMove's second argument
+        // rather than re-deriving it from the resolved (holder-relative)
+        // TargetHand, exactly as production's ApplyRequestedMove does.
+        BeginCommittedMove(new StealMove(ResolveStealTargetHand(aimSign, ball), aimSign));
 
     // NOTE: the Heading setup seam this test needs (SetHeadingForHarness) is
     // now provided by PlayerHarnessSeam.cs, which #243's fadeaway harness added
