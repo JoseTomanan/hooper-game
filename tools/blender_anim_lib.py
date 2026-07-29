@@ -559,9 +559,9 @@ def ease_in_out(t):
 #: #315. `bake_timeline` logs the resolved choice per segment, so a default that
 #: you can read in the run output is a default, not hidden magic.
 #:
-#:   startup  -> ease_in   the weight gathers, then goes: the tell, then the snap
-#:   active   -> ease_out  explode out of the commitment, decelerate into recovery
-#:   recovery -> smoothstep  a settle back toward neutral, if a later pose exists
+#:   startup  -> ease_in      the weight gathers, then goes: the tell, then snap
+#:   active   -> ease_out     explode out of it, decelerate into the recovery
+#:   recovery -> ease_in_out  a settle back toward neutral, if a later pose exists
 #:
 #: Unknown labels fall back to `DEFAULT_EASING`, so a non-three-phase timeline
 #: (a cyclic gait, a held idle) behaves exactly as it did before this mapping
@@ -573,11 +573,15 @@ PHASE_EASING = {
     "recovery": ease_in_out,
 }
 
+#: Used for a keypose whose label is not a known phase. Deliberately smoothstep:
+#: an unlabelled or cyclic timeline should glide, and that is what the timeline
+#: did before `PHASE_EASING` existed.
 DEFAULT_EASING = ease_in_out
 
-#: Backwards-compatible alias: `ease` was the single smoothstep before the
-#: per-phase mapping existed. Kept so nothing silently changes meaning.
-ease = ease_in_out
+# There is deliberately NO bare `ease` alias. It would be a footgun: passing
+# `easing=lib.ease` to `bake_timeline` overrides the per-phase mapping with
+# smoothstep across every segment, silently reinstating the glide-into-commitment
+# defect this mapping exists to prevent. Name the curve you actually want.
 
 
 def resolve_easing(keypose, override=None):
