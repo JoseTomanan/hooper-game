@@ -1037,6 +1037,88 @@ jobs:
           godot --headless --path . res://tests/integration/CrossoverAnimTest.tscn -- --harness-scenario=crossover-single-polarity
           godot --headless --path . res://tests/integration/CrossoverAnimTest.tscn -- --harness-scenario=no-unsuffixed-crossover-state
 
+      # Behind-the-back hand-side animation states (issue #281). Same shape as
+      # #280's crossover family immediately above — Player.tscn now carries
+      # SIX behind-the-back states (BehindTheBack{Startup,Active,Recovery}
+      # {Left,Right}) instead of three unsuffixed ones, and the three
+      # unsuffixed states are DELETED (not merely unreachable): HandSide is
+      # two-valued and MoveAnimResolver.OriginHand is total over it, so no
+      # third/fallback case can arise. 'btb-left-origin' / 'btb-right-origin'
+      # each prove the tree is observed on that polarity's Startup -> Active
+      # -> Recovery states, in order, for a move begun in that starting hand.
+      # 'btb-single-polarity' is the LOAD-BEARING scenario, same reasoning as
+      # crossover's: over one whole move it latches every DISTINCT
+      # "BehindTheBack*" state name the live tree actually reported and
+      # asserts they all carry the SAME hand suffix — a per-tick HandSide read
+      # (the bug OriginHand exists to prevent) would show Startup on one
+      # polarity and Active/Recovery on the other, i.e. two suffixes in one
+      # run.
+      #
+      # 'no-unsuffixed-btb-state' and 'control-unsuffixed-probe' replace
+      # crossover's single statistical control with a DIRECT pair: both issue
+      # AnimationNodeStateMachinePlayback.Travel() straight at a literal state
+      # name under IDENTICAL setup (a dribbling holder, starting node
+      # "Dribble") and observe whether the tree ever reports arriving.
+      # 'no-unsuffixed-btb-state' travels to "BehindTheBackActive" — a node
+      # that must not exist at all post-#281 — and asserts it is NEVER
+      # observed. 'control-unsuffixed-probe' travels to
+      # "BehindTheBackActiveLeft" — a node that DOES exist and is reachable
+      # via the Dribble->BehindTheBackStartupLeft->BehindTheBackActiveLeft
+      # edge chain #281 adds — and asserts it IS observed. The second is the
+      # PREMISE for the first: without it, "never reached
+      # BehindTheBackActive" would pass vacuously on a probe mechanism that
+      # was simply broken (e.g. the wrong AnimationTree node path), not on the
+      # unsuffixed state genuinely being gone. This pairing exists because a
+      # missing NODE (unlike a missing EDGE, #279's mutation-proven Travel()
+      # pathfinder blind spot) cannot be routed around — there is no path to
+      # find — so a direct probe is sound here where an edge-deletion probe
+      # would not be.
+      #
+      # 'btb-segment-lengths' asserts each of the six clips' duration is
+      # within one tick (1/60s) of BehindTheBack.DefaultFrameData's own
+      # Startup(6)/Active(3)/Recovery(10) tick windows, read from the C# side
+      # rather than hardcoded (tools/rebuild_behindtheback_clips.gd has to
+      # duplicate those numbers in GDScript, so this is what makes that
+      # duplication safe instead of merely regrettable). 'btb-no-placeholder-
+      # leak' is the direct statement that #296 is closed for this move: it
+      # reads the AnimationNodeStateMachine off scenes/Player.tscn directly
+      # and asserts each of the six states points at ITS OWN clip. Note that
+      # is an allowlist, not a blocklist against the locomotion/idle
+      # placeholder the three original unsuffixed states resolved to — the
+      # six new AnimationNodeAnimation sub-resources were hand-authored
+      # directly beneath the six crossover ones, so the likelier defect is a
+      # state pointing at a real-but-wrong clip (locomotion/crossoveractive
+      # left), which a blocklist waves through and which no reachability
+      # assertion can see either, the STATE name being correct in that case.
+      #
+      # 'btb-poses-the-skeleton' closes the gap all the others share. Every
+      # scenario above is upstream of the thing that actually matters: they
+      # assert reachability, duration and the state->clip mapping, none of
+      # which requires the clip's tracks to BIND. All seven passed green while
+      # the six clips carried track paths of the form
+      # "Armature/Skeleton3D:mixamorig_Hips" — one level deeper than the rig,
+      # whose skeleton sits at "Skeleton3D" — so every track bound to nothing
+      # and the clips were silent no-ops. Godot logs "couldn't resolve track"
+      # (2376 times) and carries on; it does not fail. This scenario reads the
+      # live Skeleton3D and asserts the upper body is still posed off rest on
+      # the LAST behind-the-back tick. Both halves matter and both came from
+      # mutation rather than taste: against deliberately-corrupted clips, "max
+      # departure from rest" and "max change across the arc" BOTH passed (110
+      # deg vs 179 working — the Y Bot rest is a T-pose, and an unbound clip's
+      # collapse to rest is itself a large change), while the final-tick
+      # reading separates cleanly at 0.0 deg inert vs 179 deg bound.
+      # Each exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run behind-the-back hand-side animation state harness
+        run: |
+          godot --headless --path . res://tests/integration/BehindTheBackAnimTest.tscn -- --harness-scenario=btb-left-origin
+          godot --headless --path . res://tests/integration/BehindTheBackAnimTest.tscn -- --harness-scenario=btb-right-origin
+          godot --headless --path . res://tests/integration/BehindTheBackAnimTest.tscn -- --harness-scenario=btb-single-polarity
+          godot --headless --path . res://tests/integration/BehindTheBackAnimTest.tscn -- --harness-scenario=no-unsuffixed-btb-state
+          godot --headless --path . res://tests/integration/BehindTheBackAnimTest.tscn -- --harness-scenario=control-unsuffixed-probe
+          godot --headless --path . res://tests/integration/BehindTheBackAnimTest.tscn -- --harness-scenario=btb-segment-lengths
+          godot --headless --path . res://tests/integration/BehindTheBackAnimTest.tscn -- --harness-scenario=btb-no-placeholder-leak
+          godot --headless --path . res://tests/integration/BehindTheBackAnimTest.tscn -- --harness-scenario=btb-poses-the-skeleton
+
       # Moving crossover — momentum-aware burst with left-stick exit (issue
       # #198, ADR-0003 amendment). CrossoverBurstMathTests already pin the
       # pure composition function; this drives a REAL PlayerController

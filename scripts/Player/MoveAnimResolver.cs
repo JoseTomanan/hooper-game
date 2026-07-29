@@ -189,11 +189,16 @@ public static class MoveAnimResolver
     /// checking its swap TIMING would produce a clip that is correct in Startup
     /// and inverted afterwards.
     ///
-    /// #281 adds "behindtheback"; #282 adds "steal", which will need its own
-    /// origin rule because a steal has no ball to swap — its handedness is the
-    /// TARGET hand, not an origin.
+    /// #281 added "behindtheback" — its swap timing was re-verified against
+    /// control flow, not against this comment: PlayerController's
+    /// JustEnteredActive branch swaps the hand for every burst-family move
+    /// except InAndOut, and BehindTheBack is in that family, so the swap lands
+    /// on the FIRST Active tick and OriginHand's formula holds.
+    ///
+    /// #282 adds "steal", which will need its own origin rule because a steal
+    /// has no ball to swap — its handedness is the TARGET hand, not an origin.
     /// </summary>
-    private static readonly HashSet<string> HandedMoves = new() { "crossover" };
+    private static readonly HashSet<string> HandedMoves = new() { "crossover", "behindtheback" };
 
     /// <summary>
     /// (Issue #280) The hand the ball was in when the currently-displayed move
@@ -300,11 +305,12 @@ public static class MoveAnimResolver
             && !string.IsNullOrEmpty(moveId)
             && ClippedMovePrefixes.TryGetValue(moveId, out string? prefix))
         {
-            // (#280) A handed move's three phase states are split in two, and
-            // the suffix names the hand the ball STARTED in — so "Left" is the
-            // crossover that carries the ball toward the body's RIGHT. There is
-            // no unsuffixed fallback: scenes/Player.tscn holds only the six
-            // handed states, because HandSide is a two-valued enum and
+            // (#280, extended by #281) A handed move's three phase states are
+            // split in two, and the suffix names the hand the ball STARTED in —
+            // so "Left" is the crossover that carries the ball toward the
+            // body's RIGHT. There is no unsuffixed fallback: scenes/Player.tscn
+            // holds only the handed states (six per handed move — crossover and
+            // behindtheback), because HandSide is a two-valued enum and
             // OriginHand is total over it, so no third case can arise.
             return HandedMoves.Contains(moveId)
                 ? prefix + generic + OriginHand(generic, ballHand)

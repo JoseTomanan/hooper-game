@@ -393,16 +393,46 @@ public class MoveAnimResolverTests
         // re-case — the .tscn state name mirrors this table exactly, so a
         // casing slip here would silently break Travel() at runtime.
         //
-        // Doubles as the guard that clipped does NOT imply handed (#280):
-        // behind-the-back is hand-directional in reality and #281 will split it,
-        // but until its two clips exist the tree holds only "BehindTheBackActive"
-        // — so a hand passed here must be ignored, whichever hand it is. Widening
-        // HandedMoves ahead of the .tscn would resolve to a missing state, and
-        // Travel() to a missing state only logs (#257) rather than throwing.
-        Assert.Equal("BehindTheBackActive",
+        // (#281) Behind-the-back is now HANDED as well as clipped, so the name
+        // also carries the origin-hand suffix and Active INVERTS the hand it is
+        // given: the move swaps the ball at Active-entry, so the hand observed
+        // during Active is already the destination hand and OriginHand maps it
+        // back to the hand the move started in. Passing Left here therefore
+        // resolves to ...Right. Pinning the inversion (not just the casing) is
+        // the point: a resolver that dropped it would still return a state that
+        // EXISTS and plays cleanly, while telegraphing the wrong direction —
+        // the ADR-0003 false read, and how the #255 mirror bug shipped green.
+        Assert.Equal("BehindTheBackActiveRight",
             MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "behindtheback", HandSide.Left));
-        Assert.Equal("BehindTheBackActive",
+        Assert.Equal("BehindTheBackActiveLeft",
             MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "behindtheback", HandSide.Right));
+
+        // Startup does NOT invert — the swap has not happened yet, so the hand
+        // observed IS the origin hand. Asserting both phases is what makes this
+        // a non-symmetric check rather than a constant-suffix one.
+        Assert.Equal("BehindTheBackStartupLeft",
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Startup, "behindtheback", HandSide.Left));
+    }
+
+    [Fact]
+    public void ResolveStateName_ClippedButUnhandedMove_IgnoresHand()
+    {
+        // The guard that clipped does NOT imply handed (#280). It used to be
+        // carried by behindtheback, which #281 promoted into HandedMoves; steal
+        // and block inherit the role because they are clipped with a single
+        // unsuffixed state per phase. A hand passed here must be ignored,
+        // whichever hand it is — widening HandedMoves ahead of the .tscn would
+        // resolve to a missing state, and Travel() to a missing state only logs
+        // (#257) rather than throwing, so the move would silently stop
+        // animating instead of failing loudly.
+        Assert.Equal("StealActive",
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "steal", HandSide.Left));
+        Assert.Equal("StealActive",
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "steal", HandSide.Right));
+        Assert.Equal("BlockActive",
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "block", HandSide.Left));
+        Assert.Equal("BlockActive",
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "block", HandSide.Right));
     }
 
     [Fact]

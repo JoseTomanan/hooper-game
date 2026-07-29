@@ -56,7 +56,7 @@ namespace HOOPERGAME.Tests.Integration;
 // BetweenTheLegsHarnessSeam.cs), both gate identically (Dribbling-only,
 // #193), and — the reason they make a meaningful control PAIR here —
 // MoveAnimResolver.ClippedMovePrefixes lists "behindtheback" (mapping to the
-// real "BehindTheBackStartup/Active/Recovery" states scenes/Player.tscn now
+// real per-move BehindTheBack states scenes/Player.tscn now
 // has) but does NOT list "betweenthelegs" (its doc comment names
 // "betweenthelegs" explicitly as one of the moves meant to fall back to the
 // shared generic clip). So scenario 1 proves the per-move path is really
@@ -68,7 +68,7 @@ namespace HOOPERGAME.Tests.Integration;
 // never have failed.
 //
 // ── Out of scope ────────────────────────────────────────────────────────────
-// Whether BehindTheBackActive's placeholder clip LOOKS right (correct limbs,
+// Whether BehindTheBackActive{Left,Right}'s clip LOOKS right (correct limbs,
 // no foot-sliding, reads as "behind the back") is #279/#173's deferred human
 // feel judgment (ADR-0021) — this harness only asserts state-machine
 // REACHABILITY, never clip content.
@@ -98,6 +98,7 @@ public partial class MoveKindAnimTest : Node
     // Latched (event-time, not end-of-run) observations.
     private bool _sawActivePhase;
     private bool _latchedTargetAnimState;
+    private string _observedPerMoveState = "(none)";
     private int _returnedInactiveFrame = -1;
 
     public override void _Ready()
@@ -185,12 +186,18 @@ public partial class MoveKindAnimTest : Node
     // ── Scenario: clipped-reaches-permove ───────────────────────────────────
     // BehindTheBack IS in MoveAnimResolver.ClippedMovePrefixes ("behindtheback"
     // -> "BehindTheBack"). Asserts the AnimationTree's state machine really
-    // Travels into "BehindTheBackActive" while MovePhase.Active is live (event
-    // -time latch, not an end-of-run check — matches PivotAnimTest's
+    // Travels into a "BehindTheBackActive*" state while MovePhase.Active is
+    // live (event-time latch, not an end-of-run check — matches PivotAnimTest's
     // discipline), then settles back onto the possession-correct NEUTRAL once
     // the move's full lifecycle returns to Inactive — "Dribble" here, since the
     // scenario starts a live dribble first and BehindTheBack does not end it
     // (see ExpectedNeutralAnimNode; pre-#285 this was always "Locomotion").
+    //
+    // The trailing wildcard is load-bearing (#281): behind-the-back is now
+    // HANDED, so the state is "BehindTheBackActiveLeft"/"...Right" and the bare
+    // "BehindTheBackActive" no longer exists at all. The scenario's claim is
+    // unchanged — a CLIPPED move must reach its own per-move state rather than
+    // the shared generic "Active", which the prefix still excludes.
     private void TickClippedReachesPerMove()
     {
         PlayerController holder;
@@ -240,9 +247,20 @@ public partial class MoveKindAnimTest : Node
                 if (phase == MovePhase.Active)
                 {
                     _sawActivePhase = true;
-                    if (animNode == "BehindTheBackActive")
+                    // (#281) Prefix match, not equality. Behind-the-back is now
+                    // HANDED as well as clipped, so its Active state is
+                    // "BehindTheBackActiveLeft" or "...Right" and the
+                    // unsuffixed "BehindTheBackActive" no longer exists. This
+                    // scenario's claim is unchanged and still precisely tested:
+                    // a CLIPPED move must reach its own per-move state rather
+                    // than the shared generic "Active" — which the prefix
+                    // excludes. Which polarity comes up depends on the tipoff's
+                    // starting hand and is CrossoverAnimTest/
+                    // BehindTheBackAnimTest's business, not this file's.
+                    if (animNode.StartsWith("BehindTheBackActive"))
                     {
                         _latchedTargetAnimState = true;
+                        _observedPerMoveState = animNode;
                     }
                 }
 
@@ -271,12 +289,13 @@ public partial class MoveKindAnimTest : Node
         if (pass)
         {
             GD.Print($"[movekind-anim] PASS clipped-reaches-permove — the AnimationTree state " +
-                     "machine actually entered \"BehindTheBackActive\" while MovePhase.Active was " +
-                     $"live, then settled back onto \"{expectedNeutral}\" once the move's lifecycle finished.");
+                     $"machine actually entered \"{_observedPerMoveState}\" (a per-move state, not the " +
+                     $"shared generic \"Active\") while MovePhase.Active was live, then settled back onto " +
+                     $"\"{expectedNeutral}\" once the move's lifecycle finished.");
         }
         else
         {
-            Fail($"clipped-reaches-permove: expected the tree to enter \"BehindTheBackActive\" " +
+            Fail($"clipped-reaches-permove: expected the tree to enter a \"BehindTheBackActive*\" state " +
                  $"during Active and settle on \"{expectedNeutral}\" after; got sawActivePhase={_sawActivePhase}, " +
                  $"latchedTargetAnimState={_latchedTargetAnimState}, finalAnimNode={finalAnimNode}, " +
                  $"ballState={_ball.State}.");
