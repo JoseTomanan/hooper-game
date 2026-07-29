@@ -505,13 +505,15 @@ func _slice(src: Animation, t0: float, t1: float, ticks: int) -> Animation:
 			var u := float(k) / float(ticks)
 			var st: float = lerpf(t0, t1, u)
 			var dt := float(k) / TPS
+			# Only the two types the filter above lets through. A TYPE_SCALE_3D
+			# arm here would be unreachable, and worse, would read as though
+			# scale tracks were still supported when the whole point of the
+			# filter is that they must not be (they fight PlayerRigScaler).
 			match type:
 				Animation.TYPE_ROTATION_3D:
 					out.rotation_track_insert_key(t, dt, src.rotation_track_interpolate(i, st))
 				Animation.TYPE_POSITION_3D:
 					out.position_track_insert_key(t, dt, src.position_track_interpolate(i, st))
-				Animation.TYPE_SCALE_3D:
-					out.scale_track_insert_key(t, dt, src.scale_track_interpolate(i, st))
 	return out
 
 
