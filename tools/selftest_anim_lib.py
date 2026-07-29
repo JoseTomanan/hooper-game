@@ -59,6 +59,54 @@ def main():
     lib.enter_pose_mode(arm)
     bpy.context.scene.frame_set(f0)
 
+    # ---- 0. the L/R chains sit on opposite sides, and WHICH side -----------
+    # THE SYMMETRIC BLIND SPOT. Every assertion in section 1 below would still
+    # pass if ARM_CHAIN["L"] were copy-pasted to the Right bones: the wrist
+    # checks are computed from whatever shoulder the chain reports, so the IK
+    # reaches its (mirrored) target either way, and the hint/over-reach/
+    # degenerate checks are all side-agnostic. A symmetric assertion cannot
+    # detect a symmetric error -- the #255 mirror-bug lesson.
+    #
+    # MEASURED, and it is NOT what the name suggests: `geom.right` points at the
+    # character's LEFT. The left shoulder sits at +0.1343 m along it and the
+    # right shoulder at -0.1804 m, and the same holds on the exported clip.
+    # `derive_axes` negates `right` alongside `forward` in a branch that fires on
+    # every Mixamo rig (see its comment), and nothing downstream re-checks the
+    # sign anatomically.
+    #
+    # This is pinned rather than fixed, deliberately. It is pre-existing (#300,
+    # verbatim), the leg IK is unaffected -- knees measured bending FORWARD by
+    # +0.129 m (L) and +0.069 m (R) mean displacement from the hip-ankle chord --
+    # and correcting the sign would mirror foot placement, changing the exported
+    # clip and breaking the 0/4160 equivalence gate that is this PR's acceptance
+    # test. Tracked separately; see README-blender.md.
+    #
+    # It matters for the HANDED moves ahead (behind-the-back #281, ball-hand
+    # sweep, between-the-legs): `hand_target = hips + geom.right * x` puts the
+    # hand on the character's LEFT. Derive hand side from bone positions.
+    hips_head = arm.pose.bones[lib.HIPS].head.copy()
+    lateral = {}
+    for side in ("L", "R"):
+        lateral[side] = (arm.pose.bones[lib.ARM_CHAIN[side][0]].head
+                         - hips_head).dot(geom.right)
+        lib.report(f"shoulder_lateral_{side}_m", f"{geom.to_m(lateral[side]):+.4f}")
+
+    # Catches the copy-paste this section exists for: two chains resolving to the
+    # same bones land on the same side (or the same point).
+    check("arm_chains_are_opposite_sides",
+          lateral["L"] * lateral["R"] < 0.0,
+          f"L and R shoulders are on the same side of the rig "
+          f"(L={geom.to_m(lateral['L']):+.4f} m, R={geom.to_m(lateral['R']):+.4f} m); "
+          f"ARM_CHAIN is wired to one side twice")
+    # Pins the measured (mirrored) convention, so a change to `derive_axes`'
+    # sign handling cannot slip through unnoticed in either direction.
+    check("geom_right_points_rig_left_known_quirk",
+          lateral["L"] > 0.0 > lateral["R"],
+          f"the `geom.right` sign convention CHANGED (L={geom.to_m(lateral['L']):+.4f}, "
+          f"R={geom.to_m(lateral['R']):+.4f}). If this was intentional, every "
+          f"authored clip's lateral placement just mirrored -- re-run the "
+          f"equivalence gate and update this assertion and README-blender.md.")
+
     for side in ("L", "R"):
         humerus_u, ulna_u = lib.arm_lengths(arm, side)
         reach_u = humerus_u + ulna_u
@@ -211,6 +259,93 @@ def main():
           f"a Startup segment should lag at its midpoint, got {startup_mid:.4f}")
     lib.report("startup_segment_midpoint", f"{startup_mid:.4f}")
     lib.report("active_segment_midpoint", f"{active_mid:.4f}")
+
+    # ---- 6d. every channel resolves at EVERY frame, frame 0 included --------
+    # Regression for the #315-review defect. `bake_timeline` evaluates t_s=0.0 on
+    # its first frame, which lands exactly on the opening keypose. Resolving
+    # against the SEGMENT returned only that keypose's channels, so a channel
+    # introduced later went missing on frame 0 alone -- a KeyError if `apply`
+    # indexes it, or one frame of limb-at-origin if `apply` uses .get(k, 0.0).
+    # Every clip has a frame 0, so this fired on every move that ramps a channel
+    # in from Active.
+    steal = [lib.Keypose(0.0, "Startup", crouch_m=0.10),
+             lib.Keypose(0.2, "Active", crouch_m=0.15, reach_extend_m=0.50),
+             lib.Keypose(0.5, "Recovery", crouch_m=0.10, reach_extend_m=0.0)]
+    at0 = lib.interp_channels(steal, 0.0)
+    check("interp_total_at_frame_zero", "reach_extend_m" in at0,
+          f"channel introduced on Active is missing at t=0: {sorted(at0)}")
+    check("interp_holds_backward_not_zero", at0.get("reach_extend_m") == 0.50,
+          f"expected the first defined value 0.50 held backward, "
+          f"got {at0.get('reach_extend_m')}")
+    # And the gap case: defined at the ends, omitted in the middle, must ease
+    # across the whole span rather than snapping at the last segment.
+    gapped = [lib.Keypose(0.0, "a", v=0.0), lib.Keypose(1.0, "b"),
+              lib.Keypose(2.0, "c", v=10.0)]
+    check("interp_bridges_channel_gap",
+          0.0 < lib.interp_channels(gapped, 1.0)["v"] < 10.0,
+          f"expected a mid value across the gap, "
+          f"got {lib.interp_channels(gapped, 1.0)['v']}")
+
+    # ---- 6e. a channel colliding with Keypose's own kwargs fails loudly -----
+    # `Keypose(**channels)` means a channel named `easing` is swallowed by the
+    # kwarg rather than becoming a channel. Left unguarded that surfaces as
+    # `TypeError: 'float' object is not callable` from deep inside
+    # interpolation, nowhere near the keypose at fault.
+    #
+    # The `v=` channel is load-bearing in this test: resolution is per channel,
+    # so a keypose pair with NO channels never resolves an easing at all and the
+    # guard would not fire. (`bake_timeline` catches it eagerly regardless, via
+    # the per-segment logging.)
+    try:
+        lib.interp_channels([lib.Keypose(0.0, "Startup", easing=0.5, v=0.0),
+                             lib.Keypose(1.0, "Active", easing=1.0, v=1.0)], 0.5)
+        check("easing_collision_fails", False,
+              "a non-callable easing was accepted")
+    except SystemExit:
+        check("easing_collision_fails", True)
+
+    # ---- 6f. bake_timeline: frame->time mapping and the overrun guard -------
+    # This is the entry point all nineteen downstream scripts call, and it had
+    # zero coverage. Both defects fixed in this review live here.
+    seen = []
+    lib.bake_timeline(
+        arm,
+        [lib.Keypose(0.0, "Startup", v=0.0), lib.Keypose(1.0, "Active", v=1.0)],
+        lambda frame, t_s, ch: seen.append((frame, round(t_s, 6), ch["v"])),
+        f0=10, f1=10 + FPS, fps=FPS)
+    check("bake_timeline_frame_count", len(seen) == FPS + 1,
+          f"expected {FPS + 1} applies over an inclusive range, got {len(seen)}")
+    check("bake_timeline_maps_frames_to_time",
+          seen[0][:2] == (10, 0.0) and seen[-1][:2] == (10 + FPS, 1.0),
+          f"frame->time mapping wrong: first={seen[0][:2]} last={seen[-1][:2]}")
+    check("bake_timeline_reaches_both_endpoints",
+          seen[0][2] == 0.0 and seen[-1][2] == 1.0,
+          f"endpoints not reached: {seen[0][2]} .. {seen[-1][2]}")
+
+    # The overrun guard. Untrapped, a timeline longer than the frame range
+    # silently truncates -- the Recovery pose never appears and every gate in
+    # the library still passes, because none of them know what was intended.
+    try:
+        lib.bake_timeline(
+            arm,
+            [lib.Keypose(0.0, "Startup", v=0.0), lib.Keypose(5.0, "Recovery", v=1.0)],
+            lambda frame, t_s, ch: None,
+            f0=10, f1=10 + FPS, fps=FPS)
+        check("bake_timeline_rejects_overrun", False,
+              "a 5.0s timeline was baked into a 1.0s frame range without error")
+    except SystemExit:
+        check("bake_timeline_rejects_overrun", True)
+
+    # ---- 6g. aim_matrix refuses a non-orthonormal basis ---------------------
+    # The guard that replaced `verify_pose_unscaled` for this job. Proven to bite
+    # by handing it a side axis that is not a unit vector's worth of information
+    # -- a zero-length tail direction, which cannot yield a unit basis.
+    try:
+        lib.aim_matrix(hips_head, lib.Vector((0.0, 0.0, 0.0)), geom.right)
+        check("aim_matrix_rejects_degenerate", False,
+              "aim_matrix accepted a zero-length tail direction")
+    except (SystemExit, ValueError, ZeroDivisionError):
+        check("aim_matrix_rejects_degenerate", True)
 
     # ---- 7. verify_pose_distinct actually FAILS on identical poses ----------
     # A gate that cannot fail is worse than no gate, so prove this one bites.

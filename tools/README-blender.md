@@ -194,6 +194,58 @@ so check the authoring output rather than guessing:
 [author] segment 'Startup' -> 'Active' (0.000s..0.200s): easing=ease_in
 ```
 
+## Two measured limitations you inherit
+
+Both are pre-existing (from #300), both are proven not to affect the shipped
+dribble clip, and both are fenced off by measurements that print every run.
+Neither was fixed in #315 because correcting either changes the exported clip
+and breaks the `0 / 4160` equivalence gate that proves the extraction is clean.
+
+### 1. `geom.right` points at the character's LEFT
+
+Measured: the left shoulder sits at `+0.1343 m` along `geom.right`, the right
+shoulder at `-0.1804 m`. `derive_axes` negates `right` alongside `forward` in a
+branch that **fires on every Mixamo rig**, and nothing downstream re-checks the
+sign anatomically.
+
+The leg IK is unaffected — knees measured bending *forward* by `+0.129 m` (L) and
+`+0.069 m` (R) mean displacement from the hip→ankle chord — and a symmetric gait
+hides it completely, which is why it survived #300.
+
+**It will not stay hidden in a handed move.** `hand_target = hips + geom.right * x`
+puts the hand on the character's **left**. For behind-the-back, the ball-hand
+sweep, between-the-legs, or anything that swaps hands, derive the side from bone
+positions (e.g. `LeftHand.head - Hips.head`) rather than from `geom.right`, and
+give the clip a **non-symmetric** assertion — a mirrored clip passes every
+symmetric check ever written (the #255 lesson).
+
+`selftest_anim_lib.py` section 0 pins this convention, so if the sign is ever
+corrected the selftest fails loudly and tells you to re-run the equivalence gate.
+
+### 2. `plant_foot` is inexact for lateral targets
+
+`Matrix.Rotation(-hip_offset, 4, right)` only rotates the component of the
+hip→ankle direction perpendicular to `right`, so a target with a sideways
+component achieves less than the requested hip angle:
+
+```
+cos(theta_eff) = cos²(alpha) + sin²(alpha)·cos(hip_offset)
+```
+
+The knee lands off the IK circle and the ankle falls **short**. Measured on the
+dribble clip: **`worst_ankle_ik_err_m = 0.0299`** — 3 cm, and that gait is nearly
+planar. Moves with real lateral footwork (euro-step, spin, step-back, defensive
+slides) will be worse.
+
+`aim_arm` does **not** share this defect: it builds its rotation axis as
+`dir_wrist.cross(hint)`, perpendicular by construction, so its solve is exact
+(sub-micron wrist error in the selftest). The fix is to use the same
+construction here.
+
+`plant_foot` returns `(solve_triple, achieved_ankle_error)` — report it. Without
+it the shortfall is invisible, because the solve triple describes the *request*,
+not the *result*.
+
 ## Reach budgets (measured on the Y Bot rig)
 
 | Chain | Length |

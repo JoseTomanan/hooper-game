@@ -238,11 +238,17 @@ def verify_cadence(arm, f0, f1, geom):
     for a clip with different cadence, silently keeping 3 would desync the
     stride from the ball -- so this fails loud instead.
     """
+    # `preserve_frame` per README-blender.md trap 5: anything that samples poses
+    # restores the frame. Harmless here today (this runs before the authoring
+    # loop, which sets every frame it touches), but this is the one sampler in
+    # the PR that was violating the convention the PR itself introduces, and the
+    # trap is that the harm only appears when someone later moves the call.
     vals = []
-    for f in range(f0, f1 + 1):
-        bpy.context.scene.frame_set(f)
-        vals.append((arm.pose.bones["mixamorig:RightHand"].head
-                     - arm.pose.bones[lib.HIPS].head).dot(geom.up))
+    with lib.preserve_frame():
+        for f in range(f0, f1 + 1):
+            bpy.context.scene.frame_set(f)
+            vals.append((arm.pose.bones["mixamorig:RightHand"].head
+                         - arm.pose.bones[lib.HIPS].head).dot(geom.up))
     span = max(vals) - min(vals)
     lo, hi = min(vals) + 0.2 * span, max(vals) - 0.2 * span
     bounces, state = 0, ("high" if vals[0] > hi else "low")
@@ -289,6 +295,7 @@ def main():
 
     lib.enter_pose_mode(arm)
     lean_q = Matrix.Rotation(math.radians(LEAN_DEGREES), 4, right)
+    worst_ankle_err = 0.0
 
     for i, f in enumerate(range(f0, f1 + 1)):
         scene.frame_set(f)
@@ -334,9 +341,17 @@ def main():
                 pitch = math.sin(math.pi * s)
                 toe_dir = (forward * 0.90 - up * (0.44 - 0.34 * pitch)).normalized()
 
-            lib.plant_foot(arm, side, ankle, toe_dir, geom, frame=f)
+            _solved, ankle_err = lib.plant_foot(
+                arm, side, ankle, toe_dir, geom, frame=f)
+            worst_ankle_err = max(worst_ankle_err, ankle_err)
 
     bpy.ops.object.mode_set(mode="OBJECT")
+
+    # Where the ankles actually landed vs where the IK was asked to put them.
+    # Nonzero because `plant_foot`'s hip rotation is inexact for lateral targets
+    # (see its docstring); this gait is nearly planar so it stays tiny, but the
+    # number is now visible instead of assumed.
+    lib.report("worst_ankle_ik_err_m", f"{geom.to_m(worst_ankle_err):.6f}")
 
     # ---- proofs, before the export commits anything --------------------------
     # These are the library's shared gates (#315), run here both because this
@@ -344,7 +359,14 @@ def main():
     # nobody trusts. Each raises SystemExit, which `--python-exit-code 1` turns
     # into a failed build.
     frames = list(range(f0, f1 + 1))
-    lib.verify_all_bones_keyed(arm)
+    # `expected_count` is what gives this gate teeth. Without it only the
+    # "some bone is unkeyed" branch runs, and that passes by construction on any
+    # healthy Mixamo source. 52 = the Y Bot's 65 bones minus the 13 leaf
+    # terminators; if a source swap or a narrowed export changes that, this is
+    # what says so instead of shipping a clip that T-poses in Godot.
+    lib.verify_all_bones_keyed(arm, expected_count=52)
+    # NOTE: a source-integrity tripwire, NOT an `aim_matrix` guard -- see its
+    # docstring. `aim_matrix` asserts its own orthonormality at construction.
     lib.verify_pose_unscaled(arm, frames)
     # A drive gait keeps ground contact (STANCE_FRACTION 0.62 > 0.5 gives a
     # double-support overlap), so the LOWER toe should never leave the support

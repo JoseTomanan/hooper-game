@@ -135,6 +135,20 @@ def derive_axes(arm):
 
     # Sign check against anatomy rather than assumption: the toe is ahead of
     # the ankle on a human.
+    #
+    # THIS BRANCH FIRES ON EVERY RUN against the Mixamo rigs -- it is not a
+    # defensive no-op, it is load-bearing. `forward = right x up` comes out
+    # pointing BACKWARD for this rig's handedness, and the flip is what makes it
+    # anatomically forward. Measured on `Dribble.fbx`: the post-flip axes are
+    # right=(1,0,0), up=(0,1,0), forward=(0,0.006,1).
+    #
+    # A #315 review proposed raising here instead, on the theory that negating
+    # `right` mirrors the rig and that the branch never fires anyway. Both halves
+    # were wrong: it fires every time, and raising broke every authoring run.
+    # Negating BOTH preserves handedness, and `right`'s final sign is verified
+    # independently -- `selftest_anim_lib.py` section 0 asserts the left shoulder
+    # sits on the negative side of `right` and the right shoulder on the positive
+    # side, which is the non-symmetric check that would actually catch a mirror.
     toe = rest["mixamorig:LeftToeBase"].head_local
     ankle = rest["mixamorig:LeftFoot"].head_local
     if (toe - ankle).dot(forward) < 0:
@@ -269,9 +283,8 @@ def aim_matrix(head, tail_dir, side_axis):
     entirely -- we never need to know what the rest roll was, which is what
     makes this robust across bones.
 
-    Unit basis, no scale: a scaled basis would stretch the bone rather than just
-    orient it, and the FBX round-trip would carry that into Godot as a SCALE_3D
-    track the clip contract does not expect. `verify_pose_unscaled` is the guard.
+    Unit basis, no scale. The orthonormality assertion below is the guard --
+    NOT `verify_pose_unscaled`, which is blind to this (see the note there).
 
     `side_axis` must not be parallel to `tail_dir`. For legs the rig's `right`
     is always safe. For ARMS it is not -- an arm near the T-pose points straight
@@ -280,11 +293,45 @@ def aim_matrix(head, tail_dir, side_axis):
     y = tail_dir.normalized()
     x = (side_axis - y * side_axis.dot(y))
     if x.length < 1e-6:
-        # Degenerate only if the bone points along the side axis; fall back to
-        # any perpendicular rather than emit NaN.
-        x = Vector((1.0, 0.0, 0.0)) - y * y.x
+        # Degenerate: the bone points along the side axis. Fall back to whichever
+        # world axis is LEAST aligned with y, rather than always X.
+        #
+        # Always-X was itself degenerate in the case most likely to reach here:
+        # `plant_foot` passes the rig's `right`, which on this rig is essentially
+        # exactly +X (it is derived from `r_hip - l_hip`), so `y` parallel to the
+        # side axis means `y` parallel to X -- and `X - y*y.x` is then the ZERO
+        # vector. The old fallback produced NaN in precisely the situation it
+        # existed to prevent.
+        ref = Vector((0.0, 0.0, 1.0)) if abs(y.x) > 0.9 else Vector((1.0, 0.0, 0.0))
+        x = ref - y * ref.dot(y)
     x.normalize()
     z = x.cross(y).normalized()
+
+    # Assert orthonormality HERE, at construction, rather than trusting a
+    # downstream pose check. MEASURED (#315 review): `verify_pose_unscaled`
+    # cannot see a non-unit basis at all -- the source action carries scale
+    # fcurves for every posed bone, so `frame_set` re-drives pose scale from the
+    # SOURCE before any measurement is taken, and the authored scale is
+    # discarded. Mutation-proven: scaling this x column 2x left
+    # `worst_pose_scale_dev` at 4.8e-7, bit-unchanged, and the selftest green.
+    #
+    # The damage is real but lands in the ROTATION, not the scale: a non-unit
+    # basis displaces child bone heads, so the next chain step (re-reading the
+    # knee after posing the femur) aims from a position the parent no longer
+    # occupies. That same mutation moved the exported clip by 14.06 deg.
+    # Re-authoring an existing clip catches that via `compare_fbx_anim.py`, but
+    # a NEW clip has no committed reference to compare against -- which is every
+    # one of the nineteen downstream handoffs. So the guard belongs here.
+    errs = (abs(x.length - 1.0), abs(y.length - 1.0), abs(z.length - 1.0),
+            abs(x.dot(y)), abs(y.dot(z)), abs(z.dot(x)))
+    if max(errs) > 1e-5:
+        raise SystemExit(
+            f"FATAL: aim_matrix built a non-orthonormal basis "
+            f"(|x|={x.length:.6f} |y|={y.length:.6f} |z|={z.length:.6f} "
+            f"x.y={x.dot(y):.2e} y.z={y.dot(z):.2e} z.x={z.dot(x):.2e}). "
+            f"This corrupts the child bone's head position and shows up as a "
+            f"rotation error downstream, NOT as a scale track.")
+
     return Matrix((
         (x.x, y.x, z.x, head.x),
         (x.y, y.y, z.y, head.y),
@@ -310,8 +357,31 @@ def plant_foot(arm, side, ankle_target, toe_dir, geom, frame=None):
     clip baked in (`Dribble.fbx` carries +0.6881 m of it), so #298's `C_leg`
     bisection machinery is unnecessary rather than merely retuned.
 
-    Returns the `solve_two_link` triple for reporting. Keys the three rotated
-    bones when `frame` is given.
+    Returns `(solve_two_link triple, achieved_ankle_error_in_armature_units)`.
+    Keys the three rotated bones when `frame` is given.
+
+    KNOWN LIMITATION -- the solve is not exact for LATERAL targets (#315 review;
+    pre-existing, verbatim from #300). `Matrix.Rotation(-hip_offset, 4, right)`
+    only rotates the component of `dir_ankle` perpendicular to `right`, so when
+    the target has a sideways component the achieved hip angle is strictly less
+    than `hip_offset`:
+
+        cos(theta_eff) = cos^2(alpha) + sin^2(alpha) * cos(hip_offset)
+
+    with alpha the angle between `dir_ankle` and `right`. The knee then lands off
+    the IK circle and the ankle falls SHORT of `ankle_target`.
+
+    `aim_arm` does not share this defect -- it builds its rotation axis as
+    `dir_wrist.cross(hint)`, perpendicular by construction, so its solve is exact
+    (its selftest asserts sub-micron wrist error). The fix here is the same
+    construction, but it is deferred: it moves this clip's output and would break
+    the 0/4160-pair equivalence gate that is #315's acceptance test.
+
+    The returned error is the guard in the meantime. It is a pure measurement --
+    it cannot change the exported pose -- and it is why this is now a measured
+    limitation rather than an invisible one. Forward-and-back gaits stay in the
+    sub-millimetre range; moves with real lateral footwork (euro-step, spin,
+    step-back, defensive slides) are where it would matter.
     """
     up_leg, leg, foot_b, _toe_b = LEG_CHAIN[side]
     right = geom.right
@@ -340,13 +410,18 @@ def plant_foot(arm, side, ankle_target, toe_dir, geom, frame=None):
     bpy.context.view_layer.update()
 
     ankle_head = arm.pose.bones[foot_b].head.copy()
+    # Measured AFTER the tibia is posed and updated, so this is where the ankle
+    # actually landed -- not where the solve asked it to go. See the lateral
+    # limitation in the docstring; without this the shortfall is unobservable,
+    # because `solved` reports the REQUEST, not the RESULT.
+    ankle_err = (ankle_head - ankle_target).length
     arm.pose.bones[foot_b].matrix = aim_matrix(ankle_head, toe_dir, right)
     bpy.context.view_layer.update()
 
     if frame is not None:
         for bn in (up_leg, leg, foot_b):
             arm.pose.bones[bn].keyframe_insert("rotation_quaternion", frame=frame)
-    return solved
+    return solved, ankle_err
 
 
 def aim_arm(arm, side, hand_target, elbow_hint_dir, geom, frame=None,
@@ -591,20 +666,48 @@ def resolve_easing(keypose, override=None):
     escape hatch) > the keypose's own `easing` > `PHASE_EASING` by label >
     `DEFAULT_EASING`.
     """
-    if override is not None:
-        return override
-    if getattr(keypose, "easing", None) is not None:
-        return keypose.easing
-    return PHASE_EASING.get(str(keypose.label).strip().lower(), DEFAULT_EASING)
+    chosen = override
+    if chosen is None:
+        chosen = getattr(keypose, "easing", None)
+    if chosen is None:
+        chosen = PHASE_EASING.get(str(keypose.label).strip().lower(), DEFAULT_EASING)
+    if not callable(chosen):
+        # `Keypose(**channels)` means a channel named `easing` is swallowed by
+        # the kwarg instead of becoming a channel. Without this the failure is a
+        # `TypeError: 'float' object is not callable` raised deep inside
+        # interpolation, nowhere near the keypose that caused it.
+        raise SystemExit(
+            f"FATAL: easing for keypose {keypose.label!r} is {chosen!r}, which is "
+            f"not callable. A channel may not be named 'easing', 'label' or "
+            f"'time_s' -- those are Keypose's own parameters. Rename the channel.")
+    return chosen
 
 
 def interp_channels(keyposes, t_s, easing=None):
-    """Channel values at `t_s`, interpolated between the bracketing keyposes.
+    """Channel values at `t_s`, for EVERY channel named anywhere in the timeline.
 
-    Holds the endpoints outside the timeline's range rather than extrapolating.
-    A channel present in one keypose but absent from its neighbour is HELD at
-    the value it has, not treated as zero -- silently lerping an absent channel
-    toward 0 is a very easy way to author a limb that drifts to the origin.
+    Resolution is PER CHANNEL, against the keyposes that actually define that
+    channel -- not against the bracketing segment. So a channel is interpolated
+    between its own neighbouring definitions, and held flat before the first and
+    after the last. It is never absent, and never lerped toward 0; silently
+    lerping an absent channel toward 0 is a very easy way to author a limb that
+    drifts to the origin.
+
+    Per-channel resolution is what makes the returned dict TOTAL, and that
+    matters more than it looks. `bake_timeline` evaluates t_s=0.0 on its first
+    frame, which lands exactly on the opening keypose. Resolving against the
+    segment would return only that keypose's channels, so a channel introduced
+    later (a steal's `reach_extend_m`, first named on Active) would be missing
+    on frame 0 alone -- a KeyError if the caller indexes, or, with the
+    `.get(key, 0.0)` idiom this docstring's own warning invites, one frame of
+    limb-at-origin followed by a jump. Every clip has a frame 0.
+
+    It also removes a discontinuity: a channel defined on keyposes 1 and 4 but
+    not 2 and 3 used to snap to keypose 4's value at the start of segment 3->4.
+    Now it eases across the whole 1->4 span.
+
+    Where every keypose defines every channel -- the common case -- this is
+    identical to resolving against the segment.
 
     `easing=None` resolves per segment via `resolve_easing`; pass a callable to
     force one curve across the whole timeline.
@@ -612,27 +715,28 @@ def interp_channels(keyposes, t_s, easing=None):
     if not keyposes:
         raise SystemExit("FATAL: empty keypose timeline")
     ordered = sorted(keyposes, key=lambda k: k.time_s)
-    if t_s <= ordered[0].time_s:
-        return dict(ordered[0].channels)
-    if t_s >= ordered[-1].time_s:
-        return dict(ordered[-1].channels)
 
-    for a, b in zip(ordered, ordered[1:]):
-        if a.time_s <= t_s <= b.time_s:
-            span = b.time_s - a.time_s
-            # The SEGMENT's easing comes from the keypose it starts at, so a
-            # three-phase move gets load-and-snap into Active and a settle out
-            # of it without the per-move spec restating that every time.
-            shape = resolve_easing(a, easing)
-            u = 0.0 if span <= 0.0 else shape((t_s - a.time_s) / span)
-            out = {}
-            for key in set(a.channels) | set(b.channels):
-                if key in a.channels and key in b.channels:
-                    out[key] = a.channels[key] + (b.channels[key] - a.channels[key]) * u
-                else:
-                    out[key] = a.channels.get(key, b.channels.get(key))
-            return out
-    raise SystemExit(f"FATAL: t={t_s} fell through the keypose timeline")
+    out = {}
+    for key in {k for kp in ordered for k in kp.channels}:
+        defs = [kp for kp in ordered if key in kp.channels]
+        if t_s <= defs[0].time_s:
+            out[key] = defs[0].channels[key]
+            continue
+        if t_s >= defs[-1].time_s:
+            out[key] = defs[-1].channels[key]
+            continue
+        for a, b in zip(defs, defs[1:]):
+            if a.time_s <= t_s <= b.time_s:
+                span = b.time_s - a.time_s
+                # The easing comes from the keypose the channel was last DEFINED
+                # at, so each channel's motion is shaped by the phase it left --
+                # a three-phase move gets load-and-snap into Active and a settle
+                # out of it without the per-move spec restating that every time.
+                shape = resolve_easing(a, easing)
+                u = 0.0 if span <= 0.0 else shape((t_s - a.time_s) / span)
+                out[key] = a.channels[key] + (b.channels[key] - a.channels[key]) * u
+                break
+    return out
 
 
 def bake_timeline(arm, keyposes, apply, f0, f1, fps, easing=None):
@@ -645,8 +749,33 @@ def bake_timeline(arm, keyposes, apply, f0, f1, fps, easing=None):
     Logs the easing resolved for each segment. That log line is what keeps the
     label-driven `PHASE_EASING` default honest: a wrong curve shows up as a
     readable line in the authoring run rather than as a clip that feels off.
+
+    Raises if the timeline runs past the frame range. `f0`/`f1` come from the
+    SOURCE FBX, while the keypose times come from the move's tick table, and the
+    two are authored independently -- so a timeline that overruns is a realistic
+    mistake. Untrapped it truncates silently: the clip just holds the last
+    in-range interpolation, the Recovery pose never appears, and every gate in
+    this library still passes, because none of them know what the timeline
+    intended.
     """
+    if not keyposes:
+        raise SystemExit("FATAL: empty keypose timeline")
     ordered = sorted(keyposes, key=lambda k: k.time_s)
+
+    span_s = (f1 - f0) / fps
+    last_s = ordered[-1].time_s
+    if last_s > span_s + 1e-9:
+        raise SystemExit(
+            f"FATAL: keypose timeline ends at {last_s:.3f}s but frames "
+            f"{f0}..{f1} at {fps} fps only cover {span_s:.3f}s. The last "
+            f"{last_s - span_s:.3f}s -- including keypose {ordered[-1].label!r} "
+            f"-- would be silently truncated. Extend the frame range or shorten "
+            f"the timeline.")
+    if last_s < span_s - 1e-9:
+        # Legitimate (the tail holds the final pose), but worth seeing.
+        log(f"NOTE: timeline ends at {last_s:.3f}s, frames cover {span_s:.3f}s; "
+            f"the final {span_s - last_s:.3f}s holds {ordered[-1].label!r}")
+
     for a, b in zip(ordered, ordered[1:]):
         log(f"segment {a.label!r} -> {b.label!r} "
             f"({a.time_s:.3f}s..{b.time_s:.3f}s): "
@@ -721,8 +850,18 @@ def verify_all_bones_keyed(arm, expected_count=None, allow_leaf_ends=True):
     pose for bones the clip omits; it falls back to skeleton REST. A clip that
     touches only the gesturing limb makes the arms T-pose the moment the move
     plays. A Blender FBX export bakes the whole armature by default, which makes
-    that failure structurally absent -- this asserts nobody has narrowed the
-    export to defeat that.
+    that failure structurally absent.
+
+    SCOPE: this inspects the ACTION, before export, so it does NOT verify export
+    scope -- it cannot see `export_fbx`'s `object_types` or `add_leaf_bones`. An
+    earlier version of this docstring claimed otherwise; it was wrong.
+
+    Because these scripts key into the source action and the Mixamo sources
+    already key all 52 non-terminator bones, the `missing` branch passes by
+    construction on a healthy source. That is fine -- it is a source-swap and
+    narrowing tripwire, not a check on what the authoring posed. To give it
+    teeth, PASS `expected_count`: without it the rig/source-change branch below
+    never runs, which is the difference between a live gate and a decoration.
 
     Leaf terminators (`LEAF_END_BONES`) are exempt by default: the Mixamo source
     clips leave all 13 unkeyed, and nothing hangs off them.
@@ -746,15 +885,26 @@ def verify_all_bones_keyed(arm, expected_count=None, allow_leaf_ends=True):
 def verify_pose_unscaled(arm, frames, tol=1e-4):
     """No bone carries a non-unit pose SCALE at any frame in `frames`.
 
-    Guards `aim_matrix` against a non-unit basis, which would stretch the bone
-    and arrive in Godot as a SCALE_3D track the clip contract does not expect.
+    SCOPE -- read this before trusting it. This does NOT guard `aim_matrix`
+    against a non-unit basis, despite the obvious appeal of that reading.
+    MEASURED (#315 review): scaling `aim_matrix`'s x column 2x leaves the number
+    this reports bit-unchanged at 4.8e-7, and the selftest fully green.
 
-    This checks the POSE, deliberately, not the fcurve list. Every Mixamo source
-    action already carries scale CHANNELS -- measured 156 of them on
-    `Dribble.fbx`, 52 bones x 3 axes -- and these scripts key into the source
-    action, so "assert no scale fcurves exist" would fail on every single
-    authoring run while catching nothing. The pose is where a bad basis shows
-    up. Measured baseline on the untouched source: 2.4e-7 off unit.
+    The reason is that scale is never keyed by these scripts, while the source
+    action carries scale CHANNELS for every posed bone -- measured 156 on
+    `Dribble.fbx`, 52 bones x 3 axes. So the `frame_set` below re-drives pose
+    scale from the SOURCE curves, discarding whatever the authoring wrote,
+    before a single measurement is taken. `aim_matrix` asserts its own
+    orthonormality at construction instead; that is the real guard.
+
+    What this DOES prove is worth keeping: that the source clip being authored
+    into carries no unexpected pose scale of its own, i.e. it is a source-
+    integrity tripwire that fires on a bad or rescaled input FBX. Measured
+    baseline on the untouched source: 2.4e-7 off unit.
+
+    It checks the POSE rather than the fcurve list deliberately: "assert no
+    scale fcurves exist" would fail on every authoring run (see the 156 above)
+    while catching nothing.
     """
     scene = bpy.context.scene
     worst = (0.0, None, None)
