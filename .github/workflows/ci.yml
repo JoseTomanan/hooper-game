@@ -901,6 +901,31 @@ jobs:
           godot --headless --path . res://tests/integration/DribbleLoopTest.tscn -- --harness-scenario=held-no-dribble
           godot --headless --path . res://tests/integration/DribbleLoopTest.tscn -- --harness-scenario=move-outranks-dribble
 
+      # Dribble hand-side/animation alignment baseline (branch
+      # test/dribble-hand-alignment-baseline). Measured defect: BallController.
+      # TickDribbling places the ball via holderPos + forward*offset +
+      # HandRight(forward)*HandOffset*HandSign(holder.HandSide) (ADR-0012,
+      # server-authoritative), but scenes/Player.tscn's Dribble BlendSpace1D is
+      # a single state with NO hand-side split — the SAME clip always plays,
+      # and it was measured to animate the RIGHT hand. HandSide defaults to
+      # Left, so a fresh possession places the ball on the OPPOSITE side from
+      # the hand the clip actually animates. hand-alignment-right (forcing
+      # HandSide.Right, matching the clip's fixed hand) is the discriminating
+      # control that proves the harness itself can pass; hand-alignment-left
+      # (the shipped default) and hand-follows-authoritative-flip (ball's
+      # lateral sign flips with HandSide, the animated hand's does not) are
+      # EXPECTED RED until the animation gets a real hand-side split.
+      # TODO(test/dribble-hand-alignment-baseline): expected red until the
+      # dribble hand-side fix lands — uncomment once the Dribble state is
+      # split by hand side (or otherwise made to follow authoritative
+      # HandSide) and hand-alignment-left / hand-follows-authoritative-flip
+      # turn green.
+      # - name: Run dribble-hand-alignment harness
+      #   run: |
+      #     godot --headless --path . res://tests/integration/DribbleHandAlignmentTest.tscn -- --harness-scenario=hand-alignment-left
+      #     godot --headless --path . res://tests/integration/DribbleHandAlignmentTest.tscn -- --harness-scenario=hand-alignment-right
+      #     godot --headless --path . res://tests/integration/DribbleHandAlignmentTest.tscn -- --harness-scenario=hand-follows-authoritative-flip
+
       # Independent height/wingspan rig scaling (issue #170), the engine-glue
       # half. RigScaleTests (dotnet) pins the pure RigScale classifier; this
       # proves PlayerRigScaler runs against the REAL imported Y Bot Skeleton3D:
