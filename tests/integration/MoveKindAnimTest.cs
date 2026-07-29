@@ -186,12 +186,18 @@ public partial class MoveKindAnimTest : Node
     // ── Scenario: clipped-reaches-permove ───────────────────────────────────
     // BehindTheBack IS in MoveAnimResolver.ClippedMovePrefixes ("behindtheback"
     // -> "BehindTheBack"). Asserts the AnimationTree's state machine really
-    // Travels into "BehindTheBackActive" while MovePhase.Active is live (event
-    // -time latch, not an end-of-run check — matches PivotAnimTest's
+    // Travels into a "BehindTheBackActive*" state while MovePhase.Active is
+    // live (event-time latch, not an end-of-run check — matches PivotAnimTest's
     // discipline), then settles back onto the possession-correct NEUTRAL once
     // the move's full lifecycle returns to Inactive — "Dribble" here, since the
     // scenario starts a live dribble first and BehindTheBack does not end it
     // (see ExpectedNeutralAnimNode; pre-#285 this was always "Locomotion").
+    //
+    // The trailing wildcard is load-bearing (#281): behind-the-back is now
+    // HANDED, so the state is "BehindTheBackActiveLeft"/"...Right" and the bare
+    // "BehindTheBackActive" no longer exists at all. The scenario's claim is
+    // unchanged — a CLIPPED move must reach its own per-move state rather than
+    // the shared generic "Active", which the prefix still excludes.
     private void TickClippedReachesPerMove()
     {
         PlayerController holder;
