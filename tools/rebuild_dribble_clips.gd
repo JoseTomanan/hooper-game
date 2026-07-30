@@ -1,23 +1,69 @@
 extends SceneTree
-# Asset build tool (#285) — extracts the two dribble-loop blendspace endpoints
-# from assets/Dribble.fbx into assets/locomotion.res.
+# Asset build tool (#285, extended by #294) — extracts FOUR dribble-loop
+# blendspace endpoints, one idle/move PAIR PER BALL-HAND POLARITY, from their
+# respective FBX sources into assets/locomotion.res.
 #
 # Run:  godot --headless --path . -s tools/rebuild_dribble_clips.gd
-# Idempotent: re-running overwrites both clips with freshly-derived ones.
+# Idempotent: re-running overwrites all four clips with freshly-derived ones,
+# and purges the pre-#294 two-clip names (see POLARITIES/LEGACY_* below).
 #
-# Produces:
-#   dribbleidle — the REAL stock-Mixamo clip (#285a), LOOPED, VERBATIM.
-#                 fix/298 round 2 proposed amending this contract for the leg
-#                 chain; that was MEASURED, REJECTED and gated off behind
-#                 CENTRE_IDLE_ENDPOINT := false (see that section below, which
-#                 documents a rejected path -- read its closing paragraph, not
-#                 just its premise). PROOF 4 is handed identity rotations and
-#                 therefore asserts plain verbatim-ness today.
-#   dribblemove — LOOPED, SAME LENGTH. As of #300 it is AUTHORED in headless
-#                 Blender (tools/author_dribble_move.py) and loaded verbatim
-#                 from AUTHORED_MOVE_FBX; the #285b lean-only draft and #298's
-#                 run-delta leg transplant are superseded and survive only
-#                 behind USE_AUTHORED_MOVE_CLIP := false.
+# Produces, per entry of POLARITIES below, named `dribble{idle,move}{suffix}`:
+#   dribbleidle{suffix} — the REAL clip for that polarity's own idle FBX
+#                 source, LOOPED, VERBATIM. For "right" this is the stock-
+#                 Mixamo assets/Dribble.fbx clip `mixamo_com` (#285a's
+#                 original contract, unchanged); for "left" it is the
+#                 Blender-mirrored assets/dribble_idle_left.fbx clip
+#                 `dribbleidleleft`. fix/298 round 2 proposed amending this
+#                 contract for the leg chain; that was MEASURED, REJECTED and
+#                 gated off behind CENTRE_IDLE_ENDPOINT := false (see that
+#                 section below, which documents a rejected path -- read its
+#                 closing paragraph, not just its premise). PROOF 4 is handed
+#                 identity rotations and therefore asserts plain
+#                 verbatim-ness today, for BOTH polarities.
+#   dribblemove{suffix} — LOOPED, SAME LENGTH as that polarity's own idle
+#                 endpoint. As of #300 it is AUTHORED in headless Blender
+#                 (tools/author_dribble_move.py for "right"; a Blender mirror
+#                 of that same authored clip for "left") and loaded verbatim
+#                 from that polarity's own move FBX; the #285b lean-only draft
+#                 and #298's run-delta leg transplant are superseded and
+#                 survive only behind USE_AUTHORED_MOVE_CLIP := false.
+#
+# ── #294: one polarity, one independent pipeline instance ────────────────────
+# Everything below this point (the corridor argument, the #298 world-frame
+# delta, the stance-centring fix, the falsified idle-centring hypothesis) is a
+# PER-POLARITY invariant: it must hold between a SINGLE polarity's own idle and
+# move endpoints, never ACROSS polarities -- "left" and "right" are never
+# blended against each other in the AnimationTree, so nothing here requires
+# them to be close to one another, only each polarity's own pair to be close
+# to itself. POLARITIES (below the LIB_PATH/SRC_FBX/YBOT_FBX constants) is what
+# turns the single-polarity pipeline the rest of this file describes into four
+# clips: the loop in _initialize() runs the ENTIRE pipeline (idle load ->
+# retarget-if-needed -> move load -> the lean/crouch/stride dead path ->
+# the five proofs) once per entry, reusing only what is genuinely
+# polarity-INDEPENDENT across iterations -- the Y Bot rig's own facing/lean
+# axis, its raw skeleton, and the shipped `run` clip.
+#
+# ── #294: the `Armature/` prefix trap is per-SOURCE, not per-polarity ────────
+# Both "left" FBX sources (dribble_idle_left.fbx, dribble_move_left.fbx) are
+# Blender exports, so BOTH come in with every track path one node level too
+# deep (`Armature/Skeleton3D:mixamorig_Hips` vs. the library's own
+# `Skeleton3D:mixamorig_Hips`) -- see _retarget_track_paths's own doc for why a
+# MISADDRESSED path is silently worse than a missing one (it still reports the
+# right length/track count and plays as a frozen no-op). Measured: 53/53 leg
+# and torso tracks prefixed on BOTH left sources, 0/53 on the stock
+# assets/Dribble.fbx. The MOVE clip goes through Blender for EITHER polarity
+# (author_dribble_move.py or its mirror), so `_load_authored_move_clip`
+# retargets it unconditionally regardless of polarity -- that part was never
+# polarity-conditional. The IDLE clip is the one place this IS
+# polarity-conditional: "right"'s idle source is the stock FBX itself (0/53,
+# no retarget needed -- it doubles as the canonical reference clip everything
+# else retargets against), while "left"'s idle source is the Blender mirror
+# (53/53, MUST be retargeted before anything downstream reads it -- see the
+# _load_polarity_idle_source doc for why this has to happen at SOURCE-LOAD
+# time, before _proof_idle_stance_centred ever compares it to anything).
+# POLARITIES' `idle_needs_retarget` flag is exactly this bit; get it backwards
+# and the left idle plays as a silent frozen-rest no-op that every
+# reachability/duration assertion still passes.
 #
 # ── Why both endpoints are derived from `Dribble`, not `Dribble` + `run` ──────
 # #276's table suggested deriving the moving endpoint by remixing `Dribble` with
@@ -179,36 +225,83 @@ extends SceneTree
 # is measurably distinct from the idle endpoint.
 
 const LIB_PATH := "res://assets/locomotion.res"
+# The canonical PATH-CONVENTION REFERENCE clip (see the file header's #294
+# section). It is the only clip in the whole four-clip set whose track paths
+# already sit on the library's own convention (`Skeleton3D:mixamorig_Hips`, no
+# `Armature/` prefix), so it plays two distinct jobs: the retarget REFERENCE
+# passed to every `_retarget_track_paths` call (idle and move, either
+# polarity), and -- because it needs no retarget of its own -- the "right"
+# polarity's own idle SOURCE. Loaded exactly ONCE, in _initialize().
 const SRC_FBX := "res://assets/Dribble.fbx"
 const SRC_CLIP := "mixamo_com"
 const YBOT_FBX := "res://assets/Y Bot.fbx"
 
-const IDLE_NAME := &"dribbleidle"
-const MOVE_NAME := &"dribblemove"
+# ── #294: one idle/move pair per ball-hand polarity ──────────────────────────
+# Replaces the single-polarity SRC_FBX/SRC_CLIP/IDLE_NAME/MOVE_NAME/
+# AUTHORED_MOVE_FBX/AUTHORED_MOVE_CLIP constants this file used to hardcode
+# before #294. `idle_needs_retarget` is the polarity-conditional half of the
+# `Armature/` prefix trap the file header describes above: false for "right"
+# (its idle source doubles as SRC_FBX/SRC_CLIP itself -- already on-
+# convention), true for "left" (a Blender mirror -- measured 53/53 tracks
+# prefixed).
+const POLARITIES := [
+	{
+		"suffix": "right",
+		# Deliberately the SAME literal path/clip as SRC_FBX/SRC_CLIP above --
+		# not a copy that could drift out of sync with them, since equality
+		# against SRC_FBX/SRC_CLIP is exactly how _load_polarity_idle_source
+		# recognises "this polarity's idle source IS the already-loaded
+		# canonical reference, reuse it" instead of reloading the same FBX.
+		"idle_fbx": SRC_FBX,
+		"idle_clip": SRC_CLIP,
+		"move_fbx": "res://assets/dribble_move_authored.fbx",
+		"move_clip": "dribblemove",
+		"idle_needs_retarget": false,
+	},
+	{
+		"suffix": "left",
+		"idle_fbx": "res://assets/dribble_idle_left.fbx",
+		"idle_clip": "dribbleidleleft",
+		"move_fbx": "res://assets/dribble_move_left.fbx",
+		"move_clip": "dribblemoveleft",
+		"idle_needs_retarget": true,
+	},
+]
 
-# ── #300: the moving endpoint is now AUTHORED, not derived ───────────────────
+# Pre-#294 single-polarity clip names. Nothing in the game references them any
+# more (POLARITIES above is what ships now) -- kept only so an idempotent
+# re-run can find and remove a stale build rather than leaving it behind to
+# silently corrupt the library's clip inventory (see the idempotency step at
+# the end of _initialize()).
+const LEGACY_IDLE_NAME := &"dribbleidle"
+const LEGACY_MOVE_NAME := &"dribblemove"
+
+# ── #300: the moving endpoint is AUTHORED, not derived ───────────────────────
 # `tools/author_dribble_move.py` keyframes a drive-dribble gait cycle in
-# headless Blender and exports this FBX; see that script's header for the
-# method (foot trajectory + two-link IK) and for why it supersedes #298's
-# delta transplant rather than tuning it.
+# headless Blender and exports the "right" polarity's move FBX (POLARITIES
+# above); see that script's header for the method (foot trajectory + two-link
+# IK) and for why it supersedes #298's delta transplant rather than tuning it.
+# The "left" polarity's move FBX is a true Blender MIRROR of that same
+# authored clip, not a second independent authoring pass.
 #
-# When true, `dribblemove` is taken verbatim from AUTHORED_MOVE_FBX and the
-# entire #298 derivation below (lean -> crouch -> leg-stride transplant ->
-# stance centring) is skipped. `dribbleidle` is unaffected either way: it is
-# extracted from SRC_FBX exactly as before, and deliberately never makes the
-# Blender round trip (measured 0.396 deg pose error -- below
-# LOOP_SEAM_TOLERANCE_DEG but NOT zero, and #285a's contract is *verbatim*).
+# When true, each polarity's dribblemove is taken verbatim from its own
+# move_fbx/move_clip (POLARITIES) and the entire #298 derivation below (lean ->
+# crouch -> leg-stride transplant -> stance centring) is skipped. Each
+# polarity's dribbleidle is unaffected either way: it is extracted from that
+# polarity's own idle_fbx exactly as before -- #285a's contract that it is
+# VERBATIM, never re-authored or IK-solved in Blender, holds for both
+# polarities. ("left"'s idle source happens to itself be a Blender EXPORT -- a
+# straight mirror, not a re-authoring -- which is exactly why it needs the
+# `Armature/`-prefix retarget above; that is track-path bookkeeping, not new
+# motion. A genuine Blender authoring round trip was separately measured at
+# 0.396 deg pose error -- below LOOP_SEAM_TOLERANCE_DEG but NOT zero, which is
+# why #285a's contract is *verbatim*, not merely close.)
 #
 # The #298 path is retained behind `false` rather than deleted so the two can
 # be A/B'd during the #301 feel verify. DELETE IT once #301 passes -- it is
 # superseded by human direction, not a falsified hypothesis anyone would
 # re-derive, so it earns its keep only until the replacement is accepted.
 const USE_AUTHORED_MOVE_CLIP := true
-const AUTHORED_MOVE_FBX := "res://assets/dribble_move_authored.fbx"
-# Godot names the clip after the FBX take, which Blender names after the
-# SCENE (not the action) when bake_anim_use_all_actions is false. The authoring
-# script renames both to match this.
-const AUTHORED_MOVE_CLIP := "dribblemove"
 
 # Forward torso lean applied to the moving endpoint. Big enough to read as a
 # drive posture at a glance (ADR-0003 legibility), small enough that the two
@@ -356,35 +449,73 @@ const CENTRE_IDLE_ENDPOINT := false
 # than a licence to hop.
 const SUPPORT_BAND_TOLERANCE := 1.25
 
-# ── #300: load the Blender-authored moving endpoint ──────────────────────────
-# Returns null (after push_error) rather than crashing, so the caller can quit
-# non-zero without saving -- the same refuse-to-save discipline as the proofs.
-func _load_authored_move_clip(reference: Animation) -> Animation:
-	var packed = load(AUTHORED_MOVE_FBX)
+# ── #294: generic "load one named clip out of one FBX" loader ────────────────
+# Shared by the canonical-reference load, the per-polarity idle-source load,
+# and (via _load_authored_move_clip below) the per-polarity move-clip load --
+# one place to get the AnimationPlayer-lookup boilerplate right instead of
+# three. Returns null (after push_error) rather than crashing, so the caller
+# can quit non-zero without saving -- the same refuse-to-save discipline as
+# the proofs.
+func _load_clip(fbx_path: String, clip_name: String, log_tag: String) -> Animation:
+	var packed = load(fbx_path)
 	if packed == null:
-		push_error(("[rebuild-dribble] #300: failed to load %s. Regenerate it with:\n" +
-			"  \"$BLENDER\" --background --python-exit-code 1 " +
-			"--python tools/author_dribble_move.py -- assets/Dribble.fbx %s")
-			% [AUTHORED_MOVE_FBX, AUTHORED_MOVE_FBX])
+		push_error("[rebuild-dribble] failed to load %s (%s)" % [fbx_path, log_tag])
 		return null
 	var root: Node = packed.instantiate()
 	var ap: AnimationPlayer = root.get_node_or_null("AnimationPlayer")
-	if ap == null:
-		push_error("[rebuild-dribble] #300: %s has no AnimationPlayer." % AUTHORED_MOVE_FBX)
+	if ap == null or not ap.has_animation(clip_name):
+		push_error("[rebuild-dribble] %s has no AnimationPlayer clip '%s' (%s)" % [fbx_path, clip_name, log_tag])
 		return null
-	if not ap.has_animation(AUTHORED_MOVE_CLIP):
-		push_error(("[rebuild-dribble] #300: %s has no clip named '%s' (found %s). Godot names the " +
-			"clip after the FBX take, which Blender names after the SCENE -- check that " +
-			"author_dribble_move.py renamed BOTH the action and the scene.")
-			% [AUTHORED_MOVE_FBX, AUTHORED_MOVE_CLIP, ap.get_animation_list()])
+	return ap.get_animation(clip_name).duplicate(true)
+
+# ── #300/#294: load a polarity's Blender-authored moving endpoint ────────────
+# `fbx_path`/`clip_name` come from that polarity's own POLARITIES entry
+# (move_fbx/move_clip) -- #300 originally hardcoded these to the "right"
+# polarity's own constants; #294 generalised the signature so the identical
+# retarget/normalize pipeline below runs unchanged for "left" too. Returns
+# null (after push_error) rather than crashing, so the caller can quit
+# non-zero without saving -- the same refuse-to-save discipline as the proofs.
+func _load_authored_move_clip(fbx_path: String, clip_name: String, reference: Animation) -> Animation:
+	var clip := _load_clip(fbx_path, clip_name, "authored move clip")
+	if clip == null:
+		push_error(("[rebuild-dribble] #300/#294: if this is the \"right\" polarity's move clip, regenerate it with:\n" +
+			"  \"$BLENDER\" --background --python-exit-code 1 " +
+			"--python tools/author_dribble_move.py -- assets/Dribble.fbx %s\n" +
+			"(the \"left\" polarity's move FBX is a Blender mirror of that output, not independently authored.) " +
+			"Godot also names a clip after the FBX take, which Blender names after the SCENE -- check that " +
+			"the authoring/mirroring step renamed BOTH the action and the scene to '%s'.")
+			% [fbx_path, clip_name])
 		return null
-	var clip: Animation = ap.get_animation(AUTHORED_MOVE_CLIP).duplicate(true)
-	print("[rebuild-dribble] #300: authored move clip '%s': len=%.3f tracks=%d"
-		% [AUTHORED_MOVE_CLIP, clip.length, clip.get_track_count()])
+	print("[rebuild-dribble] #300: authored move clip '%s' (%s): len=%.3f tracks=%d"
+		% [clip_name, fbx_path, clip.length, clip.get_track_count()])
 	if not _retarget_track_paths(clip, reference):
 		return null
 	_normalize_loop_grid(clip)
 	return clip
+
+
+# ── #294: resolve one polarity's idle SOURCE clip ────────────────────────────
+# For "right", `idle_fbx`/`idle_clip` are literally SRC_FBX/SRC_CLIP (see
+# POLARITIES' own comment), so this returns `reference` directly -- no second
+# load of the same FBX, no retarget (it is already the canonical
+# path-convention). For any other polarity ("left") this loads that
+# polarity's own idle_fbx/idle_clip fresh and, if `idle_needs_retarget` is
+# set, retargets it against `reference` immediately, BEFORE returning it --
+# this is the SOURCE-LOAD-TIME fix the file header's #294 Armature/ section
+# describes: every downstream reader (idle_clip's duplicate, and PROOF 4's
+# `src` comparand in `_proof_idle_stance_centred`) must see only the corrected
+# paths, or `_proof_idle_stance_centred` would pose `src` to all-rest and
+# become a meaningless check.
+func _load_polarity_idle_source(polarity: Dictionary, reference: Animation) -> Animation:
+	if polarity["idle_fbx"] == SRC_FBX and polarity["idle_clip"] == SRC_CLIP:
+		return reference
+	var src := _load_clip(polarity["idle_fbx"], polarity["idle_clip"], "%s idle source" % polarity["suffix"])
+	if src == null:
+		return null
+	if polarity["idle_needs_retarget"]:
+		if not _retarget_track_paths(src, reference):
+			return null
+	return src
 
 
 # ── #300: put the authored clip on locomotion.res's track-path convention ────
@@ -510,56 +641,19 @@ func _initialize() -> void:
 		quit(1)
 		return
 
-	var packed = load(SRC_FBX)
-	if packed == null:
-		push_error("[rebuild-dribble] failed to load %s" % SRC_FBX)
+	# ── canonical path-convention reference, loaded exactly ONCE (see SRC_FBX's
+	# own doc comment above for the two jobs it does) ─────────────────────────
+	var reference := _load_clip(SRC_FBX, SRC_CLIP, "canonical reference")
+	if reference == null:
 		quit(1)
 		return
-	var src_root: Node = packed.instantiate()
-	var ap: AnimationPlayer = src_root.get_node_or_null("AnimationPlayer")
-	if ap == null or not ap.has_animation(SRC_CLIP):
-		push_error("[rebuild-dribble] %s has no AnimationPlayer clip '%s'" % [SRC_FBX, SRC_CLIP])
-		quit(1)
-		return
-	var src: Animation = ap.get_animation(SRC_CLIP)
-	print("[rebuild-dribble] source '%s': len=%.3f tracks=%d loop=%d"
-		% [SRC_CLIP, src.length, src.get_track_count(), src.loop_mode])
+	print("[rebuild-dribble] canonical reference '%s': len=%.3f tracks=%d loop=%d"
+		% [SRC_CLIP, reference.length, reference.get_track_count(), reference.loop_mode])
 
-	# ── #285a: the real clip, verbatim, LOOPED ───────────────────────────────
-	# FBX import defaults to LOOP_NONE. `catch` (a one-shot grab) wanted that;
-	# a dribble stance is a sustained loop and MUST be set explicitly here --
-	# the single easiest thing to get silently wrong in this issue.
-	var idle_clip: Animation = src.duplicate(true)
-	idle_clip.loop_mode = Animation.LOOP_LINEAR
-
-	# ── the moving endpoint ──────────────────────────────────────────────────
-	# #285b/#298 derived it from `src`; #300 authors it in Blender instead.
-	# Either way it MUST come out the same length as the idle endpoint:
-	# equal-length blend points advance by the same delta and so stay
-	# phase-locked, which means the two contributions differ ONLY by the drive
-	# posture at every frame -- never by dribble cycle phase. That is what keeps
-	# the blended arc short at all times, and it is the corridor argument's
-	# load-bearing assumption.
-	var move_clip: Animation
-	if USE_AUTHORED_MOVE_CLIP:
-		move_clip = _load_authored_move_clip(src)
-		if move_clip == null:
-			quit(1)
-			return
-		if not is_equal_approx(move_clip.length, src.length):
-			push_error(("[rebuild-dribble] #300: authored clip is %.4f s but the idle endpoint is " +
-				"%.4f s. Unequal-length blendspace endpoints drift out of phase, so the two " +
-				"contributions would differ by dribble PHASE as well as by posture -- which is " +
-				"exactly what the #287 corridor argument assumes cannot happen.")
-				% [move_clip.length, src.length])
-			quit(1)
-			return
-	else:
-		move_clip = src.duplicate(true)
-	# FBX import defaults to LOOP_NONE for the authored clip too -- set it
-	# explicitly in both paths rather than relying on the import.
-	move_clip.loop_mode = Animation.LOOP_LINEAR
-
+	# ── #294: polarity-INDEPENDENT setup, hoisted out of the per-polarity loop
+	# below. These read the Y Bot rig or the shared animation library, never a
+	# polarity's own idle/move clips, so there is exactly one of each no matter
+	# how many entries POLARITIES lists.
 	var lean_axis := _derive_body_right_axis()
 	if lean_axis == Vector3.ZERO:
 		push_error("[rebuild-dribble] could not derive the body's right axis from Y Bot's rest pose.")
@@ -567,152 +661,201 @@ func _initialize() -> void:
 		return
 	var lean := Quaternion(lean_axis, deg_to_rad(LEAN_DEGREES))
 
-	# The authored clip already carries its own lean, crouch and bob, keyframed
-	# in Blender -- re-applying them here would double them.
-	var leaned := 0
-	var crouched := 0
-	if not USE_AUTHORED_MOVE_CLIP:
-		leaned = _apply_lean(move_clip, LEAN_BONE, lean)
-		if leaned <= 0:
-			push_error("[rebuild-dribble] no '%s' rotation track found to lean -- refusing to save a "
-				% LEAN_BONE + "moving endpoint identical to the idle one.")
-			quit(1)
-			return
-
-		crouched = _apply_crouch(move_clip, CROUCH_BONE, CROUCH_DROP_M)
-		if crouched <= 0:
-			push_error("[rebuild-dribble] no '%s' position track found to crouch -- refusing to save a "
-				% CROUCH_BONE + "moving endpoint without the drive stance.")
-			quit(1)
-			return
-
-	# ── #298: leg-stride transplant onto move_clip ───────────────────────────
-	# Note on ordering (issue #298 point 8): this runs after the lean/crouch
-	# above but could just as well run before them. The lean touches only
-	# mixamorig_Spine and the crouch touches only mixamorig_Hips's POSITION
-	# track; the leg bake below never reads move_clip at all (it reads only the
-	# pristine `src` and `run`, and writes only to the leg-chain ROTATION_3D
-	# tracks on move_clip), so there is no overlap for ordering to matter.
-	if not lib.has_animation("run"):
-		push_error("[rebuild-dribble] #298: locomotion.res has no 'run' clip to source a stride from.")
-		quit(1)
-		return
-	var run_anim: Animation = lib.get_animation("run")
-
 	var raw_skel := _load_raw_skeleton()
 	if raw_skel == null:
 		push_error("[rebuild-dribble] #298: could not load a Skeleton3D from a fresh %s instance." % YBOT_FBX)
 		quit(1)
 		return
 
+	if not lib.has_animation("run"):
+		push_error("[rebuild-dribble] #298: locomotion.res has no 'run' clip to source a stride from.")
+		quit(1)
+		return
+	var run_anim: Animation = lib.get_animation("run")
+
 	var leg_bone_names: Array = LEG_CHAIN_LEFT + LEG_CHAIN_RIGHT
 	var identity_q: Array = [1.0, 0.0, 0.0, 0.0]
-	# #300: the authored clip's legs are keyframed absolutely, so there is no
-	# transplanted delta and -- more importantly -- no static stagger left to
-	# cancel. Authoring absolute foot positions overwrites the source clip's
-	# +0.6881 m baked-in fore/aft stagger outright, which is what makes
-	# `C_leg` (and its whole bisection solve) unnecessary rather than retuned.
-	var c_leg_left_d: Array = identity_q
-	var c_leg_right_d: Array = identity_q
-	if not USE_AUTHORED_MOVE_CLIP:
-		var leg_stride_result := _apply_leg_stride(move_clip, src, run_anim, raw_skel, lean_axis, _facing)
-		if not leg_stride_result["ok"]:
+
+	# Idempotency: purge the pre-#294 two-clip names before adding anything.
+	# Nothing references LEGACY_IDLE_NAME/LEGACY_MOVE_NAME any more (POLARITIES
+	# above is what ships now), and leaving a stale pair behind would corrupt
+	# the library's clip inventory exactly like a stale same-name rebuild
+	# would -- see those consts' own doc comment.
+	if lib.has_animation(LEGACY_IDLE_NAME):
+		lib.remove_animation(LEGACY_IDLE_NAME)
+	if lib.has_animation(LEGACY_MOVE_NAME):
+		lib.remove_animation(LEGACY_MOVE_NAME)
+
+	# ── #294: the rest of this function is the SAME single-polarity pipeline
+	# #285/#298/#300 always ran, just run once per POLARITIES entry. See the
+	# file header's "one polarity, one independent pipeline instance" section
+	# for why nothing here needs "left" and "right" to be compared against
+	# each other -- only each polarity's own idle/move pair.
+	for polarity in POLARITIES:
+		var suffix: String = polarity["suffix"]
+		var idle_out_name := StringName("dribbleidle%s" % suffix)
+		var move_out_name := StringName("dribblemove%s" % suffix)
+
+		# ── source-load-time retarget (file header's #294 Armature/ section) ──
+		var src := _load_polarity_idle_source(polarity, reference)
+		if src == null:
 			quit(1)
 			return
-		c_leg_left_d = leg_stride_result["c_leg_left_d"]
-		c_leg_right_d = leg_stride_result["c_leg_right_d"]
+		print("[rebuild-dribble] %s idle source '%s' (%s): len=%.3f tracks=%d loop=%d"
+			% [suffix, polarity["idle_clip"], polarity["idle_fbx"], src.length, src.get_track_count(), src.loop_mode])
 
-	# fix/298 (round 2): apply the IDENTICAL static stance-centring correction
-	# to dribbleidle BEFORE the head-shift/pose-delta measurements below, so
-	# those describe the clips that actually get saved.
-	#
-	# ── FALSIFIED HYPOTHESIS, kept behind a flag (fix/298 round 2) ───────────
-	# The reasoning was: the two blendspace endpoints should differ ONLY by what
-	# the blend parameter controls (the swing), so applying the SAME static
-	# centring to dribbleidle should shrink the #287 corridor violation to zero.
-	# MEASURED, and it is false. Centring both endpoints made the corridor
-	# STRICTLY WORSE:
-	#     centre dribblemove only : 1/90 frames, worst excess 38.1 deg, ref_gap 69.9
-	#     centre BOTH endpoints   : 2/90 frames, worst excess 77.6 deg, ref_gap 39.2
-	# Note the shape of that result: NARROWING the endpoint gap (69.9 -> 39.2)
-	# INCREASED the excess. That is the #287 signature verbatim -- issue #287
-	# recorded the same non-monotonicity when midpoint clips were added (53 -> 65
-	# -> 28 violations, "never converging to 0") and concluded that only moving
-	# the REST fixes this class of defect. The degeneracy is governed by where the
-	# poses sit relative to the (BlendRestAnchor-moved) rest, NOT by how far the
-	# endpoints sit from each other, so no amount of geometric symmetrising
-	# between the endpoints can close it.
-	#
-	# So this is OFF: it costs #285a's "dribbleidle is the real stock clip
-	# verbatim" contract and buys a measurably worse corridor. The code and this
-	# evidence are retained because the hypothesis is a natural one to re-derive,
-	# and re-testing it from scratch would cost another full measurement round.
-	if CENTRE_IDLE_ENDPOINT:
-		if not _apply_static_stance_correction(idle_clip, src, raw_skel, c_leg_left_d, c_leg_right_d):
+		# ── #285a: the real clip, verbatim, LOOPED ───────────────────────────
+		# FBX import defaults to LOOP_NONE. `catch` (a one-shot grab) wanted
+		# that; a dribble stance is a sustained loop and MUST be set
+		# explicitly here -- the single easiest thing to get silently wrong in
+		# this issue.
+		var idle_clip: Animation = src.duplicate(true)
+		idle_clip.loop_mode = Animation.LOOP_LINEAR
+
+		# ── the moving endpoint ────────────────────────────────────────────
+		# #285b/#298 derived it from `src`; #300 authors it in Blender
+		# instead. Either way it MUST come out the same length as this
+		# polarity's OWN idle endpoint: equal-length blend points advance by
+		# the same delta and so stay phase-locked, which means the two
+		# contributions differ ONLY by the drive posture at every frame --
+		# never by dribble cycle phase. That is what keeps the blended arc
+		# short at all times, and it is the corridor argument's load-bearing
+		# assumption (per-polarity -- see the file header's #294 section).
+		var move_clip: Animation
+		if USE_AUTHORED_MOVE_CLIP:
+			move_clip = _load_authored_move_clip(polarity["move_fbx"], polarity["move_clip"], reference)
+			if move_clip == null:
+				quit(1)
+				return
+			if not is_equal_approx(move_clip.length, src.length):
+				push_error(("[rebuild-dribble] #300: %s's authored clip is %.4f s but its idle endpoint is " +
+					"%.4f s. Unequal-length blendspace endpoints drift out of phase, so the two " +
+					"contributions would differ by dribble PHASE as well as by posture -- which is " +
+					"exactly what the #287 corridor argument assumes cannot happen.")
+					% [suffix, move_clip.length, src.length])
+				quit(1)
+				return
+		else:
+			move_clip = src.duplicate(true)
+		# FBX import defaults to LOOP_NONE for the authored clip too -- set it
+		# explicitly in both paths rather than relying on the import.
+		move_clip.loop_mode = Animation.LOOP_LINEAR
+
+		# The authored clip already carries its own lean, crouch and bob,
+		# keyframed in Blender -- re-applying them here would double them.
+		# Dead while USE_AUTHORED_MOVE_CLIP is true; kept compiling/working
+		# per that flag's own doc comment (the #301 A/B).
+		var leaned := 0
+		var crouched := 0
+		if not USE_AUTHORED_MOVE_CLIP:
+			leaned = _apply_lean(move_clip, LEAN_BONE, lean)
+			if leaned <= 0:
+				push_error("[rebuild-dribble] no '%s' rotation track found to lean -- refusing to save a "
+					% LEAN_BONE + "moving endpoint identical to the idle one.")
+				quit(1)
+				return
+
+			crouched = _apply_crouch(move_clip, CROUCH_BONE, CROUCH_DROP_M)
+			if crouched <= 0:
+				push_error("[rebuild-dribble] no '%s' position track found to crouch -- refusing to save a "
+					% CROUCH_BONE + "moving endpoint without the drive stance.")
+				quit(1)
+				return
+
+		# ── #298: leg-stride transplant onto move_clip ───────────────────────
+		# #300: the authored clip's legs are keyframed absolutely, so there is
+		# no transplanted delta and -- more importantly -- no static stagger
+		# left to cancel; c_leg_{left,right}_d stay identity. Dead while
+		# USE_AUTHORED_MOVE_CLIP is true.
+		var c_leg_left_d: Array = identity_q
+		var c_leg_right_d: Array = identity_q
+		if not USE_AUTHORED_MOVE_CLIP:
+			var leg_stride_result := _apply_leg_stride(move_clip, src, run_anim, raw_skel, lean_axis, _facing)
+			if not leg_stride_result["ok"]:
+				quit(1)
+				return
+			c_leg_left_d = leg_stride_result["c_leg_left_d"]
+			c_leg_right_d = leg_stride_result["c_leg_right_d"]
+
+		# fix/298 (round 2): apply the IDENTICAL static stance-centring
+		# correction to dribbleidle BEFORE the head-shift/pose-delta
+		# measurements below, so those describe the clips that actually get
+		# saved. OFF by default -- see CENTRE_IDLE_ENDPOINT's own doc comment
+		# for the falsified-hypothesis evidence (measured WORSE, not merely
+		# unhelpful) that keeps this flag false.
+		if CENTRE_IDLE_ENDPOINT:
+			if not _apply_static_stance_correction(idle_clip, src, raw_skel, c_leg_left_d, c_leg_right_d):
+				quit(1)
+				return
+
+		# Prove the lean goes FORWARD, geometrically, instead of trusting the
+		# cross-product order: pose a real skeleton with each clip and check
+		# the head actually moved along the facing axis. A sign error here
+		# would draft a lean-BACK -- which reads as a step-back/retreat
+		# posture, a different move rather than merely a rough-looking one,
+		# so it is worth an assertion, independently for each polarity.
+		var head_shift := _head_shift_along(idle_clip, move_clip, _facing)
+		print("[rebuild-dribble] %s: head displacement along facing axis = %+.4f m" % [suffix, head_shift])
+		if head_shift <= 0.0:
+			push_error(("[rebuild-dribble] %s: the lean moved the head %.4f m along facing -- that is a lean " +
+				"BACK. Check the lean-axis handedness in _derive_body_right_axis().") % [suffix, head_shift])
 			quit(1)
 			return
 
-	# Prove the lean goes FORWARD, geometrically, instead of trusting the
-	# cross-product order: pose a real skeleton with each clip and check the head
-	# actually moved along the facing axis. A sign error here would draft a
-	# lean-BACK -- which reads as a step-back/retreat posture, a different move
-	# rather than merely a rough-looking one, so it is worth an assertion.
-	var head_shift := _head_shift_along(idle_clip, move_clip, _facing)
-	print("[rebuild-dribble] head displacement along facing axis = %+.4f m" % head_shift)
-	if head_shift <= 0.0:
-		push_error("[rebuild-dribble] the lean moved the head %.4f m along facing -- that is a lean BACK. "
-			% head_shift + "Check the lean-axis handedness in _derive_body_right_axis().")
-		quit(1)
-		return
+		# Guard the "distinct silhouette" bar with a real measurement rather
+		# than trusting the edit landed (the repo's prove-match-count-> 0
+		# convention).
+		var spread := _max_pose_delta(idle_clip, move_clip)
+		if USE_AUTHORED_MOVE_CLIP:
+			print(("[rebuild-dribble] #300: %s moving endpoint taken verbatim from %s (clip '%s'); " +
+				"max endpoint-to-endpoint pose delta = %.1f deg (PROOF 5 -- print only, the corridor " +
+				"question is the harness's job)") % [suffix, polarity["move_fbx"], polarity["move_clip"], spread])
+		else:
+			print(("[rebuild-dribble] %s: leaned %d key(s) on '%s' by %.0f deg about %s, crouched %d key(s) on '%s' by %.2f m; " +
+				"max endpoint-to-endpoint pose delta = %.1f deg (PROOF 5 -- print only, the corridor question is the " +
+				"harness's job)") % [suffix, leaned, LEAN_BONE, LEAN_DEGREES, lean_axis, crouched, CROUCH_BONE, CROUCH_DROP_M, spread])
+		if spread < 5.0:
+			push_error("[rebuild-dribble] %s: endpoints differ by only %.1f deg -- not a distinct silhouette." % [suffix, spread])
+			quit(1)
+			return
 
-	# Guard the "distinct silhouette" bar with a real measurement rather than
-	# trusting the edit landed (the repo's prove-match-count-> 0 convention).
-	var spread := _max_pose_delta(idle_clip, move_clip)
-	if USE_AUTHORED_MOVE_CLIP:
-		print(("[rebuild-dribble] #300: moving endpoint taken verbatim from %s (clip '%s'); " +
-			"max endpoint-to-endpoint pose delta = %.1f deg (PROOF 5 -- print only, the corridor " +
-			"question is the harness's job)") % [AUTHORED_MOVE_FBX, AUTHORED_MOVE_CLIP, spread])
-	else:
-		print(("[rebuild-dribble] leaned %d key(s) on '%s' by %.0f deg about %s, crouched %d key(s) on '%s' by %.2f m; " +
-			"max endpoint-to-endpoint pose delta = %.1f deg (PROOF 5 -- print only, the corridor question is the " +
-			"harness's job)") % [leaned, LEAN_BONE, LEAN_DEGREES, lean_axis, crouched, CROUCH_BONE, CROUCH_DROP_M, spread])
-	if spread < 5.0:
-		push_error("[rebuild-dribble] endpoints differ by only %.1f deg -- not a distinct silhouette." % spread)
-		quit(1)
-		return
+		# ── #298 PROOFs 1-4, plus PROOF 6 -- all evaluated per polarity ──────
+		if not _proof_stride(move_clip, raw_skel, _facing):
+			quit(1)
+			return
+		if not _proof_anatomy(move_clip, raw_skel):
+			quit(1)
+			return
+		if not _proof_loop_seam(move_clip, leg_bone_names):
+			quit(1)
+			return
+		# When CENTRE_IDLE_ENDPOINT is off, hand PROOF 4 identity rotations:
+		# its "dribbleidle == C_leg * source" check then reduces to
+		# "dribbleidle == source", i.e. #285a's original verbatim contract,
+		# with no second code path to keep in sync.
+		var proof4_left: Array = c_leg_left_d if CENTRE_IDLE_ENDPOINT else identity_q
+		var proof4_right: Array = c_leg_right_d if CENTRE_IDLE_ENDPOINT else identity_q
+		if not _proof_idle_stance_centred(idle_clip, src, raw_skel, leg_bone_names, proof4_left, proof4_right):
+			quit(1)
+			return
+		if not _proof_support_band(move_clip, run_anim, raw_skel):
+			quit(1)
+			return
 
-	# ── #298 PROOFs 1-4 ───────────────────────────────────────────────────────
-	if not _proof_stride(move_clip, raw_skel, _facing):
-		quit(1)
-		return
-	if not _proof_anatomy(move_clip, raw_skel):
-		quit(1)
-		return
-	if not _proof_loop_seam(move_clip, leg_bone_names):
-		quit(1)
-		return
-	# When CENTRE_IDLE_ENDPOINT is off, hand PROOF 4 identity rotations: its
-	# "dribbleidle == C_leg * source" check then reduces to "dribbleidle ==
-	# source", i.e. #285a's original verbatim contract, with no second code path
-	# to keep in sync.
-	var proof4_left: Array = c_leg_left_d if CENTRE_IDLE_ENDPOINT else identity_q
-	var proof4_right: Array = c_leg_right_d if CENTRE_IDLE_ENDPOINT else identity_q
-	if not _proof_idle_stance_centred(idle_clip, src, raw_skel, leg_bone_names, proof4_left, proof4_right):
-		quit(1)
-		return
-	if not _proof_support_band(move_clip, run_anim, raw_skel):
-		quit(1)
-		return
+		# Idempotency: drop any previous build of THIS polarity's two clips
+		# before adding, so re-running re-derives them from the pristine FBX
+		# rather than stacking edits.
+		if lib.has_animation(idle_out_name):
+			lib.remove_animation(idle_out_name)
+		if lib.has_animation(move_out_name):
+			lib.remove_animation(move_out_name)
+		lib.add_animation(idle_out_name, idle_clip)
+		lib.add_animation(move_out_name, move_clip)
+		print("[rebuild-dribble] %s: added '%s' and '%s' to the library." % [suffix, idle_out_name, move_out_name])
 
-	# Idempotency: drop any previous build of these two clips first, so re-running
-	# re-derives them from the pristine FBX rather than stacking edits.
-	if lib.has_animation(IDLE_NAME):
-		lib.remove_animation(IDLE_NAME)
-	if lib.has_animation(MOVE_NAME):
-		lib.remove_animation(MOVE_NAME)
-	lib.add_animation(IDLE_NAME, idle_clip)
-	lib.add_animation(MOVE_NAME, move_clip)
-
+	# Save ONCE, after every polarity has built and proved clean -- saving
+	# per-polarity would leave a half-built library on disk if a later
+	# polarity's proof failed partway through.
 	var err := ResourceSaver.save(lib, LIB_PATH)
 	if err != OK:
 		push_error("[rebuild-dribble] ResourceSaver.save failed with error %d" % err)

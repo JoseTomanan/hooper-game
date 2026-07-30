@@ -2977,7 +2977,17 @@ public partial class PlayerController : CharacterBody3D
 		// parameter on a state that isn't current costs nothing, and writing it
 		// every tick means the stance is already at the right blend position on
 		// the frame Travel() enters it, rather than ramping up from 0 after.
-		_animTree.Set("parameters/Dribble/blend_position", horizontalSpeed);
+		// (#294) The stance split in two — DribbleLeft/DribbleRight, one genuine
+		// clip pair per hand — so there are now two blend surfaces to feed. Both
+		// get the SAME speed unconditionally, for the same reason the single one
+		// did: only one is ever current, the other's parameter costs nothing, and
+		// writing both every tick means whichever the authoritative HandSide
+		// selects is already at the right blend position on the frame Travel()
+		// enters it. Feeding only the current polarity would reintroduce exactly
+		// the ramp-from-zero this comment's predecessor existed to avoid, on every
+		// crossover.
+		_animTree.Set("parameters/DribbleLeft/blend_position", horizontalSpeed);
+		_animTree.Set("parameters/DribbleRight/blend_position", horizontalSpeed);
 
 		// Committed-move state (#41/#69, per-move state names #277): map the
 		// DISPLAY phase to a generic anim state, then resolve THAT plus the

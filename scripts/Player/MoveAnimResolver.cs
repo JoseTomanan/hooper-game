@@ -297,9 +297,17 @@ public static class MoveAnimResolver
     /// because neither one IS a committed move (Locomotion is the no-move
     /// neutral game; Pivot is the in-place turn latch, orthogonal to
     /// CommittedMoveMachine — see MoveAnimState's doc). Dribble (#285) is
-    /// exempt for the same reason as Locomotion, which it replaces: it is the
-    /// no-move neutral stance for a live-dribbling holder, not a move — so
-    /// "CrossoverDribble" is a state the tree deliberately does not have.
+    /// exempt from the PER-MOVE split for the same reason as Locomotion, which
+    /// it replaces: it is the no-move neutral stance for a live-dribbling
+    /// holder, not a move — so "CrossoverDribble" is a state the tree
+    /// deliberately does not have.
+    ///
+    /// (#294) Dribble IS, however, split by HAND — "DribbleLeft"/"DribbleRight"
+    /// — and that is a different axis from the per-move split above, resolved by
+    /// its own early branch before the per-move gate is ever consulted. The two
+    /// axes are independent: "which move's clip" vs "which hand the ball is in".
+    /// Nothing here walks back the paragraph above; there is still no
+    /// "CrossoverDribble".
     /// FadeawayActive is
     /// exempt for the opposite reason: it IS tied to a committed move
     /// (JumpShot) but issue #243 deliberately built ONE shared fadeaway clip
@@ -357,6 +365,35 @@ public static class MoveAnimResolver
     /// <returns>The AnimationTree state name to Travel() to.</returns>
     public static string ResolveStateName(MoveAnimState generic, string? moveId, HandSide ballHand, HandSide reachSide)
     {
+        // (#294) The dribble STANCE is split by hand, and this branch sits above
+        // the per-move gate on purpose — it is a different axis, not a special
+        // case of one.
+        //
+        // Why not route this through HandedMoves/OriginHand, which already exist
+        // and already suffix a state name by hand side. Two independent reasons,
+        // either one fatal:
+        //
+        //   1. Structurally unreachable. Dribble is only ever returned for
+        //      MovePhase.Inactive (see Resolve), and Inactive means no move is in
+        //      flight, so there is no moveId. phaseIsPerMoveEligible below is
+        //      false and the ClippedMovePrefixes lookup can never run.
+        //
+        //   2. It would invert the truth. OriginHand returns Opposite(ballHand)
+        //      for every phase except Startup, because its entire job is undoing
+        //      a crossover's ball-hand flip at Active-entry. The dribble stance
+        //      never flips — the hand IS the authoritative hand, this frame, with
+        //      no correction to undo. Applying OriginHand here would resolve to a
+        //      state that EXISTS and plays cleanly while showing the ball in the
+        //      mirror of the hand it is actually in: the ADR-0003 false read,
+        //      reached by reusing a correction that does not apply.
+        //
+        // So the suffix is the raw authoritative HandSide (ADR-0012), which is
+        // already correct for every role — server, predicting client, and remote
+        // copy alike — exactly as the ball's own in-hand placement reads it
+        // (BallController.HandSign). The animated hand and the ball therefore
+        // cannot disagree; they are the same input.
+        if (generic == MoveAnimState.Dribble) return "Dribble" + ballHand;
+
         bool phaseIsPerMoveEligible = generic is MoveAnimState.Startup or MoveAnimState.Active or MoveAnimState.Recovery;
 
         if (phaseIsPerMoveEligible

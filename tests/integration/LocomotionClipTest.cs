@@ -58,8 +58,12 @@ namespace HOOPERGAME.Tests.Integration;
 //      time against the Dribble BlendSpace1D — a second partial-weight blend
 //      surface is exposed to the same degeneracy — on its own never-advanced
 //      rig trio, travelled into the Dribble state and proven to have arrived
-//      before sweeping. Both passes also require the two endpoint rigs to
-//      genuinely differ, since the corridor threshold is self-referential).
+//      before sweeping. #294 then splits that single Dribble BlendSpace1D
+//      into DribbleLeft/DribbleRight, so this now runs a THIRD and FOURTH
+//      time, once per hand-side polarity, each against its own dedicated
+//      never-advanced rig trio. Every pass also requires its two endpoint
+//      rigs to genuinely differ, since the corridor threshold is
+//      self-referential).
 //   6. a pivot upper-body completeness guard (turning-T-pose bug — the Pivot
 //      state is a single clip at full weight, so every bone pivot did NOT
 //      track was reset to Y Bot's REST = a Mixamo T-pose, snapping the arms
@@ -121,9 +125,20 @@ public partial class LocomotionClipTest : Node
     // clock, and the "first Advance() only primes" gotcha InstantiateSweepRig
     // documents can only be reproduced honestly on a tree that has never been
     // advanced.
-    private PlayerController _dribbleSweepTest;
-    private PlayerController _dribbleSweepRef0;
-    private PlayerController _dribbleSweepRef6;
+    //
+    // (#294) That single Dribble BlendSpace1D is now TWO — DribbleLeft and
+    // DribbleRight, one per hand-side polarity — which doubles the number of
+    // partial-weight blend surfaces sharing the single BlendRestAnchor-
+    // mutated rest #287's degeneracy lives in. A green Right sweep and an
+    // unmeasured Left is exactly the gap #294 exists to close, so this trio
+    // becomes two trios, one per polarity, each still its own never-advanced
+    // rig set for the same "first Advance() only primes" reason as above.
+    private PlayerController _dribbleSweepTestRight;
+    private PlayerController _dribbleSweepRef0Right;
+    private PlayerController _dribbleSweepRef6Right;
+    private PlayerController _dribbleSweepTestLeft;
+    private PlayerController _dribbleSweepRef0Left;
+    private PlayerController _dribbleSweepRef6Left;
 
     // #298 adds a THIRD family of rigs — a foot-stride measurement, not a
     // corridor sweep. `dribble-corridor` above asserts poses stay NEAR two
@@ -134,8 +149,15 @@ public partial class LocomotionClipTest : Node
     // an already-advanced tree cannot honestly reproduce the "first
     // Advance() only primes" gotcha InstantiateSweepRig documents, and these
     // three must each start from a genuinely fresh AnimationTree.
-    private PlayerController _strideDribbleMove;
-    private PlayerController _strideDribbleIdle;
+    //
+    // (#294) Doubled the same way as the corridor-sweep trio above, one
+    // move/idle pair per hand-side polarity. `_strideRun` stays singular —
+    // Locomotion has no hand-side split, so the one run control rig covers
+    // both polarity passes below.
+    private PlayerController _strideDribbleMoveRight;
+    private PlayerController _strideDribbleIdleRight;
+    private PlayerController _strideDribbleMoveLeft;
+    private PlayerController _strideDribbleIdleLeft;
     private PlayerController _strideRun;
 
     // #287 (BlendRestAnchor): scenes/Player.tscn now mutates TWO bone rests
@@ -172,12 +194,17 @@ public partial class LocomotionClipTest : Node
         _sweepRef0 = InstantiateSweepRig("SweepRef0");
         _sweepRef6 = InstantiateSweepRig("SweepRef6");
 
-        _dribbleSweepTest = InstantiateSweepRig("DribbleSweepTest");
-        _dribbleSweepRef0 = InstantiateSweepRig("DribbleSweepRef0");
-        _dribbleSweepRef6 = InstantiateSweepRig("DribbleSweepRef6");
+        _dribbleSweepTestRight = InstantiateSweepRig("DribbleSweepTestRight");
+        _dribbleSweepRef0Right = InstantiateSweepRig("DribbleSweepRef0Right");
+        _dribbleSweepRef6Right = InstantiateSweepRig("DribbleSweepRef6Right");
+        _dribbleSweepTestLeft = InstantiateSweepRig("DribbleSweepTestLeft");
+        _dribbleSweepRef0Left = InstantiateSweepRig("DribbleSweepRef0Left");
+        _dribbleSweepRef6Left = InstantiateSweepRig("DribbleSweepRef6Left");
 
-        _strideDribbleMove = InstantiateSweepRig("StrideDribbleMove");
-        _strideDribbleIdle = InstantiateSweepRig("StrideDribbleIdle");
+        _strideDribbleMoveRight = InstantiateSweepRig("StrideDribbleMoveRight");
+        _strideDribbleIdleRight = InstantiateSweepRig("StrideDribbleIdleRight");
+        _strideDribbleMoveLeft = InstantiateSweepRig("StrideDribbleMoveLeft");
+        _strideDribbleIdleLeft = InstantiateSweepRig("StrideDribbleIdleLeft");
         _strideRun = InstantiateSweepRig("StrideRun");
     }
 
@@ -264,14 +291,19 @@ public partial class LocomotionClipTest : Node
         // Vacuous-pass guard #1: the library itself must carry the clips
         // Player.tscn's AnimationTree references (locomotion/idle,
         // locomotion/run, locomotion/pivot, and #285's locomotion/dribbleidle +
-        // locomotion/dribblemove) — an empty or renamed library would
-        // trivially "pass" a bare per-clip loop below. The per-clip track
-        // resolution loop that follows iterates the WHOLE library, so the two
-        // dribble clips get #271's bone-track-match proof automatically; this
-        // list is what stops that loop from silently iterating nothing.
+        // locomotion/dribblemove — themselves split by hand side in #294 into
+        // dribbleidleleft/dribbleidleright and dribblemoveleft/dribblemoveright,
+        // since scenes/Player.tscn's single Dribble BlendSpace1D became two,
+        // DribbleLeft and DribbleRight, each blending its own hand's pair) — an
+        // empty or renamed library would trivially "pass" a bare per-clip loop
+        // below. The per-clip track resolution loop that follows iterates the
+        // WHOLE library, so all four dribble clips get #271's bone-track-match
+        // proof automatically; this list is what stops that loop from silently
+        // iterating nothing.
         string[] expected =
         {
-            "idle", "run", "pivot", "dribbleidle", "dribblemove",
+            "idle", "run", "pivot",
+            "dribbleidleleft", "dribbleidleright", "dribblemoveleft", "dribblemoveright",
             // #279's jump-shot family. Listed here for the same reason as the
             // rest: the per-clip track-resolution loop below iterates the WHOLE
             // library, so naming them is what stops that loop from silently
@@ -341,8 +373,16 @@ public partial class LocomotionClipTest : Node
         // freezes is the most obvious possible regression — a ball-handler
         // standing still would visibly stop bouncing after 2.1s. The rebuild
         // tool (tools/rebuild_dribble_clips.gd) sets LoopModeEnum.Linear
-        // explicitly; this is the assertion that keeps it set.
-        string[] mustLoop = { "idle", "run", "pivot", "dribbleidle", "dribblemove" };
+        // explicitly; this is the assertion that keeps it set. #294 splits each
+        // of those two clips into a left/right pair — all FOUR must be held to
+        // the identical standard, not just the polarity a given tipoff happens
+        // to land on, or a non-looping LEFT endpoint (#271's exact failure mode)
+        // could hide behind a passing RIGHT.
+        string[] mustLoop =
+        {
+            "idle", "run", "pivot",
+            "dribbleidleleft", "dribbleidleright", "dribblemoveleft", "dribblemoveright",
+        };
         foreach (var clipName in mustLoop)
         {
             var anim = lib.GetAnimation(clipName);
@@ -938,8 +978,10 @@ public partial class LocomotionClipTest : Node
         // cross for as long as the state was held, reading as a stutter rather
         // than a single commitment. The FBX import default happens to be
         // LOOP_NONE and the tool sets it explicitly anyway; this pins it,
-        // because `dribbleidle`/`dribblemove` needed the OPPOSITE default and
-        // that silent asymmetry was the easiest thing to get wrong in #285.
+        // because the dribble clips (dribbleidleleft/right, dribblemoveleft/
+        // right — #294 split them by hand from the original dribbleidle/
+        // dribblemove) needed the OPPOSITE default and that silent asymmetry
+        // was the easiest thing to get wrong in #285.
         foreach (var (clipName, _) in crossoverWindows)
         {
             if (!lib.HasAnimation(clipName)) continue;
@@ -1402,13 +1444,13 @@ public partial class LocomotionClipTest : Node
             allPass = false;
         }
 
-        // --- Issue #285: the Dribble BlendSpace1D gets the same sweep --------
-        // The dribble neutral is a SECOND partial-weight blend surface, so it
-        // is exposed to the exact #287 rest-anchored-accumulation degeneracy
-        // the Locomotion sweep above exists to catch — and it is exposed on a
-        // rig whose two UpLeg rests BlendRestAnchor deliberately moved to
-        // idle's frame-0 pose, i.e. a rest that belongs to a DIFFERENT clip
-        // family (Kenney-retargeted) than these two stock-Mixamo clips.
+        // --- Issue #285/#294: the Dribble BlendSpace1D(s) get the same sweep -
+        // The dribble neutral is a partial-weight blend surface, so it is
+        // exposed to the exact #287 rest-anchored-accumulation degeneracy the
+        // Locomotion sweep above exists to catch — and it is exposed on a rig
+        // whose two UpLeg rests BlendRestAnchor deliberately moved to idle's
+        // frame-0 pose, i.e. a rest that belongs to a DIFFERENT clip family
+        // (Kenney-retargeted) than these stock-Mixamo clips.
         //
         // This comment used to say the two endpoints "differ only by a
         // 20-degree forward lean on mixamorig_Spine", were therefore "a short
@@ -1439,26 +1481,54 @@ public partial class LocomotionClipTest : Node
         // Swept over ALL shared rotation bones, not just the leg chain, so the
         // spine chain carrying the lean and the near-static bones holding the
         // tightest corridor are both included rather than excluded.
-        var dribbleIdleAnim = lib.GetAnimation("dribbleidle");
-        var dribbleMoveAnim = lib.GetAnimation("dribblemove");
-        var dribbleSharedBones = SharedRotationBones(dribbleIdleAnim, dribbleMoveAnim);
+        //
+        // (#294) scenes/Player.tscn's single Dribble BlendSpace1D split into
+        // DribbleLeft and DribbleRight, doubling the number of partial-weight
+        // surfaces sharing that one re-anchored rest — so the sweep now runs
+        // once PER POLARITY, against its own dedicated never-advanced rig trio
+        // (InstantiateSweepRig's "first Advance() only primes" reproduction
+        // requires a tree that has never ticked, so the two polarities cannot
+        // share rigs). A green Right and an unmeasured Left is exactly the gap
+        // #294 exists to close, so both runs are required, and both print
+        // their own numbers so a reviewer can compare the mirrored endpoints
+        // side by side.
+        (string State, string IdleClip, string MoveClip,
+            PlayerController SweepTest, PlayerController SweepRef0, PlayerController SweepRef6)[] dribblePolarities =
+        {
+            ("DribbleRight", "dribbleidleright", "dribblemoveright",
+                _dribbleSweepTestRight, _dribbleSweepRef0Right, _dribbleSweepRef6Right),
+            ("DribbleLeft", "dribbleidleleft", "dribblemoveleft",
+                _dribbleSweepTestLeft, _dribbleSweepRef0Left, _dribbleSweepRef6Left),
+        };
+        foreach (var p in dribblePolarities)
+        {
+            // Deliberately NOT named idleAnim/sharedBones: those are family 4's
+            // Locomotion idle/run locals, declared in the enclosing scope and
+            // still read further down (see the "reused from family 4" note), so
+            // reusing the names here is a compile error rather than a shadow.
+            var dribbleIdleAnim = lib.GetAnimation(p.IdleClip);
+            var dribbleMoveAnim = lib.GetAnimation(p.MoveClip);
+            var dribbleSharedBones = SharedRotationBones(dribbleIdleAnim, dribbleMoveAnim);
 
-        // Vacuous-pass guard: both clips carry the full 53-track stock Mixamo
-        // skeleton, so a near-empty overlap means the extraction regressed.
-        if (dribbleSharedBones.Count < 20)
-        {
-            Fail($"#285 dribble corridor sweep: only {dribbleSharedBones.Count} shared ROTATION_3D bone tracks " +
-                 "between 'dribbleidle'/'dribblemove' -- expected >= 20; the sweep would be vacuous.");
-            allPass = false;
-        }
-        else if (RunCorridorSweep(dribbleSharedBones, "Dribble",
-                     _dribbleSweepTest, _dribbleSweepRef0, _dribbleSweepRef6))
-        {
-            // pass — printed inside RunCorridorSweep
-        }
-        else
-        {
-            allPass = false;
+            // Vacuous-pass guard: both clips carry the full 53-track stock
+            // Mixamo skeleton, so a near-empty overlap means the extraction
+            // regressed — checked independently per polarity, since a left-
+            // side-only regression must not hide behind a healthy right side.
+            if (dribbleSharedBones.Count < 20)
+            {
+                Fail($"#294 dribble corridor sweep [{p.State}]: only {dribbleSharedBones.Count} shared ROTATION_3D " +
+                     $"bone tracks between '{p.IdleClip}'/'{p.MoveClip}' -- expected >= 20; the sweep would be vacuous.");
+                allPass = false;
+            }
+            else if (RunCorridorSweep(dribbleSharedBones, p.State, p.SweepTest, p.SweepRef0, p.SweepRef6))
+            {
+                // pass — printed inside RunCorridorSweep, tagged with p.State
+                // so the two polarities' results are individually visible.
+            }
+            else
+            {
+                allPass = false;
+            }
         }
 
         // --- Issue #298: moving-dribble stride detection ---------------------
@@ -1477,14 +1547,22 @@ public partial class LocomotionClipTest : Node
         //   1. NON-VACUITY CONTROL — Locomotion/run at blend 6. If the
         //      measurement can't detect a REAL stride here, a red or green
         //      verdict on dribblemove below proves nothing about dribblemove
-        //      and everything about a broken probe.
-        //   2. THE #298 SUBJECT — Dribble/dribblemove at blend 6 (the actual
-        //      moving endpoint of the Dribble BlendSpace1D).
-        //   3. DISCRIMINATING CONTROL — Dribble/dribbleidle at blend 0 (the
-        //      standing dribble stance), which must stay static — this is
-        //      what would catch a future fix that bleeds the stride into the
-        //      wrong BlendSpace1D endpoint instead of fixing dribblemove
-        //      itself.
+        //      and everything about a broken probe. Run once, shared by both
+        //      polarities below — Locomotion has no hand-side split.
+        //   2. THE #298 SUBJECT — Dribble{Left,Right}/dribblemove{left,right}
+        //      at blend 6 (the actual moving endpoint of each polarity's
+        //      BlendSpace1D).
+        //   3. DISCRIMINATING CONTROL — Dribble{Left,Right}/dribbleidle
+        //      {left,right} at blend 0 (the standing dribble stance), which
+        //      must stay static — this is what would catch a future fix that
+        //      bleeds the stride into the wrong BlendSpace1D endpoint instead
+        //      of fixing dribblemove itself.
+        //
+        // (#294) Cases 2 and 3 now run once PER POLARITY against their own
+        // dedicated rig — the #298 stride defect was originally measured and
+        // fixed on the single pre-split Dribble state, and there is no reason
+        // to assume the LEFT clip pair inherited the same fix just because it
+        // shares a rebuild tool with the RIGHT pair proven here.
         bool strideControlOk = MeasureStride(_strideRun, "Locomotion", 6.0f, "run (control)",
             out double runPtpLeft, out double runPtpRight, out double runSplitMin, out double runSplitMax);
         if (!strideControlOk)
@@ -1512,48 +1590,60 @@ public partial class LocomotionClipTest : Node
             // reviewer can see whether dribblemove looks frozen in the same
             // log where the probe's own credibility is being questioned,
             // rather than silently skipping straight to an unexplained
-            // overall FAIL.
-            bool strideMoveOk = MeasureStride(_strideDribbleMove, "Dribble", 6.0f, "dribblemove (#298 subject)",
-                out double dmPtpLeft, out double dmPtpRight, out double dmSplitMin, out double dmSplitMax);
-            if (!strideMoveOk)
+            // overall FAIL. Run once per polarity so the two sets of numbers
+            // sit side by side in the log for comparison.
+            (string State, string MoveClip, string IdleClip,
+                PlayerController MoveRig, PlayerController IdleRig)[] stridePolarities =
             {
-                allPass = false;
-            }
-            else
+                ("DribbleRight", "dribblemoveright", "dribbleidleright",
+                    _strideDribbleMoveRight, _strideDribbleIdleRight),
+                ("DribbleLeft", "dribblemoveleft", "dribbleidleleft",
+                    _strideDribbleMoveLeft, _strideDribbleIdleLeft),
+            };
+            foreach (var p in stridePolarities)
             {
-                if (!(dmPtpLeft >= StrideMinPeakToPeakM && dmPtpRight >= StrideMinPeakToPeakM))
+                bool strideMoveOk = MeasureStride(p.MoveRig, p.State, 6.0f, $"{p.MoveClip} (#298 subject)",
+                    out double dmPtpLeft, out double dmPtpRight, out double dmSplitMin, out double dmSplitMax);
+                if (!strideMoveOk)
                 {
-                    Fail($"#298: locomotion/dribblemove's feet do not clear the peak-to-peak stride floor " +
-                         $"(L_ptp={dmPtpLeft:F4} R_ptp={dmPtpRight:F4} m, floor={StrideMinPeakToPeakM} m) — " +
-                         "the moving-dribble BlendSpace1D endpoint's legs are frozen.");
                     allPass = false;
                 }
-                if (!(dmSplitMin < 0.0 && dmSplitMax > 0.0))
+                else
                 {
-                    Fail($"#298: locomotion/dribblemove's fore/aft foot split never changes sign " +
-                         $"(split=[{dmSplitMin:F4},{dmSplitMax:F4}]) — the lead foot never alternates. " +
-                         "Peak-to-peak alone is not sufficient here: a static one-foot-forward stance " +
-                         "(measured: a constant 0.6598 m split that never changes sign) can clear a " +
-                         "peak-to-peak floor with both feet sliding the same direction together, which " +
-                         "is not a stride.");
-                    allPass = false;
+                    if (!(dmPtpLeft >= StrideMinPeakToPeakM && dmPtpRight >= StrideMinPeakToPeakM))
+                    {
+                        Fail($"#298: locomotion/{p.MoveClip}'s feet do not clear the peak-to-peak stride floor " +
+                             $"(L_ptp={dmPtpLeft:F4} R_ptp={dmPtpRight:F4} m, floor={StrideMinPeakToPeakM} m) — " +
+                             $"the moving-dribble BlendSpace1D endpoint's legs are frozen ({p.State}).");
+                        allPass = false;
+                    }
+                    if (!(dmSplitMin < 0.0 && dmSplitMax > 0.0))
+                    {
+                        Fail($"#298: locomotion/{p.MoveClip}'s fore/aft foot split never changes sign " +
+                             $"(split=[{dmSplitMin:F4},{dmSplitMax:F4}]) — the lead foot never alternates " +
+                             $"({p.State}). Peak-to-peak alone is not sufficient here: a static " +
+                             "one-foot-forward stance (measured: a constant 0.6598 m split that never " +
+                             "changes sign) can clear a peak-to-peak floor with both feet sliding the same " +
+                             "direction together, which is not a stride.");
+                        allPass = false;
+                    }
                 }
-            }
 
-            bool strideIdleOk = MeasureStride(_strideDribbleIdle, "Dribble", 0.0f, "dribbleidle (discriminating control)",
-                out double diPtpLeft, out double diPtpRight, out double diSplitMin, out double diSplitMax);
-            if (!strideIdleOk)
-            {
-                allPass = false;
-            }
-            else if (!(diPtpLeft <= StrideStaticMaxPeakToPeakM && diPtpRight <= StrideStaticMaxPeakToPeakM))
-            {
-                Fail($"#298: locomotion/dribbleidle (the standing dribble stance) strides more than the " +
-                     $"static ceiling allows (L_ptp={diPtpLeft:F4} R_ptp={diPtpRight:F4} m, ceiling=" +
-                     $"{StrideStaticMaxPeakToPeakM} m) — a future #298 fix must land the stride on " +
-                     "dribblemove, not bleed it into dribbleidle too (the #285a 'the real clip verbatim' " +
-                     "contract this control protects).");
-                allPass = false;
+                bool strideIdleOk = MeasureStride(p.IdleRig, p.State, 0.0f, $"{p.IdleClip} (discriminating control)",
+                    out double diPtpLeft, out double diPtpRight, out double diSplitMin, out double diSplitMax);
+                if (!strideIdleOk)
+                {
+                    allPass = false;
+                }
+                else if (!(diPtpLeft <= StrideStaticMaxPeakToPeakM && diPtpRight <= StrideStaticMaxPeakToPeakM))
+                {
+                    Fail($"#298: locomotion/{p.IdleClip} (the standing dribble stance) strides more than the " +
+                         $"static ceiling allows (L_ptp={diPtpLeft:F4} R_ptp={diPtpRight:F4} m, ceiling=" +
+                         $"{StrideStaticMaxPeakToPeakM} m, {p.State}) — a future #298 fix must land the stride " +
+                         $"on {p.MoveClip}, not bleed it into {p.IdleClip} too (the #285a 'the real clip " +
+                         "verbatim' contract this control protects).");
+                    allPass = false;
+                }
             }
         }
 
@@ -1576,10 +1666,12 @@ public partial class LocomotionClipTest : Node
     private const double SweepDurationSeconds = 1.5; // 90 * 1/60
 
     // `state` is the AnimationTree state-machine node whose BlendSpace1D is
-    // under test ("Locomotion", or #285's "Dribble"). For anything other than
-    // Locomotion the rigs must first be travelled there and PROVEN to have
-    // arrived — sweeping the wrong state would silently re-run the Locomotion
-    // sweep under a Dribble label, the most plausible vacuous pass here.
+    // under test ("Locomotion", or #294's "DribbleLeft"/"DribbleRight" — the
+    // single Dribble state #285 added is now split by hand side). For
+    // anything other than Locomotion the rigs must first be travelled there
+    // and PROVEN to have arrived — sweeping the wrong state would silently
+    // re-run the Locomotion sweep under a Dribble* label, the most plausible
+    // vacuous pass here.
     private bool RunCorridorSweep(
         List<string> sweptBones,
         string state,
@@ -1731,9 +1823,15 @@ public partial class LocomotionClipTest : Node
 
         // Non-vacuity: the two endpoint rigs must actually render DIFFERENT
         // poses, or the corridor (refGap + margin) measured nothing at all.
-        // 5 deg floor: Locomotion's idle-vs-run legs are tens of degrees apart
-        // and Dribble's authored spine lean is 20 deg, so both clear this by a
-        // wide margin — it only rules out the degenerate ~0 case.
+        // 5 deg floor: Locomotion's idle-vs-run legs are tens of degrees apart,
+        // and each DribbleLeft/DribbleRight pair's endpoints are far enough
+        // apart that the rebuild tool's own PROOF 5 measures 179.8 deg between
+        // them, so both clear this by a wide margin — it only rules out the
+        // degenerate ~0 case. Deliberately NOT quoting a spine-lean constant
+        // here: LEAN_DEGREES (38) is dead on the live path, because with
+        // USE_AUTHORED_MOVE_CLIP the lean is keyframed in Blender rather than
+        // applied by the tool, so citing it would be a number this assertion
+        // cannot actually back.
         const double MinEndpointGapDeg = 5.0;
         if (maxRefGapDeg < MinEndpointGapDeg)
         {
@@ -1782,13 +1880,15 @@ public partial class LocomotionClipTest : Node
     // #298: measures actual fore/aft foot travel (as opposed to #287's
     // RunCorridorSweep, which only checks a pose stays NEAR a reference —
     // trivially true for a frozen pose near an equally-frozen reference).
-    // `rig` must be one of the three fresh #298 stride rigs (never advanced
-    // before this call — see the field-level comment on _strideDribbleMove
-    // et al. for why). `state`/`blendPos` select the BlendSpace1D endpoint
-    // under test ("Locomotion"@6 for run, "Dribble"@6 for dribblemove,
-    // "Dribble"@0 for dribbleidle). Returns false (with a Fail already
-    // logged) on any setup/arrival problem; the four `out` measurements are
-    // only meaningful when this returns true.
+    // `rig` must be one of the fresh #298 stride rigs (never advanced
+    // before this call — see the field-level comment on
+    // _strideDribbleMoveRight/Left et al. for why). `state`/`blendPos` select
+    // the BlendSpace1D endpoint under test ("Locomotion"@6 for run,
+    // "DribbleRight"/"DribbleLeft"@6 for dribblemoveright/left, "DribbleRight"/
+    // "DribbleLeft"@0 for dribbleidleright/left — #294 split the single
+    // pre-#285 Dribble state by hand side). Returns false (with a Fail
+    // already logged) on any setup/arrival problem; the four `out`
+    // measurements are only meaningful when this returns true.
     private bool MeasureStride(
         PlayerController rig, string state, float blendPos, string label,
         out double ptpLeft, out double ptpRight, out double splitMin, out double splitMax)

@@ -317,15 +317,63 @@ public class MoveAnimResolverTests
     }
 
     [Fact]
-    public void ResolveStateName_Dribble_ReturnsGenericDribble()
+    public void ResolveStateName_Dribble_IsNeverPerMove()
     {
         // Dribble is the neutral stance, not a committed move, so it is never
         // per-move-eligible (only Startup/Active/Recovery are) — exactly like
         // Locomotion and Pivot. A stale moveId alongside it must not produce
         // "CrossoverDribble", a state the tree does not have and that Travel()
         // would silently no-op against.
-        Assert.Equal("Dribble", MoveAnimResolver.ResolveStateName(MoveAnimState.Dribble, "crossover", HandSide.Left, HandSide.Right));
-        Assert.Equal("Dribble", MoveAnimResolver.ResolveStateName(MoveAnimState.Dribble, null, HandSide.Left, HandSide.Right));
+        //
+        // (#294) It IS hand-split, which is a separate axis — so the assertion
+        // is "the moveId made no difference", not "the name is bare 'Dribble'".
+        // Written as a moveId-invariance check rather than two literals so it
+        // keeps testing the per-move exemption independently of the hand suffix.
+        // reachSide (#282) is passed as the opposite of ballHand throughout, the
+        // convention this file uses elsewhere (e.g.
+        // ResolveStateName_ReachSideAndBallHand_AreNotInterchangeable below) to
+        // prove the argument the assertion isn't about is truly inert.
+        Assert.Equal(MoveAnimResolver.ResolveStateName(MoveAnimState.Dribble, null, HandSide.Left, HandSide.Right),
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Dribble, "crossover", HandSide.Left, HandSide.Right));
+        Assert.Equal(MoveAnimResolver.ResolveStateName(MoveAnimState.Dribble, null, HandSide.Right, HandSide.Left),
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Dribble, "behindtheback", HandSide.Right, HandSide.Left));
+        Assert.Equal(MoveAnimResolver.ResolveStateName(MoveAnimState.Dribble, null, HandSide.Left, HandSide.Right),
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Dribble, "jumpshot", HandSide.Left, HandSide.Right));
+    }
+
+    [Fact]
+    public void ResolveStateName_Dribble_IsSuffixedByTheAuthoritativeHand()
+    {
+        // (#294) The defect this closes: the stance played one right-handed clip
+        // regardless of HandSide, so after a crossover left the ball in the left
+        // hand the animation still dribbled right — the ball and the animated
+        // hand on opposite sides of the body.
+        Assert.Equal("DribbleLeft", MoveAnimResolver.ResolveStateName(MoveAnimState.Dribble, null, HandSide.Left, HandSide.Right));
+        Assert.Equal("DribbleRight", MoveAnimResolver.ResolveStateName(MoveAnimState.Dribble, null, HandSide.Right, HandSide.Left));
+    }
+
+    [Fact]
+    public void ResolveStateName_Dribble_IsNotInvertedByOriginHand()
+    {
+        // The load-bearing negative. OriginHand is the obvious-looking place to
+        // route this — it already turns a HandSide into a state-name suffix —
+        // but it returns Opposite(ballHand) for every non-Startup phase, because
+        // its job is undoing a crossover's Active-entry ball-hand flip. Dribble
+        // is only ever resolved during MovePhase.Inactive, where there is no flip
+        // to undo, so routing through it would produce the EXACT MIRROR of the
+        // truth: a state that exists, plays cleanly, and telegraphs the wrong
+        // hand (the ADR-0003 false read).
+        //
+        // This asserts the two disagree rather than just asserting the correct
+        // answer, so a future refactor that "unifies" the two suffix paths fails
+        // here with a message that says why, instead of shipping a silent mirror.
+        foreach (HandSide hand in new[] { HandSide.Left, HandSide.Right })
+        {
+            HandSide viaOriginHand = MoveAnimResolver.OriginHand(MoveAnimState.Dribble, hand);
+            Assert.NotEqual(hand, viaOriginHand);
+            Assert.NotEqual("Dribble" + viaOriginHand,
+                MoveAnimResolver.ResolveStateName(MoveAnimState.Dribble, null, hand, viaOriginHand));
+        }
     }
 
     // ── Unknown phase fallback ────────────────────────────────────────────────
