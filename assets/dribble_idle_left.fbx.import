@@ -3,12 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-path="res://.godot/imported/dribble_idle_left.fbx-a418b0c0f6c578044e7fea83b79fec06.scn"
+uid="uid://doe6epbwre13f"
+path="res://.godot/imported/dribble_idle_left.fbx-1fcf46dc2a7d5baba589d155c485e6c0.scn"
 
 [deps]
 
 source_file="res://assets/dribble_idle_left.fbx"
-dest_files=["res://.godot/imported/dribble_idle_left.fbx-a418b0c0f6c578044e7fea83b79fec06.scn"]
+dest_files=["res://.godot/imported/dribble_idle_left.fbx-1fcf46dc2a7d5baba589d155c485e6c0.scn"]
 
 [params]
 

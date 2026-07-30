@@ -3,12 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-path="res://.godot/imported/dribble_move_left.fbx-9946e9230063bdc92ecc8dda6080b440.scn"
+uid="uid://cw6mqix7cpdqp"
+path="res://.godot/imported/dribble_move_left.fbx-5e4257a13db014f086cd7b3121a610c3.scn"
 
 [deps]
 
 source_file="res://assets/dribble_move_left.fbx"
-dest_files=["res://.godot/imported/dribble_move_left.fbx-9946e9230063bdc92ecc8dda6080b440.scn"]
+dest_files=["res://.godot/imported/dribble_move_left.fbx-5e4257a13db014f086cd7b3121a610c3.scn"]
 
 [params]
 
