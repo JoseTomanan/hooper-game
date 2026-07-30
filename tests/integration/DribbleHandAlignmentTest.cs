@@ -7,23 +7,38 @@ using Hooper.Player;
 
 namespace HOOPERGAME.Tests.Integration;
 
-// Headless integration harness that captures a defect measured directly
-// against this branch (2026-07-28 session): the ball's in-hand position is
-// NOT bone-attached. BallController.TickDribbling (scripts/Ball/BallController.cs)
+// Headless integration harness that captures the defect #294 closes, measured
+// directly (2026-07-28 session): the ball's in-hand position is NOT
+// bone-attached. BallController.TickDribbling (scripts/Ball/BallController.cs)
 // places the ball at holderPos + forward*offset + HandRight(forward)*HandOffset*
 // HandSign(holder) — HandSign reads the server-authoritative PlayerController.
-// HandSide (ADR-0012). But scenes/Player.tscn's Dribble AnimationTree state is a
-// single BlendSpace1D with NO hand-side split, so the SAME clip plays regardless
-// of HandSide, and that clip was measured to animate the RIGHT hand (pump range
-// L=0.0087 m vs R=0.3450 m at +0.5276 m lateral). HandSide defaults to Left
-// (PlayerController.cs, HandSide property initializer), so on a fresh possession
-// the ball is placed at NEGATIVE lateral (HandSign(Left) = -1) while the
-// animated hand pumps at POSITIVE lateral — opposite sides of the body.
+// HandSide (ADR-0012). But scenes/Player.tscn's Dribble AnimationTree state WAS
+// a single BlendSpace1D with NO hand-side split, so the SAME clip played
+// regardless of HandSide, and that clip was measured to animate the RIGHT hand
+// (pump range L=0.0087 m vs R=0.3450 m at +0.5276 m lateral). Whenever HandSide
+// was Left — every possession after a crossover — the ball sat at NEGATIVE
+// lateral (HandSign(Left) = -1) while the animated hand pumped at POSITIVE
+// lateral: opposite sides of the body.
+//
+// #294 splits that state into DribbleLeft/DribbleRight over a genuine mirrored
+// clip pair, and this harness is the proof. It was written on its own branch
+// BEFORE the fix, deliberately red, so the red output names the defect.
 //
 //   godot --headless --path . res://tests/integration/DribbleHandAlignmentTest.tscn -- --harness-scenario=hand-alignment-left
 //   godot --headless --path . res://tests/integration/DribbleHandAlignmentTest.tscn -- --harness-scenario=hand-alignment-right
 //   godot --headless --path . res://tests/integration/DribbleHandAlignmentTest.tscn -- --harness-scenario=hand-follows-authoritative-flip
+//   godot --headless --path . res://tests/integration/DribbleHandAlignmentTest.tscn -- --harness-scenario=dribble-states-own-clips
 //   Exit: 0 = PASS, 1 = FAIL (via GetTree().Quit) — the ADR-0016 exit-code contract.
+//
+// ── Why every scenario FORCES the hand rather than relying on the default ───
+// It used to be load-bearing that HandSide's initializer was Left. ADR-0012's
+// 2026-07-28 amendment flipped the possession-reset default to Right, which
+// silently inverted what "hand-alignment-left" was even testing — it began
+// asserting the Right case under the Left name, and the flip scenario's
+// window 1 premise (HandSide==Left) became unreachable. So no scenario here
+// reads the default any more: each states the polarity it wants via
+// SetHandSideForHarness and asserts it held. A test whose meaning depends on a
+// default it does not set is a test that changes meaning without changing.
 //
 // ── Why HandRightForHarness/HolderForwardForHarness, not a hand-rolled axis ──
 // This harness reads the lateral axis via BallController's own passthroughs
@@ -68,16 +83,23 @@ public partial class DribbleHandAlignmentTest : Node
     // HandSide is indistinguishable, to AdvanceHandSweep, from a real
     // in-game crossover — it starts the SAME ~7-tick lateral sweep
     // (CrossoverSweepDuration=0.12s @ 60 ticks/s, BallController.cs) rather
-    // than snapping instantly. hand-alignment-right forces HandSide AFTER the
-    // tipoff's own automatic Held-tick reset already cached "Left" as the
-    // last-observed value, so that force IS seen as a flip and DOES trigger a
-    // sweep. Sampling must not start until the sweep settles, or the window's
-    // first few ticks would show the ball transiently on the OLD (left) side
-    // — a timing artifact, not the defect under test — and fail the per-tick
-    // sign assertion for the wrong reason. 30 ticks is a large safety margin
-    // over the ~7-tick sweep.
+    // than snapping instantly. Sampling must not start until that sweep
+    // settles, or the window's first few ticks would show the ball transiently
+    // on the OLD side — a timing artifact, not the defect under test — and fail
+    // the per-tick sign assertion for the wrong reason. 30 ticks is a large
+    // safety margin over the ~7-tick sweep.
+    //
+    // Both polarities now force the hand, so exactly one of them agrees with
+    // the tipoff's own Held-tick reset and sweeps nowhere while the other
+    // genuinely sweeps. Which one is whichever way ADR-0012's reset default
+    // currently points, and this harness deliberately does not care: the
+    // WaitSweep step gates on SweepActiveForHarness, so a no-op force falls
+    // straight through and a real one waits. That is what makes the pair
+    // symmetric under a future change to that default.
     private const int SweepSettleFrames = 30;
     private const float MinDribblingHandRangeMeters = 0.15f;
+    // See the non-symmetric-discriminator block in VerdictHandAlignment.
+    private const float MinHandDominanceRatio = 5.0f;
     private const float MaxBallToHandDistanceMeters = 0.30f;
 
     private static readonly Vector3 HolderSpot = new(0f, 0f, 0f);
@@ -105,6 +127,22 @@ public partial class DribbleHandAlignmentTest : Node
 
     private readonly List<Sample> _window1 = new();
     private readonly List<Sample> _window2 = new();
+
+    // (#294) Every distinct AnimationTree node observed as ACTIVE while each
+    // window was open, latched at observation time.
+    //
+    // The geometric assertions below are the real proof — they measure where
+    // the ball and the animated hand physically are — but they cannot say WHY a
+    // polarity was right, and a harness that only measures geometry would pass
+    // on a build that reached the correct pose down some other path. This is the
+    // #257 discipline: read what the state machine ACTUALLY entered
+    // (AnimationNodeStateMachinePlayback.GetCurrentNode, via
+    // ActiveAnimNodeForHarness), never what MoveAnimResolver merely returned.
+    // Travel() to a missing or misnamed state only LOGS, so asserting the
+    // resolver's own return value would keep passing against a tree that has no
+    // such state at all.
+    private readonly HashSet<string> _states1 = new();
+    private readonly HashSet<string> _states2 = new();
 
     // One tick's worth of world-space observations, latched at event time
     // (not re-derived after the fact from a single end-of-window read).
@@ -188,6 +226,7 @@ public partial class DribbleHandAlignmentTest : Node
             case "hand-alignment-left":  TickHandAlignment(forceRight: false); break;
             case "hand-alignment-right": TickHandAlignment(forceRight: true);  break;
             case "hand-follows-authoritative-flip": TickHandFollowsFlip(); break;
+            case "dribble-states-own-clips": TickStatesOwnClips(); break;
             default:
                 Fail($"unknown scenario '{_scenario}'.");
                 Finish();
@@ -285,7 +324,7 @@ public partial class DribbleHandAlignmentTest : Node
             case Step.Act:
                 if (_frame < _stepDeadlineFrame) return;
                 var holder = NodeForPeer(_holderId);
-                if (forceRight) holder.SetHandSideForHarness(HandSide.Right);
+                holder.SetHandSideForHarness(forceRight ? HandSide.Right : HandSide.Left);
                 // The real production entry point (PlayerController's
                 // CheckAutoStartDribble calls exactly this), so the
                 // DeadDribbleRule gate and the Held->Dribbling transition
@@ -325,6 +364,7 @@ public partial class DribbleHandAlignmentTest : Node
                         return;
                     }
                     _window1.Add(SampleNow());
+                    _states1.Add(h.ActiveAnimNodeForHarness ?? "<null>");
                     if (_frame >= _stepDeadlineFrame) VerdictHandAlignment(expected);
                     return;
                 }
@@ -392,6 +432,51 @@ public partial class DribbleHandAlignmentTest : Node
                  $"minBallToHandXZDistance={minDist:F4} m over {_window1.Count} ticks.");
 
         bool pass = true;
+        if (!AssertOnlyState(_states1, "Dribble" + expected, "the observation window"))
+            pass = false;
+
+        // ── The non-symmetric discriminator ────────────────────────────────
+        // Required, and this is the assertion the whole scenario turns on. The Y
+        // Bot rig is mirror-symmetric across X=0 to 0.17 mm (measured, #294
+        // triage), so ANY left/right-symmetric measurement passes on a broken
+        // mirror — that is precisely how the #255 mirror bug shipped green.
+        //
+        // So assert the thing that genuinely differs: WHICH hand pumps, and by
+        // how much more than the other. The source clip measures 0.3450 m on the
+        // dribbling hand vs 0.0087 m on the idle one, a 39.58x ratio, so a real
+        // mirror keeps that lopsidedness and merely swaps which side owns it. A
+        // mirror that silently did nothing, or that swapped bone NAMES without
+        // transforming the pose, lands the excursion on the wrong hand and dies
+        // here — before the geometric sign check, which could otherwise be
+        // satisfied by a ball that simply followed the wrong hand consistently.
+        //
+        // 5x, against a measured 39.58x, is deliberately loose: the claim is
+        // "one hand plainly dominates," not a re-measurement of the clip. The
+        // exact ratio is clip content and belongs to #173's deferred feel pass.
+        bool expectRight = expected == HandSide.Right;
+        float dominant = expectRight ? winner.RightRangeMeters : winner.LeftRangeMeters;
+        float idle = expectRight ? winner.LeftRangeMeters : winner.RightRangeMeters;
+        if (winner.IsRight != expectRight)
+        {
+            pass = false;
+            Fail($"{_scenario}: HandSide={expected} but the clip animates the {winner.HandName} " +
+                 $"(leftRange={winner.LeftRangeMeters:F4} m, rightRange={winner.RightRangeMeters:F4} m). " +
+                 "The stance is playing the WRONG polarity's clip.");
+        }
+        else if (idle > 1e-6f && dominant / idle < MinHandDominanceRatio)
+        {
+            pass = false;
+            Fail($"{_scenario}: HandSide={expected} — the {winner.HandName} does dominate, but only by " +
+                 $"{dominant / idle:F2}x ({dominant:F4} m vs {idle:F4} m), under the required " +
+                 $"{MinHandDominanceRatio}x. The source clip measures 39.58x, so a ratio this flat means the " +
+                 "two hands are moving together: the mirror did not produce a genuinely one-handed dribble, " +
+                 "and a symmetric clip would satisfy every other assertion here.");
+        }
+        else
+        {
+            GD.Print($"[dribble-hand-alignment] {_scenario}: hand dominance {dominant / Math.Max(idle, 1e-6f):F2}x " +
+                     $"in favour of the {winner.HandName} ({dominant:F4} m vs {idle:F4} m) — non-symmetric, as required.");
+        }
         if (signMismatch)
         {
             pass = false;
@@ -438,7 +523,16 @@ public partial class DribbleHandAlignmentTest : Node
 
             case Step.Act:
                 if (_frame < _stepDeadlineFrame) return;
+                // Window 1 is the Left polarity, stated rather than inherited —
+                // see the header note on why no scenario reads the default.
+                NodeForPeer(_holderId).SetHandSideForHarness(HandSide.Left);
                 _ball.TryStartDribble(_holderId);
+                _step = Step.WaitSweep;
+                _stepDeadlineFrame = _frame + SweepSettleFrames;
+                return;
+
+            case Step.WaitSweep:
+                if (_ball.SweepActiveForHarness && _frame < _stepDeadlineFrame) return;
                 _step = Step.Settle1;
                 _stepDeadlineFrame = _frame + ObserveFrames;
                 _window1.Clear();
@@ -462,6 +556,7 @@ public partial class DribbleHandAlignmentTest : Node
                         return;
                     }
                     _window1.Add(SampleNow());
+                    _states1.Add(h.ActiveAnimNodeForHarness ?? "<null>");
                     if (_frame >= _stepDeadlineFrame)
                     {
                         _step = Step.FlipAct;
@@ -499,6 +594,7 @@ public partial class DribbleHandAlignmentTest : Node
                         return;
                     }
                     _window2.Add(SampleNow());
+                    _states2.Add(h.ActiveAnimNodeForHarness ?? "<null>");
                     if (_frame >= _stepDeadlineFrame) VerdictHandFollowsFlip();
                     return;
                 }
@@ -559,7 +655,15 @@ public partial class DribbleHandAlignmentTest : Node
                  $"hand={winner1.HandName}) -> lat2={handLat2:F4} m (sign={handSign2}, hand={winner2.HandName}), " +
                  $"flipped={handFlipped}");
 
-        bool pass = ballFlipped && handFlipped;
+        // The state-machine half of the same claim the geometry makes below: the
+        // tree must have been in DribbleLeft for window 1 and DribbleRight for
+        // window 2, and in nothing else. Checked BEFORE the geometric verdict so
+        // a build whose hands happen to line up while the tree never left one
+        // state still fails, and fails with the reason named.
+        bool statesOk = AssertOnlyState(_states1, "DribbleLeft", "window 1")
+                        & AssertOnlyState(_states2, "DribbleRight", "window 2");
+
+        bool pass = ballFlipped && handFlipped && statesOk;
         if (pass)
         {
             GD.Print($"[dribble-hand-alignment] PASS {_scenario} — BOTH the ball's lateral sign and the " +
@@ -568,7 +672,7 @@ public partial class DribbleHandAlignmentTest : Node
         }
         else
         {
-            Fail($"{_scenario}: ballFlipped={ballFlipped} handFlipped={handFlipped} — expected BOTH true. " +
+            Fail($"{_scenario}: ballFlipped={ballFlipped} handFlipped={handFlipped} statesOk={statesOk} — expected ALL true. " +
                  $"ball: lat1={ballLat1:F4} (sign={ballSign1}) -> lat2={ballLat2:F4} (sign={ballSign2}); " +
                  $"hand: lat1={handLat1:F4} (sign={handSign1}, {winner1.HandName}) -> " +
                  $"lat2={handLat2:F4} (sign={handSign2}, {winner2.HandName}). " +
@@ -579,6 +683,178 @@ public partial class DribbleHandAlignmentTest : Node
         }
 
         Finish(pass ? 0 : 1);
+    }
+
+    // ── Scenario: dribble-states-own-clips (structural) ────────────────────
+    // Reads the AnimationNodeStateMachine straight off scenes/Player.tscn and
+    // asserts the split's SHAPE, which no amount of runtime observation can
+    // reach. Three claims:
+    //
+    //   1. Each polarity's BlendSpace1D points at ITS OWN clip pair. This is an
+    //      ALLOWLIST, not a "not the other one" blocklist, because #294's split
+    //      was generated — 72 transition sub-resources plus two blend surfaces —
+    //      and the characteristic failure of generated wiring is a copy-paste
+    //      that leaves DribbleLeft pointing at a real, valid, RIGHT-handed clip.
+    //      That reads correct by state name alone and passes every blocklist.
+    //
+    //   2. The unsuffixed "Dribble" state is GONE. If it survived, Travel()'s
+    //      pathfinder could route through it and the harness would never notice
+    //      (Travel() silently routes around missing edges — proven by mutation
+    //      in #279 — so edge-level assertions are not available to us here).
+    //
+    //   3. Every edge that touches one polarity has a twin touching the other.
+    //      The split's whole rule was "each Dribble edge becomes two"; a
+    //      polarity missing an edge is a stance the tree cannot leave or reach
+    //      on that hand only, which in play looks like an intermittent freeze on
+    //      one side of a crossover.
+    private void TickStatesOwnClips()
+    {
+        // Load guard. Observed while building this scenario: with the import
+        // cache cold, res://assets/Y Bot.fbx fails and Player.tscn logs a parse
+        // error — yet GD.Load still hands back a PackedScene whose AnimationTree
+        // sub-resources parsed fine, so this scenario read the right structure
+        // and passed for the right reason. That is defensible for a structural
+        // claim, but it is one step from a null that would NRE per tick until
+        // the 12 s timeout and report a confusing failure. Name the condition.
+        var scene = GD.Load<PackedScene>("res://scenes/Player.tscn");
+        if (scene == null)
+        {
+            Fail("dribble-states-own-clips: res://scenes/Player.tscn did not load at all.");
+            Finish();
+            return;
+        }
+        var probe = scene.Instantiate<PlayerController>();
+        var tree = probe.GetNode<AnimationTree>("AnimationTree");
+        if (tree.TreeRoot is not AnimationNodeStateMachine sm)
+        {
+            Fail("dribble-states-own-clips: Player.tscn's AnimationTree root is not an AnimationNodeStateMachine.");
+            probe.QueueFree();
+            Finish();
+            return;
+        }
+
+        bool pass = true;
+        if (sm.HasNode("Dribble"))
+        {
+            Fail("dribble-states-own-clips: the unsuffixed \"Dribble\" state still exists. #294 replaced it " +
+                 "with DribbleLeft/DribbleRight; leaving it behind gives Travel() somewhere hand-blind to land.");
+            pass = false;
+        }
+
+        foreach ((string state, string idle, string move) in new[]
+                 {
+                     ("DribbleLeft",  "locomotion/dribbleidleleft",  "locomotion/dribblemoveleft"),
+                     ("DribbleRight", "locomotion/dribbleidleright", "locomotion/dribblemoveright"),
+                 })
+        {
+            if (!sm.HasNode(state))
+            {
+                Fail($"dribble-states-own-clips: state \"{state}\" is missing from Player.tscn.");
+                pass = false;
+                continue;
+            }
+            if (sm.GetNode(state) is not AnimationNodeBlendSpace1D bs)
+            {
+                Fail($"dribble-states-own-clips: state \"{state}\" is not an AnimationNodeBlendSpace1D — the " +
+                     "stance blends idle<->moving on speed, so a single-clip state would freeze it at one endpoint.");
+                pass = false;
+                continue;
+            }
+
+            var actual = new List<string>();
+            for (int i = 0; i < bs.GetBlendPointCount(); i++)
+                actual.Add(bs.GetBlendPointNode(i) is AnimationNodeAnimation a ? a.Animation.ToString() : "<not-an-animation>");
+
+            var expected = new List<string> { idle, move };
+            if (!actual.SequenceEqual(expected))
+            {
+                Fail($"dribble-states-own-clips: \"{state}\" blend points are [{string.Join(", ", actual)}], " +
+                     $"expected exactly [{string.Join(", ", expected)}] in that order (idle at pos 0, moving at " +
+                     "pos 6). A valid-but-wrong-polarity clip here is the exact false read #294 closes.");
+                pass = false;
+            }
+            else
+            {
+                GD.Print($"[dribble-hand-alignment] dribble-states-own-clips: \"{state}\" -> [{string.Join(", ", actual)}] OK.");
+            }
+        }
+
+        // Claim 3: edge-for-edge symmetry between the two polarities.
+        var left = new HashSet<string>();
+        var right = new HashSet<string>();
+        for (int i = 0; i < sm.GetTransitionCount(); i++)
+        {
+            string from = sm.GetTransitionFrom(i).ToString();
+            string to = sm.GetTransitionTo(i).ToString();
+            // The two cross-edges are the split's own invention and have no twin
+            // by construction, so they are excluded from the symmetry set and
+            // asserted separately below.
+            if (from is "DribbleLeft" && to is "DribbleRight") continue;
+            if (from is "DribbleRight" && to is "DribbleLeft") continue;
+            if (from == "DribbleLeft" || to == "DribbleLeft") left.Add($"{Neutralise(from)}->{Neutralise(to)}");
+            if (from == "DribbleRight" || to == "DribbleRight") right.Add($"{Neutralise(from)}->{Neutralise(to)}");
+        }
+
+        var onlyLeft = left.Except(right).OrderBy(s => s).ToList();
+        var onlyRight = right.Except(left).OrderBy(s => s).ToList();
+        if (onlyLeft.Count > 0 || onlyRight.Count > 0)
+        {
+            Fail($"dribble-states-own-clips: the two polarities are not edge-symmetric. Only on the LEFT: " +
+                 $"[{string.Join(", ", onlyLeft)}]; only on the RIGHT: [{string.Join(", ", onlyRight)}]. " +
+                 "Every pre-split Dribble edge was supposed to become exactly two, one per hand.");
+            pass = false;
+        }
+        else
+        {
+            GD.Print($"[dribble-hand-alignment] dribble-states-own-clips: {left.Count} edges per polarity, " +
+                     "identical modulo the suffix.");
+        }
+
+        bool l2r = false, r2l = false;
+        for (int i = 0; i < sm.GetTransitionCount(); i++)
+        {
+            string from = sm.GetTransitionFrom(i).ToString(), to = sm.GetTransitionTo(i).ToString();
+            if (from == "DribbleLeft" && to == "DribbleRight") l2r = true;
+            if (from == "DribbleRight" && to == "DribbleLeft") r2l = true;
+        }
+        if (!l2r || !r2l)
+        {
+            Fail($"dribble-states-own-clips: the DribbleLeft<->DribbleRight pair is incomplete " +
+                 $"(left->right={l2r}, right->left={r2l}). Without both, a crossover cannot move the stance " +
+                 "to the other hand without detouring through Locomotion.");
+            pass = false;
+        }
+
+        probe.QueueFree();
+        if (pass)
+            GD.Print("[dribble-hand-alignment] PASS dribble-states-own-clips — both stance states exist, own " +
+                     "their own clip pair, are edge-symmetric, and are mutually reachable.");
+        Finish(pass ? 0 : 1);
+    }
+
+    // Erases the polarity so the two edge sets are comparable as sets.
+    private static string Neutralise(string state) =>
+        state is "DribbleLeft" or "DribbleRight" ? "Dribble" : state;
+
+    // (#294) Asserts the AnimationTree was in `expected` for the whole window and
+    // never in anything else.
+    //
+    // "Only" rather than "at some point" is deliberate. The dribble stance is a
+    // sustained neutral, so any second state observed while the ball is
+    // continuously Dribbling and HandSide is held constant means something
+    // Travel()ed away and back — most likely the OTHER polarity, which is the
+    // exact defect. An "did we ever see it" assertion would pass on a tree that
+    // flickered between DribbleLeft and DribbleRight every tick, and a flicker
+    // is indistinguishable from correctness in a per-tick geometric sample
+    // averaged over a window.
+    private bool AssertOnlyState(HashSet<string> observed, string expected, string what)
+    {
+        if (observed.Count == 1 && observed.Contains(expected)) return true;
+        Fail($"{_scenario}: over {what} the AnimationTree was expected to be in \"{expected}\" and nothing " +
+             $"else; observed {{{string.Join(", ", observed)}}}. Read via ActiveAnimNodeForHarness " +
+             "(GetCurrentNode), so this is what the state machine ACTUALLY entered, not what " +
+             "MoveAnimResolver returned — Travel() to a missing state only logs (#257).");
+        return false;
     }
 
     private PlayerController NodeForPeer(int peerId) => peerId == 1 ? _p1 : _p2;
