@@ -220,7 +220,12 @@ public partial class NetDefensiveTelegraphTest : Node3D
 					// exactly what BallController.ResolveBeatenWindowTriggers
 					// (unconditional on ball state, unlike ResolveStealAttempts)
 					// grants the blow-by window for.
-					bool began = defender.BeginMoveForHarness(new StealMove(HandSide.Left));
+					// #282: no heading is ever set in this scene (defender stays
+					// at its default heading 0), and the ball never leaves
+					// Held so there is no live holder to compare against
+					// either — cos(Δ) = +1 by the "both default to 0" rule,
+					// so the reach side coincides with the target hand.
+					bool began = defender.BeginMoveForHarness(new StealMove(HandSide.Left, -1f));
 					_moveBegun = began;
 					if (!began)
 					{

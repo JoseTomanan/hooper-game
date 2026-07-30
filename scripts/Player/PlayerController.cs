@@ -2420,8 +2420,12 @@ public partial class PlayerController : CharacterBody3D
 			// The CommittedMoveMachine enforces the usual phase guards (Inactive-
 			// only Begin), so a client that sends "steal" while still in Recovery
 			// gets a silent no-op — Begin() returns false and nothing happens.
+			// (#282) param IS the raw aim sign the client sent, so it is also the
+			// defender-relative reach side the animation needs — pass it through
+			// rather than trying to recover it from the resolved target, which is
+			// holder-relative and would need the facing transform re-applied.
 			HandSide target = ResolveStealTargetHand(param, GetBall());
-			BeginCommittedMove(new StealMove(target));
+			BeginCommittedMove(new StealMove(target, param));
 		}
 		else if (moveId == "block")
 		{
@@ -3027,7 +3031,14 @@ public partial class PlayerController : CharacterBody3D
 		// is already the right value for whichever role is asking — the same
 		// property DisplayDribbling relies on. The resolver corrects for the
 		// fact that a crossover FLIPS it at Active-entry; see OriginHand.
-		string target = MoveAnimResolver.ResolveStateName(generic, DisplayMoveId(), HandSide);
+		//
+		// (#282) DisplayStealReachSide is a SEPARATE hand-side argument, not a
+		// substitute for HandSide: it is a fact about the DEFENDER's body while
+		// HandSide is a fact about the ball, and the resolver reads whichever one
+		// the current move's split rule calls for. Passing it unconditionally is
+		// safe — the resolver ignores it for every move outside
+		// TargetHandedMoves, exactly as it ignores HandSide outside HandedMoves.
+		string target = MoveAnimResolver.ResolveStateName(generic, DisplayMoveId(), HandSide, DisplayStealReachSide());
 		if (target != _currentAnimStateName)
 		{
 			_animPlayback.Travel(target);
@@ -3118,6 +3129,41 @@ public partial class PlayerController : CharacterBody3D
 		DisplayPhaseResolver.LocalMachineDrivesDisplay(IsServer, IsLocalPlayer)
 			? _machine.CurrentMove is JumpShot jumpShot && jumpShot.IsFadeaway
 			: _serverMoveId == "jumpshot" && _serverMoveParam != 0f;
+
+	/// <summary>
+	/// (Issue #282) Which side of its OWN body this node should DISPLAY a steal
+	/// reaching toward — the polarity of the six handed Steal clips.
+	///
+	/// Same per-role resolution as <see cref="DisplayMove"/>/
+	/// <see cref="DisplayMoveId"/>/<see cref="DisplayFadeaway"/> (M7b, #69): the
+	/// role that locally simulates this machine (server for either player, client
+	/// for its own) reads <c>StealMove.ReachSide</c> off the live CurrentMove;
+	/// the client's copy of a REMOTE opponent has no live local machine to read,
+	/// so it falls back to the broadcast <c>_serverMoveId</c>/
+	/// <c>_serverMoveParam</c> pair — which <see cref="MoveParamOf"/> fills with
+	/// the raw aim sign for a StealMove specifically.
+	///
+	/// Why the reach side and not <c>StealMove.TargetHand</c>: TargetHand is the
+	/// HOLDER's hand under attack, and this clip poses the DEFENDER, so the two
+	/// are opposite for every face-to-face duel. See MoveAnimResolver's
+	/// TargetHandedMoves for the full derivation — picking the wrong one of the
+	/// pair is an ADR-0003 false read, not a cosmetic imprecision.
+	///
+	/// Returns Left when the current move is not a steal at all. That is a
+	/// genuine don't-care rather than a silent default: the resolver reads this
+	/// only when the moveId it was handed is in TargetHandedMoves, and both
+	/// values come from the SAME source on each role (this node's machine, or
+	/// this node's last broadcast), so "the resolver thinks a steal is running"
+	/// and "this accessor found a steal" cannot disagree.
+	///
+	/// Cosmetic-only (ADR-0002/0004): a pure read of already-authoritative state
+	/// with no path back into DefensiveResolution, the timing window, or
+	/// replication.
+	/// </summary>
+	public HandSide DisplayStealReachSide() =>
+		DisplayPhaseResolver.LocalMachineDrivesDisplay(IsServer, IsLocalPlayer)
+			? (_machine.CurrentMove as StealMove)?.ReachSide ?? HandSide.Left
+			: _serverMoveId == "steal" && _serverMoveParam > 0f ? HandSide.Right : HandSide.Left;
 
 	/// <summary>
 	/// (Issue #285) Whether this node should DISPLAY the live-dribble neutral
@@ -3551,7 +3597,10 @@ public partial class PlayerController : CharacterBody3D
 		{
 			float aimSign = aim.X > 0f ? 1f : -1f;
 			HandSide target = ResolveStealTargetHand(aimSign, GetBall());
-			if (BeginCommittedMove(new StealMove(target)) && !isServer)
+			// (#282) aimSign is carried on the move as well as being transformed
+			// into target: it is the defender-relative reach side the handed Steal
+			// clips are selected by (MoveAnimResolver's TargetHandedMoves).
+			if (BeginCommittedMove(new StealMove(target, aimSign)) && !isServer)
 				RpcId(1, MethodName.RequestBeginMove, "steal", aimSign, false); // #225: not a cradle-family move
 		}
 
@@ -4038,9 +4087,22 @@ public partial class PlayerController : CharacterBody3D
 
 	/// <summary>
 	/// The move's reconstruction payload to broadcast — Crossover's and
-	/// BehindTheBack's shared BurstDirection shape, StealMove's TargetHand, or
+	/// BehindTheBack's shared BurstDirection shape, StealMove's AimSign, or
 	/// (#243) JumpShot's IsFadeaway classification (1f/0f). 0 when there is no
 	/// current move or the move type carries no extra payload.
+	///
+	/// (#282) A StealMove used to pack its resolved TargetHand here as 0f/1f.
+	/// It now packs the raw AimSign (+/-1f) instead, which is both what the
+	/// remote-copy display layer actually needs (see DisplayStealReachSide —
+	/// TargetHand is holder-relative and cannot select a defender-body-space
+	/// clip) and what this code path's own convention already prescribes: see
+	/// SampleMoveInput's steal block, "mirrors the crossover family's
+	/// BurstDirection convention: param is the defender's own body-relative
+	/// read, the WORLD mapping is resolved from the authoritative Heading(s) at
+	/// the point of use". Nothing read the old value — TargetHand is consumed
+	/// server-side off the machine's own StealMove instance
+	/// (BallController.ResolveStealAttempts), never off this broadcast — so this
+	/// is a repurposing of an unread slot, not a change of replicated meaning.
 	///
 	/// (#21 doubt cycle 1, finding #2) _serverMoveId/_serverMoveParam are stored
 	/// from every broadcast — satisfying "active move included in the server
@@ -4063,7 +4125,7 @@ public partial class PlayerController : CharacterBody3D
 		move is BehindTheBack behindTheBack ? behindTheBack.BurstDirection :
 		move is BetweenTheLegs betweenLegs  ? betweenLegs.BurstDirection :
 		move is InAndOut inAndOut           ? inAndOut.BurstDirection :
-		move is StealMove steal             ? (float)(int)steal.TargetHand :
+		move is StealMove steal             ? steal.AimSign :
 		move is JumpShot jumpShot           ? (jumpShot.IsFadeaway ? 1f : 0f) :
 		// BlockMove, Hesitation, and all future no-payload moves → 0f.
 		0f;

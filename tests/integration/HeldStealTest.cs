@@ -356,7 +356,20 @@ public partial class HeldStealTest : Node
 
         if (!_stealBegun && _frame == _stealBeginFrame)
         {
-            bool begun = _defender.BeginMoveForHarness(new StealMove(HandSide.Left));
+            // #282: TargetHand is hardcoded Left here across every scenario in
+            // this file, but the RELATIVE heading is not — most scenarios
+            // leave both players at heading 0 (cos(Δ) = +1), while
+            // held-static-immune-shielded force-rotates the HOLDER to Pi
+            // (cos(Δ) = -1). Rather than hardcode a value that is only
+            // coherent for the common case, re-derive it from the actual live
+            // headings via the #254 transform so it stays coherent (aimSign *
+            // cos(Δ) <= 0, i.e. Left) in every scenario this shared line
+            // serves. Purely cosmetic here — no assertion in this file reads
+            // AimSign/ReachSide — but a stray incoherent value would be
+            // confusing evidence for a future reader.
+            float relativeCos = Mathf.Cos(_defender.Heading - _holder.Heading);
+            float aimSign = relativeCos >= 0f ? -1f : 1f;
+            bool begun = _defender.BeginMoveForHarness(new StealMove(HandSide.Left, aimSign));
             _stealBegun = true;
             if (!begun)
             {

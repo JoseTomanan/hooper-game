@@ -1175,6 +1175,85 @@ jobs:
           godot --headless --path . res://tests/integration/BehindTheBackAnimTest.tscn -- --harness-scenario=btb-no-placeholder-leak
           godot --headless --path . res://tests/integration/BehindTheBackAnimTest.tscn -- --harness-scenario=btb-poses-the-skeleton
 
+      # Steal hand-side animation states (issue #282). Same family as the
+      # crossover (#280) and behind-the-back (#281) harnesses immediately
+      # above, but with a genuinely different discriminator: a steal has no
+      # ball to swap sides on, so the six states
+      # (Steal{Startup,Active,Recovery}{Left,Right}) are NOT suffixed by
+      # MoveAnimResolver.OriginHand (a per-move flip correction) at all — they
+      # are suffixed by StealMove.ReachSide, the DEFENDER's OWN body-relative
+      # reach side, fixed at construction. 'steal-left-reach' /
+      # 'steal-right-reach' each prove the tree is observed on that reach
+      # side's Startup -> Active -> Recovery states, in order, for a steal
+      # begun via BeginStealFromAimForHarness (the real aim -> TargetHand
+      # production mapping, not a hand-picked construction).
+      #
+      # 'steal-constant-polarity' is LOAD-BEARING: unlike crossover/
+      # behind-the-back, a steal never naturally flips the defender's own
+      # HandSide mid-move (the defender isn't the ball holder), so this
+      # scenario cannot borrow that natural timing to expose a wrong
+      # OriginHand-based implementation the way btb-single-polarity does. It
+      # instead TOGGLES the defender's own HandSide continuously (every 3
+      # ticks) for the whole run and asserts every distinct Steal* state
+      # observed still carries the SAME suffix — proving the resolver is
+      # provably unaffected by ballHand, which only a genuine ReachSide-only
+      # implementation can be.
+      #
+      # 'steal-face-to-face-reads-true' is the HIGHEST-VALUE scenario in this
+      # file. StealMove.TargetHand (the ball-HOLDER's hand under attack) and
+      # StealMove.ReachSide (the DEFENDER's own reach side) are related by the
+      # #254 facing transform and are EQUAL under the default same-facing
+      # headings every other scenario here uses — so a build that suffixes by
+      # TargetHand instead of ReachSide (the wrong-but-plausible
+      # implementation the original #282 handoff spec called for) would still
+      # pass every scenario above. Only a genuine face-to-face geometry
+      # (defender heading 180 deg from holder heading, relativeCos = -1),
+      # where the two values provably diverge, catches it: this scenario
+      # arranges exactly that and asserts the tree entered the ReachSide
+      # states (Right here), not the TargetHand states (Left) a mis-suffixed
+      # build would enter instead.
+      #
+      # 'steal-segment-lengths' asserts all six clips' durations are within
+      # one tick of StealMove.DefaultFrameData's own Startup(8)/Active(8)/
+      # Recovery(20) tick windows, read from the C# side rather than
+      # hardcoded. 'steal-startup-fills-window' is the SAME instrument scoped
+      # to just the Startup pair, reported as its own scenario per the
+      # ADR-0018 telegraph requirement (Startup must fill its whole visible
+      # wind-up window) rather than folded silently into the all-six check.
+      # 'steal-no-placeholder-leak' is the direct statement that #296 is
+      # closed for steal: it reads the AnimationNodeStateMachine off
+      # scenes/Player.tscn directly and asserts each of the six states points
+      # at ITS OWN clip (an allowlist, not merely a locomotion/idle
+      # blocklist — a state pointing at a real-but-wrong clip, e.g. a
+      # copy-pasted crossover sub-resource, would pass a blocklist and read
+      # correct by state name alone).
+      #
+      # 'steal-poses-the-skeleton' closes the same gap the equivalent
+      # behind-the-back scenario does: reachability, duration and the
+      # state->clip mapping are all upstream of the clip's tracks actually
+      # BINDING to this rig. It reads the live Skeleton3D and asserts the
+      # upper body is still posed off REST on the LAST steal tick — the one
+      # metric (of three tried, per #281's mutation history) that separates a
+      # bound clip from an unbound one on this rig's T-pose rest.
+      # 'no-unsuffixed-steal-state' / 'control-unsuffixed-probe' are the same
+      # direct-probe pair #281 uses: the first proves Travel("StealActive")
+      # never lands (no such node was ever wired for this issue), the second
+      # proves the SAME probe mechanism under IDENTICAL setup DOES land on
+      # "StealActiveLeft" — the premise the first scenario's pass depends on.
+      # Each exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run steal hand-side animation state harness
+        run: |
+          godot --headless --path . res://tests/integration/StealAnimTest.tscn -- --harness-scenario=steal-left-reach
+          godot --headless --path . res://tests/integration/StealAnimTest.tscn -- --harness-scenario=steal-right-reach
+          godot --headless --path . res://tests/integration/StealAnimTest.tscn -- --harness-scenario=steal-constant-polarity
+          godot --headless --path . res://tests/integration/StealAnimTest.tscn -- --harness-scenario=steal-face-to-face-reads-true
+          godot --headless --path . res://tests/integration/StealAnimTest.tscn -- --harness-scenario=steal-segment-lengths
+          godot --headless --path . res://tests/integration/StealAnimTest.tscn -- --harness-scenario=steal-startup-fills-window
+          godot --headless --path . res://tests/integration/StealAnimTest.tscn -- --harness-scenario=steal-no-placeholder-leak
+          godot --headless --path . res://tests/integration/StealAnimTest.tscn -- --harness-scenario=steal-poses-the-skeleton
+          godot --headless --path . res://tests/integration/StealAnimTest.tscn -- --harness-scenario=no-unsuffixed-steal-state
+          godot --headless --path . res://tests/integration/StealAnimTest.tscn -- --harness-scenario=control-unsuffixed-probe
+
       # Moving crossover — momentum-aware burst with left-stick exit (issue
       # #198, ADR-0003 amendment). CrossoverBurstMathTests already pin the
       # pure composition function; this drives a REAL PlayerController

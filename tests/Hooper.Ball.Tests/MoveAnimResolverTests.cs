@@ -230,9 +230,9 @@ public class MoveAnimResolverTests
         // like "CrossoverReboundGrab" is a state the tree never has; Travel() to
         // it would silently no-op.
         Assert.Equal("ReboundGrab",
-            MoveAnimResolver.ResolveStateName(MoveAnimState.ReboundGrab, "crossover", HandSide.Left));
+            MoveAnimResolver.ResolveStateName(MoveAnimState.ReboundGrab, "crossover", HandSide.Left, HandSide.Right));
         Assert.Equal("ReboundGrab",
-            MoveAnimResolver.ResolveStateName(MoveAnimState.ReboundGrab, null, HandSide.Left));
+            MoveAnimResolver.ResolveStateName(MoveAnimState.ReboundGrab, null, HandSide.Left, HandSide.Right));
     }
 
     // ── Dribbling stance (issue #285) ────────────────────────────────────────
@@ -329,12 +329,16 @@ public class MoveAnimResolverTests
         // is "the moveId made no difference", not "the name is bare 'Dribble'".
         // Written as a moveId-invariance check rather than two literals so it
         // keeps testing the per-move exemption independently of the hand suffix.
-        Assert.Equal(MoveAnimResolver.ResolveStateName(MoveAnimState.Dribble, null, HandSide.Left),
-            MoveAnimResolver.ResolveStateName(MoveAnimState.Dribble, "crossover", HandSide.Left));
-        Assert.Equal(MoveAnimResolver.ResolveStateName(MoveAnimState.Dribble, null, HandSide.Right),
-            MoveAnimResolver.ResolveStateName(MoveAnimState.Dribble, "behindtheback", HandSide.Right));
-        Assert.Equal(MoveAnimResolver.ResolveStateName(MoveAnimState.Dribble, null, HandSide.Left),
-            MoveAnimResolver.ResolveStateName(MoveAnimState.Dribble, "jumpshot", HandSide.Left));
+        // reachSide (#282) is passed as the opposite of ballHand throughout, the
+        // convention this file uses elsewhere (e.g.
+        // ResolveStateName_ReachSideAndBallHand_AreNotInterchangeable below) to
+        // prove the argument the assertion isn't about is truly inert.
+        Assert.Equal(MoveAnimResolver.ResolveStateName(MoveAnimState.Dribble, null, HandSide.Left, HandSide.Right),
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Dribble, "crossover", HandSide.Left, HandSide.Right));
+        Assert.Equal(MoveAnimResolver.ResolveStateName(MoveAnimState.Dribble, null, HandSide.Right, HandSide.Left),
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Dribble, "behindtheback", HandSide.Right, HandSide.Left));
+        Assert.Equal(MoveAnimResolver.ResolveStateName(MoveAnimState.Dribble, null, HandSide.Left, HandSide.Right),
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Dribble, "jumpshot", HandSide.Left, HandSide.Right));
     }
 
     [Fact]
@@ -344,8 +348,8 @@ public class MoveAnimResolverTests
         // regardless of HandSide, so after a crossover left the ball in the left
         // hand the animation still dribbled right — the ball and the animated
         // hand on opposite sides of the body.
-        Assert.Equal("DribbleLeft", MoveAnimResolver.ResolveStateName(MoveAnimState.Dribble, null, HandSide.Left));
-        Assert.Equal("DribbleRight", MoveAnimResolver.ResolveStateName(MoveAnimState.Dribble, null, HandSide.Right));
+        Assert.Equal("DribbleLeft", MoveAnimResolver.ResolveStateName(MoveAnimState.Dribble, null, HandSide.Left, HandSide.Right));
+        Assert.Equal("DribbleRight", MoveAnimResolver.ResolveStateName(MoveAnimState.Dribble, null, HandSide.Right, HandSide.Left));
     }
 
     [Fact]
@@ -368,7 +372,7 @@ public class MoveAnimResolverTests
             HandSide viaOriginHand = MoveAnimResolver.OriginHand(MoveAnimState.Dribble, hand);
             Assert.NotEqual(hand, viaOriginHand);
             Assert.NotEqual("Dribble" + viaOriginHand,
-                MoveAnimResolver.ResolveStateName(MoveAnimState.Dribble, null, hand));
+                MoveAnimResolver.ResolveStateName(MoveAnimState.Dribble, null, hand, viaOriginHand));
         }
     }
 
@@ -417,6 +421,17 @@ public class MoveAnimResolverTests
     // for the .tscn state names) currently covers jumpshot/crossover/
     // behindtheback/steal/block; every other moveId — and every non-per-move-
     // eligible MoveAnimState — falls back to the generic phase name.
+    //
+    // ── Test convention: ballHand and reachSide are deliberately OPPOSED ─────
+    // (#282) ResolveStateName takes two same-typed HandSide parameters —
+    // ballHand (a fact about the ball) and reachSide (a fact about the
+    // defender's own body) — read by two DISJOINT move sets (HandedMoves vs
+    // TargetHandedMoves). Every call below that is not itself pinning the
+    // steal/reachSide axis passes reachSide as the OPPOSITE of ballHand,
+    // never the same value, so that a resolver — or a future edit to this
+    // file — that silently swapped the two arguments changes the expected
+    // answer and goes RED instead of passing by luck. Do not "tidy" these
+    // into matching values.
 
     [Fact]
     public void ResolveStateName_ClippedMoveActive_ReturnsPerMoveName()
@@ -427,7 +442,7 @@ public class MoveAnimResolverTests
         // suffix; see the #280 block below for the full mapping and for why
         // Active inverts the hand it is given.
         Assert.Equal("CrossoverActiveLeft",
-            MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "crossover", HandSide.Right));
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "crossover", HandSide.Right, HandSide.Left));
     }
 
     [Fact]
@@ -447,48 +462,56 @@ public class MoveAnimResolverTests
         // EXISTS and plays cleanly, while telegraphing the wrong direction —
         // the ADR-0003 false read, and how the #255 mirror bug shipped green.
         Assert.Equal("BehindTheBackActiveRight",
-            MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "behindtheback", HandSide.Left));
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "behindtheback", HandSide.Left, HandSide.Right));
         Assert.Equal("BehindTheBackActiveLeft",
-            MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "behindtheback", HandSide.Right));
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "behindtheback", HandSide.Right, HandSide.Left));
 
         // Startup does NOT invert — the swap has not happened yet, so the hand
         // observed IS the origin hand. Asserting both phases is what makes this
         // a non-symmetric check rather than a constant-suffix one.
         Assert.Equal("BehindTheBackStartupLeft",
-            MoveAnimResolver.ResolveStateName(MoveAnimState.Startup, "behindtheback", HandSide.Left));
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Startup, "behindtheback", HandSide.Left, HandSide.Right));
     }
 
     [Fact]
     public void ResolveStateName_ClippedButUnhandedMove_IgnoresHand()
     {
-        // The guard that clipped does NOT imply handed (#280). It used to be
-        // carried by behindtheback, which #281 promoted into HandedMoves; steal
-        // and block inherit the role because they are clipped with a single
-        // unsuffixed state per phase. A hand passed here must be ignored,
-        // whichever hand it is — widening HandedMoves ahead of the .tscn would
-        // resolve to a missing state, and Travel() to a missing state only logs
-        // (#257) rather than throwing, so the move would silently stop
-        // animating instead of failing loudly.
-        Assert.Equal("StealActive",
-            MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "steal", HandSide.Left));
-        Assert.Equal("StealActive",
-            MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "steal", HandSide.Right));
+        // The guard that clipped does NOT imply handed (#280). Block is
+        // clipped (ClippedMovePrefixes) but genuinely unhanded — a single
+        // unsuffixed state per phase — and stays so: it has no ball to swap
+        // and no aim-derived reach side either.
+        //
+        // (#282) Steal used to be the other example here, but it is no longer
+        // unhanded — it moved to its OWN handed axis, split by reachSide
+        // instead of ballHand, TargetHandedMoves (see the dedicated steal
+        // section below). Block is now the sole unhanded exemplar.
+        //
+        // A hand passed here must be ignored, whichever hand it is — widening
+        // HandedMoves ahead of the .tscn would resolve to a missing state, and
+        // Travel() to a missing state only logs (#257) rather than throwing,
+        // so the move would silently stop animating instead of failing loudly.
         Assert.Equal("BlockActive",
-            MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "block", HandSide.Left));
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "block", HandSide.Left, HandSide.Right));
         Assert.Equal("BlockActive",
-            MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "block", HandSide.Right));
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "block", HandSide.Right, HandSide.Left));
     }
 
     [Fact]
     public void ResolveStateName_ClippedMoveStartup_ReturnsPerMoveName()
     {
-        Assert.Equal("JumpshotStartup", MoveAnimResolver.ResolveStateName(MoveAnimState.Startup, "jumpshot", HandSide.Left));
+        Assert.Equal("JumpshotStartup", MoveAnimResolver.ResolveStateName(MoveAnimState.Startup, "jumpshot", HandSide.Left, HandSide.Right));
     }
 
     [Fact]
     public void ResolveStateName_ClippedMoveRecovery_ReturnsPerMoveName()
     {
-        Assert.Equal("StealRecovery", MoveAnimResolver.ResolveStateName(MoveAnimState.Recovery, "steal", HandSide.Left));
+        // (#282) steal is now split by reachSide, not ballHand — see the
+        // dedicated steal section below for the full derivation. ballHand is
+        // set to the OPPOSITE of reachSide here per this file's convention, so
+        // a resolver that read the wrong axis would answer "StealRecoveryRight"
+        // instead.
+        Assert.Equal("StealRecoveryLeft",
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Recovery, "steal", HandSide.Right, HandSide.Left));
     }
 
     [Fact]
@@ -498,7 +521,7 @@ public class MoveAnimResolverTests
         // fadeaway release is a jumpshot outcome, FadeawayActive must stay the
         // single shared fadeaway clip — NOT "JumpshotFadeawayActive" — because
         // there is only one fadeaway clip regardless of which move triggered it.
-        Assert.Equal("FadeawayActive", MoveAnimResolver.ResolveStateName(MoveAnimState.FadeawayActive, "jumpshot", HandSide.Left));
+        Assert.Equal("FadeawayActive", MoveAnimResolver.ResolveStateName(MoveAnimState.FadeawayActive, "jumpshot", HandSide.Left, HandSide.Right));
     }
 
     [Fact]
@@ -509,16 +532,16 @@ public class MoveAnimResolverTests
         // with crossover now handed (#280), must not leak a hand suffix either.
         // "LocomotionLeft" is a state the tree has never had.
         Assert.Equal("Locomotion",
-            MoveAnimResolver.ResolveStateName(MoveAnimState.Locomotion, "crossover", HandSide.Left));
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Locomotion, "crossover", HandSide.Left, HandSide.Right));
         Assert.Equal("Locomotion",
-            MoveAnimResolver.ResolveStateName(MoveAnimState.Locomotion, "crossover", HandSide.Right));
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Locomotion, "crossover", HandSide.Right, HandSide.Left));
     }
 
     [Fact]
     public void ResolveStateName_ClippedMovePivot_ReturnsGenericPivot()
     {
         // Pivot is the in-place turn, not a committed move — never per-move.
-        Assert.Equal("Pivot", MoveAnimResolver.ResolveStateName(MoveAnimState.Pivot, "block", HandSide.Left));
+        Assert.Equal("Pivot", MoveAnimResolver.ResolveStateName(MoveAnimState.Pivot, "block", HandSide.Left, HandSide.Right));
     }
 
     [Fact]
@@ -527,7 +550,7 @@ public class MoveAnimResolverTests
         // "jab" is a real committed move (RequestBeginMove sends it) but is NOT
         // in the clipped-move table, so it must fall back to the shared Active
         // clip rather than throwing or resolving to a nonexistent state name.
-        Assert.Equal("Active", MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "jab", HandSide.Left));
+        Assert.Equal("Active", MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "jab", HandSide.Left, HandSide.Right));
     }
 
     [Fact]
@@ -535,13 +558,13 @@ public class MoveAnimResolverTests
     {
         // No move in flight (own player's own-role reconstruction can pass
         // null) must degrade to the generic name, not throw.
-        Assert.Equal("Active", MoveAnimResolver.ResolveStateName(MoveAnimState.Active, null, HandSide.Left));
+        Assert.Equal("Active", MoveAnimResolver.ResolveStateName(MoveAnimState.Active, null, HandSide.Left, HandSide.Right));
     }
 
     [Fact]
     public void ResolveStateName_EmptyMoveIdActive_ReturnsGenericFallback()
     {
-        Assert.Equal("Active", MoveAnimResolver.ResolveStateName(MoveAnimState.Active, string.Empty, HandSide.Left));
+        Assert.Equal("Active", MoveAnimResolver.ResolveStateName(MoveAnimState.Active, string.Empty, HandSide.Left, HandSide.Right));
     }
 
     [Fact]
@@ -550,8 +573,8 @@ public class MoveAnimResolverTests
         // Purity guarantee mirrors Resolve_CalledRepeatedlyWithSameInput_IsDeterministic:
         // same (MoveAnimState, moveId) pair must always yield the same name, with
         // no I/O or hidden state — the renderer can call this every tick safely.
-        string first  = MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "crossover", HandSide.Left);
-        string second = MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "crossover", HandSide.Left);
+        string first  = MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "crossover", HandSide.Left, HandSide.Right);
+        string second = MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "crossover", HandSide.Left, HandSide.Right);
 
         Assert.Equal(first, second);
     }
@@ -582,9 +605,9 @@ public class MoveAnimResolverTests
         // Startup is the only phase BEFORE the swap, so there the current hand
         // already IS the origin hand and passes through unchanged.
         Assert.Equal("CrossoverStartupLeft",
-            MoveAnimResolver.ResolveStateName(MoveAnimState.Startup, "crossover", HandSide.Left));
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Startup, "crossover", HandSide.Left, HandSide.Right));
         Assert.Equal("CrossoverStartupRight",
-            MoveAnimResolver.ResolveStateName(MoveAnimState.Startup, "crossover", HandSide.Right));
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Startup, "crossover", HandSide.Right, HandSide.Left));
     }
 
     [Fact]
@@ -594,14 +617,14 @@ public class MoveAnimResolverTests
         // now holds the DESTINATION and must be inverted to recover the origin.
         // A ball that began in the left hand is in the right one by Active.
         Assert.Equal("CrossoverActiveLeft",
-            MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "crossover", HandSide.Right));
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "crossover", HandSide.Right, HandSide.Left));
         Assert.Equal("CrossoverRecoveryLeft",
-            MoveAnimResolver.ResolveStateName(MoveAnimState.Recovery, "crossover", HandSide.Right));
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Recovery, "crossover", HandSide.Right, HandSide.Left));
 
         Assert.Equal("CrossoverActiveRight",
-            MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "crossover", HandSide.Left));
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "crossover", HandSide.Left, HandSide.Right));
         Assert.Equal("CrossoverRecoveryRight",
-            MoveAnimResolver.ResolveStateName(MoveAnimState.Recovery, "crossover", HandSide.Left));
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Recovery, "crossover", HandSide.Left, HandSide.Right));
     }
 
     [Fact]
@@ -618,9 +641,9 @@ public class MoveAnimResolverTests
         // All three names must carry the SAME suffix. A per-tick read of HandSide
         // would produce Left/Right/Right here and still look plausible in
         // isolation — only comparing the three exposes it.
-        string startup  = MoveAnimResolver.ResolveStateName(MoveAnimState.Startup,  "crossover", HandSide.Left);
-        string active   = MoveAnimResolver.ResolveStateName(MoveAnimState.Active,   "crossover", HandSide.Right);
-        string recovery = MoveAnimResolver.ResolveStateName(MoveAnimState.Recovery, "crossover", HandSide.Right);
+        string startup  = MoveAnimResolver.ResolveStateName(MoveAnimState.Startup,  "crossover", HandSide.Left,  HandSide.Right);
+        string active   = MoveAnimResolver.ResolveStateName(MoveAnimState.Active,   "crossover", HandSide.Right, HandSide.Left);
+        string recovery = MoveAnimResolver.ResolveStateName(MoveAnimState.Recovery, "crossover", HandSide.Right, HandSide.Left);
 
         Assert.Equal("CrossoverStartupLeft",  startup);
         Assert.Equal("CrossoverActiveLeft",   active);
@@ -629,11 +652,11 @@ public class MoveAnimResolverTests
         // And the mirror image of that same move, so a resolver hard-coded to one
         // polarity cannot pass. This is the non-symmetric control (#255).
         Assert.Equal("CrossoverStartupRight",
-            MoveAnimResolver.ResolveStateName(MoveAnimState.Startup, "crossover", HandSide.Right));
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Startup, "crossover", HandSide.Right, HandSide.Left));
         Assert.Equal("CrossoverActiveRight",
-            MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "crossover", HandSide.Left));
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "crossover", HandSide.Left, HandSide.Right));
         Assert.Equal("CrossoverRecoveryRight",
-            MoveAnimResolver.ResolveStateName(MoveAnimState.Recovery, "crossover", HandSide.Left));
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Recovery, "crossover", HandSide.Left, HandSide.Right));
     }
 
     [Fact]
@@ -645,8 +668,136 @@ public class MoveAnimResolverTests
         foreach (MoveAnimState phase in new[] { MoveAnimState.Startup, MoveAnimState.Active, MoveAnimState.Recovery })
         {
             Assert.NotEqual(
-                MoveAnimResolver.ResolveStateName(phase, "crossover", HandSide.Left),
-                MoveAnimResolver.ResolveStateName(phase, "crossover", HandSide.Right));
+                MoveAnimResolver.ResolveStateName(phase, "crossover", HandSide.Left, HandSide.Right),
+                MoveAnimResolver.ResolveStateName(phase, "crossover", HandSide.Right, HandSide.Left));
+        }
+    }
+
+    // ── Hand-side split: steal, a DIFFERENT axis (issue #282) ────────────────
+    //
+    // Steal is clipped (ClippedMovePrefixes) but its handed split is NOT the
+    // ball-hand-swap axis crossover/behindtheback use — a steal has no ball to
+    // swap. It is split by reachSide instead: the DEFENDER's own body-relative
+    // aim sign (StealMove.AimSign/ReachSide), fixed at construction and
+    // constant for the whole move. See MoveAnimResolver.TargetHandedMoves'
+    // doc comment for the full derivation of why ballHand — the natural-
+    // looking but wrong discriminator — would silently animate the mirror-
+    // image arm for every face-to-face duel.
+
+    [Theory]
+    [InlineData(MoveAnimState.Startup, "StealStartup")]
+    [InlineData(MoveAnimState.Active, "StealActive")]
+    [InlineData(MoveAnimState.Recovery, "StealRecovery")]
+    public void ResolveStateName_StealAllPhases_SuffixesTheReachSide(MoveAnimState phase, string expectedPrefix)
+    {
+        // ballHand is fixed at Left throughout — it must play no part; see
+        // ResolveStateName_StealIgnoresBallHand below for the direct version
+        // of that same claim.
+        Assert.Equal(expectedPrefix + "Left",
+            MoveAnimResolver.ResolveStateName(phase, "steal", HandSide.Left, HandSide.Left));
+        Assert.Equal(expectedPrefix + "Right",
+            MoveAnimResolver.ResolveStateName(phase, "steal", HandSide.Left, HandSide.Right));
+    }
+
+    [Fact]
+    public void ResolveStateName_StealAcrossOneMove_KeepsASinglePolarity()
+    {
+        // Mirrors ResolveStateName_CrossoverAcrossOneMove_KeepsASinglePolarity's
+        // discipline, but pins the OPPOSITE claim: crossover's ball hand flips
+        // mid-move and OriginHand corrects for it, but steal's reachSide must
+        // NOT flip even though its ballHand does (simulating a hand swap
+        // happening mid-steal, e.g. the holder recycling into a new dribble).
+        // This is the test that catches the predictable wrong implementation
+        // the #282 handoff explicitly warns against: routing steal through
+        // OriginHand(generic, ballHand) instead of reading reachSide directly.
+        //
+        // reachSide is deliberately Right while the ballHand sequence below
+        // (Left at Startup, Right from Active on) is exactly the flip pattern
+        // OriginHand exists to normalize BACK to Left — so a mutant reading
+        // OriginHand(generic, ballHand) instead of reachSide would answer
+        // "...Left" for all three phases here, not "...Right". Mutation-
+        // verified (#282): a first draft of this test used reachSide: Left,
+        // which coincided with what OriginHand recovers from this exact
+        // ballHand sequence, so the OriginHand mutant passed it BY ACCIDENT —
+        // reachSide: Right is what actually makes the two implementations
+        // diverge.
+        const HandSide reachSide = HandSide.Right;
+
+        string startup  = MoveAnimResolver.ResolveStateName(MoveAnimState.Startup,  "steal", HandSide.Left,  reachSide);
+        string active   = MoveAnimResolver.ResolveStateName(MoveAnimState.Active,   "steal", HandSide.Right, reachSide);
+        string recovery = MoveAnimResolver.ResolveStateName(MoveAnimState.Recovery, "steal", HandSide.Right, reachSide);
+
+        Assert.Equal("StealStartupRight",  startup);
+        Assert.Equal("StealActiveRight",   active);
+        Assert.Equal("StealRecoveryRight", recovery);
+    }
+
+    [Fact]
+    public void ResolveStateName_StealIgnoresBallHand()
+    {
+        // With reachSide fixed, either value of ballHand must give the SAME
+        // name — the direct converse of ResolveStateName_StealAllPhases_
+        // SuffixesTheReachSide's per-phase Left/Left vs Left/Right pair.
+        Assert.Equal(
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "steal", HandSide.Left,  HandSide.Right),
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "steal", HandSide.Right, HandSide.Right));
+    }
+
+    [Fact]
+    public void ResolveStateName_ReachSideAndBallHand_AreNotInterchangeable()
+    {
+        // THE transposition-hazard pin, and the most important new test in
+        // this section (#282). ballHand and reachSide share the exact same
+        // type (HandSide), so a call site — or a resolver implementation —
+        // that swapped the two would compile silently.
+        //
+        // Startup is chosen deliberately: it is the one per-move-eligible
+        // phase OriginHand never inverts, so the two expected answers below
+        // are not a coincidental match. "steal" must read reachSide (Right)
+        // and completely ignore ballHand (Left); "crossover" must read
+        // ballHand (Left) via OriginHand and completely ignore reachSide
+        // (Right). If either move read the OTHER axis, the suffix below would
+        // silently flip to the other hand.
+        Assert.Equal("StealStartupRight",
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Startup, "steal", HandSide.Left, HandSide.Right));
+        Assert.Equal("CrossoverStartupLeft",
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Startup, "crossover", HandSide.Left, HandSide.Right));
+    }
+
+    [Fact]
+    public void ResolveStateName_HandedSetsAreDisjoint()
+    {
+        // HandedMoves and TargetHandedMoves are both PRIVATE, so disjointness
+        // can only be pinned BEHAVIOURALLY, through the public function.
+        // ResolveStateName_StealIgnoresBallHand already proves ballHand plays
+        // no part in steal's answer; this test additionally proves steal's
+        // answer does NOT match what HandedMoves' OriginHand formula would
+        // have produced for the very same (phase, ballHand) pair — if steal
+        // were (wrongly) also a HandedMoves member, or TargetHandedMoves were
+        // checked after HandedMoves instead of before, this would fail.
+        const HandSide ballHand = HandSide.Right;
+        const HandSide reachSide = HandSide.Right;
+
+        string stealActive = MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "steal", ballHand, reachSide);
+        // What steal WOULD have produced had it been routed through
+        // HandedMoves' OriginHand formula instead of reading reachSide.
+        string wrongByHandedFormula = "Steal" + MoveAnimState.Active + MoveAnimResolver.OriginHand(MoveAnimState.Active, ballHand);
+
+        Assert.Equal("StealActiveRight", stealActive);
+        Assert.NotEqual(wrongByHandedFormula, stealActive);
+    }
+
+    [Fact]
+    public void ResolveStateName_StealPolarities_AreNeverTheSameName()
+    {
+        // Mirrors ResolveStateName_CrossoverPolarities_AreNeverTheSameName:
+        // the cheapest possible guard against a resolver that ignores
+        // reachSide entirely.
+        foreach (MoveAnimState phase in new[] { MoveAnimState.Startup, MoveAnimState.Active, MoveAnimState.Recovery })
+        {
+            Assert.NotEqual(
+                MoveAnimResolver.ResolveStateName(phase, "steal", HandSide.Left, HandSide.Left),
+                MoveAnimResolver.ResolveStateName(phase, "steal", HandSide.Left, HandSide.Right));
         }
     }
 

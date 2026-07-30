@@ -195,10 +195,54 @@ public static class MoveAnimResolver
     /// except InAndOut, and BehindTheBack is in that family, so the swap lands
     /// on the FIRST Active tick and OriginHand's formula holds.
     ///
-    /// #282 adds "steal", which will need its own origin rule because a steal
-    /// has no ball to swap — its handedness is the TARGET hand, not an origin.
+    /// #282 did NOT add "steal" here. A steal has no ball to swap, so
+    /// OriginHand's correction has nothing to undo and would simply invert the
+    /// polarity from Active onward. It is split by a different rule instead —
+    /// see <see cref="TargetHandedMoves"/>.
     /// </summary>
     private static readonly HashSet<string> HandedMoves = new() { "crossover", "behindtheback" };
+
+    /// <summary>
+    /// (Issue #282) The moves whose per-phase states are split by hand side
+    /// using a side that is CONSTANT across the whole move, and therefore need
+    /// neither <see cref="HandedMoves"/> membership nor
+    /// <see cref="OriginHand"/>'s phase correction.
+    ///
+    /// Like <see cref="HandedMoves"/> this is a subset of
+    /// <see cref="ClippedMovePrefixes"/> and membership is a promise that
+    /// scenes/Player.tscn actually holds both variants. The two sets must stay
+    /// DISJOINT — a move in both would take this branch and silently ignore its
+    /// OriginHand correction. <c>ResolveStateName_HandedSetsAreDisjoint</c>
+    /// pins that.
+    ///
+    /// ── Why steal needs its own rule, and why the obvious rule is wrong ──
+    /// The batch handoff for #282 originally specified suffixing steal by
+    /// <c>StealMove.TargetHand</c>. That is the natural-looking wrong answer.
+    /// <c>TargetHand</c> is the BALL-HANDLER's hand under attack
+    /// (HandStateResolver.TargetHandFromAim's own return doc: "the holder's
+    /// body-relative HandSide"), but this clip poses the DEFENDER's skeleton, so
+    /// its polarity must be a fact about the defender's body. The two are
+    /// related by the #254 facing transform,
+    /// <c>TargetHand == AimSign * sign(cos(defenderHeading - holderHeading))</c>,
+    /// so they are OPPOSITE for every face-to-face duel — the overwhelmingly
+    /// common defensive stance. Suffixing by TargetHand would sweep the arm away
+    /// from the hand it is supposedly attacking: a state that exists, plays
+    /// cleanly, and telegraphs the wrong side, which is exactly the ADR-0003
+    /// false read this whole split exists to prevent.
+    ///
+    /// The correct discriminator is <c>StealMove.ReachSide</c> — the defender's
+    /// own body-relative aim sign, fixed at construction.
+    ///
+    /// ── Why not re-apply the facing transform here instead ────────────────
+    /// Because it would not be constant. The defender's heading IS frozen for
+    /// the move (PlayerController skips Move() while the machine is active), but
+    /// the HOLDER's is not, so <c>cos(defenderHeading - holderHeading)</c> can
+    /// cross 90 degrees mid-steal and flip the animating arm partway through the
+    /// swipe. Reading a value that was resolved ONCE at construction is what
+    /// makes the polarity constant, and it keeps this function pure (ADR-0002/
+    /// 0004) — no headings, no Node, no geometry.
+    /// </summary>
+    private static readonly HashSet<string> TargetHandedMoves = new() { "steal" };
 
     /// <summary>
     /// (Issue #280) The hand the ball was in when the currently-displayed move
@@ -304,8 +348,22 @@ public static class MoveAnimResolver
     /// compile error, which matters most for #281/#282 adding to
     /// <see cref="HandedMoves"/> later.
     /// </param>
+    /// <param name="reachSide">
+    /// (Issue #282) The body-relative side a <see cref="TargetHandedMoves"/>
+    /// move reaches toward, constant for the whole move —
+    /// <c>PlayerController.DisplayStealReachSide()</c>, which resolves per
+    /// network role exactly like DisplayFadeaway does. Read ONLY for a move in
+    /// <see cref="TargetHandedMoves"/>; every other move ignores it entirely.
+    ///
+    /// Required for the same reason as <paramref name="ballHand"/>, and note
+    /// that the two are NOT interchangeable even though they share a type: this
+    /// one is a fact about the DEFENDER's body, ballHand is a fact about the
+    /// ball. Transposing them at a call site would compile silently, so
+    /// <c>ResolveStateName_ReachSideAndBallHand_AreNotInterchangeable</c> pins
+    /// that they are read independently.
+    /// </param>
     /// <returns>The AnimationTree state name to Travel() to.</returns>
-    public static string ResolveStateName(MoveAnimState generic, string? moveId, HandSide ballHand)
+    public static string ResolveStateName(MoveAnimState generic, string? moveId, HandSide ballHand, HandSide reachSide)
     {
         // (#294) The dribble STANCE is split by hand, and this branch sits above
         // the per-move gate on purpose — it is a different axis, not a special
@@ -342,6 +400,16 @@ public static class MoveAnimResolver
             && !string.IsNullOrEmpty(moveId)
             && ClippedMovePrefixes.TryGetValue(moveId, out string? prefix))
         {
+            // (#282) Checked FIRST, and deliberately not folded into the
+            // HandedMoves ternary below: this branch must NOT reach OriginHand.
+            // The suffix is already the constant, correct side (see
+            // TargetHandedMoves' doc), so applying OriginHand's phase
+            // correction on top would invert it from Active onward — the same
+            // false read the split exists to prevent. The two sets are disjoint,
+            // so the order is a safety net rather than a live precedence rule.
+            if (TargetHandedMoves.Contains(moveId))
+                return prefix + generic + reachSide;
+
             // (#280, extended by #281) A handed move's three phase states are
             // split in two, and the suffix names the hand the ball STARTED in —
             // so "Left" is the crossover that carries the ball toward the

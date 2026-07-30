@@ -367,7 +367,11 @@ public partial class TransitStealTest : Node
             // window regardless of dribble phase. For normal-window-unchanged
             // there is no sweep move at all, so the starting hand stays
             // correct throughout — the union's window (a) branch.
-            bool began = _defender.BeginMoveForHarness(new StealMove(_holderStartingHand));
+            // #282: neither player's heading is set anywhere in this scene
+            // (both default to 0, cos(Δ) = +1), so the reach side coincides
+            // with the target hand — mirror _holderStartingHand's polarity.
+            float aimSign = _holderStartingHand == HandSide.Right ? 1f : -1f;
+            bool began = _defender.BeginMoveForHarness(new StealMove(_holderStartingHand, aimSign));
             _stealBegun = true;
             if (!began)
             {
