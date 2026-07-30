@@ -189,9 +189,11 @@ public partial class MoveKindAnimTest : Node
     // Travels into a "BehindTheBackActive*" state while MovePhase.Active is
     // live (event-time latch, not an end-of-run check — matches PivotAnimTest's
     // discipline), then settles back onto the possession-correct NEUTRAL once
-    // the move's full lifecycle returns to Inactive — "Dribble" here, since the
-    // scenario starts a live dribble first and BehindTheBack does not end it
-    // (see ExpectedNeutralAnimNode; pre-#285 this was always "Locomotion").
+    // the move's full lifecycle returns to Inactive — "Dribble" + the holder's
+    // HandSide here (#294 split the single Dribble state into DribbleLeft/
+    // DribbleRight), since the scenario starts a live dribble first and
+    // BehindTheBack does not end it (see ExpectedNeutralAnimNode; pre-#285 this
+    // was always "Locomotion").
     //
     // The trailing wildcard is load-bearing (#281): behind-the-back is now
     // HANDED, so the state is "BehindTheBackActiveLeft"/"...Right" and the bare
@@ -431,7 +433,7 @@ public partial class MoveKindAnimTest : Node
     // instead (MoveAnimResolver's Inactive branch). Both scenarios here call
     // TryStartDribble before their move — BehindTheBack and BetweenTheLegs
     // cannot Begin from Held (#193) — and neither move ends the dribble, so in
-    // practice both now settle on "Dribble".
+    // practice both now settle on "Dribble" + the holder's HandSide (#294).
     //
     // Derived from live ball state rather than hardcoded to "Dribble" so the
     // assertion keeps its meaning if a scenario is ever pointed at a move that
@@ -439,9 +441,15 @@ public partial class MoveKindAnimTest : Node
     // would correctly settle back onto "Locomotion") — and so a bug that
     // silently killed the dribble mid-move would still be caught here rather
     // than absorbed by a loosened "either name is fine" check.
+    //
+    // (#294) "Dribble" alone is no longer a real state name — the tree now has
+    // "DribbleLeft"/"DribbleRight", and the holder's own HandSide (server-
+    // authoritative, ADR-0012) decides which. Appending it here keeps this an
+    // exact-name check rather than a weakened prefix test, same discipline as
+    // DribbleLoopTest's positive sites.
     private string ExpectedNeutralAnimNode() =>
         _ball.State == BallState.Dribbling && _ball.StateMachine.HolderPeerId == _holderId
-            ? "Dribble"
+            ? "Dribble" + NodeForPeer(_holderId).HandSide
             : "Locomotion";
 
     private void Fail(string message) => GD.PrintErr($"[movekind-anim] FAIL: {message}");

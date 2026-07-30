@@ -26,7 +26,10 @@ namespace HOOPERGAME.Tests.Integration;
 // MoveAnimState.Dribble in isolation — MoveAnimResolverTests already pins that,
 // and it would keep passing even if Player.tscn had no Dribble state at all.
 // Travel() to a missing/misnamed state only LOGS, so this is the only honest
-// proof the .tscn state and its 29 transitions are wired.
+// proof the .tscn state and its transitions are wired. Post-#294 split, that
+// count is 72 transition edges: 35 per polarity (DribbleLeft and DribbleRight
+// each mirror the single pre-split Dribble state's 35-edge set) plus the
+// DribbleLeft<->DribbleRight pair connecting the two polarities directly.
 //
 // ── Why the controls carry the real weight here ─────────────────────────────
 // The whole design decision #285 records (ADR-0014, self-resolved on the issue)
@@ -78,7 +81,7 @@ public partial class DribbleLoopTest : Node
 
     // Latched (event-time) observations.
     private bool _sawDribbleState;      // the ball genuinely reached BallState.Dribbling
-    private bool _sawDribbleAnim;       // the tree entered "Dribble"
+    private bool _sawDribbleAnim;       // the tree entered "Dribble" + the holder's authoritative HandSide (#294)
     private bool _sawLocomotionOnOther; // the off-ball control player was observed on "Locomotion"
     private bool _sawHeldThroughout;    // held-no-dribble: the ball stayed Held for the window
     private bool _sawMoveStartup;       // move-outranks-dribble: the tree left Dribble for the move's Startup
@@ -184,7 +187,13 @@ public partial class DribbleLoopTest : Node
 
             case Step.Observe:
                 if (_ball.State == BallState.Dribbling) _sawDribbleState = true;
-                if (NodeForPeer(_holderId).ActiveAnimNodeForHarness == "Dribble") _sawDribbleAnim = true;
+                // (#294) Exact-handed assertion, not a "Dribble" prefix: the point
+                // of the split is proving the tree entered the SPECIFIC polarity
+                // the authoritative HandSide demands, not merely some dribble
+                // stance. A bug that entered the wrong-handed state would pass a
+                // prefix check but must fail this one.
+                var holder = NodeForPeer(_holderId);
+                if (holder.ActiveAnimNodeForHarness == "Dribble" + holder.HandSide) _sawDribbleAnim = true;
                 if (_sawDribbleState && _sawDribbleAnim) VerdictDribbleEntered();
                 else if (_frame >= _stepDeadlineFrame) VerdictDribbleEntered();
                 return;
@@ -196,11 +205,13 @@ public partial class DribbleLoopTest : Node
         bool pass = _sawDribbleState && _sawDribbleAnim;
         if (pass)
             GD.Print("[dribble-loop] PASS dribble-entered — the ball reached BallState.Dribbling and the " +
-                     "holder's AnimationTree entered \"Dribble\" (the .tscn state and its transitions are live).");
+                     "holder's AnimationTree entered \"Dribble\" + their authoritative HandSide (the .tscn states " +
+                     "and their transitions are live).");
         else
-            Fail($"dribble-entered: expected the ball to reach Dribbling and the tree to enter \"Dribble\"; got " +
-                 $"sawDribbleState={_sawDribbleState}, sawDribbleAnim={_sawDribbleAnim}, " +
-                 $"ballState={_ball.State}, lastAnimNode={NodeForPeer(_holderId).ActiveAnimNodeForHarness}.");
+            Fail($"dribble-entered: expected the ball to reach Dribbling and the tree to enter \"Dribble\" + the " +
+                 $"holder's HandSide; got sawDribbleState={_sawDribbleState}, sawDribbleAnim={_sawDribbleAnim}, " +
+                 $"ballState={_ball.State}, handSide={NodeForPeer(_holderId).HandSide}, " +
+                 $"lastAnimNode={NodeForPeer(_holderId).ActiveAnimNodeForHarness}.");
         Finish(pass ? 0 : 1);
     }
 
@@ -211,10 +222,15 @@ public partial class DribbleLoopTest : Node
     private void TickNoBallLocomotion()
     {
         var other = _holderId == 0 ? null : OtherNode(_holderId);
-        if (other != null && other.ActiveAnimNodeForHarness == "Dribble")
+        // (#294) Prefix test, not exact-handed: the claim here is "no dribble
+        // stance of EITHER polarity", so StartsWith("Dribble") is the correct
+        // (and stronger) check — no other state in the tree begins with
+        // "Dribble", so the prefix is exact. Using the exact-handed form here
+        // would let a bug that entered the WRONG polarity slip past this control.
+        if (other != null && other.ActiveAnimNodeForHarness.StartsWith("Dribble"))
         {
-            Fail($"no-ball-locomotion: the player WITHOUT the ball entered \"Dribble\" at frame {_frame} — " +
-                 "the stance must be gated on being the holder, not merely on the ball existing.");
+            Fail($"no-ball-locomotion: the player WITHOUT the ball entered \"{other.ActiveAnimNodeForHarness}\" at " +
+                 $"frame {_frame} — the stance must be gated on being the holder, not merely on the ball existing.");
             Finish();
             return;
         }
@@ -236,7 +252,11 @@ public partial class DribbleLoopTest : Node
 
             case Step.Observe:
                 if (_ball.State == BallState.Dribbling) _sawDribbleState = true;
-                if (NodeForPeer(_holderId).ActiveAnimNodeForHarness == "Dribble") _sawDribbleAnim = true;
+                // (#294) Exact-handed, same reasoning as the dribble-entered site:
+                // this is the holder's own positive, so it must prove the SPECIFIC
+                // polarity HandSide demands, not merely "some Dribble state".
+                var holder = NodeForPeer(_holderId);
+                if (holder.ActiveAnimNodeForHarness == "Dribble" + holder.HandSide) _sawDribbleAnim = true;
                 if (other.ActiveAnimNodeForHarness == "Locomotion") _sawLocomotionOnOther = true;
                 if (_frame >= _stepDeadlineFrame) VerdictNoBallLocomotion();
                 return;
@@ -251,10 +271,11 @@ public partial class DribbleLoopTest : Node
         bool pass = _sawDribbleState && _sawDribbleAnim && _sawLocomotionOnOther;
         if (pass)
             GD.Print("[dribble-loop] PASS no-ball-locomotion — while the holder was live-dribbling and showing " +
-                     "\"Dribble\", the off-ball player stayed on \"Locomotion\" and never entered it.");
+                     "\"Dribble\" + their HandSide, the off-ball player stayed on \"Locomotion\" and never entered " +
+                     "any \"Dribble*\" state.");
         else
-            Fail($"no-ball-locomotion: expected the holder to reach \"Dribble\" AND the off-ball player to sit on " +
-                 $"\"Locomotion\"; got sawDribbleState={_sawDribbleState}, holderSawDribble={_sawDribbleAnim}, " +
+            Fail($"no-ball-locomotion: expected the holder to reach \"Dribble\" + their HandSide AND the off-ball " +
+                 $"player to sit on \"Locomotion\"; got sawDribbleState={_sawDribbleState}, holderSawDribble={_sawDribbleAnim}, " +
                  $"otherSawLocomotion={_sawLocomotionOnOther}, otherAnimNode={OtherNode(_holderId).ActiveAnimNodeForHarness}. " +
                  "Without the holder's positive, this control would be vacuous, so it fails rather than passes.");
         Finish(pass ? 0 : 1);
@@ -266,11 +287,17 @@ public partial class DribbleLoopTest : Node
     // is deliberately never called, so the tipoff possession stays Held.
     private void TickHeldNoDribble()
     {
-        if (_holderId != 0 && NodeForPeer(_holderId).ActiveAnimNodeForHarness == "Dribble")
+        // (#294) Prefix test: the claim is "no dribble stance of EITHER polarity"
+        // while the ball is Held, so StartsWith("Dribble") is correct here too —
+        // no other state begins with "Dribble", so the prefix is exact, and it
+        // stays a control against BOTH DribbleLeft and DribbleRight rather than
+        // just the one polarity HandSide happens to be defaulted to.
+        if (_holderId != 0 && NodeForPeer(_holderId).ActiveAnimNodeForHarness.StartsWith("Dribble"))
         {
-            Fail($"held-no-dribble: \"Dribble\" appeared at frame {_frame} while the ball was {_ball.State} — " +
-                 "the stance must be gated on BallState.Dribbling, not on holding the ball. Showing a " +
-                 "live-dribble loop on a Held/dead ball advertises a drive the holder cannot legally make.");
+            Fail($"held-no-dribble: \"{NodeForPeer(_holderId).ActiveAnimNodeForHarness}\" appeared at frame {_frame} " +
+                 $"while the ball was {_ball.State} — the stance must be gated on BallState.Dribbling, not on " +
+                 "holding the ball. Showing a live-dribble loop on a Held/dead ball advertises a drive the holder " +
+                 "cannot legally make.");
             Finish();
             return;
         }
@@ -332,7 +359,11 @@ public partial class DribbleLoopTest : Node
                 if (_frame < _stepDeadlineFrame) return;
                 _ball.TryStartDribble(_holderId);
                 if (_ball.State == BallState.Dribbling) _sawDribbleState = true;
-                if (NodeForPeer(_holderId).ActiveAnimNodeForHarness == "Dribble") _sawDribbleAnim = true;
+                // (#294) Exact-handed, same reasoning as the other positives:
+                // this proves the specific polarity HandSide demands actually
+                // played before the move's Startup takes over.
+                var holder = NodeForPeer(_holderId);
+                if (holder.ActiveAnimNodeForHarness == "Dribble" + holder.HandSide) _sawDribbleAnim = true;
                 // Only begin the move once the stance is genuinely on screen —
                 // otherwise "the move won" would be trivially true.
                 if (!_sawDribbleState || !_sawDribbleAnim) return;
@@ -363,11 +394,11 @@ public partial class DribbleLoopTest : Node
     {
         bool pass = _sawDribbleState && _sawDribbleAnim && _sawMoveStartup;
         if (pass)
-            GD.Print("[dribble-loop] PASS move-outranks-dribble — the tree was showing \"Dribble\" and a committed " +
-                     "JumpShot moved it straight to \"JumpshotStartup\" (the Dribble -> per-move Startup edge is wired, " +
-                     "and the neutral stance never overrides a move in flight).");
+            GD.Print("[dribble-loop] PASS move-outranks-dribble — the tree was showing \"Dribble\" + the holder's " +
+                     "HandSide and a committed JumpShot moved it straight to \"JumpshotStartup\" (the handed Dribble " +
+                     "-> per-move Startup edge is wired, and the neutral stance never overrides a move in flight).");
         else
-            Fail($"move-outranks-dribble: expected \"Dribble\" then \"JumpshotStartup\"; got " +
+            Fail($"move-outranks-dribble: expected \"Dribble\" + HandSide then \"JumpshotStartup\"; got " +
                  $"sawDribbleState={_sawDribbleState}, sawDribbleAnim={_sawDribbleAnim}, " +
                  $"sawMoveStartup={_sawMoveStartup}, lastAnimNode={NodeForPeer(_holderId).ActiveAnimNodeForHarness}.");
         Finish(pass ? 0 : 1);

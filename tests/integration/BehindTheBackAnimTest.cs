@@ -84,7 +84,9 @@ namespace HOOPERGAME.Tests.Integration;
 // CommittedMoveMachine and MoveAnimResolver entirely.
 //
 // The two scenarios share IDENTICAL setup (a dribbling holder, same starting
-// node "Dribble") and differ only in the Travel() target:
+// node "Dribble" + the holder's HandSide — #294 split the single Dribble
+// state into DribbleLeft/DribbleRight, but both still transition into the
+// same BehindTheBack states below) and differ only in the Travel() target:
 //   - "no-unsuffixed-btb-state" travels to "BehindTheBackActive" — a node
 //     that must not exist at all post-#281 (the three unsuffixed states are
 //     DELETED, not merely unreachable). GetCurrentNode() can never report a

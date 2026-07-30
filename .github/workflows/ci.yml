@@ -901,6 +901,62 @@ jobs:
           godot --headless --path . res://tests/integration/DribbleLoopTest.tscn -- --harness-scenario=held-no-dribble
           godot --headless --path . res://tests/integration/DribbleLoopTest.tscn -- --harness-scenario=move-outranks-dribble
 
+      # Dribble hand-side/animation alignment (issue #294). Written first on
+      # branch test/dribble-hand-alignment-baseline and registered COMMENTED
+      # OUT, because it was deliberately red: it IS the statement of the defect.
+      # #294 is the work that turns it green, so it lands live here.
+      #
+      # The defect it pinned: BallController.TickDribbling places the ball at
+      # holderPos + forward*offset + HandRight(forward)*HandOffset*
+      # HandSign(holder.HandSide) — server-authoritative, ADR-0012 — but
+      # scenes/Player.tscn's Dribble state was a SINGLE BlendSpace1D with no
+      # hand-side split, so one clip played regardless, and it was measured to
+      # animate the RIGHT hand (pump range 0.3450 m vs 0.0087 m, 39.58x). Every
+      # possession where the hand was Left — i.e. after any crossover — put the
+      # ball and the animated hand on opposite sides of the body.
+      #
+      # 'hand-alignment-left' / 'hand-alignment-right' are a matched pair: each
+      # FORCES its polarity (neither reads the ADR-0012 reset default, which
+      # flipped to Right on 2026-07-28 and silently inverted what these scenarios
+      # tested), then asserts three things over one window — the tree was in
+      # Dribble<Hand> and nothing else (#257: read via GetCurrentNode, not via
+      # MoveAnimResolver's return value), the ball and the animated hand share a
+      # lateral sign every tick, and the clip's pump excursion is DOMINATED by
+      # the expected hand.
+      #
+      # That last one is the load-bearing assertion and the reason this file
+      # cannot just measure geometry. The Y Bot rig is mirror-symmetric across
+      # X=0 to 0.17 mm, so a left/right-SYMMETRIC assertion passes on a broken
+      # mirror — exactly how the #255 mirror bug shipped green. The dominance
+      # ratio is non-symmetric by construction: it names which hand, and by how
+      # much.
+      #
+      # 'hand-follows-authoritative-flip' is the direct statement of the defect
+      # and was the red one: dribble Left, latch, flip to Right, latch again.
+      # The ball's lateral sign flipped even before the fix (it reads
+      # authoritative HandSide every tick); the animated hand's did not. Both
+      # must flip now, and the tree must have been in DribbleLeft for window 1
+      # and DribbleRight for window 2.
+      #
+      # 'dribble-states-own-clips' is structural and reads the state machine
+      # straight off Player.tscn: each polarity's BlendSpace1D points at ITS OWN
+      # clip pair (an ALLOWLIST — the split's 72 transition sub-resources were
+      # generated, and generated wiring fails by pointing a state at a real but
+      # WRONG-polarity clip, which reads correct by state name and passes any
+      # blocklist), the unsuffixed "Dribble" state is gone, the two polarities
+      # are edge-symmetric, and the DribbleLeft<->DribbleRight pair exists.
+      # Structural because Travel()'s pathfinder routes around a missing edge
+      # (proven by mutation, #279), so no runtime GetCurrentNode assertion can
+      # detect one.
+      #
+      # Each exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run dribble-hand-alignment harness
+        run: |
+          godot --headless --path . res://tests/integration/DribbleHandAlignmentTest.tscn -- --harness-scenario=hand-alignment-left
+          godot --headless --path . res://tests/integration/DribbleHandAlignmentTest.tscn -- --harness-scenario=hand-alignment-right
+          godot --headless --path . res://tests/integration/DribbleHandAlignmentTest.tscn -- --harness-scenario=hand-follows-authoritative-flip
+          godot --headless --path . res://tests/integration/DribbleHandAlignmentTest.tscn -- --harness-scenario=dribble-states-own-clips
+
       # Independent height/wingspan rig scaling (issue #170), the engine-glue
       # half. RigScaleTests (dotnet) pins the pure RigScale classifier; this
       # proves PlayerRigScaler runs against the REAL imported Y Bot Skeleton3D:
