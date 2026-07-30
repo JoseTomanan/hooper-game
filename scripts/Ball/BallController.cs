@@ -2419,7 +2419,7 @@ public partial class BallController : Node3D
 	/// role: the holder's node carries the authoritative value (own/server) or the
 	/// broadcast value (the client's remote copy adopts it in TickClientRemotePlayer),
 	/// so the opponent's crossover hand-switch renders on your screen for free.
-	/// Null holder (pre-tipoff / loose) defaults to Left.
+	/// Null holder (pre-tipoff / loose) defaults to Right.
 	/// </summary>
 	private static float HandSign(PlayerController holder) =>
 		(holder?.HandSide ?? HandSide.Right) == HandSide.Right ? 1f : -1f;

@@ -610,7 +610,7 @@ public partial class PlayerController : CharacterBody3D
 	/// hand on the tick a Crossover enters Active (the swap), inside
 	/// TickCommittedMoveBehavior — so the change rides the same predicted +
 	/// reconciled event the move itself does. A Hesitation does not change it.
-	/// Reset to the default (Left) when the player gains possession
+	/// Reset to the default (Right) when the player gains possession
 	/// (BallController.UpdateHandSide). Broadcast on ReceiveState like Heading;
 	/// the ball mesh's left/right offset READS it (BallController.HandSign).
 	/// </summary>
@@ -626,11 +626,11 @@ public partial class PlayerController : CharacterBody3D
 	private HandSide _serverHandSide = HandSide.Right;
 
 	/// <summary>
-	/// Resets the authoritative hand to the default (Left). Called by
+	/// Resets the authoritative hand to the default (Right). Called by
 	/// BallController on a possession change (the new holder has no carried-over
 	/// hand state). Runs on every simulating role — server authoritative, client
 	/// predicted — so all machines agree; the client's remote copy instead adopts
-	/// the broadcast value. Left is simply *a* deterministic default every peer
+	/// the broadcast value. Right is simply *a* deterministic default every peer
 	/// agrees on (issue #73); nothing downstream depends on which side it is.
 	/// </summary>
 	public void ResetHandSide() => HandSide = HandSide.Right;
