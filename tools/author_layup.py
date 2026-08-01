@@ -154,7 +154,7 @@ TORSO_PITCH_SIGN = 1.0
 # treats over-reach as FATAL for arms, so this is well inside the ~0.55 m
 # shoulder-to-wrist budget once the shoulder's own rest height is added back
 # in `main()`. See module docstring "WHY THE ARM/HEIGHTS ARE DERIVED".
-FINISH_APEX_EXTENSION_ABOVE_SHOULDER_M = 0.18
+FINISH_APEX_EXTENSION_ABOVE_SHOULDER_M = 0.40
 
 # ── keypose channel table ─────────────────────────────────────────────────────
 # All lateral channels (`*_lat_m`) are DIRECTLY SIGNED along `body_right`
@@ -181,8 +181,18 @@ _KEYPOSES_RAW = [
     [4 / FPS,  "startup",   0.00,    5.0,   0.30,       0.15,       -0.05,     -0.02,      0.12,      0.05,       0.20,      0.10,                  0.05,      -0.12,     0.08],
     [8 / FPS,  "active",    0.00,    10.0,  0.45,       0.20,       0.00,      0.05,       0.10,      0.05,       0.22,      0.20,                  0.05,      -0.15,     0.18],
     [10 / FPS, "active",    0.30,    8.0,   0.50,       0.20,       0.00,      0.05,       0.10,      0.10,       0.05,      _APEX_HEIGHT_PLACEHOLDER, -0.05,   0.05,      0.15],
-    [12 / FPS, "recovery",  0.05,    4.0,   0.30,       0.15,       -0.10,     0.05,       0.12,      0.05,       0.10,      0.30,                  0.00,      0.05,      0.10],
-    [16 / FPS, "recovery", -0.05,    1.0,   0.10,       0.05,       -0.14,     0.02,       0.16,      0.03,       0.10,      0.10,                  0.00,      -0.06,     0.10],
+    # Frame 12 is the Active/Recovery SLICE BOUNDARY -- it is the last frame of
+    # `layupactive` and the first of `layuprecovery` simultaneously, so its hip
+    # offset decides what BOTH clips read as at the cut. It must stay high: the
+    # release happens on Active's last frame, and a player who is already back
+    # on the floor there is the arcade "unplanted shot" decoupling that
+    # ADR-0003 names as the primary anti-goal. The descent belongs to Recovery,
+    # which has fourteen ticks to spend on it. (Measured before this was
+    # corrected: hips returned to +0.05 by f12, i.e. grounded at release.)
+    [12 / FPS, "recovery",  0.24,    4.0,   0.30,       0.15,       -0.10,     0.05,       0.12,      0.05,       0.10,      0.30,                  0.00,      0.05,      0.10],
+    # f16 carries the fall that f12 no longer does: still descending, not yet
+    # into the absorb trough at f18.
+    [16 / FPS, "recovery",  0.02,    1.0,   0.10,       0.05,       -0.14,     0.02,       0.16,      0.03,       0.10,      0.10,                  0.00,      -0.06,     0.10],
     [18 / FPS, "recovery", -0.12,    0.0,   0.00,       0.00,       -0.17,     0.00,       0.17,      0.00,       0.12,      0.05,                  0.00,      -0.08,     0.10],
     [TOTAL_TICKS / FPS, "recovery", -0.05, 0.0, 0.00,   0.00,       -0.15,     0.00,       0.15,      0.00,       0.11,      0.02,                  0.00,      -0.08,     0.10],
 ]
@@ -232,6 +242,10 @@ MIN_HIP_RISE_M = 0.25
 # comparison is what actually pins the finishing side -- a check that merely
 # confirmed "some hand went up" would pass even with the sides swapped.
 FINISH_HAND_HEIGHT_MARGIN_MIN_M = 0.10
+# Absolute overhead floor (m): how far ABOVE THE HEAD the finishing wrist must
+# sit at the Active apex. Pairs with the relative margin above, which cannot
+# tell "extended overhead" from "raised to chest" -- see the gate itself.
+FINISH_HAND_ABOVE_HEAD_MIN_M = 0.12
 
 # Diagnostic escape hatch: skip the arm solve so a single run can report the
 # reach ratio at EVERY frame instead of dying at the first over-reach. Never
@@ -486,6 +500,30 @@ def main():
             f"({off_side}) hand -- required >= {FINISH_HAND_HEIGHT_MARGIN_MIN_M} m. "
             f"This is the non-symmetric handedness pin (#255); a purely "
             f"symmetric check would pass even with the arms swapped.")
+
+    # ABSOLUTE overhead gate, and it is a separate gate on purpose. The
+    # margin-vs-off-hand check above is RELATIVE: a finishing hand at chest
+    # height passes it comfortably so long as the off hand is lower, which is
+    # exactly what happened on the first authored pass (measured: hand 0.029 m
+    # BELOW the head at apex, while the relative margin read a healthy
+    # +0.40 m). "Fully extended overhead" is a claim about where the hand is
+    # relative to the BODY, so it needs a body landmark -- the head -- not the
+    # other hand.
+    with lib.preserve_frame():
+        scene.frame_set(f_apex)
+        head_h = arm.pose.bones["mixamorig:Head"].head.dot(up)
+        finish_hand_h = arm.pose.bones[lib.ARM_CHAIN[FINISH_ARM_SIDE][2]].head.dot(up)
+    above_head_m = geom.to_m(finish_hand_h - head_h)
+    lib.report("finish_hand_above_head_m", f"{above_head_m:+.4f}")
+    if above_head_m < FINISH_HAND_ABOVE_HEAD_MIN_M:
+        raise SystemExit(
+            f"FATAL: at the Active apex (frame {f_apex}) the finishing "
+            f"({FINISH_ARM_SIDE}) hand sits {above_head_m:+.4f} m relative to the "
+            f"head -- required >= {FINISH_HAND_ABOVE_HEAD_MIN_M} m above it. The "
+            f"arm is raised but not extended overhead, so the pose does not read "
+            f"as a rim finish. Raise FINISH_APEX_EXTENSION_ABOVE_SHOULDER_M "
+            f"(currently {FINISH_APEX_EXTENSION_ABOVE_SHOULDER_M}) -- but keep an "
+            f"eye on worst_reach_ratio, since aim_arm treats over-reach as fatal.")
 
     lib.export_fbx(arm, dst, ACTION_NAME)
     print("AUTHOR_OK")
