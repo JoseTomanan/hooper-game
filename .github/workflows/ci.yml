@@ -1130,12 +1130,14 @@ jobs:
       # find — so a direct probe is sound here where an edge-deletion probe
       # would not be.
       #
-      # 'btb-segment-lengths' asserts each of the six clips' duration is
-      # within one tick (1/60s) of BehindTheBack.DefaultFrameData's own
-      # Startup(6)/Active(3)/Recovery(10) tick windows, read from the C# side
-      # rather than hardcoded (tools/rebuild_behindtheback_clips.gd has to
-      # duplicate those numbers in GDScript, so this is what makes that
-      # duplication safe instead of merely regrettable). 'btb-no-placeholder-
+      # 'btb-segment-lengths' asserts each of the six clips' duration matches
+      # BehindTheBack.DefaultFrameData's own Startup(6)/Active(3)/Recovery(10)
+      # tick windows, read from the C# side rather than hardcoded
+      # (tools/rebuild_behindtheback_clips.gd has to duplicate those numbers in
+      # GDScript, so this is what makes that duplication safe instead of merely
+      # regrettable). Tolerance is a 1e-3s FLOAT-NOISE band, deliberately NOT
+      # one tick: a one-tick bar cannot catch a one-tick retune, which is the
+      # exact staleness this gate exists for. 'btb-no-placeholder-
       # leak' is the direct statement that #296 is closed for this move: it
       # reads the AnimationNodeStateMachine off scenes/Player.tscn directly
       # and asserts each of the six states points at ITS OWN clip. Note that
@@ -1213,10 +1215,12 @@ jobs:
       # states (Right here), not the TargetHand states (Left) a mis-suffixed
       # build would enter instead.
       #
-      # 'steal-segment-lengths' asserts all six clips' durations are within
-      # one tick of StealMove.DefaultFrameData's own Startup(8)/Active(8)/
-      # Recovery(20) tick windows, read from the C# side rather than
-      # hardcoded. 'steal-startup-fills-window' is the SAME instrument scoped
+      # 'steal-segment-lengths' asserts all six clips' durations match
+      # StealMove.DefaultFrameData's own Startup(8)/Active(8)/Recovery(20)
+      # tick windows, read from the C# side rather than hardcoded, to within a
+      # 1e-3s float-noise band (deliberately NOT one tick — a one-tick bar
+      # cannot catch a one-tick retune).
+      # 'steal-startup-fills-window' is the SAME instrument scoped
       # to just the Startup pair, reported as its own scenario per the
       # ADR-0018 telegraph requirement (Startup must fill its whole visible
       # wind-up window) rather than folded silently into the all-six check.
