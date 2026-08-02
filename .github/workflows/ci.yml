@@ -1301,6 +1301,42 @@ jobs:
           godot --headless --path . res://tests/integration/LayupAnimTest.tscn -- --harness-scenario=layup-arm-extends-overhead
           godot --headless --path . res://tests/integration/LayupAnimTest.tscn -- --harness-scenario=control-layup-arm-low-startup
 
+      # Contest per-move clips (issue #314, #302 batch 2). Same shape as the
+      # layup harness above, with the load-bearing gate INVERTED: block and
+      # contest raise the same arms, so the feet are the entire legibility read
+      # and ContestMove.cs:53-54's commitment ladder (contest 6 < steal 8 <
+      # block 10 startup) is priced on it.
+      #
+      # contest-stays-grounded is therefore the one that matters, and "the feet
+      # stayed down" is the most vacuously-satisfiable claim in this repo — a
+      # rig that never moves, a clip that bound to nothing (#281), or a
+      # Skeleton3D the harness failed to find all satisfy it perfectly. So its
+      # control changes the MOVE, not the phase: control-layup-leaves-ground
+      # drives a Layup through the identical MeasureLowestToe path and asserts
+      # it DOES go airborne. Measured 0.0204 (contest, ceiling 0.08) vs 0.3211
+      # (layup, floor 0.15) — a 16x separation through one instrument.
+      #
+      # The handoff asked for control-block-leaves-ground; block's states still
+      # point at the locomotion/idle placeholder, so it cannot serve yet. The
+      # handoff names layup as the substitute. Swap back when block's clip lands.
+      #
+      # contest-arms-rise is the positive half (a wrist reached 0.3503 above the
+      # head during Active — the same value rebuild_contest_clips.gd's G5
+      # measured independently by FK), and control-contest-arms-low-startup
+      # proves it is a readable EVENT (startup -0.2900, a 0.6403 margin) rather
+      # than a pose held throughout. Each exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run contest per-move animation state harness
+        run: |
+          godot --headless --path . res://tests/integration/ContestAnimTest.tscn -- --harness-scenario=contest-phases
+          godot --headless --path . res://tests/integration/ContestAnimTest.tscn -- --harness-scenario=contest-no-placeholder-leak
+          godot --headless --path . res://tests/integration/ContestAnimTest.tscn -- --harness-scenario=contest-segment-lengths
+          godot --headless --path . res://tests/integration/ContestAnimTest.tscn -- --harness-scenario=contest-edges
+          godot --headless --path . res://tests/integration/ContestAnimTest.tscn -- --harness-scenario=contest-startup-differs-from-recovery
+          godot --headless --path . res://tests/integration/ContestAnimTest.tscn -- --harness-scenario=contest-stays-grounded
+          godot --headless --path . res://tests/integration/ContestAnimTest.tscn -- --harness-scenario=control-layup-leaves-ground
+          godot --headless --path . res://tests/integration/ContestAnimTest.tscn -- --harness-scenario=contest-arms-rise
+          godot --headless --path . res://tests/integration/ContestAnimTest.tscn -- --harness-scenario=control-contest-arms-low-startup
+
       # Moving crossover — momentum-aware burst with left-stick exit (issue
       # #198, ADR-0003 amendment). CrossoverBurstMathTests already pin the
       # pure composition function; this drives a REAL PlayerController
