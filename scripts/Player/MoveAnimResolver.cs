@@ -146,13 +146,24 @@ public static class MoveAnimResolver
     /// was already playing.
     ///
     /// Deliberately NOT exhaustive over every <c>CommittedMove.Id</c>: moves
-    /// without their own captured clip (jab, spin, betweenthelegs, ...) are
-    /// meant to fall back to the shared generic clip via
-    /// <see cref="ResolveStateName"/>'s default case — that is a placeholder-art
-    /// decision (ADR-0020's low-spec fidelity ceiling doesn't require bespoke
-    /// clips for every move), not an oversight. Rebound is intentionally absent
-    /// too: it isn't a committed move (no MovePhase arc), so it never reaches
-    /// this table at all.
+    /// without their own captured clip (jab, spin, betweenthelegs, ...) still
+    /// fall back to the shared generic clip via
+    /// <see cref="ResolveStateName"/>'s default case.
+    ///
+    /// That fallback is a SAFETY NET, not a destination. It used to be
+    /// described here as a settled placeholder-art decision; issue #296
+    /// established it is an active defect for any move that keeps it, because
+    /// the shared states play <c>locomotion/idle</c> for BOTH Startup and
+    /// Recovery (pixel-identical, so an opponent cannot tell "committing" from
+    /// "in the punish window") and a looping <c>locomotion/run</c> for Active —
+    /// an outright false read, and the ADR-0003 primary anti-goal surfacing in
+    /// the display layer. #276 (batch 1) and #302 (batch 2) are migrating moves
+    /// OUT of it one at a time, so this table GROWS and the fallback set
+    /// shrinks. ADR-0020's low-spec fidelity ceiling caps how much clip work
+    /// each move deserves; it never argued for leaving a move unclipped.
+    ///
+    /// Rebound is intentionally absent too: it isn't a committed move (no
+    /// MovePhase arc), so it never reaches this table at all.
     /// </summary>
     private static readonly Dictionary<string, string> ClippedMovePrefixes = new()
     {
@@ -161,6 +172,7 @@ public static class MoveAnimResolver
         ["behindtheback"] = "BehindTheBack",
         ["steal"]         = "Steal",
         ["block"]         = "Block",
+        ["layup"]         = "Layup", // #313 — unhanded; see LayupAnimTest
     };
 
     /// <summary>
@@ -316,9 +328,11 @@ public static class MoveAnimResolver
     /// shared "FadeawayActive" name, never "JumpshotFadeawayActive" — a
     /// nonexistent state that Travel() would silently no-op against.
     ///
-    /// Every other combination — an unclipped/unknown moveId (e.g. "jab",
-    /// "spin", "betweenthelegs") on any phase, or a null/empty moveId (no move
-    /// in flight) — degrades to the generic fallback name (<c>generic.ToString()</c>),
+    /// Every other combination — an unclipped/unknown moveId on any phase (as of
+    /// #313: jab, spin, betweenthelegs and the rest of #302's batch; consult
+    /// <see cref="ClippedMovePrefixes"/> rather than this list, which goes stale
+    /// each time a clip lands), or a null/empty moveId (no move in flight) —
+    /// degrades to the generic fallback name (<c>generic.ToString()</c>),
     /// matching Resolve's "never throw in a tick loop" stance: a moveId this
     /// resolver doesn't recognize just plays the shared clip instead of
     /// crashing or resolving to a state the tree doesn't have.

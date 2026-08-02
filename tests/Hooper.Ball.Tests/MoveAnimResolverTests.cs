@@ -545,6 +545,27 @@ public class MoveAnimResolverTests
     }
 
     [Fact]
+    public void ResolveStateName_Layup_ReturnsPerMoveStatesUnhanded()
+    {
+        // (#313) Layup is clipped but deliberately UNHANDED — see the handoff's
+        // "ship it unhanded first" recommendation. So all three phases must
+        // resolve to the bare "Layup*" names with NO Left/Right suffix, and must
+        // do so identically whichever hand the ball is in: a suffix here would
+        // name a state scenes/Player.tscn does not have, and Travel() to a
+        // missing state only LOGS (#257) — the move would silently stop
+        // animating rather than fail loudly.
+        foreach (var ballHand in new[] { HandSide.Left, HandSide.Right })
+        {
+            Assert.Equal("LayupStartup",
+                MoveAnimResolver.ResolveStateName(MoveAnimState.Startup, "layup", ballHand, HandSide.Right));
+            Assert.Equal("LayupActive",
+                MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "layup", ballHand, HandSide.Right));
+            Assert.Equal("LayupRecovery",
+                MoveAnimResolver.ResolveStateName(MoveAnimState.Recovery, "layup", ballHand, HandSide.Right));
+        }
+    }
+
+    [Fact]
     public void ResolveStateName_UnclippedMoveActive_ReturnsGenericFallback()
     {
         // "jab" is a real committed move (RequestBeginMove sends it) but is NOT
