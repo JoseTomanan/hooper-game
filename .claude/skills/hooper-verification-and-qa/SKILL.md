@@ -394,6 +394,33 @@ turns a green scenario into a vacuous one.
   holder's `DisplayMoveId()` returns `"behindtheback"` AND the forward
   offset is genuinely negative. Independent latches accumulated across the
   run would pass on two unrelated events that each happened *sometime*.
+- **A tolerance must be TIGHTER than the smallest change it exists to catch.**
+  The `*-segment-lengths` scenarios assert a clip's duration equals its move's
+  tick window, and their stated purpose is to catch a `DefaultFrameData` retune
+  that forgot to re-run `tools/rebuild_*_clips.gd`. Four of them shipped with a
+  ONE-TICK tolerance, which cannot catch a ONE-TICK retune: bumping
+  `StartupFrames` 8 → 9 deviates by exactly 1/60 s, slips under the bar, and
+  reports green while the clip is still cut to 8 ticks. Measured, not argued —
+  under the identical mutation the one-tick bar passed all four scenarios and a
+  `1e-3` band failed all four. Derive the bar from the OBSERVED noise (here
+  0.000000 s; the real floor is float32 `Animation.Length` rounding, ~5e-9 s),
+  never from the quantity being asserted. A measurement landing genuinely near
+  the smallest real delta is a bug to fix, not a bar to widen.
+- **A gate claiming "BOTH limbs did X" must reduce with `min`, never `max`.**
+  `ContestAnimTest.MeasureWristAboveHead` reduced the wrist pair with
+  `Math.Max`, so a ONE-armed clip satisfied a BOTH-arms assertion — mutating
+  `ContestActive → locomotion/layupactive` read `+0.2580 PASS` under `Max` vs
+  `-0.2630 FAIL` under `Min`. Symmetry is what the scenario exists to prove, so
+  it cannot also be assumed as a premise; on a symmetric clip `min == max`, which
+  is why this is invisible in a green run and only surfaces once the clip becomes
+  asymmetric. Do NOT sweep `Math.Max` → `Math.Min` — the distinction is the
+  CLAIM, not the code shape. "**an** arm finishes overhead" (`LayupAnimTest`, a
+  genuinely one-armed finish) and "**which** limb dominates"
+  (`DribbleHandAlignmentTest.IdentifyDribblingHand`, an argmax) are both correctly
+  `max`. Preferred shape for a both-limbs claim is separate accumulators plus
+  `&&`, as in `LocomotionClipTest`'s #298 stride check
+  (`ptpLeft >= floor && ptpRight >= floor`): same semantics as `min`, but it
+  prints both numbers so a one-limbed clip is legible in the log.
 - **Scene-load-only checks for `.tscn` edits (ADR-0011).** A pure
   scene/resource text-edit (add a node, set an export, wire a `NodePath`)
   needs a headless load check — the scene loads without errors — in its own
