@@ -342,6 +342,30 @@ public partial class LayupAnimTest : Node
     // two SAMPLED in-move poses (rather than either against rest) is the honest
     // question here: a bound clip poses them differently; an unbound clip
     // collapses both to rest and the delta goes to ~0.
+    //
+    // MEASURED, and the floor is placed from the measurements rather than taste:
+    //
+    //   correct wiring                          39.43 deg   pass
+    //   Recovery repointed at the STARTUP clip  21.41 deg   PASS (see below)
+    //   both states -> mv277ph (the literal
+    //   #296 defect: shared locomotion/idle)     1.52 deg   fail
+    //
+    // So the 15 deg floor sits an order of magnitude above the defect this
+    // scenario is named for, and this scenario genuinely catches it.
+    //
+    // What it does NOT catch, stated plainly rather than left for a reader to
+    // assume: pointing Recovery at the Startup CLIP still measures 21.41 deg and
+    // passes here. The two states then play the same clip but sample it at
+    // different times (Recovery's 14-tick window outruns the 8-tick clip, which
+    // is LOOP_NONE and holds its final frame), so the poses legitimately differ.
+    // That mutation is caught by layup-no-placeholder-leak instead, which pins
+    // each state to its own clip by name and went red on exactly that edit.
+    // Coverage is complete across the two scenarios; neither covers it alone.
+    //
+    // The floor was deliberately NOT raised above 21.41 to absorb that case:
+    // doing so would leave only a ~24% margin under the working 39.43 and turn
+    // any future re-author of the clip into a spurious red, in exchange for
+    // duplicating coverage another scenario already provides honestly.
     private void VerdictStartupDiffersFromRecovery()
     {
         if (_poseAtLastStartupTick == null || _poseAtLastRecoveryTick == null)
