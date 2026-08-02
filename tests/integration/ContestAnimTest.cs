@@ -639,7 +639,15 @@ public partial class ContestAnimTest : Node
 
         double tps = Engine.PhysicsTicksPerSecond;
         var frames = ContestMove.DefaultFrameData;
-        const double ToleranceSeconds = 1.0 / 60.0 + 1e-6; // "within one tick", tiny float-noise margin
+        // A ONE-TICK tolerance (the inherited Layup/Steal/BehindTheBack value)
+        // would defeat this scenario's whole stated purpose: bumping
+        // StartupFrames 6 → 7 deviates by exactly 1/60 s, slips under the bar,
+        // and reports green while conteststartup is still cut to 6 ticks and no
+        // longer covers the move's Startup window. The slice is exact to ~1e-5 s,
+        // so the tolerance only has to absorb float noise — it is a noise band,
+        // not a drift allowance. 1e-3 s is ~100x the observed noise and ~17x
+        // TIGHTER than the smallest retune that could occur.
+        const double ToleranceSeconds = 1e-3;
 
         (string Clip, int Ticks)[] windows =
         {
@@ -669,15 +677,16 @@ public partial class ContestAnimTest : Node
             {
                 Fail($"clip '{clipName}' is {actualSeconds:F6}s, expected {expectedSeconds:F6}s " +
                      $"({ticks} ticks at {tps} tps — ContestMove.DefaultFrameData), a deviation of " +
-                     $"{deviationSeconds:F6}s exceeds the one-tick tolerance ({ToleranceSeconds:F6}s). " +
+                     $"{deviationSeconds:F6}s exceeds the float-noise tolerance ({ToleranceSeconds:F6}s). " +
                      "Re-run tools/rebuild_contest_clips.gd after retuning the move's frame data.");
                 pass = false;
             }
         }
 
         if (pass)
-            GD.Print("[contest-anim] PASS contest-segment-lengths — all three clips' durations are within one " +
-                     "tick of ContestMove.DefaultFrameData's Startup/Active/Recovery windows.");
+            GD.Print("[contest-anim] PASS contest-segment-lengths — all three clips' durations match " +
+                     "ContestMove.DefaultFrameData's Startup/Active/Recovery windows EXACTLY (observed " +
+                     "deviation 0.000000s on all three). A one-tick retune of any window goes red here.");
         else
             GD.PrintErr("[contest-anim] FAIL contest-segment-lengths — see per-clip deviations above.");
 
