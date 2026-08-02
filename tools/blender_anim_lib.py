@@ -998,6 +998,57 @@ def verify_grounded(arm, frames, tol_m, geom, band_ref=None):
             f"frame {bad} (tol {tol_m} m) -- the character floats.")
 
 
+def verify_airborne(arm, frames, min_hip_rise_m, geom, ref_height=None):
+    """The character actually LEAVES the ground during `frames`.
+
+    `verify_grounded` is deliberately skipped for the airborne segment of a
+    jump shot, block, or layup -- there IS no support foot to check there. But
+    skipping the check is not the same as having no check: without a positive
+    assertion that the body actually rose, a layup that never leaves the floor
+    (a floor-level reach with the same silhouette as the intended jump) would
+    sail through authoring with NO proof at all for that segment, because
+    every other gate in this module is blind to it (`verify_grounded` isn't
+    run there by design, and nothing else measures vertical excursion). This
+    is "replace the proof, do not delete it": the Startup/Recovery segments
+    keep `verify_grounded`, and this fills the Active-segment gap it leaves.
+
+    Definition: take the HIPS bone head height along `geom.up` at each frame in
+    `frames`, and assert the peak exceeds `ref_height` by at least
+    `min_hip_rise_m` (metres, converted through `geom.to_m`).
+
+    `ref_height` is REQUIRED, not derived from `frames` itself. The obvious
+    shortcut -- default to `min(heights)` when the caller passes nothing -- is
+    wrong by construction: if `frames` covers only the airborne window, every
+    sample in it is already airborne, so its minimum is itself elevated above
+    the true ground level, and comparing the window's max against the
+    window's own min proves nothing (a perfectly flat, floor-level reach would
+    pass with a "rise" of 0.0 read against itself). The caller must instead
+    pass the Hips height measured on a frame it KNOWS is grounded (e.g. the
+    Startup frame the Active window departs from), so the rise is measured
+    against a real, independently-established baseline.
+    """
+    if ref_height is None:
+        raise SystemExit(
+            "FATAL: verify_airborne requires an explicit ref_height (the Hips "
+            "height measured on a known-grounded frame). Defaulting to "
+            "min(heights) over an all-airborne window would compare the peak "
+            "against itself and pass vacuously.")
+    scene = bpy.context.scene
+    heights = []
+    with preserve_frame():
+        for f in frames:
+            scene.frame_set(f)
+            heights.append(arm.pose.bones[HIPS].head.dot(geom.up))
+    rise_m = geom.to_m(max(heights) - ref_height)
+    report("hip_rise_m", f"{rise_m:.4f}")
+    if rise_m < min_hip_rise_m:
+        raise SystemExit(
+            f"FATAL: hips rose only {rise_m:.4f} m above the {geom.to_m(ref_height):.4f} m "
+            f"reference (required >= {min_hip_rise_m} m) -- the character never "
+            f"left the ground; a layup/block that stays grounded is a floor-level "
+            f"reach, not a jump.")
+
+
 # ═════════════════════════════════════════════════════════════════════════════
 # export
 # ═════════════════════════════════════════════════════════════════════════════
