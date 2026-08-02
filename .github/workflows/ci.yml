@@ -1254,6 +1254,53 @@ jobs:
           godot --headless --path . res://tests/integration/StealAnimTest.tscn -- --harness-scenario=no-unsuffixed-steal-state
           godot --headless --path . res://tests/integration/StealAnimTest.tscn -- --harness-scenario=control-unsuffixed-probe
 
+      # Layup per-move animation states (issue #313, sub of #302 batch 2).
+      # Before this, "layup" fell through MoveAnimResolver's default case onto
+      # the shared generic states, which per #296 play locomotion/idle for BOTH
+      # Startup and Recovery (pixel-identical — an opponent cannot tell
+      # "committing" from "in the punish window") and a looping locomotion/run
+      # for Active. On a rim attack that is an outright false read (ADR-0003).
+      # Unhanded by decision, not omission: the airborne overhead-extension
+      # silhouette is already unmistakable, and a handed split can follow.
+      #
+      # 'layup-phases' reads GetCurrentNode() (never the resolver's return
+      # value — the #257 trap: Travel() to a missing state only LOGS).
+      # 'layup-no-placeholder-leak' reads the state machine off Player.tscn's
+      # SceneState and pins each state to ITS OWN clip — an allowlist, so a
+      # state pointing at a real-but-wrong neighbouring clip fails too, which
+      # neither a blocklist nor any state-NAME assertion can see.
+      # 'layup-segment-lengths' reads the windows from Layup.DefaultFrameData
+      # rather than hardcoding them, so a #238 retune that forgets to re-run
+      # tools/rebuild_layup_clips.gd goes red here and names the tool.
+      # 'layup-edges' is the one edge-level assertion in this family that is
+      # legitimate. #279 proved a DELETED edge is invisible to GetCurrentNode()
+      # (Travel() is a pathfinder — it routes around the gap), so no runtime
+      # scenario can catch one; this reads the transition list directly off the
+      # AnimationNodeStateMachine resource, where a missing edge is simply
+      # absent. Mutation-verified: deleting tr_lu_su2ac reddens it.
+      # The geometric four re-measure on the LIVE Skeleton3D what Blender and
+      # the rebuild script already checked resource-side, because neither can
+      # see #281's failure — a clip carrying Blender's "Armature/" track-path
+      # prefix binds to NOTHING on this rig and is a SILENT no-op that
+      # reachability, durations and clip-mapping all still pass.
+      # Each positive is paired with a control asserting its own premise:
+      # 'control-layup-grounded-startup' proves the hip rise is phase-localised
+      # (startup 0.0000 vs active 0.2260) rather than a constant offset, and
+      # 'control-layup-arm-low-startup' proves the overhead extension is an
+      # event (startup -0.3985 vs active 0.2580, a 0.6565 margin) rather than a
+      # pose held throughout. Each exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run layup per-move animation state harness
+        run: |
+          godot --headless --path . res://tests/integration/LayupAnimTest.tscn -- --harness-scenario=layup-phases
+          godot --headless --path . res://tests/integration/LayupAnimTest.tscn -- --harness-scenario=layup-no-placeholder-leak
+          godot --headless --path . res://tests/integration/LayupAnimTest.tscn -- --harness-scenario=layup-segment-lengths
+          godot --headless --path . res://tests/integration/LayupAnimTest.tscn -- --harness-scenario=layup-edges
+          godot --headless --path . res://tests/integration/LayupAnimTest.tscn -- --harness-scenario=layup-startup-differs-from-recovery
+          godot --headless --path . res://tests/integration/LayupAnimTest.tscn -- --harness-scenario=layup-airborne-active
+          godot --headless --path . res://tests/integration/LayupAnimTest.tscn -- --harness-scenario=control-layup-grounded-startup
+          godot --headless --path . res://tests/integration/LayupAnimTest.tscn -- --harness-scenario=layup-arm-extends-overhead
+          godot --headless --path . res://tests/integration/LayupAnimTest.tscn -- --harness-scenario=control-layup-arm-low-startup
+
       # Moving crossover — momentum-aware burst with left-stick exit (issue
       # #198, ADR-0003 amendment). CrossoverBurstMathTests already pin the
       # pure composition function; this drives a REAL PlayerController
