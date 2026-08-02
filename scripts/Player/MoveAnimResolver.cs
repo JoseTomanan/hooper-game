@@ -173,6 +173,7 @@ public static class MoveAnimResolver
         ["steal"]         = "Steal",
         ["block"]         = "Block",
         ["layup"]         = "Layup", // #313 — unhanded; see LayupAnimTest
+        ["contest"]       = "Contest", // #314 — unhanded, symmetric by design; see ContestAnimTest
     };
 
     /// <summary>
