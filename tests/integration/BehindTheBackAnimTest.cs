@@ -670,11 +670,20 @@ public partial class BehindTheBackAnimTest : Node
     // move's real tick windows from BehindTheBack.DefaultFrameData (not
     // hardcoded), so a future #238 retune that forgets to re-run
     // tools/rebuild_behindtheback_clips.gd goes red here and names the tool.
-    // Tolerance is ONE TICK (1/60 s) per the brief — looser than
-    // LocomotionClipTest's ~1e-4s "should be exact" tolerance for an
-    // already-built asset, because a clip built to a slightly different frame
-    // count than the exact ideal but still within a tick's worth of the
-    // window is not a false read an opponent could perceive.
+    //
+    // This comment used to justify a ONE-TICK tolerance on the grounds that a
+    // sub-tick build error "is not a false read an opponent could perceive."
+    // That argument is sound but answers a DIFFERENT question than the one the
+    // paragraph above asks. Two claims were being conflated:
+    //   (a) build quality — "a clip a hair off the ideal is still legible";
+    //   (b) staleness     — "a retune that forgot the rebuild tool goes red here".
+    // A one-tick bar satisfies (a) and silently voids (b), and (b) is the claim
+    // this scenario leads with: bumping StartupFrames 6 → 7 deviates by exactly
+    // 1/60 s, slips under the bar, and reports green while the clip is still cut
+    // to 6 ticks. Since measured deviation on all six btb clips is 0.000000s (a figure the
+    // scenario re-prints per clip on every run, pass or fail),
+    // (a) needs no slack at all — nothing is "a hair off" — so tightening to a
+    // float-noise band costs (a) nothing and restores (b). See #314's review.
     private void RunSegmentLengthsCheck()
     {
         var lib = GD.Load<AnimationLibrary>("res://assets/locomotion.res");
@@ -687,7 +696,12 @@ public partial class BehindTheBackAnimTest : Node
 
         double tps = Engine.PhysicsTicksPerSecond;
         var frames = BehindTheBack.DefaultFrameData;
-        const double ToleranceSeconds = 1.0 / 60.0 + 1e-6; // "within one tick" (brief), tiny float-noise margin
+        // A float-noise band, not a drift allowance — see the block comment above
+        // for why this is no longer one tick. 1e-3 s is ~17x tighter than the
+        // smallest possible retune and ~5 orders above float32 `Animation.Length`
+        // representation noise. A clip landing genuinely near a tick is a slice
+        // bug to fix, not a bar to widen back.
+        const double ToleranceSeconds = 1e-3;
 
         (string Clip, int Ticks)[] windows =
         {
@@ -719,7 +733,7 @@ public partial class BehindTheBackAnimTest : Node
             {
                 Fail($"clip '{clipName}' is {actualSeconds:F6}s, expected {expectedSeconds:F6}s " +
                      $"({ticks} ticks at {tps} tps — BehindTheBack.DefaultFrameData), a deviation of " +
-                     $"{deviationSeconds:F6}s exceeds the one-tick tolerance ({ToleranceSeconds:F6}s). Re-run " +
+                     $"{deviationSeconds:F6}s exceeds the float-noise tolerance ({ToleranceSeconds:F6}s). Re-run " +
                      "tools/rebuild_behindtheback_clips.gd after retuning the move's frame data.");
                 pass = false;
             }
@@ -727,7 +741,7 @@ public partial class BehindTheBackAnimTest : Node
 
         if (pass)
             GD.Print("[behindtheback-anim] PASS btb-segment-lengths — all six clips' durations are within " +
-                     "one tick of BehindTheBack.DefaultFrameData's Startup/Active/Recovery tick windows.");
+                     "the float-noise band of BehindTheBack.DefaultFrameData's Startup/Active/Recovery tick windows.");
         else
             GD.PrintErr("[behindtheback-anim] FAIL btb-segment-lengths — see per-clip deviations above.");
 

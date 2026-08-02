@@ -516,7 +516,19 @@ public partial class LayupAnimTest : Node
 
         double tps = Engine.PhysicsTicksPerSecond;
         var frames = Layup.DefaultFrameData;
-        const double ToleranceSeconds = 1.0 / 60.0 + 1e-6; // "within one tick", tiny float-noise margin
+        // NOT one tick. A one-tick bar cannot catch a one-tick retune — bumping
+        // StartupFrames 8 → 9 deviates by exactly 1/60 s, slips under, and reports
+        // green while layupstartup is still cut to 8 ticks and no longer covers the
+        // move's Startup window. That is precisely the staleness this scenario says
+        // it catches, so the loose bar voided its own stated purpose (#314 review).
+        // Measured deviation on all three layup clips is 0.000000s (re-checkable:
+        // the scenario prints deviation= per clip on every run, pass or fail) — the slice is
+        // exact and the tolerance only has to absorb float32 `Animation.Length`
+        // representation noise (~5e-9 s here). It is a NOISE BAND, not a drift
+        // allowance: 1e-3 s is ~17x tighter than the smallest possible retune.
+        // If a clip ever lands genuinely near a tick, that is a slice bug to fix,
+        // NOT a tolerance to widen back.
+        const double ToleranceSeconds = 1e-3;
 
         (string Clip, int Ticks)[] windows =
         {
@@ -546,15 +558,16 @@ public partial class LayupAnimTest : Node
             {
                 Fail($"clip '{clipName}' is {actualSeconds:F6}s, expected {expectedSeconds:F6}s " +
                      $"({ticks} ticks at {tps} tps — Layup.DefaultFrameData), a deviation of " +
-                     $"{deviationSeconds:F6}s exceeds the one-tick tolerance ({ToleranceSeconds:F6}s). " +
+                     $"{deviationSeconds:F6}s exceeds the float-noise tolerance ({ToleranceSeconds:F6}s). " +
                      "Re-run tools/rebuild_layup_clips.gd after retuning the move's frame data.");
                 pass = false;
             }
         }
 
         if (pass)
-            GD.Print("[layup-anim] PASS layup-segment-lengths — all three clips' durations are within one " +
-                     "tick of Layup.DefaultFrameData's Startup/Active/Recovery windows.");
+            GD.Print("[layup-anim] PASS layup-segment-lengths — all three clips' durations match " +
+                     "Layup.DefaultFrameData's Startup/Active/Recovery windows to within float noise " +
+                     $"({ToleranceSeconds:F6}s). A one-tick retune of any window goes red here.");
         else
             GD.PrintErr("[layup-anim] FAIL layup-segment-lengths — see per-clip deviations above.");
 

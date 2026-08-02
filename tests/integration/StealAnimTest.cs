@@ -104,7 +104,8 @@ namespace HOOPERGAME.Tests.Integration;
 // Both are pure resource/scene inspections (AnimationLibrary clip lengths),
 // same instrument BehindTheBackAnimTest's btb-segment-lengths uses. Split into
 // two scenarios per the brief: steal-segment-lengths covers all six clips
-// (generic one-tick tolerance), steal-startup-fills-window is the SAME
+// (float-noise tolerance — NOT the brief's one tick, which could not catch a
+// one-tick retune; see that scenario's comment), steal-startup-fills-window is the SAME
 // instrument scoped to just the Startup pair, asserted as its OWN scenario so
 // the ADR-0018 telegraph requirement (Startup must fill its whole visible
 // wind-up window) is pinned explicitly rather than merely implied by the
@@ -746,7 +747,18 @@ public partial class StealAnimTest : Node
 
         double tps = Engine.PhysicsTicksPerSecond;
         var frames = StealMove.DefaultFrameData;
-        const double ToleranceSeconds = 1.0 / 60.0 + 1e-6; // "within one tick" (brief), tiny float-noise margin
+        // NOT one tick, despite the brief. A one-tick bar cannot catch a one-tick
+        // retune — bumping StartupFrames 8 → 9 deviates by exactly 1/60 s, slips
+        // under, and reports green while stealstartup* is still cut to 8 ticks and
+        // no longer covers the move's Startup window. That is the staleness this
+        // scenario exists to catch, so the loose bar voided its own purpose (#314
+        // review). Measured deviation on all six steal clips is 0.000000s (re-checkable:
+        // the scenario prints deviation= per clip on every run, pass or fail) — the
+        // slice is exact and the tolerance only absorbs float32 `Animation.Length`
+        // representation noise (~5e-9 s here). A NOISE BAND, not a drift allowance:
+        // 1e-3 s is ~17x tighter than the smallest possible retune. A clip landing
+        // genuinely near a tick is a slice bug to fix, not a bar to widen back.
+        const double ToleranceSeconds = 1e-3;
 
         (string Clip, int Ticks)[] windows =
         {
@@ -763,7 +775,7 @@ public partial class StealAnimTest : Node
 
         if (pass)
             GD.Print("[steal-anim] PASS steal-segment-lengths — all six clips' durations are within " +
-                     "one tick of StealMove.DefaultFrameData's Startup/Active/Recovery tick windows.");
+                     "the float-noise band of StealMove.DefaultFrameData's Startup/Active/Recovery tick windows.");
         else
             GD.PrintErr("[steal-anim] FAIL steal-segment-lengths — see per-clip deviations above.");
 
@@ -789,7 +801,14 @@ public partial class StealAnimTest : Node
 
         double tps = Engine.PhysicsTicksPerSecond;
         var frames = StealMove.DefaultFrameData;
-        const double ToleranceSeconds = 1.0 / 60.0 + 1e-6;
+        // Same 1e-3 noise band as steal-segment-lengths, but note this scenario's
+        // claim is NOT staleness — it is the ADR-0018 TELEGRAPH requirement, that
+        // the wind-up actually fills the 8 ticks a defender is given to read. A
+        // one-tick tolerance is worse here than it is above: it would accept a
+        // Startup clip a full tick (12.5% of the telegraph) short of the window
+        // this scenario's own name promises it "fills". Measured deviation on both
+        // Startup clips is 0.000000s, so the band costs nothing.
+        const double ToleranceSeconds = 1e-3;
 
         (string Clip, int Ticks)[] windows =
         {
@@ -801,9 +820,10 @@ public partial class StealAnimTest : Node
             "tools/rebuild_steal_clips.gd");
 
         if (pass)
-            GD.Print($"[steal-anim] PASS steal-startup-fills-window — both Startup clips are within one " +
-                     $"tick of the {frames.StartupFrames}-tick ADR-0018 telegraph window " +
-                     "(StealMove.DefaultFrameData.StartupFrames).");
+            GD.Print($"[steal-anim] PASS steal-startup-fills-window — both Startup clips fill the " +
+                     $"{frames.StartupFrames}-tick ADR-0018 telegraph window to within float noise " +
+                     $"({ToleranceSeconds:F6}s, StealMove.DefaultFrameData.StartupFrames). A clip even " +
+                     "one tick short of the telegraph goes red here.");
         else
             GD.PrintErr("[steal-anim] FAIL steal-startup-fills-window — see per-clip deviations above.");
 
@@ -836,7 +856,7 @@ public partial class StealAnimTest : Node
             {
                 Fail($"clip '{clipName}' is {actualSeconds:F6}s, expected {expectedSeconds:F6}s " +
                      $"({ticks} ticks at {tps} tps — StealMove.DefaultFrameData), a deviation of " +
-                     $"{deviationSeconds:F6}s exceeds the one-tick tolerance ({toleranceSeconds:F6}s). Re-run " +
+                     $"{deviationSeconds:F6}s exceeds the float-noise tolerance ({toleranceSeconds:F6}s). Re-run " +
                      $"{rebuildTool} after retuning the move's frame data. [{scenarioTag}]");
                 pass = false;
             }
