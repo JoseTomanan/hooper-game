@@ -68,6 +68,39 @@ namespace HOOPERGAME.Tests.Integration;
 // mutation-proven airborne rise, so it is available and honest. Swap the
 // control back to block when handoff 03 lands.
 //
+// ── Mutation evidence (measured, not asserted) ──────────────────────────────
+// Four mutations were applied to scenes/Player.tscn and every scenario re-run.
+// The table is here rather than only in the PR because its real content is that
+// NO SINGLE SCENARIO catches everything, and a future reader deleting one of
+// them needs to see which defect they are giving up.
+//
+//   mutation                                  grounded  arms-rise  leak  su≠re
+//   (none — shipped state)                    0.0204 P  +0.3503 P   P     55.2 P
+//   all three states -> mv277ph               0.0148 P  -0.6766 R   R      3.6 R
+//     (the literal #296 defect)
+//   ContestActive -> mv277ph                  0.0204 P  -0.2630 R   R     55.2 P
+//     (the mutation #314 names)
+//   contestactive clip -> layupactive         0.3211 R  +0.2580 P   R     55.2 P
+//     (an AIRBORNE contest — "it became a block")
+//   deleted the ContestActive->ContestRecovery edge: contest-edges R,
+//     contest-phases still P
+//
+// Three things that table says out loud:
+//
+// 1. contest-stays-grounded PASSES on a pure placeholder clip (0.0148), because
+//    locomotion/idle is genuinely grounded. The grounded gate ALONE cannot tell
+//    a planted contest from a dead one. That is not a weakness to fix by
+//    tightening it — it is why contest-arms-rise exists as the positive half.
+//
+// 2. contest-arms-rise PASSES on an airborne contest (+0.2580 — a layup raises
+//    an arm too). So the two scenarios are exactly orthogonal: grounded catches
+//    the block-lookalike, arms catches the dead clip, and neither catches the
+//    other's defect. Deleting either leaves a real failure mode uncovered.
+//
+// 3. The deleted-edge row is README trap 8 / #279 re-demonstrated live:
+//    contest-phases still passed, because Travel() is a pathfinder and routed
+//    around the gap. Only the resource-level contest-edges saw it.
+//
 // ── Why ActiveAnimNodeForHarness, not the resolver's return value (#257) ─────
 // Travel() to a missing/misnamed state only LOGS; it never throws. Asserting
 // MoveAnimResolver.ResolveStateName(...) == "ContestActive" would pass on a
