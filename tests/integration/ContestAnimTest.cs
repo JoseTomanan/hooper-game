@@ -69,35 +69,52 @@ namespace HOOPERGAME.Tests.Integration;
 // control back to block when handoff 03 lands.
 //
 // ── Mutation evidence (measured, not asserted) ──────────────────────────────
-// Four mutations were applied to scenes/Player.tscn and every scenario re-run.
+// Four mutations were applied to scenes/Player.tscn and every scenario re-run
+// (each mutation reverted from a pristine backup before the next was applied).
 // The table is here rather than only in the PR because its real content is that
 // NO SINGLE SCENARIO catches everything, and a future reader deleting one of
 // them needs to see which defect they are giving up.
 //
+// All arms-rise figures below are the LOWER of the two wrists (see
+// MeasureWristAboveHead); they were re-measured after that reduction changed
+// from max to min, because the max readings said something different.
+//
 //   mutation                                  grounded  arms-rise  leak  su≠re
 //   (none — shipped state)                    0.0204 P  +0.3503 P   P     55.2 P
-//   all three states -> mv277ph               0.0148 P  -0.6766 R   R      3.6 R
+//   all three states -> mv277ph               0.0148 P  -0.6782 R   R      3.6 R
 //     (the literal #296 defect)
 //   ContestActive -> mv277ph                  0.0204 P  -0.2630 R   R     55.2 P
 //     (the mutation #314 names)
-//   contestactive clip -> layupactive         0.3211 R  +0.2580 P   R     55.2 P
-//     (an AIRBORNE contest — "it became a block")
+//   contestactive clip -> layupactive         0.3211 R  -0.2630 R   R     55.2 P
+//     (AIRBORNE *and* one-armed — layup is both)
 //   deleted the ContestActive->ContestRecovery edge: contest-edges R,
 //     contest-phases still P
 //
-// Three things that table says out loud:
+// Four things that table says out loud:
 //
 // 1. contest-stays-grounded PASSES on a pure placeholder clip (0.0148), because
 //    locomotion/idle is genuinely grounded. The grounded gate ALONE cannot tell
 //    a planted contest from a dead one. That is not a weakness to fix by
 //    tightening it — it is why contest-arms-rise exists as the positive half.
 //
-// 2. contest-arms-rise PASSES on an airborne contest (+0.2580 — a layup raises
-//    an arm too). So the two scenarios are exactly orthogonal: grounded catches
-//    the block-lookalike, arms catches the dead clip, and neither catches the
-//    other's defect. Deleting either leaves a real failure mode uncovered.
+// 2. The layupactive row is the reason MeasureWristAboveHead takes the LOWER
+//    wrist. Under the max-wrist reading this file originally shipped, that row
+//    read +0.2580 and PASSED: layup raises one arm to +0.2580 and leaves the
+//    other at -0.2630, and a one-armed overhead pose is a steal or a one-handed
+//    block silhouette, not a contest. Taking the minimum is what makes "both
+//    hands up" the measured claim instead of an assumed one. Do not "simplify"
+//    it back to max — that is a live hole, closed by mutation, not by argument.
 //
-// 3. The deleted-edge row is README trap 8 / #279 re-demonstrated live:
+// 3. What this table does NOT prove: it contains no mutation where grounded
+//    goes red while arms-rise stays green, so contest-stays-grounded's UNIQUE
+//    contribution is currently unevidenced. Demonstrating it needs a clip that
+//    is airborne with BOTH arms up — which is precisely block's clip, and block
+//    is still on the mv277ph placeholder (see the control note below). When
+//    block's clip lands, re-run this table; until then treat the grounded gate
+//    as justified by argument (ContestMove.cs:53-54's commitment ladder) rather
+//    than by measurement, and do not delete it on the strength of arms-rise.
+//
+// 4. The deleted-edge row is README trap 8 / #279 re-demonstrated live:
 //    contest-phases still passed, because Travel() is a pathfinder and routed
 //    around the gap. Only the resource-level contest-edges saw it.
 //
@@ -155,6 +172,14 @@ public partial class ContestAnimTest : Node
     // move, which is exactly the un-telegraphed pose ADR-0003 forbids — the
     // wind-up has to be readable as a wind-up.
     private const float ArmRiseMinMargin = 0.10f;
+
+    // ...and the SAME discipline applied to the positive gate, which previously
+    // asked only for "> 0". A wrist grazing 0.0001 m over the head is not "hands
+    // in the shooter's eyeline", it is a rounding artefact that reads on screen
+    // as arms at shoulder height. Both authoring tools already gate on 0.10 m
+    // (author_contest.py WRIST_ABOVE_HEAD_MIN_M, rebuild_contest_clips.gd G5);
+    // matching them here costs nothing — the measured value is ~0.35.
+    private const float ArmAboveHeadMinM = 0.10f;
 
     private static readonly string[] KnownScenarios =
     {
@@ -223,6 +248,11 @@ public partial class ContestAnimTest : Node
     // head and weakening the control's margin to nothing. (This exact seeding
     // bug produced a false "startup=0.0000" during #313 and was caught by
     // reading the printed measurement, not by the exit code.)
+    //
+    // Two different reductions stack here and the order matters: MIN across the
+    // two WRISTS (both hands must clear — see MeasureWristAboveHead), then MAX
+    // across TICKS (the phase's peak). "max" in these names is the time axis
+    // only; a one-armed pose can never inflate them.
     private float _maxWristAboveHeadDuringStartup = float.NegativeInfinity;
     private float _maxWristAboveHeadDuringActive = float.NegativeInfinity;
     private Quaternion[] _poseAtLastStartupTick;
@@ -540,14 +570,16 @@ public partial class ContestAnimTest : Node
         GD.Print($"[contest-anim]   wrist-above-head: startup={_maxWristAboveHeadDuringStartup:F4} " +
                  $"active={_maxWristAboveHeadDuringActive:F4}");
 
-        bool pass = _sawActive && _maxWristAboveHeadDuringActive > 0f;
+        bool pass = _sawActive && _maxWristAboveHeadDuringActive >= ArmAboveHeadMinM;
         if (pass)
-            GD.Print($"[contest-anim] PASS contest-arms-rise — a wrist reached " +
-                     $"{_maxWristAboveHeadDuringActive:F4} ABOVE the head bone during Active, so the contest " +
-                     "actually puts hands in the shooter's eyeline rather than standing near them.");
+            GD.Print($"[contest-anim] PASS contest-arms-rise — the LOWER wrist reached " +
+                     $"{_maxWristAboveHeadDuringActive:F4} above the head bone during Active (floor " +
+                     $"{ArmAboveHeadMinM:F2}), so BOTH hands are in the shooter's eyeline rather than one " +
+                     "arm up in a steal/one-handed-block silhouette.");
         else
-            Fail($"contest-arms-rise: best wrist-above-head during Active was " +
-                 $"{_maxWristAboveHeadDuringActive:F4}, need > 0 (sawActive={_sawActive}). Note that " +
+            Fail($"contest-arms-rise: worst (lower) wrist-above-head during Active was " +
+                 $"{_maxWristAboveHeadDuringActive:F4}, need >= {ArmAboveHeadMinM:F2} (sawActive={_sawActive}). " +
+                 "A one-armed clip fails here BY DESIGN — that is a steal or block pose, not a contest. Note that " +
                  "contest-stays-grounded would still PASS on this clip, which is exactly why this " +
                  "scenario exists.");
         Finish(pass ? 0 : 1);
@@ -561,7 +593,7 @@ public partial class ContestAnimTest : Node
 
         // Premise: Active must genuinely have gone overhead, or "Startup did not"
         // is trivially satisfied by a clip in which the arms never move.
-        bool premise = _sawStartup && _maxWristAboveHeadDuringActive > 0f;
+        bool premise = _sawStartup && _maxWristAboveHeadDuringActive >= ArmAboveHeadMinM;
         float margin = _maxWristAboveHeadDuringActive - _maxWristAboveHeadDuringStartup;
         bool pass = premise && margin >= ArmRiseMinMargin;
         if (pass)
@@ -857,24 +889,34 @@ public partial class ContestAnimTest : Node
         return float.IsPositiveInfinity(lowest) ? float.NaN : lowest;
     }
 
-    // Best (highest) wrist relative to the head bone. The clip is symmetric and
-    // unhanded, so BOTH wrists are checked and the higher wins — asserting a
-    // specific side here would be asserting handedness the clip deliberately
-    // does not have.
+    // The LOWER wrist relative to the head bone — deliberately the worse of the
+    // two, matching author_contest.py::_wrist_above_head_m and
+    // rebuild_contest_clips.gd::_wrist_above_head so all three instruments
+    // measure the same quantity.
+    //
+    // Taking the HIGHER wrist would be the bug: a clip that raised one arm and
+    // left the other down would satisfy an "arms up" gate, but a one-armed
+    // overhead silhouette is a steal or a one-handed block, not a contest. The
+    // clip being symmetric is what this file is asserting, not a premise it may
+    // assume — so "both wrists cleared" has to be the measured claim, and the
+    // minimum is what makes it one. Checking neither side specifically is also
+    // what keeps this unhanded: min() names no hand, it just requires both.
     private static float MeasureWristAboveHead(Skeleton3D skel)
     {
         int head = skel.FindBone("mixamorig_Head");
         if (head < 0) return float.NegativeInfinity;
         float headY = skel.GetBoneGlobalPose(head).Origin.Y;
 
-        float best = float.NegativeInfinity;
+        float worst = float.PositiveInfinity;
         foreach (string wrist in new[] { "mixamorig_LeftHand", "mixamorig_RightHand" })
         {
             int idx = skel.FindBone(wrist);
             if (idx < 0) continue;
-            best = Math.Max(best, skel.GetBoneGlobalPose(idx).Origin.Y - headY);
+            worst = Math.Min(worst, skel.GetBoneGlobalPose(idx).Origin.Y - headY);
         }
-        return best;
+        // No wrist resolved at all: report the failing extreme, never a passing
+        // one — same rule as MeasureLowestToe's NaN.
+        return float.IsPositiveInfinity(worst) ? float.NegativeInfinity : worst;
     }
 
     private static Quaternion[] SampleUpperBody(Skeleton3D skel)
