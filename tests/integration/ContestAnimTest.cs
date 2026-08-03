@@ -58,15 +58,20 @@ namespace HOOPERGAME.Tests.Integration;
 // reasons above, that control fails, and contest-stays-grounded's green is
 // correctly disbelieved.
 //
-// The handoff asked for control-BLOCK-leaves-ground. Block cannot serve: as of
-// this commit scenes/Player.tscn's BlockStartup/Active/Recovery still point at
-// AnimationNodeAnimation_mv277ph (locomotion/idle), i.e. block has no clip of
-// its own yet and does not leave the ground in the display layer at all — the
-// control would fail for a reason that has nothing to do with contest. The
-// handoff anticipates this and names the substitute: "if block has not landed
-// yet, use the existing layup". #313 landed layup one commit ago with a
-// mutation-proven airborne rise, so it is available and honest. Swap the
-// control back to block when handoff 03 lands.
+// The handoff asked for control-BLOCK-leaves-ground. When #314 landed, block
+// could not serve: scenes/Player.tscn's BlockStartup/Active/Recovery all pointed
+// at AnimationNodeAnimation_mv277ph (locomotion/idle), i.e. block had no clip of
+// its own and did not leave the ground in the display layer at all — the control
+// would have failed for a reason that has nothing to do with contest. The
+// handoff anticipated this and named the substitute: "if block has not landed
+// yet, use the existing layup". #313 had landed layup with a mutation-proven
+// airborne rise, so it was available and honest.
+//
+// #283 has since landed block's real clip (measured hip rise 0.3000), so block
+// IS now available as a control. The layup substitute is deliberately kept: it
+// is proven, it discriminates by 16x, and swapping it would be a change to
+// #314's proof rather than to #283's. What block's arrival DID change is note 3
+// below, which is no longer an open item.
 //
 // ── Mutation evidence (measured, not asserted) ──────────────────────────────
 // Four mutations were applied to scenes/Player.tscn and every scenario re-run
@@ -105,14 +110,22 @@ namespace HOOPERGAME.Tests.Integration;
 //    hands up" the measured claim instead of an assumed one. Do not "simplify"
 //    it back to max — that is a live hole, closed by mutation, not by argument.
 //
-// 3. What this table does NOT prove: it contains no mutation where grounded
-//    goes red while arms-rise stays green, so contest-stays-grounded's UNIQUE
-//    contribution is currently unevidenced. Demonstrating it needs a clip that
-//    is airborne with BOTH arms up — which is precisely block's clip, and block
-//    is still on the mv277ph placeholder (see the control note below). When
-//    block's clip lands, re-run this table; until then treat the grounded gate
-//    as justified by argument (ContestMove.cs:53-54's commitment ladder) rather
-//    than by measurement, and do not delete it on the strength of arms-rise.
+// 3. RESOLVED by #283 — contest-stays-grounded's UNIQUE contribution is now
+//    evidenced by measurement rather than by argument. This table originally
+//    contained no mutation where grounded went red while arms-rise stayed
+//    green, and said so: demonstrating it "needs a clip that is airborne with
+//    BOTH arms up — which is precisely block's clip", which did not exist yet.
+//    #283 authored it, and the row was measured:
+//
+//      contestactive clip -> locomotion/blockactive
+//        contest-stays-grounded   0.3611 RED  (ceiling 0.08)
+//        contest-arms-rise       +0.3099 P    (floor 0.10)
+//
+//    That is the case the grounded gate exists for and the only mutation in
+//    this file that arms-rise cannot see: a pose with both hands in the
+//    shooter's eyeline and the feet off the floor is a BLOCK, and every other
+//    contest scenario here passes on it. Do not delete contest-stays-grounded
+//    on the strength of arms-rise — there is now a number saying why.
 //
 // 4. The deleted-edge row is README trap 8 / #279 re-demonstrated live:
 //    contest-phases still passed, because Travel() is a pathfinder and routed
