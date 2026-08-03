@@ -90,7 +90,15 @@ namespace HOOPERGAME.Tests.Integration;
 //      copy-pasted SubResource id leaves every state NAME correct and is
 //      therefore invisible to CrossoverAnimTest. Note families 7 and 8 grade
 //      different bone sets off rest: see (c)'s comment for why the crossover
-//      excludes the clavicles that the jump shot legitimately elevates).
+//      excludes the clavicles that the jump shot legitimately elevates);
+//   9. idle/pivot MATERIAL rotation coverage (#330 — family 6 only grades the
+//      arm chain, and the PR #329 sweep found a gap outside it: pivot poses
+//      RightToeBase but NOT LeftToeBase, so a plant-and-pivot lands one foot
+//      posed and one at rest for the whole 0.35 s turn. Grades ROTATION_3D
+//      coverage only — a SCALE-only bone still rest-falls its ROTATION, which is
+//      how idle's LeftToeBase hid — over the MATERIAL non-leaf set, i.e. non-leaf
+//      minus finger joints, which are 22 of pivot's 23 gaps and invisible. idle
+//      and pivot only; `run`'s five material gaps belong to #297).
 // Whether the corrected pose actually looks RIGHT remains the deferred human
 // feel judgment (#178/#173, ADR-0021) — but as of #273, pivot's pose is now
 // numerically anchored to Y Bot's own rests via the rest-delta correction,
@@ -690,6 +698,126 @@ public partial class LocomotionClipTest : Node
                 Fail($"clip 'pivot': arm-chain '{boneName}' first key is only {armDeviationDeg:F6} deg from Y Bot's " +
                      $"rest (T-pose) — expected >= {PivotArmOffRestThresholdDeg} deg (turning-T-pose bug: the arm " +
                      "would sit horizontal during a turn).");
+                allPass = false;
+            }
+        }
+
+        // --- Issue #330 assertion family: idle/pivot material rotation cover -
+        // Family 6 above proves pivot holds the ARM CHAIN off rest. It cannot
+        // see a gap anywhere else, and #330 found one: pivot poses
+        // mixamorig_RightToeBase but NOT mixamorig_LeftToeBase, so the left toe
+        // holds Y Bot's rest angle for the whole 0.35 s turn while the rest of
+        // that leg rotates under it. The feet are asymmetric during a
+        // plant-and-pivot — the move ADR-0003 cites as the archetype of
+        // "planted feet, weight, recovery," where legibility is a competitive
+        // requirement rather than polish. It is a QUIET wrong: the clip plays,
+        // the state enters, and every duration/reachability assertion passes.
+        //
+        // Root cause is upstream in `idle`, not in the pivot rebuild tool.
+        // tools/rebuild_pivot_upperbody.gd completes pivot by copying idle's
+        // ROTATION_3D tracks for bones pivot lacks; idle carries only a 1-key
+        // SCALE track for LeftToeBase and no rotation track at all, so the tool
+        // finds nothing to copy and pivot inherits the hole. Hence this family
+        // grades BOTH clips: pivot is where the defect is visible, idle is where
+        // it has to be fixed.
+        //
+        // Two deliberate scoping decisions, both of which took a measurement:
+        //
+        // (a) ROTATION_3D only. Counting a track of any type is what let this
+        //     hide — a SCALE track does nothing to stop the ROTATION
+        //     rest-fallback that is the whole a45bd1d trap, and idle's
+        //     LeftToeBase is precisely that shape. JumpshotAnimTest's
+        //     VerdictTrackCompleteness and tools/measure_clip_completeness.gd
+        //     carried the identical hole and were fixed in the same change.
+        //
+        //     Mutation-measured 2026-08-03, and the result is sharper than
+        //     "the type-blind gate misses it." Deleting ONLY the Rotation3D
+        //     filter on this family's rotBones loop, against the unfixed clips:
+        //         idle  -> 22/22 material, L=True  R=True   (scores CLEAN)
+        //         pivot -> 21/22 material, L=False R=True   (still fails)
+        //     A type-blind gate therefore hides the ROOT CAUSE while still
+        //     reporting the SYMPTOM — it points a reader at
+        //     rebuild_pivot_upperbody.gd, which is correct code, and away from
+        //     idle, which is the file that has to change. That is worse than a
+        //     miss, and it is why the filter is load-bearing rather than tidy.
+        //
+        // (b) Non-leaf is necessary but NOT sufficient, so grade the MATERIAL
+        //     non-leaf set. 22 of pivot's 23 non-leaf gaps are finger joints,
+        //     whose subtree is one more finger joint and whose rest deviation is
+        //     invisible at this rig's scale. Read the gap LIST, never the gap
+        //     COUNT — the count is dominated by noise, which is exactly how one
+        //     material foot bone sat unnoticed in a shipped clip. Material gaps
+        //     are spine, limb, or foot bones.
+        //
+        // `run` is deliberately NOT graded here. It has five material gaps
+        // (Spine1/Spine2/Neck/Left+RightHand) which are #297's subject, already
+        // filed and honestly scoped there; folding them in would make this
+        // family fail for a reason it is not about.
+        string[] toeBasePair = { "mixamorig_LeftToeBase", "mixamorig_RightToeBase" };
+        var materialNonLeaf = new List<string>();
+        for (int i = 0; i < _rawYBotSkeleton.GetBoneCount(); i++)
+        {
+            if (_rawYBotSkeleton.GetBoneChildren(i).Length == 0) continue;
+            string bn = _rawYBotSkeleton.GetBoneName(i);
+            if (IsFingerJoint(bn)) continue;
+            materialNonLeaf.Add(bn);
+        }
+
+        // Vacuity guard: an empty or finger-only requirement would be trivially
+        // satisfied by every clip, including the broken one this family exists
+        // to catch. The two toes must specifically be IN the set, or the named
+        // defect would slip through a gate that nominally passed.
+        if (materialNonLeaf.Count == 0 || toeBasePair.Any(t => !materialNonLeaf.Contains(t)))
+        {
+            Fail($"material-rotation-coverage: the raw Y Bot rig yielded {materialNonLeaf.Count} material " +
+                 $"non-leaf bones and toe-pair-present={toeBasePair.All(t => materialNonLeaf.Contains(t))}. " +
+                 "The requirement would be vacuous or would exempt the very bones #330 is about, so this " +
+                 "fails rather than passes.");
+            allPass = false;
+        }
+
+        foreach (string clipName in new[] { "idle", "pivot" })
+        {
+            Animation clip = lib.GetAnimation(clipName);
+            var rotBones = new HashSet<string>();
+            for (int i = 0; i < clip.GetTrackCount(); i++)
+            {
+                if (clip.TrackGetType(i) != Animation.TrackType.Rotation3D) continue;
+                var p = clip.TrackGetPath(i);
+                if (p.GetSubNameCount() == 0) continue;
+                rotBones.Add(p.GetSubName(0));
+            }
+
+            // Trap 17, preferred shape: the claim is "BOTH toes are posed," so
+            // the reduction is `&&` over two independent per-side accumulators,
+            // and both sides are PRINTED. A `max`-style "at least one toe is
+            // posed" reduction passes on the current one-toe clip, which IS the
+            // defect — and on a symmetric clip min == max, so the mistake would
+            // be invisible in a green run and only surface at the exact moment
+            // the gate was supposed to catch something.
+            bool leftToe = rotBones.Contains("mixamorig_LeftToeBase");
+            bool rightToe = rotBones.Contains("mixamorig_RightToeBase");
+            GD.Print($"[locomotion-clip]   '{clipName}' toe rotation cover: L={leftToe} R={rightToe} " +
+                     $"(rotation_bones={rotBones.Count})");
+            if (!(leftToe && rightToe))
+            {
+                Fail($"clip '{clipName}': the toe pair is ASYMMETRIC — L={leftToe} R={rightToe}. A ToeBase " +
+                     "with no ROTATION_3D track holds Y Bot's rest angle at full weight while the rest of " +
+                     "that leg rotates under it, so a plant-and-pivot lands one foot posed and one foot at " +
+                     "rest. Fix idle at the import boundary (remove_immutable_tracks) and re-run " +
+                     "tools/rebuild_pivot_upperbody.gd so pivot inherits the recovered track.");
+                allPass = false;
+            }
+
+            var materialMissing = materialNonLeaf.Where(b => !rotBones.Contains(b)).ToList();
+            GD.Print($"[locomotion-clip]   '{clipName}': {materialNonLeaf.Count - materialMissing.Count}/" +
+                     $"{materialNonLeaf.Count} material non-leaf bones rotation-animated");
+            if (materialMissing.Count > 0)
+            {
+                Fail($"clip '{clipName}': leaves {materialMissing.Count} MATERIAL non-leaf bone(s) with no " +
+                     $"ROTATION_3D track: [{string.Join(", ", materialMissing)}]. Each pins its whole subtree " +
+                     "to Y Bot's T-pose rest for the clip's duration (the a45bd1d trap) whenever the clip " +
+                     "plays at full weight.");
                 allPass = false;
             }
         }
@@ -2093,6 +2221,21 @@ public partial class LocomotionClipTest : Node
     {
         double dot = Mathf.Clamp(Mathf.Abs(a.Normalized().Dot(b.Normalized())), -1.0f, 1.0f);
         return Mathf.RadToDeg(2.0 * Mathf.Acos((float)dot));
+    }
+
+    // #330: a finger JOINT (mixamorig_LeftHandIndex2, ...), not the hand itself.
+    // Deliberately does NOT match "mixamorig_LeftHand" / "mixamorig_RightHand" —
+    // those are material limb bones and #297 grades them on `run`. The five
+    // digit names are spelled out rather than pattern-matched on a trailing
+    // number so a future rig with, say, "mixamorig_LeftHandProsthetic1" is
+    // reported as a material gap instead of silently exempted.
+    private static bool IsFingerJoint(string boneName)
+    {
+        foreach (string side in new[] { "mixamorig_LeftHand", "mixamorig_RightHand" })
+            foreach (string digit in new[] { "Thumb", "Index", "Middle", "Ring", "Pinky" })
+                if (boneName.StartsWith(side + digit, System.StringComparison.Ordinal))
+                    return true;
+        return false;
     }
 
     private static Skeleton3D FindSkeleton(Node root)
