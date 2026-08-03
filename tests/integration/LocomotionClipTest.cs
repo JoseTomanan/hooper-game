@@ -705,13 +705,29 @@ public partial class LocomotionClipTest : Node
         // --- Issue #330 assertion family: idle/pivot material rotation cover -
         // Family 6 above proves pivot holds the ARM CHAIN off rest. It cannot
         // see a gap anywhere else, and #330 found one: pivot poses
-        // mixamorig_RightToeBase but NOT mixamorig_LeftToeBase, so the left toe
-        // holds Y Bot's rest angle for the whole 0.35 s turn while the rest of
-        // that leg rotates under it. The feet are asymmetric during a
-        // plant-and-pivot — the move ADR-0003 cites as the archetype of
-        // "planted feet, weight, recovery," where legibility is a competitive
-        // requirement rather than polish. It is a QUIET wrong: the clip plays,
-        // the state enters, and every duration/reachability assertion passes.
+        // mixamorig_RightToeBase but NOT mixamorig_LeftToeBase.
+        //
+        // What that gap did and did NOT cost (measured 2026-08-03 — the #330
+        // write-up's severity claim is FALSIFIED and this comment is the
+        // correction). The write-up said the feet were visibly asymmetric during
+        // a plant-and-pivot. They were not. The surviving RightToeBase track
+        // holds 0.0000 deg from Y Bot's RightToeBase rest, and an absent
+        // LeftToeBase track rest-falls to exactly its own rest, so both toes
+        // rendered at rest either way and the pose was already symmetric.
+        //
+        // The gap was real but structural, and it cost something narrower and
+        // easier to miss: it silently shrank the #287 corridor sweep above.
+        // That sweep intersects idle's and run's rotation tracks, so a bone idle
+        // does not track drops out of the blend-degeneracy guard entirely —
+        // LeftToeBase was excluded by name with a comment explaining why, and
+        // the sweep ran on 7 leg-chain bones while reading as though it covered
+        // the chain. Recovering the track puts it back to 8, still 0/90.
+        //
+        // So this family's real job is to stop a bone from leaving a coverage
+        // set by accident. A missing rotation track is only a VISIBLE defect
+        // when the bone's intended pose differs from rest — but nothing tells
+        // you which case you are in until someone measures, and meanwhile every
+        // gate built on "the tracks idle and pivot share" quietly narrows.
         //
         // Root cause is upstream in `idle`, not in the pivot rebuild tool.
         // tools/rebuild_pivot_upperbody.gd completes pivot by copying idle's
@@ -801,10 +817,12 @@ public partial class LocomotionClipTest : Node
                      $"(rotation_bones={rotBones.Count})");
             if (!(leftToe && rightToe))
             {
-                Fail($"clip '{clipName}': the toe pair is ASYMMETRIC — L={leftToe} R={rightToe}. A ToeBase " +
-                     "with no ROTATION_3D track holds Y Bot's rest angle at full weight while the rest of " +
-                     "that leg rotates under it, so a plant-and-pivot lands one foot posed and one foot at " +
-                     "rest. Fix idle at the import boundary (remove_immutable_tracks) and re-run " +
+                Fail($"clip '{clipName}': the toe pair's rotation COVERAGE is asymmetric — L={leftToe} " +
+                     $"R={rightToe}. The untracked side rest-falls to Y Bot's rest while the tracked side " +
+                     "plays its key, and it also drops out of every gate built on the idle/run shared-track " +
+                     "intersection — notably the #287 corridor sweep, which is how this last went unnoticed. " +
+                     "Whether it is also VISIBLE depends on how far that bone's intended pose sits from rest, " +
+                     "so measure before assuming either way. Fix: tools/recover_idle_rotation_tracks.gd, then " +
                      "tools/rebuild_pivot_upperbody.gd so pivot inherits the recovered track.");
                 allPass = false;
             }
@@ -1547,10 +1565,16 @@ public partial class LocomotionClipTest : Node
             "mixamorig_LeftFoot", "mixamorig_RightFoot",
             "mixamorig_LeftToeBase", "mixamorig_RightToeBase",
         };
-        // mixamorig_LeftToeBase is NOT included: idle carries no ROTATION_3D
-        // track for it at all (confirmed via a disposable [DEBUG-287] probe),
-        // so there is no idle-side reference to sweep against -- it is simply
-        // absent from `sharedBones`, the same intersection family 4 computes.
+        // All 8 are swept as of #330. Until then mixamorig_LeftToeBase silently
+        // dropped out: idle carried no ROTATION_3D track for it (noted here at
+        // #287 time via a disposable [DEBUG-287] probe, but never filed), so it
+        // was absent from `sharedBones` and this sweep ran on 7 bones while
+        // reading as if it covered the leg chain. #330 recovered the track --
+        // dropped at import by remove_immutable_tracks, README trap 2 -- and the
+        // sweep now reports "8 bones swept", still 0/90 violated. That number is
+        // the evidence the recovered track does not destabilize the blend; it is
+        // also why the fix was worth making at all, since the clip's RENDERED
+        // pose was already correct (see family 9).
         var legChainBones = sharedBones.Where(b => legChainCandidates.Contains(b)).ToList();
 
         // Vacuous-pass guard: the #275 fact table names 2 UpLeg bones as the
