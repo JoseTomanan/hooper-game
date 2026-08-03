@@ -1355,9 +1355,12 @@ jobs:
       # it DOES go airborne. Measured 0.0204 (contest, ceiling 0.08) vs 0.3211
       # (layup, floor 0.15) — a 16x separation through one instrument.
       #
-      # The handoff asked for control-block-leaves-ground; block's states still
-      # point at the locomotion/idle placeholder, so it cannot serve yet. The
-      # handoff names layup as the substitute. Swap back when block's clip lands.
+      # The handoff asked for control-block-leaves-ground; when #314 landed,
+      # block's states still pointed at the locomotion/idle placeholder, so it
+      # could not serve and the handoff named layup as the substitute. #283 has
+      # since landed block's real clip (measured hip rise 0.3000), so block is
+      # now available as a control too — the layup substitute is kept because it
+      # is proven and swapping it is a change to #314's proof, not #283's.
       #
       # contest-arms-rise is the positive half (a wrist reached 0.3503 above the
       # head during Active — the same value rebuild_contest_clips.gd's G5
@@ -1375,6 +1378,49 @@ jobs:
           godot --headless --path . res://tests/integration/ContestAnimTest.tscn -- --harness-scenario=control-layup-leaves-ground
           godot --headless --path . res://tests/integration/ContestAnimTest.tscn -- --harness-scenario=contest-arms-rise
           godot --headless --path . res://tests/integration/ContestAnimTest.tscn -- --harness-scenario=control-contest-arms-low-startup
+
+      # Block per-move clips (issue #283, #302 batch 2). The EXACT INVERSE of the
+      # contest harness above, and the pair should be read together: the two
+      # moves raise the same arms off the same source FBX (Goalkeeper Catch
+      # Stationary) and are separated by one thing only — block leaves the
+      # ground, contest does not. Before #283 all three Block states shared ONE
+      # sub-resource pointing at locomotion/idle, i.e. the #296 defect in its
+      # most extreme form: the biggest commitment on defence played the same
+      # pixels as standing still, for all three phases at once.
+      #
+      # block-airborne-active is the load-bearing gate and the only assertion in
+      # this repo that can tell block from contest — phases-entered,
+      # segment-lengths, distinct-clips and arms-overhead are all satisfied
+      # identically by a contest. It measures the HIPS (contest measures toes;
+      # each move measures the quantity the OTHER one is allowed to move freely)
+      # against the ready stance the wind-up begins from, NOT against the Startup
+      # minimum: block crouches 0.20 m on purpose, so a squat-and-un-squat that
+      # never leaves the floor measures exactly 0.20 m of "rise" against its own
+      # trough and would pass a 0.20 m floor while BEING the defect. Against the
+      # ready stance that same clip reads 0.00.
+      #
+      # control-block-grounded-startup is what earns that baseline — it asserts
+      # the hips never rise above it during the wind-up, so it really is a ground
+      # level and not a point the clip was already travelling through. Unlike
+      # contest's control it needs no second MOVE: both readings come from one
+      # run of one clip through one MeasureHipHeight path, so a dead instrument
+      # (no Skeleton3D, an unbound clip, a surviving "Armature/" track prefix)
+      # reads a flat 0 for both — satisfying this ceiling and FAILING the
+      # positive gate. It therefore asserts the positive gate's result as its own
+      # premise.
+      #
+      # Measured, and all three instruments agree to four decimals: Blender-side
+      # verify_airborne hip_rise_m=0.3000, rebuild_block_clips.gd G4 rise=0.3000
+      # (post-FBX-round-trip, by manual FK), and this harness active=0.3000 off
+      # the live Skeleton3D, against startup=0.0000. Each exits 0=PASS/1=FAIL
+      # (ADR-0016).
+      - name: Run block per-move animation state harness
+        run: |
+          godot --headless --path . res://tests/integration/BlockAnimTest.tscn -- --harness-scenario=block-phases
+          godot --headless --path . res://tests/integration/BlockAnimTest.tscn -- --harness-scenario=block-no-placeholder-leak
+          godot --headless --path . res://tests/integration/BlockAnimTest.tscn -- --harness-scenario=block-segment-lengths
+          godot --headless --path . res://tests/integration/BlockAnimTest.tscn -- --harness-scenario=block-airborne-active
+          godot --headless --path . res://tests/integration/BlockAnimTest.tscn -- --harness-scenario=control-block-grounded-startup
 
       # Moving crossover — momentum-aware burst with left-stick exit (issue
       # #198, ADR-0003 amendment). CrossoverBurstMathTests already pin the
