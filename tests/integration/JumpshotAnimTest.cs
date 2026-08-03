@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using Godot;
 using Hooper.Ball;
@@ -32,8 +34,146 @@ namespace HOOPERGAME.Tests.Integration;
 //   godot --headless --path . res://tests/integration/JumpshotAnimTest.tscn -- --harness-scenario=fadeaway-active
 //   godot --headless --path . res://tests/integration/JumpshotAnimTest.tscn -- --harness-scenario=no-fadeaway-when-squared-up
 //   godot --headless --path . res://tests/integration/JumpshotAnimTest.tscn -- --harness-scenario=no-placeholder-leak
+//   godot --headless --path . res://tests/integration/JumpshotAnimTest.tscn -- --harness-scenario=jumpshot-airborne-active
+//   godot --headless --path . res://tests/integration/JumpshotAnimTest.tscn -- --harness-scenario=control-jumpshot-grounded-startup
+//   godot --headless --path . res://tests/integration/JumpshotAnimTest.tscn -- --harness-scenario=jumpshot-track-completeness
 //   Exit: 0 = PASS, 1 = FAIL (via GetTree().Quit) — the ADR-0016 exit-code contract.
 //   Omitting --harness-scenario defaults to "jumpshot-phases".
+//
+// ── Why the last three scenarios exist: the #316 measurement ────────────────
+// #316 proposed RE-AUTHORING these clips in headless Blender, on three stated
+// grounds. All three were measured against the shipped assets/locomotion.res
+// before any work started (tools/measure_clip_completeness.gd and
+// tools/measure_jumpshot_vertical.gd, both committed alongside this), and all
+// three turned out to be false:
+//
+//   1. "Hand-keyed in GDScript, so it leaves track gaps by construction."
+//      It is not hand-keyed. tools/rebuild_jumpshot_clips.gd SLICES a real
+//      mocap clip (`Goalkeeper Catch Stationary`) and resamples it at one key
+//      per gameplay tick, and its _assert_complete() already fails the BUILD if
+//      a slice loses coverage.
+//   2. "80% bone coverage (52/65) leaves 13 bones at rest."
+//      True as a count, inert as a defect: all 13 are Mixamo LEAF terminators
+//      (`*4` fingertips, HeadTop_End, `*Toe_End`). The a45bd1d T-pose trap
+//      needs an untracked bone whose LOCAL REST differs from its correct pose —
+//      an arm bone's rest is horizontal, so omitting it snaps the arm sideways.
+//      A fingertip's rest RELATIVE TO ITS ANIMATED PARENT is already correct,
+//      and being a leaf it can drag no subtree with it. That is what
+//      "jumpshot-track-completeness" pins, and it is why that scenario asserts
+//      "every NON-LEAF bone is animated" rather than a coverage percentage: the
+//      percentage is the wrong metric and would have to be lowered to 80% to
+//      pass, which would encode the wrong guarantee.
+//   3. "The startup ends with a jump — grounding was never proven."
+//      The grounding was already TRUE, just unasserted. Measured lowest-toe
+//      height across the shipped family: +0.0002 at Startup entry, +0.399 at
+//      Startup exit, +0.406 peak during Active, +0.005 at Recovery end. Hips
+//      likewise run -0.230 (gather) -> +0.431 (release) -> -0.291 (landing
+//      absorb), which MEETS OR EXCEEDS every magnitude #316's own motion spec
+//      asked a re-author to produce (-0.12 / +0.30 / -0.10).
+//
+// ── The two measurement spaces are NOT comparable — do not "reconcile" them ──
+// tools/measure_jumpshot_vertical.gd reports +0.406 of Active toe rise; this
+// harness reports +0.2240 for the same clips, and BOTH are correct. They measure
+// different things:
+//   * the tool does manual FK on the RAW assets/Y Bot.fbx rig, in resource space,
+//     against the skeleton's REST pose;
+//   * this harness reads the LIVE Skeleton3D on scenes/Player.tscn, against the
+//     pre-move idle stance — and that skeleton has been rewritten by
+//     PlayerRigScaler (per-bone SetBonePoseScale on the leg/spine chain) and
+//     BlendRestAnchor before a single tick runs.
+// Different baseline AND different scale. Only the harness number is the one any
+// threshold here may be set from; the tool's numbers are for reasoning about the
+// CLIP, not about the rendered player.
+//
+// So the re-author was dropped (it would have spent a merge-train slot on a
+// BINARY resource to make the motion no better, and arguably worse — programmatic
+// Blender keyframing interpolates between authored poses, which is precisely the
+// "sliding between two poses" #316 wanted to avoid, whereas the shipped clip is
+// resampled motion capture). What was genuinely missing was CI proof, which is
+// what these three scenarios are. The measurement is recorded here rather than
+// only in the issue so the next reader does not re-open a settled question.
+//
+// ── Mutation evidence for the three #316 scenarios ──────────────────────────
+// Every threshold below is set from a measured working value AND a measured
+// broken one. Run locally against Godot 4.7.1 on 2026-08-03; "-" = unaffected.
+//
+// Shipped tree reads: startup min=-0.1876 max=+0.1541 / active min=+0.2174
+// max=+0.2240 / completeness 52 of 52 non-leaf on all four clips.
+//
+//   mutation                                        airborne  grounded  complete
+//   (none — shipped tree)                             PASS      PASS      PASS
+//   A: JumpshotActive  -> "locomotion/idle"           FAIL*     FAIL†     -
+//   B: JumpshotStartup -> "locomotion/jumpshotactive" PASS‡     FAIL§     -
+//   D: JumpshotStartup -> "locomotion/idle"           PASS‡     FAIL¶     -
+//   C: add "pivot" to the completeness clip list      -         -         FAIL#
+//
+//   * min=-0.0002 / max=+0.1812. Under the ORIGINAL Math.Max reduction this
+//     mutation PASSED at +0.1812 — see the note below; that is why the gate
+//     reduces with min.
+//   † correctly fails on BROKEN PREMISE rather than passing: with Active grounded
+//     the toe instrument is no longer demonstrably live, so a grounded Startup
+//     reading proves nothing.
+//   ‡ correctly UNAFFECTED — B and D break only the wind-up, and the Active clip
+//     is still genuinely airborne. The two scenarios detect different defects,
+//     which is what makes keeping both worthwhile.
+//   § the GROUNDED half: startup min=+0.2080 > ceiling 0.08 — the shot began in
+//     the air.
+//   ¶ the TAKEOFF half: startup max=+0.0112 < floor 0.10 — the shot never left
+//     the floor during its wind-up. B and D together are what prove the two-sided
+//     gate; either half alone is satisfied by one of these two defects.
+//   # 'pivot' animates 29/52 non-leaf bones, leaving 23 (including
+//     mixamorig_LeftToeBase) pinned to rest.
+//
+//   Not covered by this table: no mutation makes "complete" go red while the two
+//   geometric gates stay green from a CLIP-CONTENT change, because C mutates the
+//   assertion's input list rather than locomotion.res (a binary resource). If a
+//   future change strips tracks from a shipped clip, re-run this table.
+//
+// ── Why "airborne" reduces with MIN across Active (README trap 17) ──────────
+// Written first with Math.Max and MUTATION-PROVEN INADEQUATE, so it is recorded
+// here rather than silently fixed. Mutation: point the JumpshotActive state's
+// AnimationNodeAnimation at "locomotion/idle" — a grounded clip, i.e. a jump shot
+// released with both feet planted, exactly the defect this gate exists to catch.
+// Under Math.Max it read +0.1812 and PASSED (floor 0.15). Under Math.Min the same
+// run reads min=-0.0002 / max=+0.1812 and FAILS — the split between the two bounds
+// IS the diagnosis, which is why both are printed.
+//
+// The cause is the 4-tick Active window plus the ~1-tick lag between what
+// GetCurrentNode() reports and the pose the Skeleton3D has actually been given.
+// The first sample labelled "JumpshotActive" therefore still carries STARTUP's
+// final pose — which is fully airborne by design — so a max-reduction latches
+// Startup's tail and never looks at the Active clip at all.
+//
+// Trap 17's rule states the general form: the CLAIM here is "the shooter is
+// airborne THROUGHOUT the release", a statement about EVERY Active tick, and a
+// statement about every tick can only be reduced with min. Max asks whether ANY
+// tick complied, which the borrowed Startup pose satisfies for free. Note the
+// gate is green under both reductions on a correct clip (min == max to within
+// 0.01), which is precisely why this was invisible until mutated.
+//
+// ── Why "grounded startup" is TWO-SIDED rather than a single entry sample ───
+// LayupAnimTest's control-layup-grounded-startup gates
+// maxHipRiseDuringStartup <= 0.08 across the WHOLE Startup phase. Copying that
+// shape here would be wrong and would FAIL: jumpshot's Startup is 18 ticks and
+// deliberately ENDS AIRBORNE — "heels leave the floor at the end" is the motion
+// spec.
+//
+// The obvious repair — sample only the FIRST Startup tick — was written, and
+// MUTATION-PROVED VACUOUS. Mutation: point JumpshotStartup's
+// AnimationNodeAnimation at "locomotion/jumpshotactive", so the shot begins
+// fully airborne. The entry sample still read +0.0003 and PASSED, because of the
+// one-tick reporting lag documented on ObserveGeometry: the first tick named
+// "JumpshotStartup" still carries the pre-move idle pose — which is the very
+// pose _toeBaselineY was latched from. The gate was asserting that the baseline
+// equals itself and could not fail for ANY clip.
+//
+// What is asserted instead is that Startup CONTAINS THE TAKEOFF: its lowest
+// reading is grounded (the gather) and its highest is airborne (the extension),
+// with the first tick dropped. Each half alone is satisfiable by a defect — only
+// the grounded half by a shot that never jumps, only the airborne half by one
+// that begins mid-air — so the pair is the claim. It is also the stronger
+// legibility statement: the rise is required to happen inside the 18 ticks an
+// opponent reads the feint window off, not somewhere off-screen.
 //
 // ── Why ActiveAnimNodeForHarness, not the resolver's own decision (#257) ────
 // Same discipline as DribbleLoopTest/PivotAnimTest/MoveKindAnimTest: reading
@@ -116,10 +256,39 @@ public partial class JumpshotAnimTest : Node
     private static readonly Vector3 FarSpot = new(12f, 0f, 12f); // keeps the other player out of PickupRadius
     private static readonly Vector3 RimCenter = new(0f, 3.05f, 0f); // matches BallController.DefaultRimCenter
 
+    // Thresholds are MEASURED, not assumed. Observed on the shipped clips through
+    // THIS harness (see the note below on why that qualifier matters):
+    //   toe rise during Active      = +0.2240  vs floor   0.15  -> ~1.5x margin
+    //   toe rise at Startup entry   = +0.0003  vs ceiling 0.08  -> ~270x margin
+    // Both numbers are the same two ContestAnimTest/LayupAnimTest use, deliberately:
+    // a shared scale keeps "airborne" meaning the same thing across the per-move
+    // harnesses. The airborne margin is the tighter of the two, but the broken
+    // value it must separate from is a grounded clip reading ~0.01-0.05, so 0.15
+    // still sits cleanly between them.
+    private const float AirborneMinToeRise = 0.15f;
+    private const float GroundedMaxToeRise = 0.08f;
+
+    // The takeoff half of control-jumpshot-grounded-startup gets its OWN, LOWER
+    // floor, and reusing AirborneMinToeRise here would be a latent flake rather
+    // than a stricter test. Startup's highest observable reading is +0.1541 —
+    // only 0.0041 above 0.15 — because the one-tick reporting lag means Startup's
+    // FINAL and highest pose (~0.22) is never sampled under the "JumpshotStartup"
+    // label at all; it lands on Active's first tick. A threshold 2.7% below the
+    // measured value would redden on any minor retune of the wind-up.
+    //
+    // 0.10 keeps a 1.5x margin against the measured +0.1541 while still sitting
+    // clearly ABOVE GroundedMaxToeRise (0.08), which is what keeps the two-sided
+    // claim non-degenerate: a clip cannot satisfy both halves by standing still.
+    private const float StartupTakeoffMinToeRise = 0.10f;
+
     private static readonly string[] KnownScenarios =
     {
-        "jumpshot-phases", "fadeaway-active", "no-fadeaway-when-squared-up", "no-placeholder-leak"
+        "jumpshot-phases", "fadeaway-active", "no-fadeaway-when-squared-up", "no-placeholder-leak",
+        "jumpshot-airborne-active", "control-jumpshot-grounded-startup", "jumpshot-track-completeness",
     };
+
+    // Pure resource inspection — needs no live tree, no tipoff, no move.
+    private static readonly string[] StaticScenarios = { "jumpshot-track-completeness" };
 
     private string _scenario = "jumpshot-phases";
 
@@ -144,6 +313,32 @@ public partial class JumpshotAnimTest : Node
     private bool _sawFadeawayActive;
     private bool _sawGenericPlaceholder; // the shared "Startup"/"Active"/"Recovery" leaked through
 
+    // Geometry, latched at EVENT TIME. Never recomputed at verdict time: by then
+    // the move is long over and the rig has settled back onto Locomotion, so a
+    // verdict-time read would measure a standing player and report a confident,
+    // meaningless "grounded" for every scenario.
+    private Skeleton3D _shooterSkel;
+    private bool _haveToeBaseline;
+    private float _toeBaselineY;             // lowest toe BEFORE the move — the standing stance
+    // Startup is asserted TWO-SIDED (grounded early, airborne late) rather than at
+    // a single entry sample — see the header note. Both bounds are kept for the
+    // same reason Active keeps both: the pair is the diagnosis.
+    private float _minToeRiseDuringStartup = float.PositiveInfinity;
+    private float _maxToeRiseDuringStartup = float.NegativeInfinity;
+    private int _startupTicksObserved;
+    // BOTH bounds across Active are kept, and the gate reduces with the MIN — see
+    // the header note "why airborne reduces with min". Both are printed so a clip
+    // that is airborne for only part of its release is legible in the log rather
+    // than failing anonymously (README trap 17's preferred shape, copied from
+    // LocomotionClipTest's #298 stride gate).
+    //
+    // Seeds are the infinities, not 0: a toe BELOW the baseline is a legitimate
+    // reading (the gather crouch settles the feet), and seeding at 0 would clamp
+    // one bound to a value the rig never produced.
+    private float _minToeRiseDuringActive = float.PositiveInfinity;
+    private float _maxToeRiseDuringActive = float.NegativeInfinity;
+    private int _activeTicksObserved;
+
     public override void _Ready()
     {
         string[] args = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).ToArray();
@@ -154,6 +349,12 @@ public partial class JumpshotAnimTest : Node
         {
             Fail($"unknown scenario '{_scenario}'.");
             Finish();
+            return;
+        }
+
+        if (StaticScenarios.Contains(_scenario))
+        {
+            VerdictTrackCompleteness();
             return;
         }
 
@@ -213,6 +414,13 @@ public partial class JumpshotAnimTest : Node
 
             case Step.Act:
                 if (_frame < _stepDeadlineFrame) break;
+                // The standing stance, latched on the LAST tick before the shot
+                // begins — while the shooter is still on Locomotion with both
+                // feet down. Every geometric reading below is a DIFFERENCE from
+                // this, so the gates measure "how far from standing" rather than
+                // raw Skeleton3D-space coordinates, which carry the rig's own
+                // offsets and would make the thresholds rig-specific magic.
+                LatchToeBaseline();
                 // The REAL production entry point for a shot (TripleThreatHarnessSeam's
                 // BeginJumpShotForHarness calls the same BeginCommittedMove
                 // choke point SampleMoveInput's shoot branch does).
@@ -283,6 +491,96 @@ public partial class JumpshotAnimTest : Node
         // wind-up entirely would otherwise still satisfy this latch.
         if (_sawJumpshotStartup && node == "FadeawayActive") _sawFadeawayActive = true;
         if (node == "Startup" || node == "Active" || node == "Recovery") _sawGenericPlaceholder = true;
+
+        ObserveGeometry(node);
+    }
+
+    // Reads the LIVE Skeleton3D mid-move. This is deliberately not a re-read of
+    // what rebuild_jumpshot_clips.gd already checks on the resource: a clip whose
+    // track paths fail to bind on scenes/Player.tscn is a SILENT no-op (#281's
+    // "Armature/" prefix), and every resource-side check still passes on it. The
+    // live skeleton is the only place that failure is visible.
+    private void ObserveGeometry(string node)
+    {
+        if (!_haveToeBaseline) return;
+
+        float toe = MeasureLowestToe();
+        // NaN propagates rather than defaulting to 0 — a Skeleton3D whose toe
+        // bones could not be found must leave the latches unset (and the verdicts
+        // failing) instead of reporting a flawless 0.0000 for every tick.
+        if (float.IsNaN(toe)) return;
+        float rise = toe - _toeBaselineY;
+
+        // The FIRST tick on which GetCurrentNode() names a phase still carries the
+        // PREVIOUS phase's pose — the AnimationTree reports the state it travelled
+        // to before the mixer has written that state's clip to the Skeleton3D.
+        // Measured, not assumed: with JumpshotStartup pointed at an airborne clip
+        // the entry sample still read +0.0003 (the idle stance), and with
+        // JumpshotActive pointed at a grounded clip the first Active sample still
+        // read Startup's airborne +0.18. Both phases therefore drop their first
+        // observed tick, or the gate measures the phase BEFORE the one it names.
+        //
+        // Startup has 18 ticks and Active 4, so dropping one leaves 17 and 3 —
+        // ample in both cases. If a future retune shortens Active to 1 tick this
+        // stops being viable and the scenario should fail loudly rather than
+        // silently measure nothing, which is what _activeTicksObserved > 0 in the
+        // verdict is for.
+        if (node == "JumpshotStartup")
+        {
+            _startupTicksObserved++;
+            if (_startupTicksObserved > 1)
+            {
+                _minToeRiseDuringStartup = Math.Min(_minToeRiseDuringStartup, rise);
+                _maxToeRiseDuringStartup = Math.Max(_maxToeRiseDuringStartup, rise);
+            }
+        }
+
+        if (node == "JumpshotActive")
+        {
+            _activeTicksObserved++;
+            if (_activeTicksObserved > 1)
+            {
+                _minToeRiseDuringActive = Math.Min(_minToeRiseDuringActive, rise);
+                _maxToeRiseDuringActive = Math.Max(_maxToeRiseDuringActive, rise);
+            }
+        }
+    }
+
+    private void LatchToeBaseline()
+    {
+        float toe = MeasureLowestToe();
+        if (float.IsNaN(toe)) return; // leaves _haveToeBaseline false -> verdicts fail loudly
+        _toeBaselineY = toe;
+        _haveToeBaseline = true;
+    }
+
+    // Lowest of the two toes, in the Skeleton3D's own space. Absolute values are
+    // meaningless here (they carry the rig's offsets); only differences from
+    // _toeBaselineY are ever asserted. Mirrors ContestAnimTest.MeasureLowestToe.
+    private float MeasureLowestToe()
+    {
+        _shooterSkel ??= FindSkeleton(_shooter);
+        if (_shooterSkel == null) return float.NaN;
+
+        float lowest = float.PositiveInfinity;
+        foreach (string toe in new[] { "mixamorig_LeftToeBase", "mixamorig_RightToeBase" })
+        {
+            int idx = _shooterSkel.FindBone(toe);
+            if (idx < 0) continue;
+            lowest = Math.Min(lowest, _shooterSkel.GetBoneGlobalPose(idx).Origin.Y);
+        }
+        return float.IsPositiveInfinity(lowest) ? float.NaN : lowest;
+    }
+
+    private static Skeleton3D FindSkeleton(Node root)
+    {
+        if (root is Skeleton3D s) return s;
+        foreach (Node child in root.GetChildren())
+        {
+            Skeleton3D found = FindSkeleton(child);
+            if (found != null) return found;
+        }
+        return null;
     }
 
     private void RenderVerdict()
@@ -293,7 +591,200 @@ public partial class JumpshotAnimTest : Node
             case "fadeaway-active":              VerdictFadeawayActive(); break;
             case "no-fadeaway-when-squared-up":  VerdictNoFadeawayWhenSquaredUp(); break;
             case "no-placeholder-leak":          VerdictNoPlaceholderLeak(); break;
+            case "jumpshot-airborne-active":     VerdictAirborneActive(); break;
+            case "control-jumpshot-grounded-startup": VerdictGroundedStartup(); break;
         }
+    }
+
+    // ── Scenario: jumpshot-airborne-active (positive) ───────────────────────
+    // A jump shot whose feet never leave the floor is not a jump shot — it is a
+    // set shot, and it reads as one. This is the gate that would catch a clip
+    // re-slice landing on the wrong part of the source arc, or a re-authored
+    // clip that lost its root translation.
+    private void VerdictAirborneActive()
+    {
+        GD.Print($"[jumpshot-anim]   toe rise during Active: min={_minToeRiseDuringActive:F4} " +
+                 $"max={_maxToeRiseDuringActive:F4} over {_activeTicksObserved} tick(s) " +
+                 $"(floor {AirborneMinToeRise:F2} applies to MIN), baseline latched = {_haveToeBaseline}");
+
+        // The min is the gate; the max is printed for legibility. See the header
+        // for the mutation that proves max alone is not enough.
+        bool pass = _haveToeBaseline
+                    && _sawJumpshotActive
+                    && _activeTicksObserved > 0
+                    && _minToeRiseDuringActive >= AirborneMinToeRise;
+        if (pass)
+            GD.Print($"[jumpshot-anim] PASS jumpshot-airborne-active — across ALL {_activeTicksObserved} " +
+                     $"\"JumpshotActive\" tick(s) the lowest toe stayed at least {_minToeRiseDuringActive:F4} " +
+                     $"above the stance the shot began in (floor {AirborneMinToeRise:F2}, peak " +
+                     $"{_maxToeRiseDuringActive:F4}). The shooter is off the floor for the whole release.");
+        else
+            Fail($"jumpshot-airborne-active: toe rise during Active was min={_minToeRiseDuringActive:F4} " +
+                 $"max={_maxToeRiseDuringActive:F4} over {_activeTicksObserved} tick(s), need MIN >= " +
+                 $"{AirborneMinToeRise:F2} (sawActive={_sawJumpshotActive}, baseline={_haveToeBaseline}). " +
+                 "If min is low while max is high, the shooter touched down DURING the release — the Active " +
+                 "clip is grounded and only its first tick inherited Startup's airborne pose. If both are " +
+                 "low, the clip lost its root translation or its tracks are not binding on Player.tscn (#281).");
+        Finish(pass ? 0 : 1);
+    }
+
+    // ── Scenario: control-jumpshot-grounded-startup (control) ───────────────
+    // Two jobs, and the second is the one that makes it a control rather than a
+    // second positive:
+    //
+    //   (a) it pins the CONTRAST — grounded at Startup entry, airborne by Active
+    //       — which is what makes the motion a RISE. "Airborne during Active"
+    //       alone is equally satisfied by a clip that begins airborne and stays
+    //       there, i.e. a player who never jumps because he was already floating.
+    //   (b) it asserts its own premise. A dead toe instrument — a Skeleton3D the
+    //       harness failed to find, bones renamed by a rig change, or a clip
+    //       bound to nothing — reports a constant value, which satisfies
+    //       "grounded at entry" PERFECTLY. So this scenario requires the SAME
+    //       run's Active reading to have gone airborne first. A frozen instrument
+    //       cannot produce both readings.
+    private void VerdictGroundedStartup()
+    {
+        GD.Print($"[jumpshot-anim]   toe rise across Startup: min={_minToeRiseDuringStartup:F4} " +
+                 $"(ceiling {GroundedMaxToeRise:F2}) max={_maxToeRiseDuringStartup:F4} " +
+                 $"(floor {StartupTakeoffMinToeRise:F2}) over {_startupTicksObserved} tick(s); " +
+                 $"premise min during Active = {_minToeRiseDuringActive:F4}");
+
+        // The premise uses the SAME min-reduction the positive scenario gates on,
+        // not max — a premise weaker than the claim it underwrites would let this
+        // control pass on exactly the runs the positive scenario rejects.
+        bool premise = _haveToeBaseline
+                       && _sawJumpshotStartup
+                       && _startupTicksObserved > 1
+                       && _minToeRiseDuringActive >= AirborneMinToeRise;
+
+        // Two-sided: Startup must CONTAIN the takeoff. Grounded at its low point
+        // (the gather) and airborne at its high point (the extension). Asserting
+        // only the grounded half would be satisfied by a Startup that never leaves
+        // the floor; asserting only the airborne half would be satisfied by one
+        // that begins in the air. Together they say "the rise happens HERE",
+        // inside the 18 ticks the feint window is read off.
+        bool wasGrounded = _minToeRiseDuringStartup <= GroundedMaxToeRise;
+        bool leftFloor = _maxToeRiseDuringStartup >= StartupTakeoffMinToeRise;
+        bool pass = premise && wasGrounded && leftFloor;
+
+        if (pass)
+            GD.Print($"[jumpshot-anim] PASS control-jumpshot-grounded-startup — across \"JumpshotStartup\" the " +
+                     $"lowest toe went from {_minToeRiseDuringStartup:F4} (grounded, ceiling " +
+                     $"{GroundedMaxToeRise:F2}) up to {_maxToeRiseDuringStartup:F4} (airborne, floor " +
+                     $"{StartupTakeoffMinToeRise:F2}), and the same run held {_minToeRiseDuringActive:F4} throughout " +
+                     "Active. The takeoff happens INSIDE the wind-up: the shot rises from the floor rather " +
+                     "than beginning airborne, and the toe instrument is demonstrably live.");
+        else
+            Fail($"control-jumpshot-grounded-startup: startup min={_minToeRiseDuringStartup:F4} " +
+                 $"(need <= {GroundedMaxToeRise:F2}) max={_maxToeRiseDuringStartup:F4} " +
+                 $"(need >= {StartupTakeoffMinToeRise:F2}) over {_startupTicksObserved} tick(s); premise " +
+                 $"minActiveRise={_minToeRiseDuringActive:F4} (floor {AirborneMinToeRise:F2}), " +
+                 $"sawStartup={_sawJumpshotStartup}, baseline={_haveToeBaseline}. A high MIN means the shot " +
+                 "began airborne; a low MAX means it never left the floor during the wind-up. If the PREMISE " +
+                 "broke, a grounded reading proves nothing — a frozen instrument is grounded too — so this " +
+                 "fails rather than passes.");
+        Finish(pass ? 0 : 1);
+    }
+
+    // ── Scenario: jumpshot-track-completeness (static) ──────────────────────
+    // Encodes the #316 measurement (see the header). The assertion is NOT a
+    // coverage percentage — the shipped clips are 52/65 = 80% and that is
+    // CORRECT, because the 13 untracked bones are all leaf terminators. A
+    // percentage floor would have to be set at 80% to pass, which asserts nothing
+    // about the property that actually matters.
+    //
+    // What matters is the a45bd1d trap's real precondition: an untracked bone
+    // pins its whole SUBTREE to rest. A leaf has no subtree, and its own rest is
+    // measured relative to a parent the clip DOES animate, so it follows correctly.
+    // Hence: every NON-LEAF bone must be animated. That is rig-derived rather than
+    // a magic number, so a rig change moves the requirement instead of silently
+    // invalidating it.
+    private void VerdictTrackCompleteness()
+    {
+        var lib = GD.Load<AnimationLibrary>("res://assets/locomotion.res");
+        if (lib == null)
+        {
+            Fail("jumpshot-track-completeness: could not load res://assets/locomotion.res.");
+            Finish(1);
+            return;
+        }
+
+        // The RAW rig, never scenes/Player.tscn: BlendRestAnchor rewrites bone
+        // rests at _Ready. Only the HIERARCHY is read here so that would not
+        // actually bite, but the raw-FBX rule is cheap to honour and the next
+        // person to extend this may well reach for a rest transform.
+        var rigScene = GD.Load<PackedScene>("res://assets/Y Bot.fbx");
+        Skeleton3D rig = rigScene == null ? null : FindSkeleton(rigScene.Instantiate());
+        if (rig == null)
+        {
+            Fail("jumpshot-track-completeness: could not find a Skeleton3D in res://assets/Y Bot.fbx.");
+            Finish(1);
+            return;
+        }
+
+        var nonLeaf = new List<string>();
+        for (int i = 0; i < rig.GetBoneCount(); i++)
+            if (rig.GetBoneChildren(i).Length > 0)
+                nonLeaf.Add(rig.GetBoneName(i));
+
+        // A rig that reported no non-leaf bones would make this scenario vacuous
+        // — every clip would trivially satisfy an empty requirement.
+        if (nonLeaf.Count == 0)
+        {
+            Fail($"jumpshot-track-completeness: the rig reported {rig.GetBoneCount()} bones but NONE with " +
+                 "children, so 'every non-leaf bone is animated' would be vacuously true. The hierarchy " +
+                 "lookup is broken.");
+            Finish(1);
+            return;
+        }
+
+        string[] clips = { "jumpshotstartup", "jumpshotactive", "jumpshotrecovery", "fadeawayactive" };
+        bool pass = true;
+
+        foreach (string clipName in clips)
+        {
+            if (!lib.HasAnimation(clipName))
+            {
+                Fail($"jumpshot-track-completeness: '{clipName}' is missing from locomotion.res.");
+                pass = false;
+                continue;
+            }
+
+            Animation anim = lib.GetAnimation(clipName);
+            var tracked = new HashSet<string>();
+            for (int t = 0; t < anim.GetTrackCount(); t++)
+            {
+                NodePath path = anim.TrackGetPath(t);
+                // Skipping subname-less paths here is safe in a way README trap 15
+                // warns it usually is NOT: that trap is about a gate that reports
+                // "unresolved=[]" by exempting the very tracks that failed to bind.
+                // This gate runs the other direction — it iterates the RIG's bones
+                // and demands each one appear — so a path contributing no bone name
+                // simply fails to satisfy anything and can mask nothing.
+                if (path.GetSubNameCount() == 0) continue;
+                tracked.Add(path.GetSubName(0));
+            }
+
+            var missing = nonLeaf.Where(b => !tracked.Contains(b)).ToList();
+            GD.Print($"[jumpshot-anim]   '{clipName}': {tracked.Count}/{rig.GetBoneCount()} bones animated, " +
+                     $"{nonLeaf.Count - missing.Count}/{nonLeaf.Count} non-leaf bones animated");
+
+            if (missing.Count > 0)
+            {
+                Fail($"jumpshot-track-completeness: '{clipName}' leaves {missing.Count} NON-LEAF bone(s) " +
+                     $"untracked: [{string.Join(", ", missing)}]. Each pins its whole subtree to the rig's " +
+                     "rest pose (a Mixamo T-pose) for the clip's duration — the a45bd1d trap. Re-run " +
+                     "tools/rebuild_jumpshot_clips.gd, whose _assert_complete() should have caught this at " +
+                     "build time.");
+                pass = false;
+            }
+        }
+
+        if (pass)
+            GD.Print("[jumpshot-anim] PASS jumpshot-track-completeness — all four jumpshot clips animate every " +
+                     $"one of the rig's {nonLeaf.Count} non-leaf bones, so no bone can drag a subtree to the " +
+                     "T-pose rest when its state is entered at full weight.");
+        Finish(pass ? 0 : 1);
     }
 
     // ── Scenario: jumpshot-phases (positive) ────────────────────────────────

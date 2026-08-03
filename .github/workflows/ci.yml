@@ -1047,12 +1047,47 @@ jobs:
       #
       # Whether either clip LOOKS right stays #279/#173's deferred human feel
       # judgment (ADR-0021).
+      #
+      # The last three scenarios are #316. That issue proposed RE-AUTHORING these
+      # clips in headless Blender; all three of its stated justifications were
+      # measured against the shipped locomotion.res first and none survived (the
+      # clips are resampled MOCAP, not hand-keyed; their only untracked bones are
+      # inert leaf terminators; and the grounding it wanted proven was already
+      # true). The re-author was dropped and these gates were added in its place,
+      # because the one real gap was that none of it was asserted in CI. The full
+      # measurement and the mutation table live in JumpshotAnimTest.cs's header —
+      # read it before re-opening the re-author.
+      #
+      #   jumpshot-airborne-active          the shooter is off the floor for ALL
+      #                                     of the 4-tick release. Reduces with
+      #                                     MIN, not max: a max-reduction passed
+      #                                     on a grounded Active clip because the
+      #                                     first Active tick still carries
+      #                                     Startup's airborne pose (README trap
+      #                                     17, mutation-proven).
+      #   control-jumpshot-grounded-startup the takeoff happens INSIDE the 18-tick
+      #                                     wind-up — grounded at its low point,
+      #                                     airborne at its high point. Two-sided
+      #                                     because each half alone is satisfied
+      #                                     by a real defect. Also asserts its own
+      #                                     premise (the same run's Active reading)
+      #                                     so a frozen toe instrument, which is
+      #                                     "grounded" too, cannot pass it.
+      #   jumpshot-track-completeness       every NON-LEAF rig bone is animated by
+      #                                     all four clips. Deliberately not a
+      #                                     coverage percentage: the clips are
+      #                                     52/65 = 80% and that is CORRECT, since
+      #                                     the 13 gaps are leaf terminators that
+      #                                     can drag no subtree to the T-pose rest.
       - name: Run jumpshot-animation state harness
         run: |
           godot --headless --path . res://tests/integration/JumpshotAnimTest.tscn -- --harness-scenario=jumpshot-phases
           godot --headless --path . res://tests/integration/JumpshotAnimTest.tscn -- --harness-scenario=fadeaway-active
           godot --headless --path . res://tests/integration/JumpshotAnimTest.tscn -- --harness-scenario=no-fadeaway-when-squared-up
           godot --headless --path . res://tests/integration/JumpshotAnimTest.tscn -- --harness-scenario=no-placeholder-leak
+          godot --headless --path . res://tests/integration/JumpshotAnimTest.tscn -- --harness-scenario=jumpshot-airborne-active
+          godot --headless --path . res://tests/integration/JumpshotAnimTest.tscn -- --harness-scenario=control-jumpshot-grounded-startup
+          godot --headless --path . res://tests/integration/JumpshotAnimTest.tscn -- --harness-scenario=jumpshot-track-completeness
 
       # Crossover hand-side animation states (issue #280). Player.tscn now
       # carries SIX crossover states (Crossover{Startup,Active,Recovery}
