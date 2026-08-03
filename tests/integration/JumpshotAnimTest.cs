@@ -754,6 +754,26 @@ public partial class JumpshotAnimTest : Node
             var tracked = new HashSet<string>();
             for (int t = 0; t < anim.GetTrackCount(); t++)
             {
+                // ROTATION_3D only (#330). The first cut of this gate counted a
+                // track of ANY type, which is a latent false-negative: Godot's
+                // AnimationMixer drives position/rotation/scale as independent
+                // channels, so a bone whose only track is SCALE_3D still has its
+                // ROTATION written from skeleton rest at full weight. Rotation
+                // rest-fallback IS the a45bd1d trap, so rotation is the coverage
+                // this gate exists to measure.
+                //
+                // It was never LYING about the four clips below — they are 52
+                // rotation + 1 position with zero scale tracks, so the CI numbers
+                // were honest either way. But README trap 13 makes the gap
+                // reachable: any rebuild script that skipped the "drop every
+                // per-bone SCALE track" step would ship clips this gate waved
+                // through. `locomotion/idle` is exactly that shape today — a
+                // 1-key SCALE track and no rotation track for
+                // mixamorig_LeftToeBase — and scored clean here until this filter
+                // landed (#330; LocomotionClipTest's family 9 is the gate that
+                // catches it).
+                if (anim.TrackGetType(t) != Animation.TrackType.Rotation3D) continue;
+
                 NodePath path = anim.TrackGetPath(t);
                 // Skipping subname-less paths here is safe in a way README trap 15
                 // warns it usually is NOT: that trap is about a gate that reports
@@ -766,8 +786,11 @@ public partial class JumpshotAnimTest : Node
             }
 
             var missing = nonLeaf.Where(b => !tracked.Contains(b)).ToList();
-            GD.Print($"[jumpshot-anim]   '{clipName}': {tracked.Count}/{rig.GetBoneCount()} bones animated, " +
-                     $"{nonLeaf.Count - missing.Count}/{nonLeaf.Count} non-leaf bones animated");
+            // Printed, not just asserted: #330's premise is that these four clips
+            // measured 52/52 non-leaf BEFORE the rotation filter and must still
+            // measure 52/52 after it. A silent pass cannot show that.
+            GD.Print($"[jumpshot-anim]   '{clipName}': {tracked.Count}/{rig.GetBoneCount()} bones rotation-animated, " +
+                     $"{nonLeaf.Count - missing.Count}/{nonLeaf.Count} non-leaf bones rotation-animated");
 
             if (missing.Count > 0)
             {
