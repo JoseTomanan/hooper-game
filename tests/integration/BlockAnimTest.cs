@@ -54,6 +54,49 @@ namespace HOOPERGAME.Tests.Integration;
 // prefix) cannot produce a passing pair. A dead instrument reads a flat 0 for
 // both, which passes the control and FAILS the positive gate.
 //
+// ── Mutation evidence (measured, not asserted) ──────────────────────────────
+// Six mutations were applied and the affected scenarios re-run, each reverted
+// from a pristine backup before the next was applied. The table is here rather
+// than only in the PR because its real content is that NO SINGLE SCENARIO
+// CATCHES EVERYTHING, and a future reader deleting one of them needs to see
+// which defect they are giving up.
+//
+//   mutation                                    scenario                  result
+//   (none — shipped state)                      all five                  PASS
+//   the pre-#283 tree (all three states on      no-placeholder-leak       RED
+//     one locomotion/idle sub-resource)           — the literal #296 defect
+//   BlockActive state -> the STARTUP             no-placeholder-leak       RED
+//     sub-resource (a REAL clip, wrong one)        — what a blocklist misses
+//   blockactive clip -> locomotion/contestactive airborne-active   -0.0300 RED
+//     (block becomes a contest)                  no-placeholder-leak       RED
+//   blockstartup clip -> locomotion/blockactive  control-grounded  +0.5000 RED
+//     (the wind-up is already airborne)          airborne-active           PASS
+//   BlockMove startupFrames 10 -> 11             segment-lengths           RED
+//     (a retune without re-running the tool)       — dev 0.016667s
+//   ["block"] removed from ClippedMovePrefixes   phases                    RED
+//     (resolver falls through to generic)          — sawGenericPlaceholder
+//
+// Three things that table says out loud:
+//
+// 1. The contestactive row is the whole point of block-airborne-active. It
+//    reads -0.0300 (a contest DROPS the hips; the "rise" is negative), while
+//    block-phases, block-segment-lengths and block-startup-vs-recovery-style
+//    pose checks would all still be green — a contest clip in a Block state is
+//    a real, well-formed, correctly-timed clip playing the wrong move.
+//
+// 2. The blockstartup->blockactive row is why the control is not decoration.
+//    block-airborne-active STILL PASSES there, because with an airborne
+//    baseline the Active peak is still far above it. Only the control sees it.
+//    That is the one defect the positive gate is structurally blind to, and it
+//    is the exact vacuity blender_anim_lib.verify_airborne refuses to permit by
+//    requiring an explicit ref_height.
+//
+// 3. The mutation that reddens block-phases is a RESOLVER change, not a clip
+//    change: no amount of pointing states at wrong clips can move the tree off
+//    them, because GetCurrentNode() reads the STATE. That is the same division
+//    of labour ContestAnimTest found — and the reason both a state-level and a
+//    clip-level scenario have to exist.
+//
 // ── Why ActiveAnimNodeForHarness, not the resolver's return value (#257) ─────
 // Travel() to a missing/misnamed state only LOGS; it never throws. Asserting
 // MoveAnimResolver.ResolveStateName(...) == "BlockActive" would pass on a
