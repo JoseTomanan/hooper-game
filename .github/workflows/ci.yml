@@ -1376,6 +1376,46 @@ jobs:
           godot --headless --path . res://tests/integration/ContestAnimTest.tscn -- --harness-scenario=contest-arms-rise
           godot --headless --path . res://tests/integration/ContestAnimTest.tscn -- --harness-scenario=control-contest-arms-low-startup
 
+      # Jab step per-move clips (issue #304, #302 batch 2) — the smallest
+      # committed move in the game (Startup 3 / Active 2 / Recovery 4 ticks,
+      # 0.150 s total). Before #304 "jab" fell through
+      # MoveAnimResolver.ResolveStateName's default case onto the shared
+      # generic states, which per #296 rendered a 3-tick looping idle for
+      # Startup/Recovery and a 2-tick slice of a SPRINT STRIDE for Active.
+      #
+      # jabstep-segment-lengths matters unusually much here: Active is 2 ticks
+      # = 0.0333 s, so a one-tick mis-slice is a 50% length error, not a
+      # rounding nicety — the tolerance is a float-noise band (1e-3 s), not a
+      # drift allowance.
+      #
+      # jabstep-torso-pitches-forward-in-active is the issue's own defining
+      # contrast with retreat dribble (#305): jab step leans FORWARD over the
+      # extended front foot. Measured live: the pre-move-baseline -> Active
+      # delta is 0.1356 m (floor 0.02); control-jabstep-torso-modest-in-startup
+      # proves Startup's own growth (0.1122) stays measurably below Active's
+      # (a real but deliberately thin 0.0234 m margin — this is a <=3-tick
+      # wind-up that intentionally brings the read most of the way to the stab
+      # pose by Startup's own end, the same choice author_contest.py made for
+      # its own Startup/Active boundary).
+      #
+      # jabstep-differs-from-retreatdribble is GUARDED: #305 (retreat dribble)
+      # has not landed on main as of this PR, so the scenario detects the
+      # absence of Player.tscn's "RetreatDribbleActive" state and exits 0 with
+      # a printed SKIPPED verdict rather than silently omitting the file or
+      # asserting an untestable premise. See PR #304's body for the filed
+      # follow-up issue that tracks wiring the real comparison once #305 lands.
+      # Each scenario exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run jab step per-move animation state harness
+        run: |
+          godot --headless --path . res://tests/integration/JabStepAnimTest.tscn -- --harness-scenario=jabstep-phases
+          godot --headless --path . res://tests/integration/JabStepAnimTest.tscn -- --harness-scenario=jabstep-no-placeholder-leak
+          godot --headless --path . res://tests/integration/JabStepAnimTest.tscn -- --harness-scenario=jabstep-segment-lengths
+          godot --headless --path . res://tests/integration/JabStepAnimTest.tscn -- --harness-scenario=jabstep-edges
+          godot --headless --path . res://tests/integration/JabStepAnimTest.tscn -- --harness-scenario=jabstep-startup-differs-from-recovery
+          godot --headless --path . res://tests/integration/JabStepAnimTest.tscn -- --harness-scenario=jabstep-torso-pitches-forward-in-active
+          godot --headless --path . res://tests/integration/JabStepAnimTest.tscn -- --harness-scenario=control-jabstep-torso-modest-in-startup
+          godot --headless --path . res://tests/integration/JabStepAnimTest.tscn -- --harness-scenario=jabstep-differs-from-retreatdribble
+
       # Moving crossover — momentum-aware burst with left-stick exit (issue
       # #198, ADR-0003 amendment). CrossoverBurstMathTests already pin the
       # pure composition function; this drives a REAL PlayerController
