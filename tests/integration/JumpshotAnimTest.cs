@@ -671,7 +671,7 @@ public partial class JumpshotAnimTest : Node
             GD.Print($"[jumpshot-anim] PASS control-jumpshot-grounded-startup — across \"JumpshotStartup\" the " +
                      $"lowest toe went from {_minToeRiseDuringStartup:F4} (grounded, ceiling " +
                      $"{GroundedMaxToeRise:F2}) up to {_maxToeRiseDuringStartup:F4} (airborne, floor " +
-                     $"{AirborneMinToeRise:F2}), and the same run held {_minToeRiseDuringActive:F4} throughout " +
+                     $"{StartupTakeoffMinToeRise:F2}), and the same run held {_minToeRiseDuringActive:F4} throughout " +
                      "Active. The takeoff happens INSIDE the wind-up: the shot rises from the floor rather " +
                      "than beginning airborne, and the toe instrument is demonstrably live.");
         else
