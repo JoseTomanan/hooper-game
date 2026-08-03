@@ -568,10 +568,30 @@ public class MoveAnimResolverTests
     [Fact]
     public void ResolveStateName_UnclippedMoveActive_ReturnsGenericFallback()
     {
-        // "jab" is a real committed move (RequestBeginMove sends it) but is NOT
+        // "spin" is a real committed move (RequestBeginMove sends it) but is NOT
         // in the clipped-move table, so it must fall back to the shared Active
         // clip rather than throwing or resolving to a nonexistent state name.
-        Assert.Equal("Active", MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "jab", HandSide.Left, HandSide.Right));
+        Assert.Equal("Active", MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "spin", HandSide.Left, HandSide.Right));
+    }
+
+    [Fact]
+    public void ResolveStateName_JabStep_ReturnsPerMoveStatesUnhanded()
+    {
+        // (#304) JabStep is clipped but deliberately UNHANDED — the move is a
+        // pure foot gesture independent of which hand the ball is in (JabStep.cs's
+        // own class doc). All three phases must resolve to the bare "JabStep*"
+        // names with NO Left/Right suffix, identically whichever hand the ball
+        // is in. NOTE: CommittedMove.Id is "jab" (JabStep.cs's ctor), NOT
+        // "jabstep" — ClippedMovePrefixes keys on the real moveId.
+        foreach (var ballHand in new[] { HandSide.Left, HandSide.Right })
+        {
+            Assert.Equal("JabStepStartup",
+                MoveAnimResolver.ResolveStateName(MoveAnimState.Startup, "jab", ballHand, HandSide.Right));
+            Assert.Equal("JabStepActive",
+                MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "jab", ballHand, HandSide.Right));
+            Assert.Equal("JabStepRecovery",
+                MoveAnimResolver.ResolveStateName(MoveAnimState.Recovery, "jab", ballHand, HandSide.Right));
+        }
     }
 
     [Fact]
