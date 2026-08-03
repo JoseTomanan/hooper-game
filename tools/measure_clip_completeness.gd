@@ -25,6 +25,15 @@ extends SceneTree
 #               is the a45bd1d trap. A leaf has no subtree and its rest is
 #               relative to a parent the clip does animate, so it follows
 #               correctly. Only a non-leaf gap can produce a false read.
+#
+# BOTH numbers count ROTATION_3D tracks ONLY (#330). The first cut of this
+# instrument counted a bone as animated if it carried a track of ANY type, and
+# that is a false negative: Godot's AnimationMixer drives translation, rotation
+# and scale as independent channels, so a bone whose only track is SCALE_3D
+# still has its ROTATION written from skeleton rest. The a45bd1d trap is
+# specifically about rotation rest-fallback. `idle` is exactly that shape — it
+# carries a 1-key SCALE track and no rotation track for mixamorig_LeftToeBase —
+# and scored a clean 30/52 here until this filter landed.
 
 const LIB_PATH := "res://assets/locomotion.res"
 const RIG_FBX := "res://assets/Y Bot.fbx"
@@ -58,7 +67,8 @@ func _initialize() -> void:
 	print("[measure] rig '%s': %d bones, %d of them non-leaf" % [RIG_FBX, total, non_leaf.size()])
 	print("[measure] library holds %d clips" % lib.get_animation_list().size())
 	print("")
-	print("%-26s %8s %6s %6s %6s %8s %10s" % ["clip", "len", "trk", "rot", "pos", "bones", "non-leaf"])
+	print("[measure] coverage columns count ROTATION_3D tracks only (#330)")
+	print("%-26s %8s %6s %6s %6s %8s %10s" % ["clip", "len", "trk", "rot", "pos", "rotbone", "non-leaf"])
 
 	var names := CLIPS
 	if names.is_empty():
@@ -84,9 +94,12 @@ func _initialize() -> void:
 			if b == "":
 				continue
 			if skel.find_bone(b) < 0:
+				# Unresolved is a whole-clip health check, so it stays type-blind:
+				# a SCALE track aimed at a bone the rig does not have is still a
+				# defect worth surfacing, even though it cannot cause a T-pose.
 				if not unresolved.has(b):
 					unresolved.append(b)
-			else:
+			elif a.track_get_type(i) == Animation.TYPE_ROTATION_3D:
 				bones[b] = true
 		var n := bones.size()
 		var nl_missing := []
@@ -113,6 +126,8 @@ func _initialize() -> void:
 		var a: Animation = lib.get_animation(name)
 		var tracked := {}
 		for i in a.get_track_count():
+			if a.track_get_type(i) != Animation.TYPE_ROTATION_3D:
+				continue
 			var b := bone_of(a.track_get_path(i))
 			if b != "" and skel.find_bone(b) >= 0:
 				tracked[b] = true

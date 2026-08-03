@@ -421,6 +421,38 @@ turns a green scenario into a vacuous one.
   `&&`, as in `LocomotionClipTest`'s #298 stride check
   (`ptpLeft >= floor && ptpRight >= floor`): same semantics as `min`, but it
   prints both numbers so a one-limbed clip is legible in the log.
+- **A bone-coverage gate must count `ROTATION_3D` tracks, not tracks of any
+  type.** Godot's `AnimationMixer` drives position/rotation/scale as independent
+  channels, so a bone whose only track is `SCALE_3D` still has its **rotation**
+  written from skeleton rest at full weight — the a45bd1d T-pose trap is
+  specifically a rotation-channel fact. `JumpshotAnimTest.VerdictTrackCompleteness`
+  and `tools/measure_clip_completeness.gd` both shipped type-blind in PR #329 and
+  both scored `locomotion/idle` clean at 30/52 while it carried a 1-key SCALE
+  track and **no rotation track** for `mixamorig_LeftToeBase` (#330). Mutation-
+  measured: with the filter removed, `idle` reads a perfect 22/22 while `pivot`
+  still fails — so a type-blind gate hides the **root cause** while still
+  reporting the **symptom**, which is worse than a miss because it points the
+  reader at `rebuild_pivot_upperbody.gd`, which is correct code.
+- **Non-leaf is necessary, not sufficient: grade the MATERIAL set and read the
+  gap LIST, not the gap COUNT.** Finger joints are non-leaf and effectively inert
+  (a finger's subtree is one more finger joint). 22 of `pivot`'s 23 non-leaf gaps
+  were fingers, which is exactly how one material foot bone sat unnoticed in a
+  shipped clip. Material gaps are **spine, limb, or foot** bones;
+  `LocomotionClipTest.IsFingerJoint` is the shared predicate, deliberately not
+  matching `mixamorig_LeftHand`/`RightHand` themselves.
+- **A missing rotation track is not automatically a visible defect — measure the
+  severity before asserting it.** #330 was filed claiming `pivot` rendered the
+  feet asymmetrically. It did not: the surviving `RightToeBase` key sits
+  `0.0000°` from that bone's Y Bot rest and an absent track rest-falls to exactly
+  its own rest, so both toes already rendered at rest. A gap is visible only when
+  the bone's **intended pose differs from rest**, which nothing tells you until
+  someone measures. The real cost was narrower and easier to miss: the missing
+  track silently shrank the **#287 corridor sweep**, which intersects `idle`'s
+  and `run`'s rotation tracks, so the bone dropped out of the blend-degeneracy
+  guard entirely (7 leg-chain bones swept while the code read as though it
+  covered the chain; 8 after the fix, still 0/90). When a coverage gap turns out
+  to be cosmetically inert, check what **other** gates were silently narrowed by
+  it before concluding it cost nothing.
 - **Scene-load-only checks for `.tscn` edits (ADR-0011).** A pure
   scene/resource text-edit (add a node, set an export, wire a `NodePath`)
   needs a headless load check — the scene loads without errors — in its own
