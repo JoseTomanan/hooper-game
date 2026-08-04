@@ -360,28 +360,45 @@ def plant_foot(arm, side, ankle_target, toe_dir, geom, frame=None):
     Returns `(solve_two_link triple, achieved_ankle_error_in_armature_units)`.
     Keys the three rotated bones when `frame` is given.
 
-    KNOWN LIMITATION -- the solve is not exact for LATERAL targets (#315 review;
-    pre-existing, verbatim from #300). `Matrix.Rotation(-hip_offset, 4, right)`
-    only rotates the component of `dir_ankle` perpendicular to `right`, so when
-    the target has a sideways component the achieved hip angle is strictly less
-    than `hip_offset`:
+    THE SOLVE IS EXACT, INCLUDING FOR LATERAL TARGETS (#321). It did not used to
+    be. The old femur direction was `Matrix.Rotation(-hip_offset, 4, right) @
+    dir_ankle`, and a rotation about the rig's `right` only moves the component
+    of `dir_ankle` PERPENDICULAR to `right`, so a laterally-offset target
+    achieved strictly less than the requested hip angle:
 
         cos(theta_eff) = cos^2(alpha) + sin^2(alpha) * cos(hip_offset)
 
-    with alpha the angle between `dir_ankle` and `right`. The knee then lands off
-    the IK circle and the ankle falls SHORT of `ankle_target`.
+    with alpha the angle between `dir_ankle` and `right`. The knee landed off the
+    IK circle, the tibia was then aimed at the true target from that wrong knee,
+    and the ankle fell SHORT. Measured: 0.029890 m worst-case on the dribble --
+    a NEARLY PLANAR gait, against a whole ground band of 0.0315 m -- and
+    0.033680 m on the selftest's lateral cases.
 
-    `aim_arm` does not share this defect -- it builds its rotation axis as
-    `dir_wrist.cross(hint)`, perpendicular by construction, so its solve is exact
-    (its selftest asserts sub-micron wrist error). The fix here is the same
-    construction, but it is deferred: it moves this clip's output and would break
-    the 0/4160-pair equivalence gate that is #315's acceptance test.
+    Note what that formula does at alpha = 90 deg: the shortfall vanishes
+    exactly. Every clip authored before #321 is a near-sagittal gait, and every
+    assertion written for them measured that one angle -- which is how a 3 cm
+    error survived two milestones of green gates.
 
-    The returned error is the guard in the meantime. It is a pure measurement --
-    it cannot change the exported pose -- and it is why this is now a measured
-    limitation rather than an invisible one. Forward-and-back gaits stay in the
-    sub-millimetre range; moves with real lateral footwork (euro-step, spin,
-    step-back, defensive slides) are where it would matter.
+    The fix is `aim_arm`'s construction, applied to the leg: build the rotation
+    axis PERPENDICULAR BY CONSTRUCTION as `dir_ankle.cross(forward)`, so
+    rotating `dir_ankle` about it by a POSITIVE `hip_offset` carries it toward
+    `forward` -- putting the knee ahead of the hip->ankle line, the only way a
+    human knee bends -- and lands the knee exactly on the IK circle.
+
+    Sign convention deliberately mirrors `aim_arm` rather than inventing a
+    second one: `cross(reach, hint)` with a POSITIVE angle, where the old code
+    used `right` with a NEGATIVE one. Do not "tidy" one to match the other.
+
+    A CONSEQUENCE WORTH KNOWING: the femur solve no longer reads `geom.right` at
+    all, so it is now independent of that axis's sign. `geom.right`/`geom.lateral`
+    survives here only as `aim_matrix`'s side reference, i.e. bone ROLL -- where
+    its sign is still load-bearing (flipping it rolls the leg 180 deg) but its
+    anatomy is irrelevant.
+
+    The returned ankle error stays reported even though it now reads as float
+    noise. It is the standing guard: a future spec that pushes a target outside
+    reach, or a rig whose bone tails stop coinciding with their children's heads,
+    shows up here as a number instead of as a subtly wrong pose.
     """
     up_leg, leg, foot_b, _toe_b = LEG_CHAIN[side]
     right = geom.right
@@ -392,11 +409,28 @@ def plant_foot(arm, side, ankle_target, toe_dir, geom, frame=None):
                             what=f"{side} leg")
     _d, hip_offset, _interior = solved
 
-    # Rotate the hip->ankle direction by `hip_offset` about the rig's right axis
-    # to get the femur direction. This sense puts the knee AHEAD of the
-    # hip->ankle line, which is the only way a human knee bends.
     dir_ankle = to_ankle.normalized()
-    femur_dir = Matrix.Rotation(-hip_offset, 4, right) @ dir_ankle
+    # Bend-plane normal, perpendicular to the reach BY CONSTRUCTION -- see the
+    # docstring. `forward` is the knee hint: it is the axis this library verifies
+    # anatomically (`derive_axes`' toe check), so "the knee goes forward" is a
+    # grounded claim rather than a sign convention.
+    axis = dir_ankle.cross(geom.forward)
+    if axis.length < 1e-6:
+        # The ankle target is directly fore or aft of the hip AT HIP HEIGHT, so
+        # `forward` names no bend plane. Refuse, exactly as `aim_arm` refuses a
+        # hint parallel to its reach: normalizing a zero vector here would emit
+        # NaN into the exported clip, and silently picking a plane would produce
+        # a wrong-but-plausible pose, which is the failure mode this library
+        # exists to prevent. Unreachable for a real foot plant -- an ankle level
+        # with the hip and straight ahead -- so hitting it means the SPEC is
+        # wrong, not this code.
+        raise SystemExit(
+            f"FATAL: the {side} ankle target sits directly fore/aft of the hip "
+            f"at hip height, so `forward` names no knee bend plane. Give the "
+            f"target a vertical component (a foot plant is always below the "
+            f"hip).")
+    axis.normalize()
+    femur_dir = Matrix.Rotation(hip_offset, 4, axis) @ dir_ankle
 
     arm.pose.bones[up_leg].matrix = aim_matrix(hip_head, femur_dir, right)
     bpy.context.view_layer.update()

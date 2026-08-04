@@ -166,6 +166,116 @@ def main():
         except SystemExit:
             check(f"degenerate_hint_fails_{side}", True)
 
+    # ---- 4b. plant_foot lands the ankle exactly, LATERAL targets included ----
+    # THE #321 GATE. `plant_foot` used to build its femur rotation axis as the
+    # rig's `right`, and a rotation about `right` only moves the component of
+    # `dir_ankle` PERPENDICULAR to `right`. So a laterally-offset ankle target
+    # achieved strictly less than the requested hip angle --
+    #
+    #     cos(theta_eff) = cos^2(alpha) + sin^2(alpha) * cos(hip_offset)
+    #
+    # -- the knee landed off the IK circle, the tibia was then aimed at the true
+    # target from that wrong knee, and the ankle fell SHORT. Measured on the
+    # dribble (a nearly-planar gait) at 0.029890 m; a genuinely lateral stance is
+    # materially worse. The fix mirrors `aim_arm`: build the axis as
+    # `dir_ankle.cross(forward)`, perpendicular by construction.
+    #
+    # THE SAGITTAL CASE IS THE CONTROL, and it is load-bearing. It was already
+    # near-exact before the fix (alpha ~= 90 deg makes the shortfall vanish), so
+    # a suite containing only sagittal cases would have reported green on the
+    # buggy solver -- which is exactly what happened for two milestones. The
+    # lateral cases are what discriminate; the sagittal one proves the harness
+    # itself is not simply measuring zero for an unrelated reason.
+    #
+    # Both signs on both sides, deliberately: an inboard target crosses the
+    # midline (the leg reaches ACROSS the body, a euro-step/crossover-step
+    # shape) and an outboard one is a defensive slide. A single sign per side
+    # would leave the mirror untested -- the #255 lesson.
+    ANKLE_TOL_M = 1e-4
+    for side in ("L", "R"):
+        # Deliberately not `hip_head` -- that name is the HIPS bone above and is
+        # read again by section 6g. This is the femur root.
+        leg_hip = arm.pose.bones[lib.LEG_CHAIN[side][0]].head.copy()
+        for label, lat_m, down_m, fore_m in (
+            ("sagittal_control", 0.00, 0.60, 0.25),
+            ("lateral_outboard", 0.40, 0.60, 0.00),
+            ("lateral_inboard", -0.40, 0.60, 0.00),
+            ("lateral_fore", 0.40, 0.55, 0.20),
+        ):
+            # `lat_m` is signed along `geom.right`, whose anatomical sign does not
+            # matter here: both signs are exercised on both sides, so the pair
+            # covers inboard and outboard whichever way the axis points.
+            target = (leg_hip
+                      + geom.right * geom.m(lat_m)
+                      - geom.up * geom.m(down_m)
+                      + geom.forward * geom.m(fore_m))
+            _solved, err_u = lib.plant_foot(
+                arm, side, target, geom.forward, geom)
+            err_m = geom.to_m(err_u)
+            lib.report(f"ankle_err_{side}_{label}_m", f"{err_m:.8f}")
+            check(f"ankle_reaches_{side}_{label}", err_m < ANKLE_TOL_M,
+                  f"ankle off target by {err_m:.6f} m (tol {ANKLE_TOL_M}); a "
+                  f"rotation axis that is not perpendicular to the reach "
+                  f"direction cannot land the knee on the IK circle")
+
+            # ---- and the knee bends FORWARD ------------------------------
+            # THE ASSERTION THE ANKLE CHECK CANNOT MAKE, and the one that
+            # matters most. A two-link solve has a whole CIRCLE of valid knee
+            # positions, and every one of them lands the ankle exactly on
+            # target -- so `ankle_reaches_*` above reads 1e-7 for a knee that
+            # bends BACKWARD just as happily as for one that bends forward.
+            # This is `elbow_follows_hint`'s lesson (section 2), transplanted
+            # to the leg, where it was missing: #321 changed the rotation
+            # SENSE from `Rotation(-hip_offset, right)` to
+            # `Rotation(+hip_offset, dir_ankle x forward)`, and getting that
+            # sign wrong would produce an inverted, visually catastrophic knee
+            # that every pre-existing gate in this library passes.
+            #
+            # Measured as displacement of the knee from the hip->ankle CHORD,
+            # projected on `forward` -- the axis `derive_axes` verifies
+            # anatomically. The chord, not the hip: a leg reaching forward
+            # puts the knee ahead of the hip for trivial reasons, so
+            # subtracting the chord is what isolates the BEND from the reach.
+            knee = arm.pose.bones[lib.LEG_CHAIN[side][1]].head.copy()
+            chord = (target - leg_hip)
+            from_hip = knee - leg_hip
+            # Remove the along-chord component; what remains is the bend.
+            chord_n = chord.normalized()
+            bend = from_hip - chord_n * from_hip.dot(chord_n)
+            bend_fwd_m = geom.to_m(bend.dot(geom.forward))
+            lib.report(f"knee_bend_forward_{side}_{label}_m",
+                       f"{bend_fwd_m:+.4f}")
+            # Floor, not merely >0: a near-straight leg has a tiny bend whose
+            # sign is float noise, so a bare sign test could pass vacuously.
+            # 0.02 m is far above noise and far below the ~0.07-0.13 m these
+            # poses actually produce.
+            check(f"knee_bends_forward_{side}_{label}", bend_fwd_m > 0.02,
+                  f"the knee displaces {bend_fwd_m:+.4f} m along `forward` "
+                  f"from the hip->ankle chord; a human knee bends FORWARD, so "
+                  f"a non-positive value means the femur rotation SENSE is "
+                  f"inverted -- which the ankle-error check above cannot see, "
+                  f"because both bend directions land the ankle exactly")
+
+    # ---- 4c. a fore/aft target names no bend plane -> FATAL -----------------
+    # `dir_ankle.cross(forward)` is the zero vector when the ankle target sits
+    # directly fore or aft of the hip at hip height. `aim_arm` already refuses
+    # its own degenerate hint rather than silently picking a plane; this asserts
+    # `plant_foot` mirrors that handling instead of introducing a second
+    # convention (or, worse, normalizing a zero vector into NaN and exporting
+    # it). The case is anatomically unreachable for a real foot plant -- an
+    # ankle at hip height, straight ahead -- which is precisely why it must
+    # raise rather than be handled: reaching it means the spec is wrong.
+    for side in ("L", "R"):
+        leg_hip = arm.pose.bones[lib.LEG_CHAIN[side][0]].head.copy()
+        degenerate = leg_hip + geom.forward * (geom.leg_reach * 0.7)
+        try:
+            lib.plant_foot(arm, side, degenerate, geom.forward, geom)
+            check(f"plant_foot_degenerate_fails_{side}", False,
+                  "plant_foot accepted an ankle target directly fore of the hip, "
+                  "which names no bend plane")
+        except SystemExit:
+            check(f"plant_foot_degenerate_fails_{side}", True)
+
     # ---- 5. none of the above introduced a pose scale -----------------------
     # `aim_arm` passes the bend-plane normal to `aim_matrix` as the side axis
     # instead of the rig's `right`. That basis must still be unit, or the clip
