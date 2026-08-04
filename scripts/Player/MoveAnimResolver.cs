@@ -146,7 +146,7 @@ public static class MoveAnimResolver
     /// was already playing.
     ///
     /// Deliberately NOT exhaustive over every <c>CommittedMove.Id</c>: moves
-    /// without their own captured clip (jab, spin, betweenthelegs, ...) still
+    /// without their own captured clip (spin, betweenthelegs, ...) still
     /// fall back to the shared generic clip via
     /// <see cref="ResolveStateName"/>'s default case.
     ///
@@ -174,6 +174,7 @@ public static class MoveAnimResolver
         ["block"]         = "Block",
         ["layup"]         = "Layup", // #313 — unhanded; see LayupAnimTest
         ["contest"]       = "Contest", // #314 — unhanded, symmetric by design; see ContestAnimTest
+        ["jab"]           = "JabStep", // #304 — unhanded; the CommittedMove.Id is "jab" (JabStep.cs), not "jabstep"
     };
 
     /// <summary>
@@ -330,7 +331,7 @@ public static class MoveAnimResolver
     /// nonexistent state that Travel() would silently no-op against.
     ///
     /// Every other combination — an unclipped/unknown moveId on any phase (as of
-    /// #313: jab, spin, betweenthelegs and the rest of #302's batch; consult
+    /// #304: spin, betweenthelegs and the rest of #302's batch; consult
     /// <see cref="ClippedMovePrefixes"/> rather than this list, which goes stale
     /// each time a clip lands), or a null/empty moveId (no move in flight) —
     /// degrades to the generic fallback name (<c>generic.ToString()</c>),
