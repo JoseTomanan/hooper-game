@@ -357,13 +357,20 @@ def hand_lateral_offset_m(frames_dict, geom, right):
 
     Projected on `right` — the lateral axis measured ONCE from the stock rig,
     threaded in from `gate2_once()` — so this reads as "which side of the body"
-    without hardcoding an axis. Positive = the rig's right.
+    without hardcoding an axis.
+
+    The SIGN is not anatomical and no caller may read it as such (#320): this
+    is `geom.lateral`, which points at the character's LEFT on these rigs. Only
+    the RELATIVE sign between two clips is meaningful, which is all Gate 4b
+    asserts. An earlier version of this docstring claimed "positive = the rig's
+    right"; it was wrong, and that same confusion once produced a spurious
+    27.256% magnitude reading (see the note above).
 
     `right` MUST NOT be re-derived from the job's own armature. `derive_axes()`
     reads REST orientation, and `dribble_move_authored.fbx` is a Blender
     re-export whose rest roll is rewritten (the same corruption that gives
     Gate 2 its false 70.53 cm reading there). MEASURED during #294: projecting
-    on that file's own `geom.right` made this gate report a 27.256% magnitude
+    on that file's own `geom.lateral` made this gate report a 27.256% magnitude
     deviation on a mirror that is provably exact. The arithmetic reason is
     sharp — `dst = S @ src @ S` gives `dst.trans = S_rot @ src.trans`, so two
     projections are equal-and-opposite ONLY if the axis is an eigenvector of S
@@ -416,8 +423,11 @@ def gate4b_lateral_side(src_by_frame, dst_by_frame, geom, right):
     # these are the two DOMINANT hands -- the ones Gate 4 just measured.
     src_dom, dst_dom = src["R"], dst["L"]
 
+    # Labelled by the AXIS, not by anatomy: the sign of `geom.lateral` says
+    # nothing about left/right (#320), and only the flip between the two rows
+    # below is the finding.
     print("[mirror] Gate 4b -- dribbling-hand lateral offset (Hips-relative, "
-          "+ = rig's right)")
+          "signed along geom.lateral; only the FLIP is meaningful)")
     print(f"[mirror]   SOURCE    right hand = {src_dom:+.4f} m")
     print(f"[mirror]   MIRRORED  left  hand = {dst_dom:+.4f} m")
 
@@ -438,8 +448,7 @@ def gate4b_lateral_side(src_by_frame, dst_by_frame, geom, right):
         raise SystemExit(
             f"FATAL gate4b: the dribbling hand did NOT change sides -- source "
             f"right hand {src_dom:+.4f} m, mirrored left hand {dst_dom:+.4f} m, "
-            f"both on the rig's "
-            f"{'right' if src_dom > 0 else 'left'}. No coordinate was "
+            f"both on the same side of the midline. No coordinate was "
             f"reflected: this is a bone-name swap or a wrong-axis MIRROR, not a "
             f"mirror. See this gate's docstring.")
     dev_pct = abs(abs(dst_dom) - abs(src_dom)) / abs(src_dom) * 100.0
@@ -756,7 +765,12 @@ def gate2_once():
     pairs, _midline = gate1_pairing([pb.name for pb in arm.pose.bones])
     gate2_rest_symmetry(arm, pairs, geom)
 
-    right = Vector(geom.right)
+    # `lateral`, not `body_right` (#320): every consumer of this axis compares
+    # the two clips' projections on it RELATIVELY (Gate 4b asserts the sign
+    # FLIPS between source and mirror), so the axis's anatomical direction is
+    # irrelevant -- only that both clips are read against the SAME axis, and
+    # that it is an eigenvector of MIRROR (asserted just below).
+    right = Vector(geom.lateral)
     report("trusted_right_axis", tuple(round(v, 6) for v in right))
     # Gate 4b's arithmetic only mirrors if this axis is an eigenvector of
     # MIRROR, so assert that here rather than letting a skewed axis surface as a

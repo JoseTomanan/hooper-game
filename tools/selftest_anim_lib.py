@@ -67,45 +67,102 @@ def main():
     # degenerate checks are all side-agnostic. A symmetric assertion cannot
     # detect a symmetric error -- the #255 mirror-bug lesson.
     #
-    # MEASURED, and it is NOT what the name suggests: `geom.right` points at the
-    # character's LEFT. The left shoulder sits at +0.1343 m along it and the
-    # right shoulder at -0.1804 m, and the same holds on the exported clip.
-    # `derive_axes` negates `right` alongside `forward` in a branch that fires on
-    # every Mixamo rig (see its comment), and nothing downstream re-checks the
-    # sign anatomically.
+    # THE TWO LATERAL AXES ARE ASSERTED SEPARATELY, because they make different
+    # claims (#320). `geom.lateral` is a BASIS vector whose sign is load-bearing
+    # and whose anatomy is meaningless -- it points at the character's LEFT, and
+    # it must keep doing so, because `plant_foot` hands it to `aim_matrix` as a
+    # ROLL reference (flipping it rolls every posed leg bone 180 deg; measured at
+    # 179.99 deg). `geom.body_right` is the ANATOMICAL axis, and it must point at
+    # the character's right.
     #
-    # This is pinned rather than fixed, deliberately. It is pre-existing (#300,
-    # verbatim), the leg IK is unaffected -- knees measured bending FORWARD by
-    # +0.129 m (L) and +0.069 m (R) mean displacement from the hip-ankle chord --
-    # and correcting the sign would mirror foot placement, changing the exported
-    # clip and breaking the 0/4160 equivalence gate that is this PR's acceptance
-    # test. Tracked separately; see README-blender.md.
-    #
-    # It matters for the HANDED moves ahead (behind-the-back #281, ball-hand
-    # sweep, between-the-legs): `hand_target = hips + geom.right * x` puts the
-    # hand on the character's LEFT. Derive hand side from bone positions.
+    # THIS IS THE ASSERTION THAT WOULD HAVE CAUGHT THE ORIGINAL DEFECT. The
+    # library used to expose the basis vector under the name `right`, and six
+    # authoring scripts each independently worked around it with a local
+    # `-geom.right`. A gate on `body_right`'s anatomy applied to that old `right`
+    # fails outright -- see the mutation note on `body_right_points_rig_right`
+    # below.
     hips_head = arm.pose.bones[lib.HIPS].head.copy()
-    lateral = {}
+    on_lateral, on_body_right = {}, {}
     for side in ("L", "R"):
-        lateral[side] = (arm.pose.bones[lib.ARM_CHAIN[side][0]].head
-                         - hips_head).dot(geom.right)
-        lib.report(f"shoulder_lateral_{side}_m", f"{geom.to_m(lateral[side]):+.4f}")
+        shoulder = arm.pose.bones[lib.ARM_CHAIN[side][0]].head - hips_head
+        on_lateral[side] = shoulder.dot(geom.lateral)
+        on_body_right[side] = shoulder.dot(geom.body_right)
+        lib.report(f"shoulder_on_lateral_{side}_m",
+                   f"{geom.to_m(on_lateral[side]):+.4f}")
+        lib.report(f"shoulder_on_body_right_{side}_m",
+                   f"{geom.to_m(on_body_right[side]):+.4f}")
 
     # Catches the copy-paste this section exists for: two chains resolving to the
     # same bones land on the same side (or the same point).
     check("arm_chains_are_opposite_sides",
-          lateral["L"] * lateral["R"] < 0.0,
+          on_lateral["L"] * on_lateral["R"] < 0.0,
           f"L and R shoulders are on the same side of the rig "
-          f"(L={geom.to_m(lateral['L']):+.4f} m, R={geom.to_m(lateral['R']):+.4f} m); "
+          f"(L={geom.to_m(on_lateral['L']):+.4f} m, "
+          f"R={geom.to_m(on_lateral['R']):+.4f} m); "
           f"ARM_CHAIN is wired to one side twice")
-    # Pins the measured (mirrored) convention, so a change to `derive_axes`'
-    # sign handling cannot slip through unnoticed in either direction.
-    check("geom_right_points_rig_left_known_quirk",
-          lateral["L"] > 0.0 > lateral["R"],
-          f"the `geom.right` sign convention CHANGED (L={geom.to_m(lateral['L']):+.4f}, "
-          f"R={geom.to_m(lateral['R']):+.4f}). If this was intentional, every "
-          f"authored clip's lateral placement just mirrored -- re-run the "
-          f"equivalence gate and update this assertion and README-blender.md.")
+
+    # ---- the BASIS axis: pinned, because its sign drives bone ROLL -----------
+    # Not an anatomical claim. This exists so that a change to `derive_axes`' sign
+    # handling cannot slip through unnoticed: it would silently roll every
+    # `aim_matrix`-posed bone 180 deg and move every authored clip.
+    check("lateral_axis_sign_pinned",
+          on_lateral["L"] > 0.0 > on_lateral["R"],
+          f"`geom.lateral`'s sign CHANGED (L={geom.to_m(on_lateral['L']):+.4f}, "
+          f"R={geom.to_m(on_lateral['R']):+.4f}). This axis is `aim_matrix`'s roll "
+          f"reference, so flipping it rotates every posed bone 180 deg about its "
+          f"own axis and moves every authored clip -- re-run every equivalence "
+          f"gate before accepting this, and update README-blender.md.")
+
+    # ---- the ANATOMICAL axis: NON-SYMMETRIC, and it names a side ------------
+    # THE #320 GATE. It must fail if the sides swap, so it names them: the RIGHT
+    # shoulder is on the POSITIVE side of `body_right` and the LEFT shoulder on
+    # the negative side. A symmetric assertion cannot ever detect a mirror error
+    # -- that is precisely why the original defect survived #300 and #315, where
+    # every check was either side-agnostic or read the side off whichever chain
+    # it was already given (the #255 lesson).
+    #
+    # MUTATION-PROVEN, not argued: forcing `derive_body_right` to return
+    # `lateral` unchanged -- i.e. reinstating exactly the old, misnamed `right`
+    # -- makes this read L=+0.1343 R=-0.1804 and FAIL, while
+    # `lateral_axis_sign_pinned` and every other check in this file stay green.
+    # So this gate is a real discriminator and not a restatement of the pin above.
+    #
+    # Note the shoulders are an INDEPENDENT landmark from the hip pair that
+    # `derive_axes` builds `lateral` from, and from the shoulder span
+    # `derive_body_right` reads -- this measures the POSED skeleton, that one
+    # reads REST geometry. So this is a third opinion, not the same measurement.
+    check("body_right_points_rig_right",
+          on_body_right["R"] > 0.0 > on_body_right["L"],
+          f"`geom.body_right` does not point at the character's RIGHT "
+          f"(R shoulder={geom.to_m(on_body_right['R']):+.4f} m, "
+          f"L shoulder={geom.to_m(on_body_right['L']):+.4f} m). Every authored "
+          f"clip places hands and feet along this axis, so an inverted sign puts "
+          f"every one of them on the WRONG SIDE OF THE BODY.")
+
+    # And `body_right` must be EXACTLY +/-`lateral`, component for component.
+    # This is the property the whole #320 approach rests on: it is what lets a
+    # call site move from `-geom.right` to `geom.body_right` without perturbing a
+    # single exported clip, so it is asserted rather than assumed.
+    #
+    # Asserted BITWISE, on the components, and not as a dot product -- which was
+    # the first attempt and is the wrong instrument. `mathutils` vectors are
+    # FLOAT32, so `.normalized()` leaves a residual: `lateral.dot(-lateral)`
+    # measured -1.0000000053, i.e. |lateral|^2 off unit by 5.3e-9. A dot-product
+    # gate therefore needs a tolerance derived from float32 epsilon, and it would
+    # pass for a re-derived vector that merely happens to be antiparallel to
+    # within that tolerance -- which is exactly the thing being ruled out. IEEE
+    # negation is exact, so if `body_right` really is `+/-lateral` then equality
+    # holds with NO tolerance at all, and a test that needs none cannot be
+    # loosened later.
+    same = all(b == l for b, l in zip(geom.body_right, geom.lateral))
+    negated = all(b == -l for b, l in zip(geom.body_right, geom.lateral))
+    lib.report("body_right_vs_lateral",
+               "identical" if same else "negated" if negated else "NEITHER")
+    check("body_right_is_exactly_plus_or_minus_lateral", same or negated,
+          f"`body_right` {tuple(geom.body_right)} is neither exactly `lateral` "
+          f"{tuple(geom.lateral)} nor its exact negation. It must be +/-`lateral`, "
+          f"never an independently re-derived vector: any deviation moves every "
+          f"authored clip and breaks every equivalence gate.")
 
     for side in ("L", "R"):
         humerus_u, ulna_u = lib.arm_lengths(arm, side)
@@ -117,12 +174,20 @@ def main():
         # direction-dependent error cannot hide behind one lucky pose. The elbow
         # hint points down and outward, which is where a real elbow goes for a
         # reach in front of the body.
-        hint = (-geom.up * 0.8 + geom.right * (0.6 if side == "R" else -0.6))
+        # `outward` = away from the midline for THIS side, so the hint and the
+        # `side_up` target below mean the same anatomical thing on both arms.
+        # Built from `body_right`, not the basis axis (#320): these were written
+        # against the old `geom.right`, which points at the character's LEFT, so
+        # "outward for R" was silently INBOARD. The assertions in this section are
+        # side-agnostic (does the wrist reach, does the elbow follow the hint), so
+        # that never made them fail -- it just meant the poses being tested were
+        # the mirror of the ones the code reads as testing.
+        outward = geom.body_right if side == "R" else -geom.body_right
+        hint = (-geom.up * 0.8 + outward * 0.6)
         for label, direction, frac in (
             ("fwd_low", geom.forward * 0.8 - geom.up * 0.6, 0.70),
             ("fwd_flat", geom.forward * 1.0, 0.85),
-            ("side_up", geom.forward * 0.3 + geom.up * 0.5
-             + geom.right * (0.8 if side == "R" else -0.8), 0.60),
+            ("side_up", geom.forward * 0.3 + geom.up * 0.5 + outward * 0.8, 0.60),
         ):
             target = shoulder + direction.normalized() * (reach_u * frac)
             err_u = lib.aim_arm(arm, side, target, hint, geom)
@@ -191,22 +256,26 @@ def main():
     # midline (the leg reaches ACROSS the body, a euro-step/crossover-step
     # shape) and an outboard one is a defensive slide. A single sign per side
     # would leave the mirror untested -- the #255 lesson.
+    #
+    # `outward` is derived per side from `body_right` (#320) so that "outboard"
+    # and "inboard" in the labels below are ANATOMICALLY true on both legs. With
+    # the old basis axis a fixed sign meant outboard on one side and inboard on
+    # the other, so the four cases were really two cases run twice.
     ANKLE_TOL_M = 1e-4
     for side in ("L", "R"):
         # Deliberately not `hip_head` -- that name is the HIPS bone above and is
         # read again by section 6g. This is the femur root.
         leg_hip = arm.pose.bones[lib.LEG_CHAIN[side][0]].head.copy()
+        outward = geom.body_right if side == "R" else -geom.body_right
         for label, lat_m, down_m, fore_m in (
             ("sagittal_control", 0.00, 0.60, 0.25),
             ("lateral_outboard", 0.40, 0.60, 0.00),
             ("lateral_inboard", -0.40, 0.60, 0.00),
             ("lateral_fore", 0.40, 0.55, 0.20),
         ):
-            # `lat_m` is signed along `geom.right`, whose anatomical sign does not
-            # matter here: both signs are exercised on both sides, so the pair
-            # covers inboard and outboard whichever way the axis points.
+            # `lat_m` positive = away from the midline, negative = across it.
             target = (leg_hip
-                      + geom.right * geom.m(lat_m)
+                      + outward * geom.m(lat_m)
                       - geom.up * geom.m(down_m)
                       + geom.forward * geom.m(fore_m))
             _solved, err_u = lib.plant_foot(
@@ -451,7 +520,7 @@ def main():
     # by handing it a side axis that is not a unit vector's worth of information
     # -- a zero-length tail direction, which cannot yield a unit basis.
     try:
-        lib.aim_matrix(hips_head, lib.Vector((0.0, 0.0, 0.0)), geom.right)
+        lib.aim_matrix(hips_head, lib.Vector((0.0, 0.0, 0.0)), geom.lateral)
         check("aim_matrix_rejects_degenerate", False,
               "aim_matrix accepted a zero-length tail direction")
     except (SystemExit, ValueError, ZeroDivisionError):

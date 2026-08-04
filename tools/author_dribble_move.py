@@ -279,7 +279,12 @@ def main():
 
     geom = lib.RigGeometry(arm)
     geom.log_summary()
-    right, up, forward = geom.right, geom.up, geom.forward
+    # `lateral`, NOT `body_right` (#320): this basis is handed to
+    # `aim_matrix`/`Matrix.Rotation`, where the axis SIGN is load-bearing but
+    # its anatomy is irrelevant. Swapping in `body_right` here would roll the
+    # posed bones 180 deg while changing nothing about which side anything
+    # lands on.
+    right, up, forward = geom.lateral, geom.up, geom.forward
 
     verify_cadence(arm, f0, f1, geom)
 

@@ -79,24 +79,27 @@ if it ever fires here, the fix is to pull the hand target IN, not to accept the
 clamp.
 
 ===============================================================================
-`geom.right` POINTS AT THE CHARACTER'S LEFT -- READ THIS BEFORE TOUCHING SIGNS
+`geom.lateral` POINTS AT THE CHARACTER'S LEFT -- READ THIS BEFORE TOUCHING SIGNS
 ===============================================================================
 Measured here (matches `tools/README-blender.md` and `selftest_anim_lib.py`
-exactly): on this source, `LeftArm` sits at `+0.1343 m` along `geom.right` and
-`RightArm` at `-0.1804 m`. `derive_axes` negates `right` alongside `forward` in
+exactly): on this source, `LeftArm` sits at `+0.1343 m` along `geom.lateral` and
+`RightArm` at `-0.1804 m`. `derive_axes` negates `lateral` alongside `forward` in
 a branch that fires on every Mixamo rig, and nothing downstream re-checks the
-sign anatomically -- `geom.right` is a internally-consistent basis vector, not
+sign anatomically -- `geom.lateral` is an internally-consistent basis vector, not
 an anatomically-named one.
 
-This script therefore NEVER uses `geom.right` directly for hand-side placement.
-Every lateral offset goes through `BODY_RIGHT = -geom.right` instead, defined
-once in `main()` and threaded through as `body_right` -- positive along it is
-the character's actual anatomical right, matching `RightArm`'s sign. Getting
-this backwards ships a clip that is a mirror image of its label: it plays
-cleanly, passes every symmetric check, and telegraphs the wrong hand (the #255
-lesson). The non-symmetric guards below (`_ball_side_shoulder_moved_back`, and
-the caller's own G4/G6 in the Godot-side rebuild script) are what would actually
-catch that.
+This script therefore NEVER uses `geom.lateral` directly for hand-side placement.
+Every lateral offset goes through `geom.body_right` instead, defined and verified
+in `blender_anim_lib.derive_body_right` (derived from the shoulder span,
+cross-checked against the hip span) and threaded through as `body_right` --
+positive along it is the character's actual anatomical right, matching
+`RightArm`'s sign. Getting this backwards ships a clip that is a mirror image of
+its label: it plays cleanly, passes every symmetric check, and telegraphs the
+wrong hand (the #255 lesson). The non-symmetric guards below
+(`_ball_side_shoulder_moved_back`, and the caller's own G4/G6 in the Godot-side
+rebuild script) are what would actually catch that. There is no longer a
+`geom.right`; the local `-geom.right` workaround this script used to carry is
+gone, replaced by the shared `geom.body_right` accessor (#320).
 
 ===============================================================================
 THE MACHINERY LIVES IN blender_anim_lib (#315)
@@ -256,8 +259,8 @@ def _side_signs(ball_side):
     """(ball_sign, recv_side) for `ball_side` in {"L","R"}.
 
     `ball_sign` multiplies every own-side lateral/twist channel to place it on
-    the ANATOMICALLY correct side, using `BODY_RIGHT` (see module docstring) --
-    never `geom.right` directly. -1 for L, +1 for R matches `BODY_RIGHT`'s sign
+    the ANATOMICALLY correct side, using `body_right` (see module docstring) --
+    never `geom.lateral` directly. -1 for L, +1 for R matches `body_right`'s sign
     (positive = character's actual right, per the measured RightArm/LeftArm
     lateral figures).
     """
@@ -311,7 +314,12 @@ def _author_polarity(arm, geom, body_right, ball_side, frame_offset):
     """
     ball_sign, recv_side = _side_signs(ball_side)
     recv_sign = -ball_sign
-    right, up, forward = geom.right, geom.up, geom.forward
+    # `lateral`, NOT `body_right` (#320): this basis is handed to
+    # `aim_matrix`/`Matrix.Rotation`, where the axis SIGN is load-bearing but
+    # its anatomy is irrelevant. Swapping in `body_right` here would roll the
+    # posed bones 180 deg while changing nothing about which side anything
+    # lands on.
+    right, up, forward = geom.lateral, geom.up, geom.forward
 
     ball_humerus_u, ball_ulna_u = lib.arm_lengths(arm, ball_side)
     recv_humerus_u, recv_ulna_u = lib.arm_lengths(arm, recv_side)
@@ -450,7 +458,8 @@ def main():
 
     geom = lib.RigGeometry(arm)
     geom.log_summary()
-    body_right = -geom.right  # see module docstring: geom.right points LEFT.
+    # Anatomical right, derived + verified in the lib (#320).
+    body_right = geom.body_right
     lib.report("body_right", tuple(round(v, 4) for v in body_right))
 
     lib.enter_pose_mode(arm)
