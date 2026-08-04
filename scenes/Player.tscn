@@ -151,9 +151,6 @@ advance_mode = 2
 
 [sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_fdw08"]
 
-[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_mv277ph"]
-animation = &"locomotion/idle"
-
 [sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_js279su"]
 animation = &"locomotion/jumpshotstartup"
 
@@ -234,6 +231,15 @@ animation = &"locomotion/contestactive"
 
 [sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_ct314re"]
 animation = &"locomotion/contestrecovery"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_bl283su"]
+animation = &"locomotion/blockstartup"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_bl283ac"]
+animation = &"locomotion/blockactive"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_bl283re"]
+animation = &"locomotion/blockrecovery"
 
 [sub_resource type="AnimationNodeStateMachineTransition" id="tr_js_lo2su"]
 
@@ -606,11 +612,11 @@ states/StealActiveRight/node = SubResource("AnimationNodeAnimation_st282acr")
 states/StealActiveRight/position = Vector2(460, 700)
 states/StealRecoveryRight/node = SubResource("AnimationNodeAnimation_st282rer")
 states/StealRecoveryRight/position = Vector2(620, 700)
-states/BlockStartup/node = SubResource("AnimationNodeAnimation_mv277ph")
+states/BlockStartup/node = SubResource("AnimationNodeAnimation_bl283su")
 states/BlockStartup/position = Vector2(300, 740)
-states/BlockActive/node = SubResource("AnimationNodeAnimation_mv277ph")
+states/BlockActive/node = SubResource("AnimationNodeAnimation_bl283ac")
 states/BlockActive/position = Vector2(460, 740)
-states/BlockRecovery/node = SubResource("AnimationNodeAnimation_mv277ph")
+states/BlockRecovery/node = SubResource("AnimationNodeAnimation_bl283re")
 states/BlockRecovery/position = Vector2(620, 740)
 states/LayupStartup/node = SubResource("AnimationNodeAnimation_lu313su")
 states/LayupStartup/position = Vector2(300, 820)
