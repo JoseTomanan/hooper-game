@@ -102,6 +102,16 @@ def main():
     worst_loc = (0.0, None, None)
     n_pairs = n_rot = n_loc = 0
     per_bone = {}
+    # Per-bone ROTATION spread, alongside the location one. Added in #321,
+    # because ATTRIBUTING a non-zero diff -- not merely detecting one -- is what
+    # this tool is actually used for, and the two channels attribute to different
+    # causes. A location-only list conflates them: a rotated PARENT displaces
+    # every descendant's head, so the leg chain shows location deltas all the way
+    # down to `Toe_End` while only the three IK-posed bones per side actually
+    # rotated. Reading "10 bones moved" without "which 4 rotated" invites
+    # exactly the wrong conclusion (that the toes were re-posed, when they were
+    # only carried).
+    per_bone_rot = {}
     for f in range(a["f0"], a["f1"] + 1):
         for bone in a["names"]:
             ma, mb = a["frames"][f][bone], b["frames"][f][bone]
@@ -115,6 +125,7 @@ def main():
                 worst_rot = (deg, f, bone)
             if deg != 0.0:
                 n_rot += 1
+                per_bone_rot[bone] = max(per_bone_rot.get(bone, 0.0), deg)
 
             dm = (ma.translation - mb.translation).length / upm
             if dm > worst_loc[0]:
@@ -130,6 +141,12 @@ def main():
           f"(frame {worst_loc[1]}, {worst_loc[2]})")
     print(f"[cmp] pairs with nonzero rotation delta = {n_rot}")
     print(f"[cmp] pairs with nonzero location delta = {n_loc}")
+    # Rotation first: it names the bones the authoring actually RE-POSED, which
+    # is the set an attribution argument has to account for. The location list
+    # below is the larger, derived set (re-posed bones plus everything hanging
+    # off them).
+    for bone, dg in sorted(per_bone_rot.items(), key=lambda kv: -kv[1])[:12]:
+        print(f"[cmp]   rot-differing bone: {bone} max={dg:.6f} deg")
     for bone, dm in sorted(per_bone.items(), key=lambda kv: -kv[1])[:12]:
         print(f"[cmp]   loc-differing bone: {bone} max={dm:.10f} m")
 
