@@ -352,6 +352,157 @@ def main():
         except SystemExit:
             check(f"plant_foot_degenerate_fails_{side}", True)
 
+    # ---- 4d. the knee HINGE is aligned with the bend plane ------------------
+    # THE #338(1) GATE, and the one that discriminates. `plant_foot` hands ONE
+    # `side_axis` to THREE `aim_matrix` calls, and `aim_matrix` uses it as a
+    # bone ROLL reference. Until #338 that axis was `geom.lateral` for all three.
+    #
+    # For the FEMUR and TIBIA that is wrong, and wrong CONTINUOUSLY rather than
+    # only at a singularity. A knee is a hinge, so the femur's roll decides which
+    # way the kneecap faces; it should face along the direction the knee actually
+    # bends, i.e. the femur's side axis should be the NORMAL of the hip-knee-ankle
+    # plane. `geom.lateral` is that normal only for a purely sagittal leg. As the
+    # leg abducts, the two diverge by the abduction angle, and the kneecap ends up
+    # facing somewhere the knee does not bend.
+    #
+    # MEASURED on the real authoring runs, as the angle between `geom.lateral`
+    # and the bend-plane normal over every `plant_foot` call each script makes:
+    #
+    #     dribble 22.47 deg (mean 18.82)   layup 56.53 (mean 7.94)
+    #     block   18.11        ( 9.64)     behindtheback 12.74 ( 5.93)
+    #     contest  9.27        ( 6.69)     steal          7.47 ( 2.88)
+    #     jabstep  6.24        ( 5.18)
+    #
+    # -- so this is not a hypothetical corner. Every shipped clip already carries
+    # it, the dribble worst-case by 22 deg.
+    #
+    # WHAT THE ISSUE OVERSTATED, recorded so the next reader is not hunting for
+    # something that cannot happen: #338 frames this as a "visible leg-twist pop"
+    # from a roll DISCONTINUITY. The discontinuity is real -- measured at
+    # 1800 deg of roll per degree of target movement -- but it sits at exactly
+    # 90 deg of abduction AND near-full extension, which means an ankle at hip
+    # height at the end of a straight leg. No foot plant reaches that. The
+    # reachable defect is the continuous misalignment above, which is why this
+    # gate measures alignment rather than trying to provoke a pop.
+    #
+    # Post-fix the femur's side axis IS the bend-plane normal by construction, so
+    # this reads 1.000000 exactly rather than merely within tolerance.
+    HINGE_TOL = 0.9999          # |cos| -- 0.81 deg of misalignment
+    SOLE_TOL_DEG = 0.5
+    for side in ("L", "R"):
+        leg_hip = arm.pose.bones[lib.LEG_CHAIN[side][0]].head.copy()
+        outward = geom.body_right if side == "R" else -geom.body_right
+        for label, lat_m, down_m, fore_m in (
+            ("sagittal_control", 0.00, 0.60, 0.25),
+            ("abducted_22deg", 0.24, 0.60, 0.00),
+            ("abducted_45deg", 0.55, 0.55, 0.00),
+        ):
+            target = (leg_hip
+                      + outward * geom.m(lat_m)
+                      - geom.up * geom.m(down_m)
+                      + geom.forward * geom.m(fore_m))
+            lib.plant_foot(arm, side, target, geom.forward, geom)
+
+            # The REALIZED bend plane, read back off the posed skeleton rather
+            # than recomputed from the spec -- so this measures what was actually
+            # exported, not what the solver intended.
+            hip_p = arm.pose.bones[lib.LEG_CHAIN[side][0]].head.copy()
+            knee_p = arm.pose.bones[lib.LEG_CHAIN[side][1]].head.copy()
+            ankle_p = arm.pose.bones[lib.LEG_CHAIN[side][2]].head.copy()
+            normal = (knee_p - hip_p).cross(ankle_p - knee_p)
+            if normal.length < 1e-9:
+                # A perfectly straight leg spans no plane, so there is no hinge
+                # to align and this case would assert nothing. Say so instead of
+                # passing vacuously.
+                check(f"hinge_plane_exists_{side}_{label}", False,
+                      "the posed leg is straight, so the hip-knee-ankle plane is "
+                      "degenerate and the hinge assertion below would be vacuous")
+                continue
+            normal.normalize()
+
+            for bone_label, chain_idx in (("femur", 0), ("tibia", 1)):
+                bone = arm.pose.bones[lib.LEG_CHAIN[side][chain_idx]]
+                # Column 0 of a pose matrix is the bone's local X in armature
+                # space -- the axis `aim_matrix` builds from `side_axis`.
+                local_x = bone.matrix.col[0].to_3d().normalized()
+                align = abs(local_x.dot(normal))
+                lib.report(f"hinge_align_{side}_{label}_{bone_label}",
+                           f"{align:.6f}")
+                check(f"hinge_aligned_{side}_{label}_{bone_label}",
+                      align > HINGE_TOL,
+                      f"the {bone_label}'s roll axis is {align:.6f} aligned with "
+                      f"the hip-knee-ankle plane normal (need >{HINGE_TOL}); the "
+                      f"kneecap therefore faces "
+                      f"{math.degrees(math.acos(min(1.0, align))):.2f} deg "
+                      f"away from the direction the knee actually bends")
+
+            # ---- and the SOLE stays LEVEL ----------------------------------
+            # THE GATE THAT PROTECTS THE SCOPE OF THE FIX, and the reason
+            # `plant_foot` does NOT simply swap its one `side_axis` wholesale.
+            #
+            # The foot's roll is not a hinge question -- it is the orientation of
+            # the SOLE, which should stay flat on the floor no matter how abducted
+            # the leg is. `geom.lateral` is horizontal, which is exactly why every
+            # authoring run measures 0.0000 deg of sole tilt today.
+            #
+            # MUTATION-PROVEN, and this is the mutation that matters: passing the
+            # bend-plane normal to the FOOT as well -- i.e. #338's proposed
+            # one-line fix, applied uniformly -- rolls the planted foot onto its
+            # edge by 22.16 deg on the dribble and 46.35 deg on the layup, while
+            # every other gate in this file, `verify_grounded` included, stays
+            # green. `verify_grounded` cannot see it: it measures ankle and toe
+            # HEIGHTS, and a foot rolled about its own long axis keeps both.
+            foot = arm.pose.bones[lib.LEG_CHAIN[side][2]]
+            sole_x = foot.matrix.col[0].to_3d().normalized()
+            tilt_deg = math.degrees(math.asin(
+                max(-1.0, min(1.0, sole_x.dot(geom.up)))))
+            lib.report(f"sole_tilt_{side}_{label}_deg", f"{tilt_deg:+.4f}")
+            check(f"sole_stays_level_{side}_{label}",
+                  abs(tilt_deg) < SOLE_TOL_DEG,
+                  f"the planted sole is rolled {tilt_deg:+.4f} deg out of "
+                  f"horizontal (tol {SOLE_TOL_DEG}); the foot is standing on its "
+                  f"edge. The foot's roll reference must stay HORIZONTAL "
+                  f"(`geom.lateral`), not follow the knee's bend plane")
+
+    # ---- 4e. the ill-conditioned corner the issue asked for -----------------
+    # #338 asks for "an abduction case near the ill-conditioned region (femur
+    # within a few degrees of `lateral`)". That corner needs BOTH near-full
+    # abduction AND near-full extension: `plant_foot` aims the femur at
+    # `dir_ankle` rotated by `hip_offset`, so a BENT knee lifts the femur out of
+    # the lateral axis by `hip_offset` all on its own, and the Gram-Schmidt
+    # residual never collapses. Straightening the leg is what removes that
+    # margin.
+    #
+    # Anatomically this is a full side-split at hip height -- unreachable for a
+    # real plant, which is the honest reason it is a library-level gate here and
+    # not a clip-level one. It is included because it is where the old reference
+    # degrades WITHOUT BOUND, and a fix justified by conditioning should be
+    # asserted at the conditioning limit.
+    for side in ("L", "R"):
+        leg_hip = arm.pose.bones[lib.LEG_CHAIN[side][0]].head.copy()
+        outward = geom.body_right if side == "R" else -geom.body_right
+        target = leg_hip + outward * (geom.leg_reach * 0.97)
+        lib.plant_foot(arm, side, target, geom.forward, geom)
+        hip_p = arm.pose.bones[lib.LEG_CHAIN[side][0]].head.copy()
+        knee_p = arm.pose.bones[lib.LEG_CHAIN[side][1]].head.copy()
+        ankle_p = arm.pose.bones[lib.LEG_CHAIN[side][2]].head.copy()
+        normal = (knee_p - hip_p).cross(ankle_p - knee_p)
+        check(f"extreme_hinge_plane_exists_{side}", normal.length > 1e-9,
+              "the leg came out perfectly straight, so this case asserts nothing")
+        if normal.length < 1e-9:
+            continue
+        normal.normalize()
+        local_x = arm.pose.bones[
+            lib.LEG_CHAIN[side][0]].matrix.col[0].to_3d().normalized()
+        align = abs(local_x.dot(normal))
+        lib.report(f"hinge_align_{side}_extreme_lateral", f"{align:.6f}")
+        check(f"hinge_aligned_{side}_extreme_lateral", align > HINGE_TOL,
+              f"at near-full lateral extension the femur's roll axis is only "
+              f"{align:.6f} aligned with the bend-plane normal. This is the "
+              f"corner where `geom.lateral` as a roll reference degrades without "
+              f"bound -- the residual it leaves after Gram-Schmidt collapses "
+              f"toward zero and the roll becomes noise")
+
     # ---- 4f. the bend-plane guards refuse NOISE, not merely ZERO ------------
     # THE #338(2) GATE. `plant_foot` and `aim_arm` both build a bend plane as a
     # cross product of two UNIT vectors, so its length is sin(angle) and the

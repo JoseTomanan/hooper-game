@@ -556,13 +556,77 @@ def plant_foot(arm, side, ankle_target, toe_dir, geom, frame=None):
     second one: `cross(reach, hint)` with a POSITIVE angle, where the old code
     used `right` with a NEGATIVE one. Do not "tidy" one to match the other.
 
-    A CONSEQUENCE WORTH KNOWING: the femur solve no longer reads the lateral
-    axis at all, so it is now independent of that axis's sign. `geom.lateral`
-    survives here only as `aim_matrix`'s side reference, i.e. bone ROLL -- where
-    its sign is still load-bearing (flipping it rolls the leg 180 deg; measured
-    at 179.99 deg on every leg bone during #320) but its ANATOMY is irrelevant.
-    That is exactly why this call site takes `geom.lateral` and NOT
-    `geom.body_right`: swapping them here would roll the legs inside out while
+    TWO ROLL REFERENCES, ONE PER JOINT ROLE (#338)
+    ══════════════════════════════════════════════
+    This function makes THREE `aim_matrix` calls -- femur, tibia, foot -- and
+    `aim_matrix` uses its `side_axis` as a bone ROLL reference. Until #338 all
+    three were handed `geom.lateral`. They now split, because the three bones ask
+    different questions and only two of them share an answer:
+
+    `hinge_axis`  = -(dir_ankle x forward), for the FEMUR and TIBIA.
+                    A knee is a HINGE, so the femur's roll decides which way the
+                    kneecap faces, and it should face along the direction the
+                    knee actually bends -- i.e. the roll reference should be the
+                    NORMAL of the hip-knee-ankle plane. That normal is exactly
+                    this function's own bend-plane axis, already computed one
+                    line above for the femur rotation.
+    `sole_axis`   = geom.lateral, for the FOOT.
+                    A foot's roll is not a hinge question, it is the orientation
+                    of the SOLE, which should stay flat on the floor however
+                    abducted the leg is. `geom.lateral` is HORIZONTAL, which is
+                    the whole reason it works here.
+
+    WHY `lateral` WAS WRONG FOR THE LEG, and it is a continuous error rather than
+    a corner case: `geom.lateral` equals the bend-plane normal only for a purely
+    SAGITTAL leg. As the leg abducts the two diverge by the abduction angle.
+    Measured as the angle between them over every `plant_foot` call each
+    authoring script makes:
+
+        dribble 22.47 deg (mean 18.82)   layup 56.53 (mean 7.94)
+        block   18.11        ( 9.64)     behindtheback 12.74 ( 5.93)
+        contest  9.27        ( 6.69)     steal          7.47 ( 2.88)
+        jabstep  6.24        ( 5.18)
+
+    So every clip authored before #338 carries a kneecap pointing up to 22 deg
+    (56 deg for the layup) away from where its knee bends.
+
+    THE SIGN IS THE WHOLE BALLGAME, and #338 proposed it backwards. The issue
+    suggests passing `axis` -- the vector this function already computes as
+    `dir_ankle.cross(geom.forward)`. That vector is 180.000000 deg from
+    `geom.lateral` for a sagittal leg, so passing it as written would roll every
+    leg bone 180 deg (the same catastrophe #320 measured when it tried negating
+    `lateral`). `forward x dir_ankle` -- the NEGATION, which is what
+    `hinge_axis` is -- measures 0.000000 deg from `geom.lateral` for a sagittal
+    leg. It therefore agrees with the old behaviour exactly where the old
+    behaviour was right, and diverges only where it was wrong.
+
+    WHY THE FOOT DID NOT COME ALONG, mutation-proven rather than argued: handing
+    `hinge_axis` to the foot as well -- #338's one-line fix applied uniformly --
+    rolls the planted sole out of horizontal by 22.16 deg on the dribble and
+    46.35 deg on the layup, i.e. the character stands on the edges of their feet.
+    Every other gate in the library stays green through that, `verify_grounded`
+    included: it measures ankle and toe HEIGHTS, and a foot rolled about its own
+    long axis keeps both. `selftest_anim_lib`'s `sole_stays_level_*` is the gate
+    that now catches it.
+
+    WHAT BOUNDS `sole_axis`, since it keeps a fixed axis rather than a derived
+    one: its conditioning depends on `toe_dir`, NOT on how abducted the leg is.
+    `aim_matrix` Gram-Schmidts it against `toe_dir`, so it degenerates only if
+    the toe points along `geom.lateral` -- a foot aimed sideways, within
+    `BEND_PLANE_MIN_SIN` of it. No authored clip does that (all pass a
+    forward-ish `toe_dir`), and for any `toe_dir` in the sagittal plane the
+    residual is exactly `lateral`, giving 0.0000 deg of sole tilt. A move that
+    genuinely needs a sideways-pointing foot -- some defensive-slide shapes --
+    would fall into `aim_matrix`'s deterministic world-axis fallback and should
+    pass an explicit sole reference instead. That is the known limit; it is not
+    reachable from anything in the tree today.
+
+    A CONSEQUENCE WORTH KNOWING: the femur solve does not read the lateral axis
+    at all, and since #338 neither does the femur or tibia ROLL. `geom.lateral`
+    survives here only as the FOOT's roll reference, where its sign is still
+    load-bearing (flipping it rolls the foot 180 deg) but its ANATOMY is
+    irrelevant. That is exactly why this call site takes `geom.lateral` and NOT
+    `geom.body_right`: swapping them would roll the feet inside out while
     changing nothing about which side the foot lands on.
 
     The returned ankle error stays reported even though it now reads as float
@@ -580,8 +644,9 @@ def plant_foot(arm, side, ankle_target, toe_dir, geom, frame=None):
     reached their targets.
     """
     up_leg, leg, foot_b, _toe_b = LEG_CHAIN[side]
-    # Roll reference only -- see the docstring. NOT `body_right`.
-    side_axis = geom.lateral
+    # The FOOT's roll reference. Horizontal, so the sole stays flat -- see "TWO
+    # ROLL REFERENCES" in the docstring. Roll only; NOT `body_right`.
+    sole_axis = geom.lateral
 
     hip_head = arm.pose.bones[up_leg].head.copy()
     to_ankle = ankle_target - hip_head
@@ -613,7 +678,12 @@ def plant_foot(arm, side, ankle_target, toe_dir, geom, frame=None):
     axis.normalize()
     femur_dir = Matrix.Rotation(hip_offset, 4, axis) @ dir_ankle
 
-    arm.pose.bones[up_leg].matrix = aim_matrix(hip_head, femur_dir, side_axis)
+    # The FEMUR/TIBIA roll reference: the bend-plane normal itself, NEGATED --
+    # see "TWO ROLL REFERENCES" in the docstring for why this is not `axis` as
+    # written, and why the sign is the whole ballgame.
+    hinge_axis = -axis
+
+    arm.pose.bones[up_leg].matrix = aim_matrix(hip_head, femur_dir, hinge_axis)
     bpy.context.view_layer.update()
     # Re-read the knee head AFTER the femur is posed: it is the femur's tail, so
     # reading it before would aim the tibia from a stale position and quietly
@@ -621,7 +691,7 @@ def plant_foot(arm, side, ankle_target, toe_dir, geom, frame=None):
     # load-bearing for exactly this reason -- do not "clean them up".
     knee_head = arm.pose.bones[leg].head.copy()
     arm.pose.bones[leg].matrix = aim_matrix(
-        knee_head, (ankle_target - knee_head), side_axis)
+        knee_head, (ankle_target - knee_head), hinge_axis)
     bpy.context.view_layer.update()
 
     ankle_head = arm.pose.bones[foot_b].head.copy()
@@ -630,7 +700,7 @@ def plant_foot(arm, side, ankle_target, toe_dir, geom, frame=None):
     # limitation in the docstring; without this the shortfall is unobservable,
     # because `solved` reports the REQUEST, not the RESULT.
     ankle_err = (ankle_head - ankle_target).length
-    arm.pose.bones[foot_b].matrix = aim_matrix(ankle_head, toe_dir, side_axis)
+    arm.pose.bones[foot_b].matrix = aim_matrix(ankle_head, toe_dir, sole_axis)
     bpy.context.view_layer.update()
 
     if frame is not None:
