@@ -97,6 +97,45 @@ LEAF_END_BONES = frozenset({
     "mixamorig:RightHandPinky4",
 })
 
+# ── degenerate-geometry thresholds (#338) ────────────────────────────────────
+# Both of the following guard a quantity that is ALREADY GARBAGE long before it
+# reaches zero, so both are set from a measurement rather than from "close to
+# zero looks about right". That was the #338 defect: guards written as exact- or
+# near-zero checks fire two to five decades after the answer they protect has
+# stopped meaning anything, and the caller gets a wrong-but-plausible pose with
+# nothing said.
+
+# Minimum |a x b| for two UNIT vectors to name a usable plane -- i.e. sin(angle),
+# so this is an angle in radians for small values.
+#
+# MEASURED, in Blender's float32 `mathutils` vectors: the DIRECTION error of a
+# Gram-Schmidt residual against an exact reference grows as roughly
+# 1.1e-5/theta degrees --
+#
+#     theta   1e-3 -> 0.011 deg   1e-4 -> 0.109   1e-5 -> 1.12
+#             1e-6 -> 10.31       1e-7 -> 62.02
+#
+# The old threshold of 1e-6 therefore admitted a plane that was already ~10 deg
+# wrong. 1e-3 keeps it within ~0.01 deg, which is far below anything a pose can
+# express.
+#
+# PROVEN INERT ON REAL WORK, so this is hardening and not a behaviour change:
+# the smallest `|dir_ankle x forward|` over every `plant_foot` call made by all
+# seven authoring scripts is 0.402019 (the layup), i.e. 400x this threshold, and
+# the smallest Gram-Schmidt residual reaching `aim_matrix` is 0.759086. No
+# committed clip changes because of it.
+BEND_PLANE_MIN_SIN = 1e-3
+
+# Minimum |span . axis| / |span| for a rest landmark pair to resolve which side
+# of the body an axis points at. Relative to the span length, because the dot
+# product scales with it and an absolute threshold would mean different angles
+# on different rigs (and in different units -- this library works in armature
+# units, where a shoulder span is ~37, not ~0.37).
+#
+# MEASURED on the Y Bot: the real landmarks read 0.99999998 (shoulders) and
+# 1.00000000 (hips), so honest input clears this by a factor of 1000.
+LANDMARK_MIN_COS = 1e-3
+
 
 def log(msg):
     print(f"[author] {msg}")
@@ -211,11 +250,22 @@ def derive_body_right(arm, lateral):
                 - rest["mixamorig:LeftUpLeg"].head_local)
     by_shoulders = shoulder_span.dot(lateral)
     by_hips = hip_span.dot(lateral)
-    if by_shoulders == 0.0 or by_hips == 0.0:
+    # RELATIVE to the span length, not an exact-zero test (#338). This guard used
+    # to read `== 0.0`, which for a float dot product essentially never holds --
+    # so a span merely NEARLY perpendicular to `lateral` (dot = 1e-9) sailed
+    # through and the anatomical side was then decided by float noise. That is
+    # exactly the coin flip the message below says it refuses to make; the guard
+    # was refusing only the one input that never arrives.
+    cos_shoulders = abs(by_shoulders) / shoulder_span.length
+    cos_hips = abs(by_hips) / hip_span.length
+    if cos_shoulders < LANDMARK_MIN_COS or cos_hips < LANDMARK_MIN_COS:
         raise SystemExit(
             f"FATAL: cannot resolve anatomical right -- the shoulder or hip span "
-            f"is perpendicular to `lateral` (shoulders {by_shoulders:.6f}, hips "
-            f"{by_hips:.6f}). This rig's landmarks do not define a side.")
+            f"is perpendicular to `lateral` to within noise (shoulders "
+            f"{by_shoulders:.6f}, |cos|={cos_shoulders:.3e}; hips {by_hips:.6f}, "
+            f"|cos|={cos_hips:.3e}; need |cos| >= {LANDMARK_MIN_COS}). This rig's "
+            f"landmarks do not define a side, so the sign of the dot product is "
+            f"float noise rather than anatomy.")
     if (by_shoulders > 0.0) != (by_hips > 0.0):
         raise SystemExit(
             f"FATAL: this rig's shoulders and hips disagree on which way "
@@ -271,11 +321,16 @@ class RigGeometry:
     --------------------------------------------------------
     `geom.lateral`     a BASIS vector. Sign is well-defined and load-bearing;
                        anatomy is NOT implied (it points at the character's LEFT
-                       on every Mixamo rig measured here). It is the REQUIRED
-                       axis for `aim_matrix`'s `side_axis`, which is a bone-ROLL
-                       reference: nothing downstream re-derives that sign, so
-                       substituting `body_right` there rolls the posed bones
-                       180 deg.
+                       on every Mixamo rig measured here). Wherever a call site
+                       passes a FIXED axis as `aim_matrix`'s `side_axis` -- a
+                       bone-ROLL reference -- this is the one to pass: nothing
+                       downstream re-derives that sign, so substituting
+                       `body_right` there rolls the posed bones 180 deg.
+                       NOT universal, though. `side_axis` may also be a COMPUTED
+                       per-pose axis, and for the leg HINGE bones it must be:
+                       #338 moved the femur and tibia onto the bend-plane normal
+                       (`plant_foot`'s `hinge_axis`), leaving `lateral` to the
+                       foot alone. See `aim_matrix` for which is which.
     `geom.body_right`  the character's ANATOMICAL right, derived and verified by
                        `derive_body_right`. Use it for every hand/foot PLACEMENT
                        that means "on the right side of the body".
@@ -391,19 +446,41 @@ def aim_matrix(head, tail_dir, side_axis):
     Unit basis, no scale. The orthonormality assertion below is the guard --
     NOT `verify_pose_unscaled`, which is blind to this (see the note there).
 
-    `side_axis` must not be parallel to `tail_dir`. For legs `geom.lateral` is
-    always safe. For ARMS it is not -- an arm near the T-pose points straight
-    down the lateral axis -- so `aim_arm` passes the bend-plane normal instead.
+    `side_axis` must not be parallel to `tail_dir`, and it sets the bone's ROLL:
+    its SIGN matters (flipping it rolls the bone 180 deg), its ANATOMY does not.
+    Never pass `geom.body_right` -- see `RigGeometry` (#320). The right axis
+    depends on what the bone's roll MEANS, and there are two answers:
 
-    This axis sets the bone's ROLL, so its SIGN matters (flipping it rolls the
-    bone 180 deg) but its ANATOMY does not. Pass `geom.lateral`, never
-    `geom.body_right` -- see `RigGeometry` (#320).
+    A COMPUTED BEND-PLANE NORMAL, for any bone that acts as a HINGE. Both arm
+    bones (`aim_arm`) and, since #338, both leg hinge bones (`plant_foot`'s
+    `hinge_axis`). A hinge's roll is not free -- the kneecap/elbow must face the
+    way the joint bends -- so the reference has to TRACK the pose. For arms this
+    was also a necessity: an arm near the T-pose points straight down the lateral
+    axis, so a fixed `geom.lateral` is degenerate there. For legs it is purely a
+    correctness fix; `lateral` never went degenerate, it just left the femur's
+    roll misaligned with the bend plane by up to 22 deg on shipped clips.
+
+    A FIXED `geom.lateral`, for a bone whose roll is an ORIENTATION rather than a
+    hinge. The FOOT is the live case: its roll is the tilt of the SOLE, which
+    must stay flat on the floor regardless of how the knee bends, and `lateral`
+    is horizontal. Handing the bend-plane normal to the foot as well -- #338's
+    proposed one-line fix, applied uniformly -- stands the character on the edges
+    of their feet (mutation-measured at 22.16 deg, dribble). Gated by
+    `sole_stays_level_*` in the selftest.
     """
     y = tail_dir.normalized()
     x = (side_axis - y * side_axis.dot(y))
-    if x.length < 1e-6:
+    if x.length < BEND_PLANE_MIN_SIN:
         # Degenerate: the bone points along the side axis. Fall back to whichever
         # world axis is LEAST aligned with y, rather than always X.
+        #
+        # The trip point moved from 1e-6 to `BEND_PLANE_MIN_SIN` in #338. Below
+        # that the residual's DIRECTION is noise (see the constant's measured
+        # table), so normalising it yields an arbitrary roll that merely LOOKS
+        # like a computed one. Substituting a world axis is not better geometry,
+        # but it is DETERMINISTIC and reproducible, which a noise direction is
+        # not -- and the two are equally arbitrary in this regime, so the tie
+        # goes to the one that exports the same clip twice.
         #
         # Always-X was itself degenerate in the case most likely to reach here:
         # `plant_foot` passes `geom.lateral`, which on this rig is essentially
@@ -498,13 +575,77 @@ def plant_foot(arm, side, ankle_target, toe_dir, geom, frame=None):
     second one: `cross(reach, hint)` with a POSITIVE angle, where the old code
     used `right` with a NEGATIVE one. Do not "tidy" one to match the other.
 
-    A CONSEQUENCE WORTH KNOWING: the femur solve no longer reads the lateral
-    axis at all, so it is now independent of that axis's sign. `geom.lateral`
-    survives here only as `aim_matrix`'s side reference, i.e. bone ROLL -- where
-    its sign is still load-bearing (flipping it rolls the leg 180 deg; measured
-    at 179.99 deg on every leg bone during #320) but its ANATOMY is irrelevant.
-    That is exactly why this call site takes `geom.lateral` and NOT
-    `geom.body_right`: swapping them here would roll the legs inside out while
+    TWO ROLL REFERENCES, ONE PER JOINT ROLE (#338)
+    ══════════════════════════════════════════════
+    This function makes THREE `aim_matrix` calls -- femur, tibia, foot -- and
+    `aim_matrix` uses its `side_axis` as a bone ROLL reference. Until #338 all
+    three were handed `geom.lateral`. They now split, because the three bones ask
+    different questions and only two of them share an answer:
+
+    `hinge_axis`  = -(dir_ankle x forward), for the FEMUR and TIBIA.
+                    A knee is a HINGE, so the femur's roll decides which way the
+                    kneecap faces, and it should face along the direction the
+                    knee actually bends -- i.e. the roll reference should be the
+                    NORMAL of the hip-knee-ankle plane. That normal is exactly
+                    this function's own bend-plane axis, already computed one
+                    line above for the femur rotation.
+    `sole_axis`   = geom.lateral, for the FOOT.
+                    A foot's roll is not a hinge question, it is the orientation
+                    of the SOLE, which should stay flat on the floor however
+                    abducted the leg is. `geom.lateral` is HORIZONTAL, which is
+                    the whole reason it works here.
+
+    WHY `lateral` WAS WRONG FOR THE LEG, and it is a continuous error rather than
+    a corner case: `geom.lateral` equals the bend-plane normal only for a purely
+    SAGITTAL leg. As the leg abducts the two diverge by the abduction angle.
+    Measured as the angle between them over every `plant_foot` call each
+    authoring script makes:
+
+        dribble 22.47 deg (mean 18.82)   layup 56.53 (mean 7.94)
+        block   18.11        ( 9.64)     behindtheback 12.74 ( 5.93)
+        contest  9.27        ( 6.69)     steal          7.47 ( 2.88)
+        jabstep  6.24        ( 5.18)
+
+    So every clip authored before #338 carries a kneecap pointing up to 22 deg
+    (56 deg for the layup) away from where its knee bends.
+
+    THE SIGN IS THE WHOLE BALLGAME, and #338 proposed it backwards. The issue
+    suggests passing `axis` -- the vector this function already computes as
+    `dir_ankle.cross(geom.forward)`. That vector is 180.000000 deg from
+    `geom.lateral` for a sagittal leg, so passing it as written would roll every
+    leg bone 180 deg (the same catastrophe #320 measured when it tried negating
+    `lateral`). `forward x dir_ankle` -- the NEGATION, which is what
+    `hinge_axis` is -- measures 0.000000 deg from `geom.lateral` for a sagittal
+    leg. It therefore agrees with the old behaviour exactly where the old
+    behaviour was right, and diverges only where it was wrong.
+
+    WHY THE FOOT DID NOT COME ALONG, mutation-proven rather than argued: handing
+    `hinge_axis` to the foot as well -- #338's one-line fix applied uniformly --
+    rolls the planted sole out of horizontal by 22.16 deg on the dribble and
+    46.35 deg on the layup, i.e. the character stands on the edges of their feet.
+    Every other gate in the library stays green through that, `verify_grounded`
+    included: it measures ankle and toe HEIGHTS, and a foot rolled about its own
+    long axis keeps both. `selftest_anim_lib`'s `sole_stays_level_*` is the gate
+    that now catches it.
+
+    WHAT BOUNDS `sole_axis`, since it keeps a fixed axis rather than a derived
+    one: its conditioning depends on `toe_dir`, NOT on how abducted the leg is.
+    `aim_matrix` Gram-Schmidts it against `toe_dir`, so it degenerates only if
+    the toe points along `geom.lateral` -- a foot aimed sideways, within
+    `BEND_PLANE_MIN_SIN` of it. No authored clip does that (all pass a
+    forward-ish `toe_dir`), and for any `toe_dir` in the sagittal plane the
+    residual is exactly `lateral`, giving 0.0000 deg of sole tilt. A move that
+    genuinely needs a sideways-pointing foot -- some defensive-slide shapes --
+    would fall into `aim_matrix`'s deterministic world-axis fallback and should
+    pass an explicit sole reference instead. That is the known limit; it is not
+    reachable from anything in the tree today.
+
+    A CONSEQUENCE WORTH KNOWING: the femur solve does not read the lateral axis
+    at all, and since #338 neither does the femur or tibia ROLL. `geom.lateral`
+    survives here only as the FOOT's roll reference, where its sign is still
+    load-bearing (flipping it rolls the foot 180 deg) but its ANATOMY is
+    irrelevant. That is exactly why this call site takes `geom.lateral` and NOT
+    `geom.body_right`: swapping them would roll the feet inside out while
     changing nothing about which side the foot lands on.
 
     The returned ankle error stays reported even though it now reads as float
@@ -522,8 +663,9 @@ def plant_foot(arm, side, ankle_target, toe_dir, geom, frame=None):
     reached their targets.
     """
     up_leg, leg, foot_b, _toe_b = LEG_CHAIN[side]
-    # Roll reference only -- see the docstring. NOT `body_right`.
-    side_axis = geom.lateral
+    # The FOOT's roll reference. Horizontal, so the sole stays flat -- see "TWO
+    # ROLL REFERENCES" in the docstring. Roll only; NOT `body_right`.
+    sole_axis = geom.lateral
 
     hip_head = arm.pose.bones[up_leg].head.copy()
     to_ankle = ankle_target - hip_head
@@ -537,7 +679,7 @@ def plant_foot(arm, side, ankle_target, toe_dir, geom, frame=None):
     # anatomically (`derive_axes`' toe check), so "the knee goes forward" is a
     # grounded claim rather than a sign convention.
     axis = dir_ankle.cross(geom.forward)
-    if axis.length < 1e-6:
+    if axis.length < BEND_PLANE_MIN_SIN:
         # The ankle target is directly fore or aft of the hip AT HIP HEIGHT, so
         # `forward` names no bend plane. Refuse, exactly as `aim_arm` refuses a
         # hint parallel to its reach: normalizing a zero vector here would emit
@@ -547,14 +689,20 @@ def plant_foot(arm, side, ankle_target, toe_dir, geom, frame=None):
         # with the hip and straight ahead -- so hitting it means the SPEC is
         # wrong, not this code.
         raise SystemExit(
-            f"FATAL: the {side} ankle target sits directly fore/aft of the hip "
-            f"at hip height, so `forward` names no knee bend plane. Give the "
-            f"target a vertical component (a foot plant is always below the "
-            f"hip).")
+            f"FATAL: the {side} ankle target sits within {BEND_PLANE_MIN_SIN} rad "
+            f"of directly fore/aft of the hip at hip height, so `forward` names "
+            f"no knee bend plane (|dir_ankle x forward| = {axis.length:.3e}). "
+            f"Give the target a vertical component (a foot plant is always below "
+            f"the hip).")
     axis.normalize()
     femur_dir = Matrix.Rotation(hip_offset, 4, axis) @ dir_ankle
 
-    arm.pose.bones[up_leg].matrix = aim_matrix(hip_head, femur_dir, side_axis)
+    # The FEMUR/TIBIA roll reference: the bend-plane normal itself, NEGATED --
+    # see "TWO ROLL REFERENCES" in the docstring for why this is not `axis` as
+    # written, and why the sign is the whole ballgame.
+    hinge_axis = -axis
+
+    arm.pose.bones[up_leg].matrix = aim_matrix(hip_head, femur_dir, hinge_axis)
     bpy.context.view_layer.update()
     # Re-read the knee head AFTER the femur is posed: it is the femur's tail, so
     # reading it before would aim the tibia from a stale position and quietly
@@ -562,7 +710,7 @@ def plant_foot(arm, side, ankle_target, toe_dir, geom, frame=None):
     # load-bearing for exactly this reason -- do not "clean them up".
     knee_head = arm.pose.bones[leg].head.copy()
     arm.pose.bones[leg].matrix = aim_matrix(
-        knee_head, (ankle_target - knee_head), side_axis)
+        knee_head, (ankle_target - knee_head), hinge_axis)
     bpy.context.view_layer.update()
 
     ankle_head = arm.pose.bones[foot_b].head.copy()
@@ -571,7 +719,7 @@ def plant_foot(arm, side, ankle_target, toe_dir, geom, frame=None):
     # limitation in the docstring; without this the shortfall is unobservable,
     # because `solved` reports the REQUEST, not the RESULT.
     ankle_err = (ankle_head - ankle_target).length
-    arm.pose.bones[foot_b].matrix = aim_matrix(ankle_head, toe_dir, side_axis)
+    arm.pose.bones[foot_b].matrix = aim_matrix(ankle_head, toe_dir, sole_axis)
     bpy.context.view_layer.update()
 
     if frame is not None:
@@ -616,16 +764,23 @@ def aim_arm(arm, side, hand_target, elbow_hint_dir, geom, frame=None,
     # Bend-plane normal. Rotating `dir_wrist` about (dir_wrist x hint) by a
     # POSITIVE angle carries it toward `hint`, so the elbow ends up displaced
     # to the hinted side.
-    axis = dir_wrist.cross(elbow_hint_dir)
-    if axis.length < 1e-6:
-        # `elbow_hint_dir` is parallel to the reach direction, so it names no
-        # plane. Refuse rather than pick an arbitrary one: a silently-chosen
-        # elbow plane is exactly the kind of wrong-but-plausible pose this
-        # library exists to prevent.
+    # Both operands unit, so `|axis|` is sin(angle) and the guard below is an
+    # ANGLE. The hint is normalised here rather than trusted: the signature does
+    # not require a unit vector (every caller today happens to pass one), and an
+    # un-normalised hint would scale `|axis|` -- making a short hint trip a guard
+    # that an identical-direction long one passes.
+    axis = dir_wrist.cross(elbow_hint_dir.normalized())
+    if axis.length < BEND_PLANE_MIN_SIN:
+        # `elbow_hint_dir` is parallel -- or merely NEARLY parallel (#338) -- to
+        # the reach direction, so it names no usable plane. Refuse rather than
+        # pick an arbitrary one: a silently-chosen elbow plane is exactly the
+        # kind of wrong-but-plausible pose this library exists to prevent.
         raise SystemExit(
             f"FATAL: elbow_hint_dir is parallel to the {side} arm's reach "
-            f"direction, so it does not define a bend plane. Pass a hint that "
-            f"points across the reach (e.g. down/outward), not along it.")
+            f"direction to within {BEND_PLANE_MIN_SIN} rad, so it does not "
+            f"define a bend plane (|reach x hint| = {axis.length:.3e}). Pass a "
+            f"hint that points across the reach (e.g. down/outward), not along "
+            f"it.")
     axis.normalize()
     humerus_dir = Matrix.Rotation(sh_offset, 4, axis) @ dir_wrist
 
