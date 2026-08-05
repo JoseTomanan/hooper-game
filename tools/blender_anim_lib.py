@@ -321,11 +321,16 @@ class RigGeometry:
     --------------------------------------------------------
     `geom.lateral`     a BASIS vector. Sign is well-defined and load-bearing;
                        anatomy is NOT implied (it points at the character's LEFT
-                       on every Mixamo rig measured here). It is the REQUIRED
-                       axis for `aim_matrix`'s `side_axis`, which is a bone-ROLL
-                       reference: nothing downstream re-derives that sign, so
-                       substituting `body_right` there rolls the posed bones
-                       180 deg.
+                       on every Mixamo rig measured here). Wherever a call site
+                       passes a FIXED axis as `aim_matrix`'s `side_axis` -- a
+                       bone-ROLL reference -- this is the one to pass: nothing
+                       downstream re-derives that sign, so substituting
+                       `body_right` there rolls the posed bones 180 deg.
+                       NOT universal, though. `side_axis` may also be a COMPUTED
+                       per-pose axis, and for the leg HINGE bones it must be:
+                       #338 moved the femur and tibia onto the bend-plane normal
+                       (`plant_foot`'s `hinge_axis`), leaving `lateral` to the
+                       foot alone. See `aim_matrix` for which is which.
     `geom.body_right`  the character's ANATOMICAL right, derived and verified by
                        `derive_body_right`. Use it for every hand/foot PLACEMENT
                        that means "on the right side of the body".
@@ -441,13 +446,27 @@ def aim_matrix(head, tail_dir, side_axis):
     Unit basis, no scale. The orthonormality assertion below is the guard --
     NOT `verify_pose_unscaled`, which is blind to this (see the note there).
 
-    `side_axis` must not be parallel to `tail_dir`. For legs `geom.lateral` is
-    always safe. For ARMS it is not -- an arm near the T-pose points straight
-    down the lateral axis -- so `aim_arm` passes the bend-plane normal instead.
+    `side_axis` must not be parallel to `tail_dir`, and it sets the bone's ROLL:
+    its SIGN matters (flipping it rolls the bone 180 deg), its ANATOMY does not.
+    Never pass `geom.body_right` -- see `RigGeometry` (#320). The right axis
+    depends on what the bone's roll MEANS, and there are two answers:
 
-    This axis sets the bone's ROLL, so its SIGN matters (flipping it rolls the
-    bone 180 deg) but its ANATOMY does not. Pass `geom.lateral`, never
-    `geom.body_right` -- see `RigGeometry` (#320).
+    A COMPUTED BEND-PLANE NORMAL, for any bone that acts as a HINGE. Both arm
+    bones (`aim_arm`) and, since #338, both leg hinge bones (`plant_foot`'s
+    `hinge_axis`). A hinge's roll is not free -- the kneecap/elbow must face the
+    way the joint bends -- so the reference has to TRACK the pose. For arms this
+    was also a necessity: an arm near the T-pose points straight down the lateral
+    axis, so a fixed `geom.lateral` is degenerate there. For legs it is purely a
+    correctness fix; `lateral` never went degenerate, it just left the femur's
+    roll misaligned with the bend plane by up to 22 deg on shipped clips.
+
+    A FIXED `geom.lateral`, for a bone whose roll is an ORIENTATION rather than a
+    hinge. The FOOT is the live case: its roll is the tilt of the SOLE, which
+    must stay flat on the floor regardless of how the knee bends, and `lateral`
+    is horizontal. Handing the bend-plane normal to the foot as well -- #338's
+    proposed one-line fix, applied uniformly -- stands the character on the edges
+    of their feet (mutation-measured at 22.16 deg, dribble). Gated by
+    `sole_stays_level_*` in the selftest.
     """
     y = tail_dir.normalized()
     x = (side_axis - y * side_axis.dot(y))
