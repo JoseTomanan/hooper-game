@@ -97,6 +97,45 @@ LEAF_END_BONES = frozenset({
     "mixamorig:RightHandPinky4",
 })
 
+# ── degenerate-geometry thresholds (#338) ────────────────────────────────────
+# Both of the following guard a quantity that is ALREADY GARBAGE long before it
+# reaches zero, so both are set from a measurement rather than from "close to
+# zero looks about right". That was the #338 defect: guards written as exact- or
+# near-zero checks fire two to five decades after the answer they protect has
+# stopped meaning anything, and the caller gets a wrong-but-plausible pose with
+# nothing said.
+
+# Minimum |a x b| for two UNIT vectors to name a usable plane -- i.e. sin(angle),
+# so this is an angle in radians for small values.
+#
+# MEASURED, in Blender's float32 `mathutils` vectors: the DIRECTION error of a
+# Gram-Schmidt residual against an exact reference grows as roughly
+# 1.1e-5/theta degrees --
+#
+#     theta   1e-3 -> 0.011 deg   1e-4 -> 0.109   1e-5 -> 1.12
+#             1e-6 -> 10.31       1e-7 -> 62.02
+#
+# The old threshold of 1e-6 therefore admitted a plane that was already ~10 deg
+# wrong. 1e-3 keeps it within ~0.01 deg, which is far below anything a pose can
+# express.
+#
+# PROVEN INERT ON REAL WORK, so this is hardening and not a behaviour change:
+# the smallest `|dir_ankle x forward|` over every `plant_foot` call made by all
+# seven authoring scripts is 0.402019 (the layup), i.e. 400x this threshold, and
+# the smallest Gram-Schmidt residual reaching `aim_matrix` is 0.759086. No
+# committed clip changes because of it.
+BEND_PLANE_MIN_SIN = 1e-3
+
+# Minimum |span . axis| / |span| for a rest landmark pair to resolve which side
+# of the body an axis points at. Relative to the span length, because the dot
+# product scales with it and an absolute threshold would mean different angles
+# on different rigs (and in different units -- this library works in armature
+# units, where a shoulder span is ~37, not ~0.37).
+#
+# MEASURED on the Y Bot: the real landmarks read 0.99999998 (shoulders) and
+# 1.00000000 (hips), so honest input clears this by a factor of 1000.
+LANDMARK_MIN_COS = 1e-3
+
 
 def log(msg):
     print(f"[author] {msg}")
@@ -211,11 +250,22 @@ def derive_body_right(arm, lateral):
                 - rest["mixamorig:LeftUpLeg"].head_local)
     by_shoulders = shoulder_span.dot(lateral)
     by_hips = hip_span.dot(lateral)
-    if by_shoulders == 0.0 or by_hips == 0.0:
+    # RELATIVE to the span length, not an exact-zero test (#338). This guard used
+    # to read `== 0.0`, which for a float dot product essentially never holds --
+    # so a span merely NEARLY perpendicular to `lateral` (dot = 1e-9) sailed
+    # through and the anatomical side was then decided by float noise. That is
+    # exactly the coin flip the message below says it refuses to make; the guard
+    # was refusing only the one input that never arrives.
+    cos_shoulders = abs(by_shoulders) / shoulder_span.length
+    cos_hips = abs(by_hips) / hip_span.length
+    if cos_shoulders < LANDMARK_MIN_COS or cos_hips < LANDMARK_MIN_COS:
         raise SystemExit(
             f"FATAL: cannot resolve anatomical right -- the shoulder or hip span "
-            f"is perpendicular to `lateral` (shoulders {by_shoulders:.6f}, hips "
-            f"{by_hips:.6f}). This rig's landmarks do not define a side.")
+            f"is perpendicular to `lateral` to within noise (shoulders "
+            f"{by_shoulders:.6f}, |cos|={cos_shoulders:.3e}; hips {by_hips:.6f}, "
+            f"|cos|={cos_hips:.3e}; need |cos| >= {LANDMARK_MIN_COS}). This rig's "
+            f"landmarks do not define a side, so the sign of the dot product is "
+            f"float noise rather than anatomy.")
     if (by_shoulders > 0.0) != (by_hips > 0.0):
         raise SystemExit(
             f"FATAL: this rig's shoulders and hips disagree on which way "
@@ -401,9 +451,17 @@ def aim_matrix(head, tail_dir, side_axis):
     """
     y = tail_dir.normalized()
     x = (side_axis - y * side_axis.dot(y))
-    if x.length < 1e-6:
+    if x.length < BEND_PLANE_MIN_SIN:
         # Degenerate: the bone points along the side axis. Fall back to whichever
         # world axis is LEAST aligned with y, rather than always X.
+        #
+        # The trip point moved from 1e-6 to `BEND_PLANE_MIN_SIN` in #338. Below
+        # that the residual's DIRECTION is noise (see the constant's measured
+        # table), so normalising it yields an arbitrary roll that merely LOOKS
+        # like a computed one. Substituting a world axis is not better geometry,
+        # but it is DETERMINISTIC and reproducible, which a noise direction is
+        # not -- and the two are equally arbitrary in this regime, so the tie
+        # goes to the one that exports the same clip twice.
         #
         # Always-X was itself degenerate in the case most likely to reach here:
         # `plant_foot` passes `geom.lateral`, which on this rig is essentially
@@ -537,7 +595,7 @@ def plant_foot(arm, side, ankle_target, toe_dir, geom, frame=None):
     # anatomically (`derive_axes`' toe check), so "the knee goes forward" is a
     # grounded claim rather than a sign convention.
     axis = dir_ankle.cross(geom.forward)
-    if axis.length < 1e-6:
+    if axis.length < BEND_PLANE_MIN_SIN:
         # The ankle target is directly fore or aft of the hip AT HIP HEIGHT, so
         # `forward` names no bend plane. Refuse, exactly as `aim_arm` refuses a
         # hint parallel to its reach: normalizing a zero vector here would emit
@@ -547,10 +605,11 @@ def plant_foot(arm, side, ankle_target, toe_dir, geom, frame=None):
         # with the hip and straight ahead -- so hitting it means the SPEC is
         # wrong, not this code.
         raise SystemExit(
-            f"FATAL: the {side} ankle target sits directly fore/aft of the hip "
-            f"at hip height, so `forward` names no knee bend plane. Give the "
-            f"target a vertical component (a foot plant is always below the "
-            f"hip).")
+            f"FATAL: the {side} ankle target sits within {BEND_PLANE_MIN_SIN} rad "
+            f"of directly fore/aft of the hip at hip height, so `forward` names "
+            f"no knee bend plane (|dir_ankle x forward| = {axis.length:.3e}). "
+            f"Give the target a vertical component (a foot plant is always below "
+            f"the hip).")
     axis.normalize()
     femur_dir = Matrix.Rotation(hip_offset, 4, axis) @ dir_ankle
 
@@ -616,16 +675,23 @@ def aim_arm(arm, side, hand_target, elbow_hint_dir, geom, frame=None,
     # Bend-plane normal. Rotating `dir_wrist` about (dir_wrist x hint) by a
     # POSITIVE angle carries it toward `hint`, so the elbow ends up displaced
     # to the hinted side.
-    axis = dir_wrist.cross(elbow_hint_dir)
-    if axis.length < 1e-6:
-        # `elbow_hint_dir` is parallel to the reach direction, so it names no
-        # plane. Refuse rather than pick an arbitrary one: a silently-chosen
-        # elbow plane is exactly the kind of wrong-but-plausible pose this
-        # library exists to prevent.
+    # Both operands unit, so `|axis|` is sin(angle) and the guard below is an
+    # ANGLE. The hint is normalised here rather than trusted: the signature does
+    # not require a unit vector (every caller today happens to pass one), and an
+    # un-normalised hint would scale `|axis|` -- making a short hint trip a guard
+    # that an identical-direction long one passes.
+    axis = dir_wrist.cross(elbow_hint_dir.normalized())
+    if axis.length < BEND_PLANE_MIN_SIN:
+        # `elbow_hint_dir` is parallel -- or merely NEARLY parallel (#338) -- to
+        # the reach direction, so it names no usable plane. Refuse rather than
+        # pick an arbitrary one: a silently-chosen elbow plane is exactly the
+        # kind of wrong-but-plausible pose this library exists to prevent.
         raise SystemExit(
             f"FATAL: elbow_hint_dir is parallel to the {side} arm's reach "
-            f"direction, so it does not define a bend plane. Pass a hint that "
-            f"points across the reach (e.g. down/outward), not along it.")
+            f"direction to within {BEND_PLANE_MIN_SIN} rad, so it does not "
+            f"define a bend plane (|reach x hint| = {axis.length:.3e}). Pass a "
+            f"hint that points across the reach (e.g. down/outward), not along "
+            f"it.")
     axis.normalize()
     humerus_dir = Matrix.Rotation(sh_offset, 4, axis) @ dir_wrist
 

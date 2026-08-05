@@ -26,6 +26,7 @@ it; a clamped two-link solve then yields a locked, straight arm that reads as a
 mannequin rather than a reach. Handoff 00 requires callers treat that as a
 FAILURE, so this asserts it raises rather than logs.
 """
+import math
 import os
 import sys
 
@@ -350,6 +351,102 @@ def main():
                   "which names no bend plane")
         except SystemExit:
             check(f"plant_foot_degenerate_fails_{side}", True)
+
+    # ---- 4f. the bend-plane guards refuse NOISE, not merely ZERO ------------
+    # THE #338(2) GATE. `plant_foot` and `aim_arm` both build a bend plane as a
+    # cross product of two UNIT vectors, so its length is sin(angle) and the
+    # guard threshold is an angle. Both used `< 1e-6`, which only trips within a
+    # microradian of degenerate.
+    #
+    # MEASURED, which is what sets the replacement threshold rather than taste:
+    # the DIRECTION error of the normalised residual against an exact reference
+    # follows roughly 1.1e-5/theta degrees in Blender's float32 vectors --
+    #
+    #     theta   1e-3 -> 0.011 deg    1e-4 -> 0.109    1e-5 -> 1.12
+    #             1e-6 -> 10.31        1e-7 -> 62.02
+    #
+    # -- so at the OLD threshold the plane was already 10 deg wrong, and the
+    # knee (or elbow) was placed in an arbitrary plane while the guard stayed
+    # silent. That is the "wrong-but-plausible pose" these guards exist to catch.
+    # 1e-3 rad keeps the plane within ~0.01 deg.
+    #
+    # PROVEN NOT TO FIRE ON REAL WORK, so this is hardening and not a behaviour
+    # change: the minimum `|dir_ankle x forward|` over every `plant_foot` call of
+    # all seven authoring scripts is 0.402019 (the layup), i.e. 400x the new
+    # threshold. No committed clip moves because of this.
+    BEND_GUARD_TEST_RAD = 1e-4          # noise-dominated, but >> the old 1e-6
+    for side in ("L", "R"):
+        leg_hip = arm.pose.bones[lib.LEG_CHAIN[side][0]].head.copy()
+        # A target `BEND_GUARD_TEST_RAD` off dead-ahead: the bend plane it names
+        # is real arithmetic but pure noise in direction.
+        nearly_fore = (geom.forward * math.cos(BEND_GUARD_TEST_RAD)
+                       - geom.up * math.sin(BEND_GUARD_TEST_RAD)).normalized()
+        target = leg_hip + nearly_fore * (geom.leg_reach * 0.7)
+        try:
+            lib.plant_foot(arm, side, target, geom.forward, geom)
+            check(f"plant_foot_refuses_noise_plane_{side}", False,
+                  f"plant_foot accepted an ankle target only "
+                  f"{BEND_GUARD_TEST_RAD} rad off dead-ahead. The bend plane it "
+                  f"derived is noise, so the knee went into an arbitrary plane "
+                  f"and nothing said so")
+        except SystemExit:
+            check(f"plant_foot_refuses_noise_plane_{side}", True)
+
+        # Same shape for `aim_arm`'s elbow hint.
+        shoulder = arm.pose.bones[lib.ARM_CHAIN[side][0]].head.copy()
+        h, u = lib.arm_lengths(arm, side)
+        hand_target = shoulder + (geom.forward * (h + u) * 0.7)
+        reach_dir = (hand_target - shoulder).normalized()
+        off = reach_dir.cross(geom.up).normalized()
+        near_parallel_hint = (reach_dir * math.cos(BEND_GUARD_TEST_RAD)
+                              + off * math.sin(BEND_GUARD_TEST_RAD))
+        try:
+            lib.aim_arm(arm, side, hand_target, near_parallel_hint, geom)
+            check(f"aim_arm_refuses_noise_plane_{side}", False,
+                  f"aim_arm accepted an elbow hint only {BEND_GUARD_TEST_RAD} rad "
+                  f"from its reach direction; the elbow plane it derived is noise")
+        except SystemExit:
+            check(f"aim_arm_refuses_noise_plane_{side}", True)
+
+    # ---- 4g. derive_body_right refuses a landmark COIN FLIP -----------------
+    # THE #338(3) GATE. The guard was `by_shoulders == 0.0 or by_hips == 0.0` --
+    # exact float equality, which essentially never holds, so a span merely
+    # NEARLY perpendicular to `lateral` sailed through and the anatomical side
+    # was then decided by float noise. That is precisely the coin flip the
+    # adjacent error message says it refuses to make.
+    #
+    # The premise is asserted, not assumed: the crafted axis below is reported
+    # with both ratios, so a future edit that stops making the spans
+    # near-perpendicular turns this into a visible premise failure rather than a
+    # silently vacuous pass.
+    #
+    # MARGIN ON THE REAL RIG, so the new relative threshold cannot bite honest
+    # input: |dot|/|span| measures 0.99999998 (shoulders) and 1.00000000 (hips),
+    # i.e. the real landmarks sit 1000x clear of a 1e-3 threshold.
+    span = (arm.data.bones["mixamorig:RightArm"].head_local
+            - arm.data.bones["mixamorig:LeftArm"].head_local)
+    # A unit axis almost exactly perpendicular to the shoulder span, tilted back
+    # toward it by a small but entirely non-zero amount.
+    perp = span.cross(geom.forward).normalized()
+    crafted = (perp + span.normalized() * 1e-4).normalized()
+    hip_span = (arm.data.bones["mixamorig:RightUpLeg"].head_local
+                - arm.data.bones["mixamorig:LeftUpLeg"].head_local)
+    r_sh = abs(span.dot(crafted)) / span.length
+    r_hip = abs(hip_span.dot(crafted)) / hip_span.length
+    lib.report("body_right_coinflip_ratio_shoulders", f"{r_sh:.8f}")
+    lib.report("body_right_coinflip_ratio_hips", f"{r_hip:.8f}")
+    check("body_right_coinflip_premise", r_sh < 1e-3 and r_hip < 1e-3,
+          f"the crafted axis is not actually near-perpendicular to the landmarks "
+          f"(shoulders {r_sh:.8f}, hips {r_hip:.8f}), so the refusal asserted "
+          f"below would not be testing the guard")
+    try:
+        lib.derive_body_right(arm, crafted)
+        check("body_right_refuses_coinflip", False,
+              "derive_body_right resolved an anatomical side from landmarks that "
+              "are perpendicular to the given axis to within float noise; the "
+              "sign it returned is a coin flip")
+    except SystemExit:
+        check("body_right_refuses_coinflip", True)
 
     # ---- 5. none of the above introduced a pose scale -----------------------
     # `aim_arm` passes the bend-plane normal to `aim_matrix` as the side axis
