@@ -277,9 +277,15 @@ ELBOW_HINT_LAT = 0.6
 # Dramatically tighter than author_layup.py's 0.18 m Startup band, and that is
 # the POINT rather than an accident: the ankles here are anchored to a fixed
 # floor (see `apply`), so the feet do not move vertically at all and the only
-# residual is the foot IK solver's own error (worst_ankle_ik_err_m ~0.004 m).
-# 0.02 m is roughly 5x that residual -- loose enough not to be flaky, tight
-# enough that ANY real vertical excursion fails.
+# residual is the foot IK solver's own error. 0.02 m was chosen as roughly 5x a
+# then-measured ~0.004 m residual -- loose enough not to be flaky, tight enough
+# that ANY real vertical excursion fails.
+#
+# THAT RATIONALE IS NOW STALE (#321): the solver residual is 0, so the 5x
+# headroom no longer describes anything. The VALUE is still fine -- it is a
+# vertical-excursion gate, not a solver-noise gate -- but do not re-derive it
+# from the old multiplier. Re-tuning it needs a fresh measurement of what
+# excursion this clip should be allowed.
 #
 # This is the gate that distinguishes contest from block, so it is deliberately
 # not sized for comfort: a clip that drifts even 3 cm off the floor is one that

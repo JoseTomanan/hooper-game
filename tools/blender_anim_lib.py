@@ -271,13 +271,25 @@ class RigGeometry:
     --------------------------------------------------------
     `geom.lateral`     a BASIS vector. Sign is well-defined and load-bearing;
                        anatomy is NOT implied (it points at the character's LEFT
-                       on every Mixamo rig measured here). Use it where a
-                       side-reference axis is needed and the anatomical side is
-                       irrelevant: `aim_matrix`'s `side_axis`, and the axis of a
-                       `Matrix.Rotation` for a torso lean.
+                       on every Mixamo rig measured here). It is the REQUIRED
+                       axis for `aim_matrix`'s `side_axis`, which is a bone-ROLL
+                       reference: nothing downstream re-derives that sign, so
+                       substituting `body_right` there rolls the posed bones
+                       180 deg.
     `geom.body_right`  the character's ANATOMICAL right, derived and verified by
                        `derive_body_right`. Use it for every hand/foot PLACEMENT
                        that means "on the right side of the body".
+
+    A `Matrix.Rotation` TORSO LEAN belongs to neither column, and the tree
+    genuinely uses both: `author_dribble_move` passes `lateral`, while
+    `author_block` / `author_contest` / `author_jabstep` / `author_layup` pass
+    `body_right`. Both are correct, because `body_right` is exactly `+/-lateral`
+    and each file's lean-sign constant (`LEAN_DEGREES`, `TORSO_PITCH_SIGN`) was
+    co-derived against the axis that file passes. So the invariant here is a
+    PAIRING, not an axis: change the axis and you MUST re-derive the sign
+    constant with it. Do not "unify" these call sites on one axis without
+    re-running each file's lean-direction oracle -- an unpaired swap tips every
+    torso backwards while passing every side-agnostic gate.
 
     There is deliberately NO `geom.right`. It was removed rather than aliased,
     because it named the basis vector while reading as the anatomical one -- and
@@ -496,9 +508,18 @@ def plant_foot(arm, side, ankle_target, toe_dir, geom, frame=None):
     changing nothing about which side the foot lands on.
 
     The returned ankle error stays reported even though it now reads as float
-    noise. It is the standing guard: a future spec that pushes a target outside
-    reach, or a rig whose bone tails stop coinciding with their children's heads,
-    shows up here as a number instead of as a subtly wrong pose.
+    noise. A future spec that pushes a target outside reach, or a rig whose bone
+    tails stop coinciding with their children's heads, shows up here as a number
+    instead of as a subtly wrong pose.
+
+    BUT IT IS ONLY REPORTED, NEVER ASSERTED (#335). This call passes
+    `on_overreach="warn"`, so an out-of-reach target is CLAMPED and logged, not
+    refused -- and none of the seven authoring scripts compares the reported
+    `worst_ankle_ik_err_m` against a threshold. So the number is a tripwire only
+    for a human who reads the log. Now that the exact value is 0.000000 a hard
+    gate is finally cheap (`selftest_anim_lib` already uses 1e-4); until #335
+    adds one, do not treat a green authoring run as evidence that the feet
+    reached their targets.
     """
     up_leg, leg, foot_b, _toe_b = LEG_CHAIN[side]
     # Roll reference only -- see the docstring. NOT `body_right`.

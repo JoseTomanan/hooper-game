@@ -279,11 +279,18 @@ def main():
 
     geom = lib.RigGeometry(arm)
     geom.log_summary()
-    # `lateral`, NOT `body_right` (#320): this basis is handed to
-    # `aim_matrix`/`Matrix.Rotation`, where the axis SIGN is load-bearing but
-    # its anatomy is irrelevant. Swapping in `body_right` here would roll the
-    # posed bones 180 deg while changing nothing about which side anything
-    # lands on.
+    # `lateral`, NOT `body_right` (#320): this basis is handed to `aim_matrix`
+    # as its `side_axis`, a bone-ROLL reference where the axis SIGN is
+    # load-bearing but its anatomy is irrelevant. Swapping in `body_right` here
+    # would roll the posed bones 180 deg while changing nothing about which side
+    # anything lands on.
+    #
+    # `right` ALSO supplies the `Matrix.Rotation` torso-lean axis below (~line
+    # 302). That is a separate contract: there either axis works, but only
+    # paired with a lean-sign constant derived against it -- `LEAN_DEGREES` was
+    # derived against `lateral`. Unlike `aim_matrix`, the pairing is what
+    # matters, not the axis. See `RigGeometry`'s docstring; four sibling
+    # scripts legitimately pass `body_right` there instead.
     right, up, forward = geom.lateral, geom.up, geom.forward
 
     verify_cadence(arm, f0, f1, geom)
@@ -353,9 +360,11 @@ def main():
     bpy.ops.object.mode_set(mode="OBJECT")
 
     # Where the ankles actually landed vs where the IK was asked to put them.
-    # Nonzero because `plant_foot`'s hip rotation is inexact for lateral targets
-    # (see its docstring); this gait is nearly planar so it stays tiny, but the
-    # number is now visible instead of assumed.
+    # Reads 0.000000 since #321 made `plant_foot`'s bend-plane axis
+    # perpendicular by construction, so the solve is exact for ANY target
+    # direction (it previously read 0.029890 here). A nonzero value now means an
+    # over-reach clamp or a rig-geometry change, not solver error -- but nothing
+    # ASSERTS it; see `plant_foot`'s docstring and #335.
     lib.report("worst_ankle_ik_err_m", f"{geom.to_m(worst_ankle_err):.6f}")
 
     # ---- proofs, before the export commits anything --------------------------

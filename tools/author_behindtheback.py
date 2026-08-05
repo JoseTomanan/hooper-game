@@ -314,11 +314,12 @@ def _author_polarity(arm, geom, body_right, ball_side, frame_offset):
     """
     ball_sign, recv_side = _side_signs(ball_side)
     recv_sign = -ball_sign
-    # `lateral`, NOT `body_right` (#320): this basis is handed to
-    # `aim_matrix`/`Matrix.Rotation`, where the axis SIGN is load-bearing but
-    # its anatomy is irrelevant. Swapping in `body_right` here would roll the
-    # posed bones 180 deg while changing nothing about which side anything
-    # lands on.
+    # `lateral`, NOT `body_right` (#320): this basis is handed to `aim_matrix`
+    # as its `side_axis`, a bone-ROLL reference where the axis SIGN is
+    # load-bearing but its anatomy is irrelevant. Swapping in `body_right` here
+    # would roll the posed bones 180 deg while changing nothing about which side
+    # anything lands on. (This file's only `Matrix.Rotation` is a spine twist
+    # about `up`, so no lateral-axis rotation is involved either way.)
     right, up, forward = geom.lateral, geom.up, geom.forward
 
     ball_humerus_u, ball_ulna_u = lib.arm_lengths(arm, ball_side)

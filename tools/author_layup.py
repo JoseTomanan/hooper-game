@@ -306,11 +306,17 @@ def main():
     geom.log_summary()
     # Anatomical right, derived + verified in the lib (#320).
     body_right = geom.body_right
-    # `lateral`, NOT `body_right` (#320): this basis is handed to
-    # `aim_matrix`/`Matrix.Rotation`, where the axis SIGN is load-bearing but
-    # its anatomy is irrelevant. Swapping in `body_right` here would roll the
-    # posed bones 180 deg while changing nothing about which side anything
-    # lands on.
+    # `lateral`, NOT `body_right` (#320): this basis is handed to `aim_matrix`
+    # as its `side_axis`, a bone-ROLL reference where the axis SIGN is
+    # load-bearing but its anatomy is irrelevant. Swapping in `body_right` here
+    # would roll the posed bones 180 deg while changing nothing about which side
+    # anything lands on.
+    #
+    # This does NOT extend to the torso pitch below, which passes `body_right`
+    # to `Matrix.Rotation` (line ~400) -- that is correct, because
+    # `TORSO_PITCH_SIGN` was derived against `body_right` and is pinned by the
+    # lean-direction oracle `_torso_pitches_backward`. Axis and sign constant
+    # are a pair; see `RigGeometry`'s docstring.
     right, up, forward = geom.lateral, geom.up, geom.forward
     lib.report("body_right", tuple(round(v, 4) for v in body_right))
 

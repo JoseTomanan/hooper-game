@@ -127,10 +127,16 @@ def main():
     # `lateral_axis_sign_pinned` and every other check in this file stay green.
     # So this gate is a real discriminator and not a restatement of the pin above.
     #
-    # Note the shoulders are an INDEPENDENT landmark from the hip pair that
-    # `derive_axes` builds `lateral` from, and from the shoulder span
-    # `derive_body_right` reads -- this measures the POSED skeleton, that one
-    # reads REST geometry. So this is a third opinion, not the same measurement.
+    # KNOWN LIMIT, so this is not oversold: it reads `ARM_CHAIN[side][0]`, i.e.
+    # `mixamorig:{Left,Right}Arm` -- the SAME two bones `derive_body_right`
+    # builds its shoulder span from. Posed-vs-rest makes it a real discriminator
+    # for an `ARM_CHAIN` mis-wiring (proven by the mutation above), but it shares
+    # that function's landmarks, so it CANNOT catch a rig whose `LeftArm` and
+    # `RightArm` labels are themselves swapped -- the #255-class mirror failure.
+    #
+    # No purely axis-derived alternative exists: `up` and `forward` do not
+    # determine handedness on a mirror-symmetric skeleton, so SOME bone label
+    # must be trusted. The limitation is inherent, not an oversight.
     check("body_right_points_rig_right",
           on_body_right["R"] > 0.0 > on_body_right["L"],
           f"`geom.body_right` does not point at the character's RIGHT "

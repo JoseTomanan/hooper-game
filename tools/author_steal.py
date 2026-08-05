@@ -329,8 +329,9 @@ def _side_signs(polarity):
 
     `reach_sign` multiplies every reach-direction-relative channel in this
     file (see module docstring) -- -1 for "L", +1 for "R", matching
-    `BODY_RIGHT`'s sign. `arm_side` is the OPPOSITE chain: the hand reaching to
-    the defender's left is the RIGHT arm crossing over (module docstring).
+    `geom.body_right`'s sign. `arm_side` is the OPPOSITE chain: the hand
+    reaching to the defender's left is the RIGHT arm crossing over (module
+    docstring).
     """
     reach_sign = -1.0 if polarity == "L" else 1.0
     arm_side = "R" if polarity == "L" else "L"
@@ -373,11 +374,12 @@ def _author_polarity(arm, geom, body_right, polarity, frame_offset):
     """
     reach_sign, arm_side = _side_signs(polarity)
     near_side, far_side = polarity, ("R" if polarity == "L" else "L")
-    # `lateral`, NOT `body_right` (#320): this basis is handed to
-    # `aim_matrix`/`Matrix.Rotation`, where the axis SIGN is load-bearing but
-    # its anatomy is irrelevant. Swapping in `body_right` here would roll the
-    # posed bones 180 deg while changing nothing about which side anything
-    # lands on.
+    # `lateral`, NOT `body_right` (#320): this basis is handed to `aim_matrix`
+    # as its `side_axis`, a bone-ROLL reference where the axis SIGN is
+    # load-bearing but its anatomy is irrelevant. Swapping in `body_right` here
+    # would roll the posed bones 180 deg while changing nothing about which side
+    # anything lands on. (This file's only `Matrix.Rotation` is a spine twist
+    # about `up`, so no lateral-axis rotation is involved either way.)
     right, up, forward = geom.lateral, geom.up, geom.forward
 
     swipe_humerus_u, swipe_ulna_u = lib.arm_lengths(arm, arm_side)
