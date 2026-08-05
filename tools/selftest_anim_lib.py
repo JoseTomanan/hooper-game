@@ -386,8 +386,25 @@ def main():
     # gate measures alignment rather than trying to provoke a pop.
     #
     # Post-fix the femur's side axis IS the bend-plane normal by construction, so
-    # this reads 1.000000 exactly rather than merely within tolerance.
-    HINGE_TOL = 0.9999          # |cos| -- 0.81 deg of misalignment
+    # this reads +1.000000 exactly rather than merely within tolerance.
+    #
+    # THE COMPARISON IS SIGNED, AND THAT IS THE WHOLE POINT (#339 review).
+    # Written as `abs(local_x.dot(normal))` this gate is a MAGNITUDE test, and a
+    # 180 deg roll -- the single defect `plant_foot`'s own comment calls "the
+    # whole ballgame" -- flips `local_x` straight back onto +1.0 and passes.
+    # Mutation-proven: reverting `hinge_axis = -axis` to the unnegated `axis`
+    # that #338 literally asked for left this whole file green, exit 0, every
+    # `hinge_align_*` reading 1.000000, the sagittal controls included.
+    #
+    # The expected sign is DERIVED, not observed, so this asserts the geometry
+    # rather than whatever the solver happens to emit. `plant_foot` builds
+    # `femur_dir = R(+hip_offset, axis) @ dir_ankle`, and for a rotation by theta
+    # about a unit axis, `a x R_theta(a) = sin(theta) * axis`. The realized
+    # normal below is `femur_dir x (ankle - knee) = d * (femur_dir x dir_ankle)`
+    # = `-d * sin(hip_offset) * axis`, and `hip_offset` is in (0, pi) so the sine
+    # is strictly positive. Normalized, the realized normal is exactly `-axis` --
+    # which IS `hinge_axis`. Hence +1, and hence a mutation reads -1.
+    HINGE_TOL = 0.9999          # signed cos -- 0.81 deg of misalignment
     SOLE_TOL_DEG = 0.5
     for side in ("L", "R"):
         leg_hip = arm.pose.bones[lib.LEG_CHAIN[side][0]].head.copy()
@@ -425,16 +442,19 @@ def main():
                 # Column 0 of a pose matrix is the bone's local X in armature
                 # space -- the axis `aim_matrix` builds from `side_axis`.
                 local_x = bone.matrix.col[0].to_3d().normalized()
-                align = abs(local_x.dot(normal))
+                align = local_x.dot(normal)
                 lib.report(f"hinge_align_{side}_{label}_{bone_label}",
-                           f"{align:.6f}")
+                           f"{align:+.6f}")
                 check(f"hinge_aligned_{side}_{label}_{bone_label}",
                       align > HINGE_TOL,
-                      f"the {bone_label}'s roll axis is {align:.6f} aligned with "
-                      f"the hip-knee-ankle plane normal (need >{HINGE_TOL}); the "
-                      f"kneecap therefore faces "
-                      f"{math.degrees(math.acos(min(1.0, align))):.2f} deg "
-                      f"away from the direction the knee actually bends")
+                      f"the {bone_label}'s roll axis is {align:+.6f} aligned "
+                      f"with the hip-knee-ankle plane normal (need "
+                      f">+{HINGE_TOL}); the kneecap therefore faces "
+                      f"{math.degrees(math.acos(max(-1.0, min(1.0, align)))):.2f}"
+                      f" deg away from the direction the knee actually bends. A "
+                      f"value near -1 means the roll reference's SIGN is "
+                      f"inverted -- the axis is right, the bone is rolled "
+                      f"180 deg (see `hinge_axis` in `plant_foot`)")
 
             # ---- and the SOLE stays LEVEL ----------------------------------
             # THE GATE THAT PROTECTS THE SCOPE OF THE FIX, and the reason
@@ -494,11 +514,11 @@ def main():
         normal.normalize()
         local_x = arm.pose.bones[
             lib.LEG_CHAIN[side][0]].matrix.col[0].to_3d().normalized()
-        align = abs(local_x.dot(normal))
-        lib.report(f"hinge_align_{side}_extreme_lateral", f"{align:.6f}")
+        align = local_x.dot(normal)      # signed -- see HINGE_TOL above
+        lib.report(f"hinge_align_{side}_extreme_lateral", f"{align:+.6f}")
         check(f"hinge_aligned_{side}_extreme_lateral", align > HINGE_TOL,
               f"at near-full lateral extension the femur's roll axis is only "
-              f"{align:.6f} aligned with the bend-plane normal. This is the "
+              f"{align:+.6f} aligned with the bend-plane normal. This is the "
               f"corner where `geom.lateral` as a roll reference degrades without "
               f"bound -- the residual it leaves after Gram-Schmidt collapses "
               f"toward zero and the roll becomes noise")
