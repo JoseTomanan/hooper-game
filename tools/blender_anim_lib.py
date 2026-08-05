@@ -115,12 +115,21 @@ def report(name, value):
 # rig geometry
 # ═════════════════════════════════════════════════════════════════════════════
 def derive_axes(arm):
-    """Right/up/forward in ARMATURE space, from the REST pose.
+    """`(lateral, up, forward)` in ARMATURE space, from the REST pose.
 
     Derived, never hardcoded: Mixamo rest rolls are arbitrary. Read from the
     RAW imported FBX -- never from a Player.tscn rig, where BlendRestAnchor
     rotates both UpLeg rests at _Ready and every foot/toe global rest inherits
     the error (119.6 deg; cost a 2.17x stride mismeasurement in #298).
+
+    THE FIRST RETURN VALUE IS `lateral`, NOT `right` (#320). It is a basis
+    vector with a well-defined SIGN and NO anatomical meaning: on every Mixamo
+    rig measured here it points at the character's LEFT. It used to be called
+    `right`, which is a name that lies. For "which side of the body is this",
+    use `RigGeometry.body_right`, which is derived anatomically and verified.
+
+    `up` and `forward` ARE anatomical: `up` is hips->head, and `forward` is
+    sign-checked against the toe-ahead-of-ankle test below.
     """
     rest = arm.data.bones
     l_hip = rest["mixamorig:LeftUpLeg"].head_local
@@ -128,32 +137,93 @@ def derive_axes(arm):
     hips = rest[HIPS].head_local
     head = rest["mixamorig:Head"].head_local
 
-    right = (r_hip - l_hip).normalized()
+    lateral = (r_hip - l_hip).normalized()
     up = (head - hips).normalized()
-    forward = right.cross(up).normalized()
-    right = up.cross(forward).normalized()
+    forward = lateral.cross(up).normalized()
+    lateral = up.cross(forward).normalized()
 
     # Sign check against anatomy rather than assumption: the toe is ahead of
     # the ankle on a human.
     #
     # THIS BRANCH FIRES ON EVERY RUN against the Mixamo rigs -- it is not a
-    # defensive no-op, it is load-bearing. `forward = right x up` comes out
+    # defensive no-op, it is load-bearing. `forward = lateral x up` comes out
     # pointing BACKWARD for this rig's handedness, and the flip is what makes it
     # anatomically forward. Measured on `Dribble.fbx`: the post-flip axes are
-    # right=(1,0,0), up=(0,1,0), forward=(0,0.006,1).
+    # lateral=(1,0,0), up=(0,1,0), forward=(0,0.006,1).
     #
     # A #315 review proposed raising here instead, on the theory that negating
-    # `right` mirrors the rig and that the branch never fires anyway. Both halves
-    # were wrong: it fires every time, and raising broke every authoring run.
-    # Negating BOTH preserves handedness, and `right`'s final sign is verified
-    # independently -- `selftest_anim_lib.py` section 0 asserts the left shoulder
-    # sits on the negative side of `right` and the right shoulder on the positive
-    # side, which is the non-symmetric check that would actually catch a mirror.
+    # the lateral axis mirrors the rig and that the branch never fires anyway.
+    # Both halves were wrong: it fires every time, and raising broke every
+    # authoring run. Negating BOTH preserves handedness.
+    #
+    # WHY BOTH ARE STILL NEGATED, given that this leaves `lateral` pointing at
+    # the character's LEFT (#320): because this vector's SIGN is load-bearing in
+    # two roles that have nothing to do with anatomy, and MEASURING the
+    # alternative settled it. Negating only `forward` -- i.e. "correcting"
+    # `lateral` to point anatomically right, with no other edit -- re-authors the
+    # dribble into a BROKEN clip, not a mirrored one:
+    #
+    #   4096 of 4160 (frame,bone) pairs rotation-differing; every leg-chain bone
+    #   rotated 179.99 deg (`aim_matrix`'s side reference flipped, so its x and z
+    #   columns flip and each IK-posed bone rolls 180 deg about its own axis);
+    #   the torso lean reversed, swinging everything hanging off the spine
+    #   (HeadTop_End 0.8418 m, LeftHandMiddle4 0.6644 m).
+    #
+    # So the sign stays, and the ANATOMY question moved to a separate,
+    # independently-derived accessor -- `RigGeometry.body_right`. That kills the
+    # trap by making the misleading name unavailable rather than by flipping a
+    # sign that three unrelated things depend on.
     toe = rest["mixamorig:LeftToeBase"].head_local
     ankle = rest["mixamorig:LeftFoot"].head_local
     if (toe - ankle).dot(forward) < 0:
-        forward, right = -forward, -right
-    return right, up, forward
+        forward, lateral = -forward, -lateral
+    return lateral, up, forward
+
+
+def derive_body_right(arm, lateral):
+    """The character's ANATOMICAL right, as +/-`lateral`. See #320.
+
+    `lateral` is a basis vector whose sign says nothing about anatomy (on every
+    Mixamo rig here it points at the character's LEFT). This resolves the
+    anatomy question ONCE, so the six authoring scripts stop each carrying their
+    own `BODY_RIGHT = -geom.right` workaround and a docstring explaining it.
+
+    Returned as +/-`lateral` rather than re-derived as a fresh vector, and that
+    is deliberate on two counts:
+
+    - It stays EXACTLY antiparallel to the basis, bit-for-bit, so switching a
+      call site from `-geom.right` to `geom.body_right` cannot perturb an
+      exported clip. That is what let #320 land without re-authoring seven FBX
+      assets and re-confirming seven equivalence gates.
+    - A freshly re-derived vector would need its own orthogonalisation against
+      `up`/`forward`, i.e. a second, subtly different basis to get wrong.
+
+    The SIGN is measured against the SHOULDER pair, which is independent of the
+    hip pair `derive_axes` built `lateral` from -- so this is a genuine second
+    opinion, not a restatement. The hip pair is then cross-checked against it:
+    a rig whose shoulders and hips disagree on handedness is malformed, and
+    silently picking one would place every hand on a coin flip.
+    """
+    rest = arm.data.bones
+    shoulder_span = (rest["mixamorig:RightArm"].head_local
+                     - rest["mixamorig:LeftArm"].head_local)
+    hip_span = (rest["mixamorig:RightUpLeg"].head_local
+                - rest["mixamorig:LeftUpLeg"].head_local)
+    by_shoulders = shoulder_span.dot(lateral)
+    by_hips = hip_span.dot(lateral)
+    if by_shoulders == 0.0 or by_hips == 0.0:
+        raise SystemExit(
+            f"FATAL: cannot resolve anatomical right -- the shoulder or hip span "
+            f"is perpendicular to `lateral` (shoulders {by_shoulders:.6f}, hips "
+            f"{by_hips:.6f}). This rig's landmarks do not define a side.")
+    if (by_shoulders > 0.0) != (by_hips > 0.0):
+        raise SystemExit(
+            f"FATAL: this rig's shoulders and hips disagree on which way "
+            f"`lateral` points (shoulders {by_shoulders:+.6f}, hips "
+            f"{by_hips:+.6f}). One of the two bone pairs is mislabelled, so "
+            f"anatomical side cannot be resolved -- refusing rather than "
+            f"placing every hand on a coin flip.")
+    return lateral if by_shoulders > 0.0 else -lateral
 
 
 def units_per_metre(arm):
@@ -196,11 +266,30 @@ class RigGeometry:
     its pose calls instead of six positional axis arguments -- and so `geom.m()`
     is always at hand, which is the standing guard against the 100x
     armature-vs-world space error.
+
+    TWO LATERAL AXES, AND THEY ARE NOT INTERCHANGEABLE (#320)
+    --------------------------------------------------------
+    `geom.lateral`     a BASIS vector. Sign is well-defined and load-bearing;
+                       anatomy is NOT implied (it points at the character's LEFT
+                       on every Mixamo rig measured here). Use it where a
+                       side-reference axis is needed and the anatomical side is
+                       irrelevant: `aim_matrix`'s `side_axis`, and the axis of a
+                       `Matrix.Rotation` for a torso lean.
+    `geom.body_right`  the character's ANATOMICAL right, derived and verified by
+                       `derive_body_right`. Use it for every hand/foot PLACEMENT
+                       that means "on the right side of the body".
+
+    There is deliberately NO `geom.right`. It was removed rather than aliased,
+    because it named the basis vector while reading as the anatomical one -- and
+    the six authoring scripts each independently worked around it with a local
+    `BODY_RIGHT = -geom.right`. An alias would preserve exactly the trap this
+    split exists to remove; an AttributeError names the problem at the call site.
     """
 
     def __init__(self, arm):
         self.arm = arm
-        self.right, self.up, self.forward = derive_axes(arm)
+        self.lateral, self.up, self.forward = derive_axes(arm)
+        self.body_right = derive_body_right(arm, self.lateral)
         self.units_per_metre = units_per_metre(arm)
         self.femur, self.tibia, self.foot = bone_lengths(arm)
 
@@ -218,9 +307,13 @@ class RigGeometry:
         return self.femur + self.tibia
 
     def log_summary(self):
-        report("axes_right", tuple(round(v, 4) for v in self.right))
+        report("axes_lateral", tuple(round(v, 4) for v in self.lateral))
         report("axes_up", tuple(round(v, 4) for v in self.up))
         report("axes_forward", tuple(round(v, 4) for v in self.forward))
+        # Reported alongside `lateral` so the run log SHOWS the relationship
+        # between the basis axis and anatomy rather than leaving a reader to
+        # remember which way `lateral` happens to point on this rig.
+        report("axes_body_right", tuple(round(v, 4) for v in self.body_right))
         report("units_per_metre", f"{self.units_per_metre:.1f}")
         report("femur_m", f"{self.to_m(self.femur):.4f}")
         report("tibia_m", f"{self.to_m(self.tibia):.4f}")
@@ -286,9 +379,13 @@ def aim_matrix(head, tail_dir, side_axis):
     Unit basis, no scale. The orthonormality assertion below is the guard --
     NOT `verify_pose_unscaled`, which is blind to this (see the note there).
 
-    `side_axis` must not be parallel to `tail_dir`. For legs the rig's `right`
-    is always safe. For ARMS it is not -- an arm near the T-pose points straight
-    down `right` -- so `aim_arm` passes the bend-plane normal instead.
+    `side_axis` must not be parallel to `tail_dir`. For legs `geom.lateral` is
+    always safe. For ARMS it is not -- an arm near the T-pose points straight
+    down the lateral axis -- so `aim_arm` passes the bend-plane normal instead.
+
+    This axis sets the bone's ROLL, so its SIGN matters (flipping it rolls the
+    bone 180 deg) but its ANATOMY does not. Pass `geom.lateral`, never
+    `geom.body_right` -- see `RigGeometry` (#320).
     """
     y = tail_dir.normalized()
     x = (side_axis - y * side_axis.dot(y))
@@ -297,7 +394,7 @@ def aim_matrix(head, tail_dir, side_axis):
         # world axis is LEAST aligned with y, rather than always X.
         #
         # Always-X was itself degenerate in the case most likely to reach here:
-        # `plant_foot` passes the rig's `right`, which on this rig is essentially
+        # `plant_foot` passes `geom.lateral`, which on this rig is essentially
         # exactly +X (it is derived from `r_hip - l_hip`), so `y` parallel to the
         # side axis means `y` parallel to X -- and `X - y*y.x` is then the ZERO
         # vector. The old fallback produced NaN in precisely the situation it
@@ -360,31 +457,52 @@ def plant_foot(arm, side, ankle_target, toe_dir, geom, frame=None):
     Returns `(solve_two_link triple, achieved_ankle_error_in_armature_units)`.
     Keys the three rotated bones when `frame` is given.
 
-    KNOWN LIMITATION -- the solve is not exact for LATERAL targets (#315 review;
-    pre-existing, verbatim from #300). `Matrix.Rotation(-hip_offset, 4, right)`
-    only rotates the component of `dir_ankle` perpendicular to `right`, so when
-    the target has a sideways component the achieved hip angle is strictly less
-    than `hip_offset`:
+    THE SOLVE IS EXACT, INCLUDING FOR LATERAL TARGETS (#321). It did not used to
+    be. The old femur direction was `Matrix.Rotation(-hip_offset, 4, right) @
+    dir_ankle`, and a rotation about the rig's `right` only moves the component
+    of `dir_ankle` PERPENDICULAR to `right`, so a laterally-offset target
+    achieved strictly less than the requested hip angle:
 
         cos(theta_eff) = cos^2(alpha) + sin^2(alpha) * cos(hip_offset)
 
-    with alpha the angle between `dir_ankle` and `right`. The knee then lands off
-    the IK circle and the ankle falls SHORT of `ankle_target`.
+    with alpha the angle between `dir_ankle` and `right`. The knee landed off the
+    IK circle, the tibia was then aimed at the true target from that wrong knee,
+    and the ankle fell SHORT. Measured: 0.029890 m worst-case on the dribble --
+    a NEARLY PLANAR gait, against a whole ground band of 0.0315 m -- and
+    0.033680 m on the selftest's lateral cases.
 
-    `aim_arm` does not share this defect -- it builds its rotation axis as
-    `dir_wrist.cross(hint)`, perpendicular by construction, so its solve is exact
-    (its selftest asserts sub-micron wrist error). The fix here is the same
-    construction, but it is deferred: it moves this clip's output and would break
-    the 0/4160-pair equivalence gate that is #315's acceptance test.
+    Note what that formula does at alpha = 90 deg: the shortfall vanishes
+    exactly. Every clip authored before #321 is a near-sagittal gait, and every
+    assertion written for them measured that one angle -- which is how a 3 cm
+    error survived two milestones of green gates.
 
-    The returned error is the guard in the meantime. It is a pure measurement --
-    it cannot change the exported pose -- and it is why this is now a measured
-    limitation rather than an invisible one. Forward-and-back gaits stay in the
-    sub-millimetre range; moves with real lateral footwork (euro-step, spin,
-    step-back, defensive slides) are where it would matter.
+    The fix is `aim_arm`'s construction, applied to the leg: build the rotation
+    axis PERPENDICULAR BY CONSTRUCTION as `dir_ankle.cross(forward)`, so
+    rotating `dir_ankle` about it by a POSITIVE `hip_offset` carries it toward
+    `forward` -- putting the knee ahead of the hip->ankle line, the only way a
+    human knee bends -- and lands the knee exactly on the IK circle.
+
+    Sign convention deliberately mirrors `aim_arm` rather than inventing a
+    second one: `cross(reach, hint)` with a POSITIVE angle, where the old code
+    used `right` with a NEGATIVE one. Do not "tidy" one to match the other.
+
+    A CONSEQUENCE WORTH KNOWING: the femur solve no longer reads the lateral
+    axis at all, so it is now independent of that axis's sign. `geom.lateral`
+    survives here only as `aim_matrix`'s side reference, i.e. bone ROLL -- where
+    its sign is still load-bearing (flipping it rolls the leg 180 deg; measured
+    at 179.99 deg on every leg bone during #320) but its ANATOMY is irrelevant.
+    That is exactly why this call site takes `geom.lateral` and NOT
+    `geom.body_right`: swapping them here would roll the legs inside out while
+    changing nothing about which side the foot lands on.
+
+    The returned ankle error stays reported even though it now reads as float
+    noise. It is the standing guard: a future spec that pushes a target outside
+    reach, or a rig whose bone tails stop coinciding with their children's heads,
+    shows up here as a number instead of as a subtly wrong pose.
     """
     up_leg, leg, foot_b, _toe_b = LEG_CHAIN[side]
-    right = geom.right
+    # Roll reference only -- see the docstring. NOT `body_right`.
+    side_axis = geom.lateral
 
     hip_head = arm.pose.bones[up_leg].head.copy()
     to_ankle = ankle_target - hip_head
@@ -392,13 +510,30 @@ def plant_foot(arm, side, ankle_target, toe_dir, geom, frame=None):
                             what=f"{side} leg")
     _d, hip_offset, _interior = solved
 
-    # Rotate the hip->ankle direction by `hip_offset` about the rig's right axis
-    # to get the femur direction. This sense puts the knee AHEAD of the
-    # hip->ankle line, which is the only way a human knee bends.
     dir_ankle = to_ankle.normalized()
-    femur_dir = Matrix.Rotation(-hip_offset, 4, right) @ dir_ankle
+    # Bend-plane normal, perpendicular to the reach BY CONSTRUCTION -- see the
+    # docstring. `forward` is the knee hint: it is the axis this library verifies
+    # anatomically (`derive_axes`' toe check), so "the knee goes forward" is a
+    # grounded claim rather than a sign convention.
+    axis = dir_ankle.cross(geom.forward)
+    if axis.length < 1e-6:
+        # The ankle target is directly fore or aft of the hip AT HIP HEIGHT, so
+        # `forward` names no bend plane. Refuse, exactly as `aim_arm` refuses a
+        # hint parallel to its reach: normalizing a zero vector here would emit
+        # NaN into the exported clip, and silently picking a plane would produce
+        # a wrong-but-plausible pose, which is the failure mode this library
+        # exists to prevent. Unreachable for a real foot plant -- an ankle level
+        # with the hip and straight ahead -- so hitting it means the SPEC is
+        # wrong, not this code.
+        raise SystemExit(
+            f"FATAL: the {side} ankle target sits directly fore/aft of the hip "
+            f"at hip height, so `forward` names no knee bend plane. Give the "
+            f"target a vertical component (a foot plant is always below the "
+            f"hip).")
+    axis.normalize()
+    femur_dir = Matrix.Rotation(hip_offset, 4, axis) @ dir_ankle
 
-    arm.pose.bones[up_leg].matrix = aim_matrix(hip_head, femur_dir, right)
+    arm.pose.bones[up_leg].matrix = aim_matrix(hip_head, femur_dir, side_axis)
     bpy.context.view_layer.update()
     # Re-read the knee head AFTER the femur is posed: it is the femur's tail, so
     # reading it before would aim the tibia from a stale position and quietly
@@ -406,7 +541,7 @@ def plant_foot(arm, side, ankle_target, toe_dir, geom, frame=None):
     # load-bearing for exactly this reason -- do not "clean them up".
     knee_head = arm.pose.bones[leg].head.copy()
     arm.pose.bones[leg].matrix = aim_matrix(
-        knee_head, (ankle_target - knee_head), right)
+        knee_head, (ankle_target - knee_head), side_axis)
     bpy.context.view_layer.update()
 
     ankle_head = arm.pose.bones[foot_b].head.copy()
@@ -415,7 +550,7 @@ def plant_foot(arm, side, ankle_target, toe_dir, geom, frame=None):
     # limitation in the docstring; without this the shortfall is unobservable,
     # because `solved` reports the REQUEST, not the RESULT.
     ankle_err = (ankle_head - ankle_target).length
-    arm.pose.bones[foot_b].matrix = aim_matrix(ankle_head, toe_dir, right)
+    arm.pose.bones[foot_b].matrix = aim_matrix(ankle_head, toe_dir, side_axis)
     bpy.context.view_layer.update()
 
     if frame is not None:

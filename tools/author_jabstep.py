@@ -99,9 +99,13 @@ the read (the foot commits, the ball does not).
 ===============================================================================
 LATERAL SIGN CONVENTION
 ===============================================================================
-Same as author_contest.py/author_layup.py: on this rig `geom.right` points at
-the character's LEFT, so every lateral offset goes through
-`BODY_RIGHT = -geom.right`.
+Same as author_contest.py/author_layup.py: lateral offsets go through
+`geom.body_right`, the rig's anatomical right (derived from the shoulder span
+and cross-checked against the hip span in `blender_anim_lib.derive_body_right`).
+`geom.lateral` is a basis vector only -- on this rig it points at the
+character's LEFT and must NOT be used for hand/foot placement. There is no
+longer a `geom.right`; the local `-geom.right` workaround is gone, replaced by
+the shared accessor (#320).
 
 ===============================================================================
 COSMETIC-ONLY (the dense surface this move sits on)
@@ -256,7 +260,8 @@ def main():
 
     geom = lib.RigGeometry(arm)
     geom.log_summary()
-    body_right = -geom.right  # see module docstring: geom.right points LEFT.
+    # Anatomical right, derived + verified in the lib (#320).
+    body_right = geom.body_right
     up, forward = geom.up, geom.forward
     lib.report("body_right", tuple(round(v, 4) for v in body_right))
 

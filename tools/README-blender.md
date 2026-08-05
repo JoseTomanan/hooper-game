@@ -194,57 +194,103 @@ so check the authoring output rather than guessing:
 [author] segment 'Startup' -> 'Active' (0.000s..0.200s): easing=ease_in
 ```
 
-## Two measured limitations you inherit
+## Two measured limitations, both now FIXED (#321, #320)
 
-Both are pre-existing (from #300), both are proven not to affect the shipped
-dribble clip, and both are fenced off by measurements that print every run.
-Neither was fixed in #315 because correcting either changes the exported clip
-and breaks the `0 / 4160` equivalence gate that proves the extraction is clean.
+Both were pre-existing from #300 and both were deferred out of #315 because
+fixing them appeared to change the exported clip. Both were fixed in the same
+session; this section records what they were, because the *shape* of each defect
+is the reusable lesson and both left permanent gates behind.
 
-### 1. `geom.right` points at the character's LEFT
+### 1. Lateral axis: `geom.right` → `geom.lateral` + `geom.body_right` (#320)
 
-Measured: the left shoulder sits at `+0.1343 m` along `geom.right`, the right
-shoulder at `-0.1804 m`. `derive_axes` negates `right` alongside `forward` in a
-branch that **fires on every Mixamo rig**, and nothing downstream re-checks the
-sign anatomically.
+`geom.right` pointed at the character's **LEFT** — left shoulder `+0.1343 m`
+along it, right shoulder `-0.1804 m`. All six authoring scripts already worked
+around it with a local `BODY_RIGHT = -geom.right`, so it was never a live bug,
+just a naming landmine with six copies of its own antidote.
 
-The leg IK is unaffected — knees measured bending *forward* by `+0.129 m` (L) and
-`+0.069 m` (R) mean displacement from the hip→ankle chord — and a symmetric gait
-hides it completely, which is why it survived #300.
+**Resolved by splitting the two meanings, not by flipping the sign:**
 
-**It will not stay hidden in a handed move.** `hand_target = hips + geom.right * x`
-puts the hand on the character's **left**. For behind-the-back, the ball-hand
-sweep, between-the-legs, or anything that swaps hands, derive the side from bone
-positions (e.g. `LeftHand.head - Hips.head`) rather than from `geom.right`, and
-give the clip a **non-symmetric** assertion — a mirrored clip passes every
-symmetric check ever written (the #255 lesson).
+| Use it for | Attribute |
+|---|---|
+| "which side of the **body**" — every hand/foot **placement** | `geom.body_right` |
+| a side-reference **axis** — `aim_matrix`'s `side_axis`, a `Matrix.Rotation` axis | `geom.lateral` |
 
-`selftest_anim_lib.py` section 0 pins this convention, so if the sign is ever
-corrected the selftest fails loudly and tells you to re-run the equivalence gate.
+There is **no `geom.right`** any more. It was removed rather than aliased, so a
+stale call site raises `AttributeError` at the point of the mistake.
 
-### 2. `plant_foot` is inexact for lateral targets
+**Why not just correct the sign?** Measured, because the answer is not obvious:
+negating only `forward` and re-authoring the dribble gives **4096 of 4160 pairs
+rotation-differing**, every leg bone rotated `179.99°`, worst location delta
+`0.8418 m` on `HeadTop_End`. The axis is load-bearing in two *non-anatomical*,
+sign-critical roles — `aim_matrix`'s roll reference (flip it → legs inside out)
+and the torso-lean rotation axis (flip it → the lean reverses and the whole upper
+body swings). "Correcting" it produces a broken clip, not a mirrored one.
 
-`Matrix.Rotation(-hip_offset, 4, right)` only rotates the component of the
-hip→ankle direction perpendicular to `right`, so a target with a sideways
-component achieves less than the requested hip angle:
+`geom.body_right` is returned as `±geom.lateral` — never re-derived — so the
+migration is bit-identical: the dribble re-authors to **0 / 4160** and no asset
+changed. Its sign is measured against the **shoulder** span (independent of the
+hip pair `lateral` is built from) and cross-checked against the hip span;
+disagreement raises rather than guessing.
+
+**The gates it left behind** (`selftest_anim_lib.py` section 0):
+`lateral_axis_sign_pinned` (the basis sign, *not* an anatomical claim — it exists
+because flipping it silently rolls every posed bone 180°), and
+`body_right_points_rig_right`, which is **non-symmetric**: it names the sides and
+fails if they swap. That is the property nothing in #300 or #315 had — every
+check there was side-agnostic or read the side off whichever chain it was handed
+(the #255 lesson). Mutation-proven: making `derive_body_right` return `lateral`
+unchanged fails it at `R=-0.1804 / L=+0.1343` while every other check stays green.
+
+### 2. `plant_foot`'s leg IK was inexact for lateral targets (#321)
+
+The femur direction was `Matrix.Rotation(-hip_offset, 4, right) @ dir_ankle`, and
+a rotation about `right` only moves the component of `dir_ankle` *perpendicular*
+to `right`, so a laterally-offset target achieved less than the requested angle:
 
 ```
 cos(theta_eff) = cos²(alpha) + sin²(alpha)·cos(hip_offset)
 ```
 
-The knee lands off the IK circle and the ankle falls **short**. Measured on the
-dribble clip: **`worst_ankle_ik_err_m = 0.0299`** — 3 cm, and that gait is nearly
-planar. Moves with real lateral footwork (euro-step, spin, step-back, defensive
-slides) will be worse.
+The knee landed off the IK circle, the tibia was aimed at the true target from
+that wrong knee, and the ankle fell **short** — `worst_ankle_ik_err_m = 0.0299`,
+3 cm, against a whole ground band of `0.0315 m`.
 
-`aim_arm` does **not** share this defect: it builds its rotation axis as
-`dir_wrist.cross(hint)`, perpendicular by construction, so its solve is exact
-(sub-micron wrist error in the selftest). The fix is to use the same
-construction here.
+**Fixed** by using `aim_arm`'s construction: `axis = dir_ankle.cross(forward)`,
+perpendicular by construction, rotated by a **positive** `hip_offset` (same sign
+convention as `aim_arm` — don't "tidy" one to match the other). A fore/aft target
+at hip height names no bend plane and now raises, mirroring `aim_arm`'s
+degenerate branch. `worst_ankle_ik_err_m` is now `0.000000`, and the femur solve
+no longer reads the lateral axis at all.
 
-`plant_foot` returns `(solve_triple, achieved_ankle_error)` — report it. Without
-it the shortfall is invisible, because the solve triple describes the *request*,
-not the *result*.
+**Read the formula at `alpha = 90°`: the shortfall vanishes exactly.** Every clip
+authored before #321 is a near-sagittal gait, and every assertion written for
+them measured precisely that angle — which is how a 3 cm error survived two
+milestones of green gates. This is the reusable lesson: *a gate that only ever
+samples the one input where the bug is zero is not a gate.* The new selftest
+cases keep a sagittal **control** alongside the lateral ones for exactly that
+reason (it read `9e-8` on the buggy solver too).
+
+**The other gate it left behind** is more important than the ankle measurement:
+a two-link solve has a whole **circle** of valid knee positions and every one of
+them lands the ankle exactly on target, so the ankle-error check is structurally
+**blind** to a knee bending backwards. `knee_bends_forward_*` measures the knee's
+displacement from the hip→ankle *chord* along `forward`. Mutation-proven:
+flipping the rotation sense leaves `ankle_reaches_*` PASSING at `1.3e-7 m` while
+the knee gate reads `-0.2024 m` and fails. If you add another IK primitive, it
+needs both gates — reaching the target does not mean the joint bent the right way.
+
+> ⚠️ **Six authored clips have not been regenerated** since #321 —
+> `behindtheback`, `block`, `contest`, `jabstep`, `layup`, `steal`. Their
+> committed FBX files were produced by the old solver, so re-running their
+> authoring scripts now yields a non-zero diff *by design*. Measured drift is
+> confined to the leg chain in all six (zero arm/spine/head/hips/hand bones),
+> ranging from `2.4°` (steal) to `9.5°` (block) — except **`layup`, which moves
+> `65.4°` / `0.437 m` on the left femur and is strongly asymmetric**, and needs
+> looking at rather than blindly regenerating. Tracked separately; do not
+> interpret a non-zero diff on those six as your own change.
+
+`plant_foot` returns `(solve_triple, achieved_ankle_error)` — keep reporting it.
+The solve triple describes the *request*, not the *result*.
 
 ## Reach budgets (measured on the Y Bot rig)
 

@@ -67,10 +67,12 @@ The multi-polarity scripts (steal, behind-the-back) author lateral channels
 because they must place the SAME table on either side depending on which hand
 started with the ball. This clip has exactly one polarity, so that
 indirection buys nothing here. Every lateral channel below is authored
-DIRECTLY SIGNED along `BODY_RIGHT` (positive = the character's actual
-anatomical right, per `author_behindtheback.py`'s measured convention: on this
-rig `geom.right` points at the character's LEFT, so every lateral offset here
-goes through `BODY_RIGHT = -geom.right`, never `geom.right` directly) and
+DIRECTLY SIGNED along `geom.body_right` (positive = the character's actual
+anatomical right, derived from the shoulder span and cross-checked against the
+hip span in `blender_anim_lib.derive_body_right`; `geom.lateral` is a basis
+vector only -- on this rig it points at the character's LEFT and must NOT be
+used for hand/foot placement; there is no longer a `geom.right`, the local
+`-geom.right` workaround is gone, replaced by the shared accessor, #320) and
 applied as `body_right * value` with no extra sign multiplication in `apply`.
 
 ===============================================================================
@@ -302,8 +304,14 @@ def main():
 
     geom = lib.RigGeometry(arm)
     geom.log_summary()
-    body_right = -geom.right  # see module docstring: geom.right points LEFT.
-    right, up, forward = geom.right, geom.up, geom.forward
+    # Anatomical right, derived + verified in the lib (#320).
+    body_right = geom.body_right
+    # `lateral`, NOT `body_right` (#320): this basis is handed to
+    # `aim_matrix`/`Matrix.Rotation`, where the axis SIGN is load-bearing but
+    # its anatomy is irrelevant. Swapping in `body_right` here would roll the
+    # posed bones 180 deg while changing nothing about which side anything
+    # lands on.
+    right, up, forward = geom.lateral, geom.up, geom.forward
     lib.report("body_right", tuple(round(v, 4) for v in body_right))
 
     lib.enter_pose_mode(arm)

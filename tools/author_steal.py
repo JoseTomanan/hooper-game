@@ -112,11 +112,14 @@ in), far_foot_side="R" (right foot anchors the Startup weight shift). The
 SIGN CONVENTION -- ONE VARIABLE, `reach_sign`
 ===============================================================================
 `_side_signs` returns `reach_sign` = -1.0 for polarity "L", +1.0 for "R" --
-matching `BODY_RIGHT`'s sign (positive = character's actual anatomical right;
-see `author_behindtheback.py`'s own measured derivation, reused verbatim: on
-this rig `geom.right` points at the character's LEFT, so every lateral offset
-in this script goes through `BODY_RIGHT = -geom.right`, never `geom.right`
-directly).
+matching `geom.body_right`'s sign (positive = character's actual anatomical
+right; derived from the shoulder span and cross-checked against the hip span
+in `blender_anim_lib.derive_body_right`, reused verbatim from
+`author_behindtheback.py`). `geom.lateral` is a basis vector only -- on this
+rig it points at the character's LEFT and must NOT be used for hand/foot
+placement. There is no longer a `geom.right`; the local `-geom.right`
+workaround this script used to carry is gone, replaced by the shared
+accessor (#320).
 
 Every lateral channel in this file is authored in "reach-direction-relative"
 terms, i.e. a POSITIVE table value always means "further toward the side the
@@ -370,7 +373,12 @@ def _author_polarity(arm, geom, body_right, polarity, frame_offset):
     """
     reach_sign, arm_side = _side_signs(polarity)
     near_side, far_side = polarity, ("R" if polarity == "L" else "L")
-    right, up, forward = geom.right, geom.up, geom.forward
+    # `lateral`, NOT `body_right` (#320): this basis is handed to
+    # `aim_matrix`/`Matrix.Rotation`, where the axis SIGN is load-bearing but
+    # its anatomy is irrelevant. Swapping in `body_right` here would roll the
+    # posed bones 180 deg while changing nothing about which side anything
+    # lands on.
+    right, up, forward = geom.lateral, geom.up, geom.forward
 
     swipe_humerus_u, swipe_ulna_u = lib.arm_lengths(arm, arm_side)
     rest_humerus_u, rest_ulna_u = lib.arm_lengths(arm, near_side)
@@ -583,7 +591,8 @@ def main():
 
     geom = lib.RigGeometry(arm)
     geom.log_summary()
-    body_right = -geom.right  # see module docstring: geom.right points LEFT.
+    # Anatomical right, derived + verified in the lib (#320).
+    body_right = geom.body_right
     lib.report("body_right", tuple(round(v, 4) for v in body_right))
     lib.report("ball_height_above_floor_target_m", f"{BALL_HEIGHT_ABOVE_FLOOR_M:.4f}")
     lib.report("h_ball_hips_relative_m", f"{H_BALL:.4f}")
