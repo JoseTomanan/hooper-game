@@ -144,6 +144,19 @@ change. A handful of pairs differing by a lot is a real, localised change.
    nothing. The real risk is a non-unit `aim_matrix` basis writing a non-identity
    **pose** scale, which is what `verify_pose_unscaled` checks. Baseline on the
    untouched source: 2.4e-7 off unit.
+10. **A guard on a near-degenerate quantity must fire while the answer is still
+    wrong, not once it is undefined.** Every cross-product / Gram-Schmidt guard
+    here protects a *direction*, and a direction is noise long before its
+    magnitude reaches zero. Measured in Blender's float32 vectors: the direction
+    error of a normalised residual grows as roughly `1.1e-5/θ` degrees, so the
+    old `< 1e-6` guards were admitting planes that were already **10° wrong**
+    and, at `1e-7`, **62° wrong** — silently, with the orthonormality assert
+    passing happily on the resulting basis. Thresholds live in
+    `BEND_PLANE_MIN_SIN` / `LANDMARK_MIN_COS`; both are set from that curve and
+    both are proven inert against real work (see limitation 3). The general
+    form: **never write `== 0.0` or `< 1e-6` on a quantity whose *usefulness*
+    degrades continuously — measure where it stops meaning anything, and guard
+    there.**
 
 ## Segments of ≤3 ticks are single poses, and that is correct
 
@@ -194,12 +207,13 @@ so check the authoring output rather than guessing:
 [author] segment 'Startup' -> 'Active' (0.000s..0.200s): easing=ease_in
 ```
 
-## Two measured limitations, both now FIXED (#321, #320)
+## Three measured limitations, all now FIXED (#321, #320, #338)
 
-Both were pre-existing from #300 and both were deferred out of #315 because
-fixing them appeared to change the exported clip. Both were fixed in the same
-session; this section records what they were, because the *shape* of each defect
-is the reusable lesson and both left permanent gates behind.
+The first two were pre-existing from #300 and both were deferred out of #315
+because fixing them appeared to change the exported clip; the third was found by
+the `/code-review` pass on the PR that fixed them. This section records what they
+were, because the *shape* of each defect is the reusable lesson and each left
+permanent gates behind.
 
 ### 1. Lateral axis: `geom.right` → `geom.lateral` + `geom.body_right` (#320)
 
@@ -282,15 +296,99 @@ needs both gates — reaching the target does not mean the joint bent the right 
 > ⚠️ **Six authored clips have not been regenerated** since #321 —
 > `behindtheback`, `block`, `contest`, `jabstep`, `layup`, `steal`. Their
 > committed FBX files were produced by the old solver, so re-running their
-> authoring scripts now yields a non-zero diff *by design*. Measured drift is
-> confined to the leg chain in all six (zero arm/spine/head/hips/hand bones),
-> ranging from `2.4°` (steal) to `9.5°` (block) — except **`layup`, which moves
-> `65.4°` / `0.437 m` on the left femur and is strongly asymmetric**, and needs
-> looking at rather than blindly regenerating. Tracked separately; do not
-> interpret a non-zero diff on those six as your own change.
+> authoring scripts now yields a non-zero diff *by design*, and **#338 added a
+> second layer to that same drift.** Both layers are confined to the leg chain
+> (zero arm/spine/head/hips/hand rotation in any of the six). Re-running them
+> today, against the committed asset:
+>
+> | clip | worst rotation | worst location |
+> |---|---|---|
+> | `jabstep` | `5.62°` | `0.0186 m` |
+> | `steal` | `6.00°` | `0.0172 m` |
+> | `contest` | `8.57°` | `0.0281 m` |
+> | `behindtheback` | `12.02°` | `0.0400 m` |
+> | `block` | `18.33°` | `0.0673 m` |
+> | **`layup`** | **`74.22°`** | **`0.4374 m`** |
+>
+> The **location** column is *identical* to what #321 alone produced — #338 is a
+> pure roll change and moves no joint — so the `layup` positional outlier is
+> still entirely #321's, and #338 does not disturb the "was the layup spec tuned
+> against the buggy solver?" question that has to be answered before it is
+> regenerated. Tracked separately; do not interpret a non-zero diff on those six
+> as your own change.
 
 `plant_foot` returns `(solve_triple, achieved_ankle_error)` — keep reporting it.
 The solve triple describes the *request*, not the *result*.
+
+### 3. `plant_foot`'s bone ROLL was ill-conditioned, and mis-scoped (#338)
+
+#321 made the femur *position* solve exact for any target direction. The **roll**
+did not get the same treatment: all three of `plant_foot`'s `aim_matrix` calls —
+femur, tibia, foot — were handed `geom.lateral` as their roll reference.
+
+**For the femur and tibia that is wrong continuously, not just at a
+singularity.** A knee is a hinge, so the femur's roll decides which way the
+kneecap faces, and it should face along the direction the knee actually bends —
+i.e. the roll reference should be the **normal of the hip-knee-ankle plane**.
+`geom.lateral` equals that normal only for a purely sagittal leg; as the leg
+abducts the two diverge by the abduction angle. Measured over every `plant_foot`
+call each authoring script makes:
+
+| clip | worst | mean | | clip | worst | mean |
+|---|---|---|---|---|---|---|
+| `dribble` | `22.47°` | `18.82°` | | `behindtheback` | `12.74°` | `5.93°` |
+| `layup` | `56.53°` | `7.94°` | | `contest` | `9.27°` | `6.69°` |
+| `block` | `18.11°` | `9.64°` | | `steal` | `7.47°` | `2.88°` |
+| | | | | `jabstep` | `6.24°` | `5.18°` |
+
+**Fixed** by splitting the reference by joint role — `hinge_axis` (the bend-plane
+normal) for the femur and tibia, `sole_axis` (`geom.lateral`) for the foot.
+
+**Two things the issue got wrong, both caught by measuring rather than
+reasoning**, and both worth knowing because the same shape will recur:
+
+1. **The sign.** #338 proposed passing `axis`, the vector `plant_foot` already
+   computes as `dir_ankle.cross(forward)`. That is `180.000000°` from
+   `geom.lateral` for a sagittal leg, so passing it as written rolls every leg
+   bone 180° — the same catastrophe #320 measured. The **negation**,
+   `forward × dir_ankle`, is `0.000000°` from `geom.lateral` for a sagittal leg:
+   it agrees with the old behaviour exactly where the old behaviour was right.
+2. **The scope.** Applying it to the **foot** too — the literal one-line fix —
+   rolls the planted sole out of horizontal by `22.16°` (dribble) / `46.35°`
+   (layup); the character stands on the edges of their feet. `geom.lateral` is
+   *horizontal*, which is the whole reason it belongs on the foot and nowhere
+   else. **`verify_grounded` cannot see this**: it measures ankle and toe
+   *heights*, and a foot rolled about its own long axis keeps both.
+
+**What bounds the foot's reference**, since it keeps a fixed axis: its
+conditioning depends on `toe_dir`, *not* on abduction. It degenerates only for a
+foot aimed sideways (`toe_dir` within `BEND_PLANE_MIN_SIN` of `geom.lateral`),
+which nothing in the tree does. A move that genuinely needs one — some
+defensive-slide shapes — should pass an explicit sole reference.
+
+**The framing this corrects.** #338 describes the defect as a "visible leg-twist
+pop" from a roll *discontinuity*. The discontinuity is real — measured at
+**1800° of roll per degree of target movement** — but it sits at exactly 90° of
+abduction *and* near-full extension, i.e. an ankle at hip height on a straight
+leg. No foot plant reaches that. What is reachable, and what every shipped clip
+already carried, is the continuous misalignment tabulated above.
+
+**The gates it left behind** (`selftest_anim_lib.py` sections 4d–4g):
+`hinge_aligned_*` (the femur/tibia roll axis vs the realized bend-plane normal,
+read off the *posed skeleton*, with a sagittal **control** that read `1.000000`
+even pre-fix), `sole_stays_level_*`, `plant_foot_refuses_noise_plane_*` /
+`aim_arm_refuses_noise_plane_*`, and `body_right_refuses_coinflip`. All
+mutation-proven: pre-fix the hinge gates read `0.969190` at 22° of abduction and
+`0.000002` at the conditioning limit, and handing the foot the hinge axis fails
+`sole_stays_level_*` at `±21.80°` / `±45.00°` while every other gate in the
+library — `verify_grounded` included — stays green.
+
+**Proven inert on real work**, which is what makes the widened guards (trap 10)
+hardening rather than a behaviour change: over every `plant_foot` call of all
+seven authoring scripts the smallest `|dir_ankle × forward|` is `0.402019` and
+the smallest Gram-Schmidt residual is `0.759086` — 400× and 759× clear of
+`BEND_PLANE_MIN_SIN`. The real rig's landmark margins are `0.99999998`
+(shoulders) and `1.00000000` (hips), 1000× clear of `LANDMARK_MIN_COS`.
 
 ## Reach budgets (measured on the Y Bot rig)
 
