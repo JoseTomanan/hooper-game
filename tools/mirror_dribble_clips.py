@@ -293,7 +293,9 @@ def gate1_pairing(all_names):
 # ═════════════════════════════════════════════════════════════════════════════
 # DECISION (not specified by the issue brief): Gate 2 is measured ONCE, from
 # `assets/Dribble.fbx` -- proven stock/unmangled below (its rest axes measure
-# ~right=(1,0,0) / up=(0,1,0) / forward=(0,0,1), the raw Mixamo convention) --
+# ~lateral=(1,0,0) / up=(0,1,0) / forward=(0,0,1), the raw Mixamo convention;
+# `lateral` is a BASIS vector and on this rig it points at the character's
+# LEFT, so do not read that (1,0,0) as "right" -- #320, #335) --
 # and reused for BOTH jobs, rather than re-measured from each job's own source.
 #
 # Reason: `assets/dribble_move_authored.fbx` is itself a Blender re-export
@@ -352,10 +354,10 @@ def hand_vertical_range_m(frames_dict, geom):
     return {side: geom.to_m(max(v) - min(v)) for side, v in ys.items()}
 
 
-def hand_lateral_offset_m(frames_dict, geom, right):
+def hand_lateral_offset_m(frames_dict, geom, lateral):
     """Per-hand mean SIGNED lateral offset from the Hips, in metres.
 
-    Projected on `right` — the lateral axis measured ONCE from the stock rig,
+    Projected on `lateral` — the lateral axis measured ONCE from the stock rig,
     threaded in from `gate2_once()` — so this reads as "which side of the body"
     without hardcoding an axis.
 
@@ -364,9 +366,11 @@ def hand_lateral_offset_m(frames_dict, geom, right):
     the RELATIVE sign between two clips is meaningful, which is all Gate 4b
     asserts. An earlier version of this docstring claimed "positive = the rig's
     right"; it was wrong, and that same confusion once produced a spurious
-    27.256% magnitude reading (see the note above).
+    27.256% magnitude reading (see the note above). The parameter was itself
+    still NAMED `right` until #335 -- the retracted claim outlived its
+    retraction by living on in the identifier.
 
-    `right` MUST NOT be re-derived from the job's own armature. `derive_axes()`
+    `lateral` MUST NOT be re-derived from the job's own armature. `derive_axes()`
     reads REST orientation, and `dribble_move_authored.fbx` is a Blender
     re-export whose rest roll is rewritten (the same corruption that gives
     Gate 2 its false 70.53 cm reading there). MEASURED during #294: projecting
@@ -380,15 +384,15 @@ def hand_lateral_offset_m(frames_dict, geom, right):
     per-job; only the axis direction has to come from the stock rig.
     """
     out = {}
-    right = Vector(right)
+    lateral = Vector(lateral)
     for side, bone in (("L", "mixamorig:LeftHand"), ("R", "mixamorig:RightHand")):
-        vals = [(pose[bone].translation - pose[lib.HIPS].translation).dot(right)
+        vals = [(pose[bone].translation - pose[lib.HIPS].translation).dot(lateral)
                 for pose in frames_dict.values()]
         out[side] = geom.to_m(sum(vals) / len(vals))
     return out
 
 
-def gate4b_lateral_side(src_by_frame, dst_by_frame, geom, right):
+def gate4b_lateral_side(src_by_frame, dst_by_frame, geom, lateral):
     """The mirrored clip's dribbling hand must be on the OTHER SIDE of the body.
 
     WHY THIS GATE EXISTS -- it closes a hole the other four leave wide open,
@@ -417,8 +421,8 @@ def gate4b_lateral_side(src_by_frame, dst_by_frame, geom, right):
     that X is the sagittal axis; this is the runtime cross-check that the
     constant actually in force agrees with that measurement.
     """
-    src = hand_lateral_offset_m(src_by_frame, geom, right)
-    dst = hand_lateral_offset_m(dst_by_frame, geom, right)
+    src = hand_lateral_offset_m(src_by_frame, geom, lateral)
+    dst = hand_lateral_offset_m(dst_by_frame, geom, lateral)
     # The source dribbles right-handed, the mirror must dribble left-handed, so
     # these are the two DOMINANT hands -- the ones Gate 4 just measured.
     src_dom, dst_dom = src["R"], dst["L"]
@@ -544,7 +548,7 @@ def write_import_sidecar(src_import_path, dst_fbx_path):
 # ═════════════════════════════════════════════════════════════════════════════
 # per-job pipeline
 # ═════════════════════════════════════════════════════════════════════════════
-def process_job(src_path, dst_path, action_name, trusted_right):
+def process_job(src_path, dst_path, action_name, trusted_lateral):
     log(f"===== job: {src_path} -> {dst_path} (action {action_name!r}) =====")
     arm, f0, f1 = lib.load_source(src_path, FPS)
     scene = bpy.context.scene
@@ -628,7 +632,7 @@ def process_job(src_path, dst_path, action_name, trusted_right):
             f"{worst_g3_loc[2]}) exceeds {GATE3_LOC_TOL_UNITS} units")
 
     gate4_discriminator(src_by_frame, dst_by_frame, geom)
-    gate4b_lateral_side(src_by_frame, dst_by_frame, geom, trusted_right)
+    gate4b_lateral_side(src_by_frame, dst_by_frame, geom, trusted_lateral)
 
     # Reused library gates, exercised for real here since every one of the 65
     # bones is now keyed at every frame (a full mirror touches everything,
@@ -770,8 +774,8 @@ def gate2_once():
     # FLIPS between source and mirror), so the axis's anatomical direction is
     # irrelevant -- only that both clips are read against the SAME axis, and
     # that it is an eigenvector of MIRROR (asserted just below).
-    right = Vector(geom.lateral)
-    report("trusted_right_axis", tuple(round(v, 6) for v in right))
+    lateral = Vector(geom.lateral)
+    report("trusted_lateral_axis", tuple(round(v, 6) for v in lateral))
     # Gate 4b's arithmetic only mirrors if this axis is an eigenvector of
     # MIRROR, so assert that here rather than letting a skewed axis surface as a
     # confusing magnitude-deviation failure two gates later.
@@ -783,22 +787,22 @@ def gate2_once():
     # tolerance -- while still being ~14x clear of the measured value. A
     # genuinely wrong axis has an off-axis component near 1.0, three orders of
     # magnitude above this, so nothing real can slip through.
-    off_axis = max(abs(right.y), abs(right.z))
-    report("trusted_right_off_axis_component", f"{off_axis:.8f}")
+    off_axis = max(abs(lateral.y), abs(lateral.z))
+    report("trusted_lateral_off_axis_component", f"{off_axis:.8f}")
     if off_axis > 1e-3:
         raise SystemExit(
-            f"FATAL gate2: the stock rig's right axis {tuple(right)} is not "
+            f"FATAL gate2: the stock rig's lateral axis {tuple(lateral)} is not "
             f"aligned to armature X (off-axis component {off_axis:.8f}); "
             f"MIRROR = diag(-1,1,1) reflects X, so Gate 4b could not read a "
             f"meaningful side from it.")
-    return right
+    return lateral
 
 
 def main():
-    trusted_right = gate2_once()
+    trusted_lateral = gate2_once()
     results = []
     for src, dst, action_name in JOBS:
-        results.append(process_job(src, dst, action_name, trusted_right))
+        results.append(process_job(src, dst, action_name, trusted_lateral))
     for r in results:
         log(f"SUMMARY: {r['dst_path']} -- {r['frame_count']} frames, "
             f"{r['duration_s']:.3f}s, {r['file_size']} bytes")
