@@ -882,7 +882,13 @@ public partial class LocomotionClipTest : Node
         foreach (var (clipName, ticks) in jumpshotWindows)
         {
             double expectedSeconds = ticks / tps;
-            double actualSeconds = lib.GetAnimation(clipName).Length;
+            // Variant accessor, NOT .Length: that property is `float` in Godot 4.6.x
+            // and `double` in 4.7, so a 4.7.1-built assembly throws
+            // MissingMethodException under a stale 4.6 binary — and it throws
+            // inside _PhysicsProcess, BEFORE the timeout check, so the scenario
+            // HANGS instead of failing (#339 measured all 8 of these). The
+            // Variant accessor binds correctly under both. See AuthoredClipMcpProbe.
+            double actualSeconds = lib.GetAnimation(clipName).Get("length").AsDouble();
             GD.Print($"[locomotion-clip]   '{clipName}': length={actualSeconds:F6}s " +
                      $"expected={expectedSeconds:F6}s ({ticks} ticks @ {tps} tps)");
             if (System.Math.Abs(actualSeconds - expectedSeconds) > LengthToleranceSeconds)
@@ -1108,7 +1114,13 @@ public partial class LocomotionClipTest : Node
                 continue;
             }
             double expectedSeconds = ticks / tps;
-            double actualSeconds = lib.GetAnimation(clipName).Length;
+            // Variant accessor, NOT .Length: that property is `float` in Godot 4.6.x
+            // and `double` in 4.7, so a 4.7.1-built assembly throws
+            // MissingMethodException under a stale 4.6 binary — and it throws
+            // inside _PhysicsProcess, BEFORE the timeout check, so the scenario
+            // HANGS instead of failing (#339 measured all 8 of these). The
+            // Variant accessor binds correctly under both. See AuthoredClipMcpProbe.
+            double actualSeconds = lib.GetAnimation(clipName).Get("length").AsDouble();
             GD.Print($"[locomotion-clip]   '{clipName}': length={actualSeconds:F6}s " +
                      $"expected={expectedSeconds:F6}s ({ticks} ticks @ {tps} tps)");
             if (System.Math.Abs(actualSeconds - expectedSeconds) > LengthToleranceSeconds)
