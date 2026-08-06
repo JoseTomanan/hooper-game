@@ -603,7 +603,22 @@ public partial class ContestAnimTest : Node
         // Premise: all three phases must genuinely have been observed. "The feet
         // stayed down" proves nothing about a phase the run never entered, and
         // a partial traversal is exactly how this would pass vacuously.
-        bool premise = _sawStartup && _sawActive && _sawRecovery;
+        //
+        // The tick counts close the last path into that vacuous pass. The saw-
+        // latches are set from GetCurrentNode() alone, BEFORE Observe() looks
+        // for the Skeleton3D — so a rig with no Skeleton3D at all leaves all
+        // three latches true while not a single toe is ever measured, and
+        // _maxToeExcursion sits at its 0 seed reporting perfectly planted feet.
+        // A missing toe BONE is already caught (MeasureLowestToe returns NaN,
+        // which propagates through Math.Max and fails the ceiling); a missing
+        // SKELETON was not. Requiring a geometry sample in each phase closes it.
+        //
+        // "> 0" here, not the "> 1" the wrist verdicts use: these two toe
+        // reductions are whole-move and fold every tick, including the first
+        // (see Observe), so one sample in a phase is a real sample.
+        bool premise = _sawStartup && _sawActive && _sawRecovery
+                       && _startupTicksObserved > 0 && _activeTicksObserved > 0
+                       && _recoveryTicksObserved > 0;
         bool pass = premise && _maxToeExcursion <= GroundedMaxToeExcursion;
         if (pass)
             GD.Print($"[contest-anim] PASS contest-stays-grounded — across Startup, Active AND Recovery the " +
@@ -629,7 +644,13 @@ public partial class ContestAnimTest : Node
                  $"(floor {AirborneMinToeRise:F2}), excursion = {_maxToeExcursion:F4}, " +
                  $"ticks su/ac/re = {_startupTicksObserved}/{_activeTicksObserved}/{_recoveryTicksObserved}");
 
-        bool premise = _sawStartup && _sawActive;
+        // Same geometry-sampled premise as contest-stays-grounded (see there for
+        // why the saw-latches alone are not enough). This direction is a FLOOR
+        // rather than a ceiling, so a dead instrument already fails it — the
+        // guard is here so the control and the scenario it underwrites hold
+        // themselves to the same standard.
+        bool premise = _sawStartup && _sawActive
+                       && _startupTicksObserved > 0 && _activeTicksObserved > 0;
         bool pass = premise && _maxToeRise >= AirborneMinToeRise;
         if (pass)
             GD.Print($"[contest-anim] PASS control-layup-leaves-ground — the SAME MeasureLowestToe path that " +
