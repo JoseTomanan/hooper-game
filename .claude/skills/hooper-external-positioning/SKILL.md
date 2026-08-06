@@ -274,8 +274,8 @@ clone plus documented commands.** Concretely:
    devlog or README section tells an outside reader to run something, walk
    the literal sequence from a clean checkout at least once before
    publishing. Note the headless harness additionally needs a Godot
-   4.6.3 .NET binary (CI provisions it via `chickensoft-games/setup-godot@v2`,
-   version 4.6.3, `use-dotnet: true`; locally, point at your own install) —
+   4.7.1 .NET binary (CI provisions it via `chickensoft-games/setup-godot@v2`,
+   version 4.7.1, `use-dotnet: true`; locally, point at your own install) —
    an instruction that omits this prerequisite is not reproducible.
 
 ---

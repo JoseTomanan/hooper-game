@@ -21,7 +21,7 @@ NOT to use this" section below before assuming this is the right skill.
 | Tool | Required version | Why it must match |
 |---|---|---|
 | .NET SDK | 8.0.x (verified locally: 8.0.421) | Both csprojs target `net8.0`. Verify with `dotnet --list-sdks`. |
-| Godot editor/runtime | **4.6.3 STABLE, MONO build** | `HOOPER GAME.csproj` pins `Sdk="Godot.NET.Sdk/4.6.3"` and the test csproj pins `PackageReference Include="GodotSharp" Version="4.6.3"`. A mismatched Godot binary will not load the project correctly or will disagree with the C# bindings. Get the **mono** variant, not the standard (GDScript-only) build — Godot ships separate binaries and only the mono one carries .NET support. |
+| Godot editor/runtime | **4.7.1 STABLE, MONO build** | `HOOPER GAME.csproj` pins `Sdk="Godot.NET.Sdk/4.7.1"` and the test csproj pins `PackageReference Include="GodotSharp" Version="4.7.1"`. A mismatched Godot binary will not load the project correctly or will disagree with the C# bindings — and the 4.6.3 mismatch specifically **hangs** rather than fails; see "The 4.6.3 mismatch hangs, it does not fail" below. Get the **mono** variant, not the standard (GDScript-only) build — Godot ships separate binaries and only the mono one carries .NET support. |
 | Blender (**optional** — animation tooling only) | Any current stable (verified 2026-07-29: 5.2.0 LTS) | Not required to build, test, or run the game — only needed for headless `bpy`-scripted animation-clip work (retargeting/editing/blending motion onto the Y Bot rig), the same shape as `tools/rebuild_dribble_clips.gd` but for Blender instead of Godot. No version pin exists because nothing in this repo depends on a specific Blender API version yet. |
 
 Godot is **not** an SDK/NuGet dependency you `dotnet restore` — it's a
@@ -29,7 +29,7 @@ separate engine binary you download yourself. It is normal for it to be
 **absent** on a fresh clone/CI runner until you provision it (see below).
 
 **Do not hardcode a specific machine's download path as load-bearing.** On the
-machine this skill was verified on, a working 4.6.3 mono binary happened to
+machine this skill was verified on, a working mono binary happened to
 live under the user's `Downloads` folder — that is a fragile, deletion-prone
 location and MUST NOT be treated as a stable contract. Instead:
 
@@ -40,20 +40,46 @@ location and MUST NOT be treated as a stable contract. Instead:
   (`bash tests/integration/run-net-state-sync.sh "$GODOT"`), which is the same
   idea — don't invent a second convention.
 - On Windows, download the **`_console.exe`** variant (e.g.
-  `Godot_v4.6.3-stable_mono_win64_console.exe`), not the plain
-  `Godot_v4.6.3-stable_mono_win64.exe`. The console variant prints to the
+  `Godot_v4.7.1-stable_mono_win64_console.exe`), not the plain
+  `Godot_v4.7.1-stable_mono_win64.exe`. The console variant prints to the
   terminal (stdout/stderr visible); the windowed variant swallows it — you
   will not see `[harness] PASS/FAIL` output from the windowed binary when run
   from a shell.
 - The Godot binary is typically **NOT on PATH** on a dev machine — every local
   invocation in this skill spells out the binary explicitly (or via `$GODOT`).
   CI does not have this problem: it provisions Godot fresh every run via
-  `chickensoft-games/setup-godot@v2` with `version: 4.6.3, use-dotnet: true`,
+  `chickensoft-games/setup-godot@v2` with `version: 4.7.1, use-dotnet: true`,
   which puts a `godot` binary on PATH for the job.
 - Confirm your local binary matches the pin before trusting it:
-  `& $GODOT --version` must print `4.6.3.stable.mono.official.<hash>`. Any
+  `& $GODOT --version` must print `4.7.1.stable.mono.official.<hash>`. Any
   other version string is a real risk — Godot's C# API has churned across
   minor versions.
+
+### The 4.6.3 mismatch hangs, it does not fail
+
+The repo ran on **4.6.3** until PR #269 (`chore/godot-4.7-migration`, merged
+2026-07-24) moved it to **4.7.1**. A stale 4.6.3 binary is therefore the most
+likely wrong binary to have lying around, and it is the worst one, because it
+does not announce itself:
+
+- `Animation.Length` is `float` in 4.6.x and `double` in 4.7. A 4.7.1-built
+  assembly calls a `double`-returning `get_Length()`, which 4.6.3's GodotSharp
+  does not export, so the call throws `MissingMethodException:
+  Godot.Animation.get_Length()`.
+- It throws inside `_PhysicsProcess`, i.e. **before** each scenario's own
+  10-second timeout check ever runs. The scenario therefore **spins forever**
+  instead of failing. Measured in #339: eight scenarios behaved this way —
+  `LocomotionClipTest`, the six `*-segment-lengths`, and
+  `steal-startup-fills-window` — all routed through the `CheckClipWindows`
+  helper, so **the affected set is not predictable from scenario names.**
+
+**If a harness scenario hangs rather than failing, check the binary version
+before debugging the test.** That symptom is almost always this.
+
+- A 4.6.3 **editor** opened on this project is separately hazardous: Godot can
+  silently rewrite the csproj SDK pin to match itself. Run `git status` on
+  `HOOPER GAME.csproj` after any editor session and revert an unintended pin
+  change before staging.
 
 ### Headless Blender (animation tooling — optional, not a build dependency)
 
@@ -104,7 +130,7 @@ Output DLL lands at `.godot/mono/temp/bin/Debug/HOOPER GAME.dll`.
 ```
 dotnet test "tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj" --configuration Debug
 ```
-Expected: **`Passed! - Failed: 0, Passed: 664, Skipped: 5, Total: 669`**, ~1-4s.
+Expected: **`Passed! - Failed: 0, Passed: 1143, Skipped: 5, Total: 1148`**, ~1-4s.
 (The golden test inventory that owns this baseline count lives in
 `hooper-verification-and-qa` — if the numbers drift, reconcile there first.)
 The 5 skips are all `Hooper.Ball.Tests.ShotScatterCurveCharacterizationTests`
@@ -148,7 +174,7 @@ in ways that produce a specific, recurring confusion: *"`dotnet test` is
 green, why is CI red?"*
 
 **1. The game project — `HOOPER GAME.csproj`** (repo root):
-- `Sdk="Godot.NET.Sdk/4.6.3"`, `TargetFramework net8.0` (flips to `net9.0`
+- `Sdk="Godot.NET.Sdk/4.7.1"`, `TargetFramework net8.0` (flips to `net9.0`
   only when `GodotTargetPlatform==android` — an Android export target uses a
   different framework than everything verified here).
 - `ImplicitUsings` is **NOT** enabled.
@@ -172,7 +198,7 @@ green, why is CI red?"*
 - Plain `Microsoft.NET.Sdk`, `net8.0`, `ImplicitUsings` **enabled**,
   `Nullable` enabled. xUnit 2.5.3 + Microsoft.NET.Test.Sdk 17.8.0 +
   coverlet.collector 6.0.0.
-- References `GodotSharp` version `4.6.3` as an ordinary **NuGet package**,
+- References `GodotSharp` version `4.7.1` as an ordinary **NuGet package**,
   **NOT** a `ProjectReference` to the game csproj. The csproj's own comment
   explains why: a `ProjectReference` to a `Godot.NET.Sdk` project causes
   xUnit attributes (`[Fact]`, etc.) to be resolved against the *game*
@@ -211,7 +237,7 @@ One workflow, triggers on push to `main` + all PRs, two jobs:
    This is the fast, engine-free gate.
 
 2. **`integration-test`** (ubuntu-latest, `timeout-minutes: 15`): checkout →
-   setup-dotnet → **`chickensoft-games/setup-godot@v2`** (`version: 4.6.3,
+   setup-dotnet → **`chickensoft-games/setup-godot@v2`** (`version: 4.7.1,
    use-dotnet: true, include-templates: false` — this is how CI obtains the
    Godot binary and puts `godot` on PATH) → the bootstrap
    `godot --headless --build-solutions --quit || exit 0` (the deliberately
@@ -299,9 +325,9 @@ during this skill's authoring.
    2026-07-12; the 5 skips are the ShotScatterCurveCharacterizationTests and
    are intentional).
 5. Only if you need to run the headless harness or the game locally (not
-   required for pure C# work): obtain a **Godot 4.6.3 stable MONO** binary
+   required for pure C# work): obtain a **Godot 4.7.1 stable MONO** binary
    (the `_console.exe` variant on Windows), point `$GODOT` at it, verify
-   `& $GODOT --version` prints `4.6.3.stable.mono.official.<hash>`, run
+   `& $GODOT --version` prints `4.7.1.stable.mono.official.<hash>`, run
    `& $GODOT --headless --build-solutions --quit` once to bootstrap the
    bindings (tolerate a nonzero exit from this one command), then
    `& $GODOT --headless --path . res://tests/integration/SmokeTest.tscn`.
@@ -333,8 +359,8 @@ from digests); reviewed and corrected 2026-07-15 (CI harness invocation count
 - `dotnet build "HOOPER GAME.csproj" --configuration Debug` → Build
   succeeded, 0 warnings / 0 errors, ~1.1s incremental.
 - `dotnet test "tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj" --configuration Debug`
-  → Passed: 664, Failed: 0, Skipped: 5 (all ShotScatterCurveCharacterizationTests),
-  Total: 669.
+  → Passed: 1143, Failed: 0, Skipped: 5 (all ShotScatterCurveCharacterizationTests),
+  Total: 1148 (re-measured 2026-08-06).
 - `dotnet --list-sdks` → 8.0.421 (the only SDK installed).
 - `HOOPER GAME.csproj`, `tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj`,
   `.github/workflows/ci.yml` (357 lines), `.claude/hooks/verify-green.sh`
@@ -342,9 +368,11 @@ from digests); reviewed and corrected 2026-07-15 (CI harness invocation count
 - `.gitignore` uid lines (26: `*.uid`; 32: `!assets/locomotion.res.uid`) read
   directly; `git check-ignore export_presets.cfg build` → both ignored
   (verified 2026-07-12 per discovery).
-- A local Godot 4.6.3 mono binary reported
-  `4.6.3.stable.mono.official.7d41c59c4` and ran SmokeTest.tscn to
-  `[harness] PASS`, exit 0 (verified 2026-07-12 per discovery).
+- A local Godot mono binary ran SmokeTest.tscn to `[harness] PASS`, exit 0
+  (verified 2026-07-12, on the then-current 4.6.3 pin). **That binary is now
+  the WRONG one** — PR #269 moved the pin to 4.7.1 on 2026-07-24. Re-verified
+  2026-08-06: the machine has 4.7.1 available but `$GODOT` was unset, and the
+  canonical `%LOCALAPPDATA%\GodotPortable\` slot still holds the stale 4.6.3.
 - Blender 5.2.0 LTS portable ZIP installed under `%LOCALAPPDATA%\BlenderPortable\`,
   `$BLENDER` env var set; `--background --version` and
   `--background --python-expr "import bpy; ..."` both verified live, exit 0
@@ -356,7 +384,7 @@ stale, especially after any Godot / GodotSharp / .NET bump):
 dotnet --version
 dotnet build "HOOPER GAME.csproj" --configuration Debug
 dotnet test "tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj" --configuration Debug
-& $GODOT --version                              # expect 4.6.3.stable.mono.official.<hash>
+& $GODOT --version                              # expect 4.7.1.stable.mono.official.<hash>
 git check-ignore export_presets.cfg build       # expect both echoed (ignored)
 git worktree list                               # check the stale-worktree count
 ```
@@ -368,6 +396,6 @@ silently assume an answer):
 - The "blessed" way to obtain/pin a local Godot binary is only the env-var
   convention this skill recommends; if the project later adopts a fixed
   install location or provisioning script, update this file.
-- CI pins Godot to exactly `4.6.3` via `setup-godot@v2` while `setup-dotnet`
+- CI pins Godot to exactly `4.7.1` via `setup-godot@v2` while `setup-dotnet`
   floats on `'8.0.x'`; there is no documented policy for bumping the
   Godot / GodotSharp / local-binary trio in lockstep.

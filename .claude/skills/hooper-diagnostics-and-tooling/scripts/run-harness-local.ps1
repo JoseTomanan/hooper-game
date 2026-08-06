@@ -7,11 +7,11 @@
 # run those via Git Bash, not this script.
 #
 # Usage:
-#   powershell -File run-harness-local.ps1 -Godot "C:\...\Godot_v4.6.3-stable_mono_win64_console.exe"
+#   powershell -File run-harness-local.ps1 -Godot "C:\...\Godot_v4.7.1-stable_mono_win64_console.exe"
 #   powershell -File run-harness-local.ps1 -Godot $env:GODOT -StopOnFail
 #   powershell -File run-harness-local.ps1 -List          # print matrix, no binary needed
 #
-#   -Godot       path to the Godot 4.6.3 .NET binary (falls back to $env:GODOT).
+#   -Godot       path to the Godot 4.7.1 .NET binary (falls back to $env:GODOT).
 #                Use the *_console.exe variant so [harness] output is visible.
 #   -StopOnFail  abort at the first failing scenario (default: run all).
 #   -List        print the parsed scenario matrix and exit.

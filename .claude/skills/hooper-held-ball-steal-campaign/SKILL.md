@@ -66,9 +66,9 @@ ball because the caller returns before reaching them.
 Do not design anything until you have demonstrated the gap *today*, on the
 current main. All commands run from the repo root
 (`C:/Users/The King/Documents/GitHub/hooper-game` — path contains spaces,
-always quote). `godot` means a Godot **4.6.3 .NET** binary on PATH or via an
+always quote). `godot` means a Godot **4.7.1 .NET** binary on PATH or via an
 env var you set; CI provisions it with `chickensoft-games/setup-godot@v2`,
-`version: 4.6.3`, `use-dotnet: true`.
+`version: 4.7.1`, `use-dotnet: true`.
 
 **Step 0.1 — Confirm the gating branch still exists.**
 

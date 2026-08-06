@@ -13,7 +13,7 @@
 #   bash run-harness-local.sh <path-to-godot-binary> [--stop-on-fail] [--list]
 #   GODOT=<path> bash run-harness-local.sh [--stop-on-fail] [--list]
 #
-#   $1 / $GODOT     Godot 4.6.3 .NET binary (on Windows use the *_console.exe
+#   $1 / $GODOT     Godot 4.7.1 .NET binary (on Windows use the *_console.exe
 #                   variant so [harness] output reaches the terminal).
 #   --stop-on-fail  abort at the first failing scenario (default: run all,
 #                   report everything, exit non-zero if anything failed).
@@ -73,7 +73,7 @@ fi
 
 if [ -z "$GODOT_BIN" ]; then
   echo "ERROR: no Godot binary given. Pass it as \$1 or set \$GODOT." >&2
-  echo "  e.g.  GODOT=/path/to/Godot_v4.6.3-stable_mono_win64_console.exe bash $0" >&2
+  echo "  e.g.  GODOT=/path/to/Godot_v4.7.1-stable_mono_win64_console.exe bash $0" >&2
   exit 2
 fi
 if ! command -v "$GODOT_BIN" >/dev/null 2>&1 && [ ! -x "$GODOT_BIN" ]; then

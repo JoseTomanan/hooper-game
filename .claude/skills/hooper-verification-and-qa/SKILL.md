@@ -473,11 +473,11 @@ dotnet test "tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj" --configuration D
 # Game-project build (the guard dotnet test alone cannot provide)
 dotnet build "HOOPER GAME.csproj" --configuration Debug
 
-# One single-instance scenario. Needs a local Godot 4.6.3 .NET/Mono binary —
+# One single-instance scenario. Needs a local Godot 4.7.1 .NET/Mono binary —
 # it is NOT on PATH by default; point $GODOT (or an env var) at the
 # *_console.exe variant for terminal output. The version MUST match the
-# Godot.NET.Sdk/GodotSharp 4.6.3 pin. CI provisions its own via
-# chickensoft-games/setup-godot@v2 (version: 4.6.3, use-dotnet: true).
+# Godot.NET.Sdk/GodotSharp 4.7.1 pin. CI provisions its own via
+# chickensoft-games/setup-godot@v2 (version: 4.7.1, use-dotnet: true).
 & $GODOT --headless --path . res://tests/integration/SmokeTest.tscn
 & $GODOT --headless --path . res://tests/integration/StealTurnoverTest.tscn -- --harness-scenario=success
 ```

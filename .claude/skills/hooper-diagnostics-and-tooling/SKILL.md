@@ -158,9 +158,9 @@ Two equivalent scripts live in this skill's `scripts/` directory. Both parse
 the live scenario matrix out of `.github/workflows/ci.yml` (every
 `godot --headless --path . res://tests/integration/*.tscn` invocation, in CI
 order), so they cannot drift from CI. As of 2026-07-15 that is **30 scenario
-invocations across 10 scenes**. Both need a local Godot **4.6.3 .NET** binary
+invocations across 10 scenes**. Both need a local Godot **4.7.1 .NET** binary
 (not on PATH by default; CI gets one via `chickensoft-games/setup-godot@v2`,
-version 4.6.3, `use-dotnet: true`). On Windows use the `*_console.exe`
+version 4.7.1, `use-dotnet: true`). On Windows use the `*_console.exe`
 variant so `[harness]` output reaches your terminal.
 
 Build the game assembly first (harness code compiles into it):
@@ -172,7 +172,7 @@ dotnet build "HOOPER GAME.csproj" --configuration Debug
 Git Bash:
 
 ```
-GODOT="/c/path/to/Godot_v4.6.3-stable_mono_win64_console.exe" bash .claude/skills/hooper-diagnostics-and-tooling/scripts/run-harness-local.sh
+GODOT="/c/path/to/Godot_v4.7.1-stable_mono_win64_console.exe" bash .claude/skills/hooper-diagnostics-and-tooling/scripts/run-harness-local.sh
 bash .claude/skills/hooper-diagnostics-and-tooling/scripts/run-harness-local.sh --list           # print matrix only, no binary needed
 bash .claude/skills/hooper-diagnostics-and-tooling/scripts/run-harness-local.sh "$GODOT" --stop-on-fail
 ```
@@ -180,7 +180,7 @@ bash .claude/skills/hooper-diagnostics-and-tooling/scripts/run-harness-local.sh 
 PowerShell 5.1:
 
 ```
-powershell -File .claude\skills\hooper-diagnostics-and-tooling\scripts\run-harness-local.ps1 -Godot "C:\path\to\Godot_v4.6.3-stable_mono_win64_console.exe"
+powershell -File .claude\skills\hooper-diagnostics-and-tooling\scripts\run-harness-local.ps1 -Godot "C:\path\to\Godot_v4.7.1-stable_mono_win64_console.exe"
 powershell -File .claude\skills\hooper-diagnostics-and-tooling\scripts\run-harness-local.ps1 -List
 ```
 
@@ -371,7 +371,7 @@ against `hooper-proof-and-analysis-toolkit`. Verified against:
   10 scenes, 4 dual-instance scripts) — grepped live.
 - `[harness]`/`[net-harness]` print conventions — grepped live.
 - Both shipped scripts' `--list` output and no-binary error paths — executed
-  live (full matrix run additionally requires a local Godot 4.6.3 .NET
+  live (full matrix run additionally requires a local Godot 4.7.1 .NET
   binary; the parse/summary logic does not).
 - `docs/analysis/0079-shot-scatter-curve.md` — read directly.
 

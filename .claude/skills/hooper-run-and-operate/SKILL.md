@@ -45,10 +45,10 @@ verifications use this flow: window 1 clicks **Host**, window 2 clicks
 
 ### From a terminal (windowed, single instance)
 ```
-& "<path-to>\Godot_v4.6.3-stable_mono_win64_console.exe" --path "C:\Users\The King\Documents\GitHub\hooper-game"
+& "<path-to>\Godot_v4.7.1-stable_mono_win64_console.exe" --path "C:\Users\The King\Documents\GitHub\hooper-game"
 ```
 Use the `_console.exe` variant for terminal stdout — the sibling
-`Godot_v4.6.3-stable_mono_win64.exe` is windowed-only and silent on the
+`Godot_v4.7.1-stable_mono_win64.exe` is windowed-only and silent on the
 console. Neither is on PATH by default; see §6 "Getting a Godot binary".
 
 ### Headless (no window, still runs Main.tscn as a live sim)
@@ -286,7 +286,7 @@ SERVER_BIND_WAIT="${SERVER_BIND_WAIT:-6}"  # seconds for Godot's .NET cold boot 
 
 ### Local invocation (Windows, Git Bash, from the repo root)
 ```bash
-GODOT="/c/path/to/Godot_v4.6.3-stable_mono_win64_console.exe"
+GODOT="/c/path/to/Godot_v4.7.1-stable_mono_win64_console.exe"
 SERVER_BIND_WAIT=6 bash tests/integration/run-net-state-sync.sh "$GODOT"
 ```
 Override `HARNESS_PORT` if a default port is stuck in use (e.g. an orphaned
@@ -371,20 +371,20 @@ text-authored today.
 ## 6. Getting a Godot binary
 
 `godot` is **not on PATH** on a typical dev machine here. You need the exact
-**Godot 4.6.3 .NET/Mono** build (must match the `Godot.NET.Sdk/4.6.3` +
-GodotSharp 4.6.3 pin in the csproj):
+**Godot 4.7.1 .NET/Mono** build (must match the `Godot.NET.Sdk/4.7.1` +
+GodotSharp 4.7.1 pin in the csproj):
 
-- **Local**: download the ".NET" (mono) build of 4.6.3 from godotengine.org.
+- **Local**: download the ".NET" (mono) build of 4.7.1 from godotengine.org.
   Use the `_console.exe` variant for anything terminal-driven. Point an env
   var at it (`$GODOT` in Git Bash) so the `run-net-*.sh` `$1` argument stays
   a one-liner.
 - **CI**: gets `godot` on PATH via `chickensoft-games/setup-godot@v2`
-  (`version: 4.6.3`, `use-dotnet: true`) — which is why CI scripts call bare
+  (`version: 4.7.1`, `use-dotnet: true`) — which is why CI scripts call bare
   `godot` while local runs need an explicit path.
 
 Sanity-check before trusting any run:
 ```
-& <godot_console.exe> --version    # must print 4.6.3.stable.mono.official.<hash>
+& <godot_console.exe> --version    # must print 4.7.1.stable.mono.official.<hash>
 ```
 A version mismatch against the csproj pin is a real source of subtle
 divergence. Full toolchain story: `hooper-build-and-env`.
