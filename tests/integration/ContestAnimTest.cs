@@ -271,6 +271,13 @@ public partial class ContestAnimTest : Node
     private Quaternion[] _poseAtLastStartupTick;
     private Quaternion[] _poseAtLastRecoveryTick;
 
+    // Instrumentation only (#340 step 1) — how many ticks Observe() actually
+    // sampled each phase on, so a future fix can see whether a phase's window
+    // is being under-observed before changing any gate.
+    private int _startupTicksObserved;
+    private int _activeTicksObserved;
+    private int _recoveryTicksObserved;
+
     public override void _Ready()
     {
         string[] args = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).ToArray();
@@ -415,17 +422,20 @@ public partial class ContestAnimTest : Node
         float wristAboveHead = MeasureWristAboveHead(skel);
         if (node == _startupState)
         {
+            _startupTicksObserved++;
             _maxWristAboveHeadDuringStartup =
                 Math.Max(_maxWristAboveHeadDuringStartup, wristAboveHead);
             _poseAtLastStartupTick = SampleUpperBody(skel);
         }
         else if (node == _activeState)
         {
+            _activeTicksObserved++;
             _maxWristAboveHeadDuringActive =
                 Math.Max(_maxWristAboveHeadDuringActive, wristAboveHead);
         }
         else
         {
+            _recoveryTicksObserved++;
             // Overwritten each Recovery tick, so it ends up holding the LAST one
             // — the "sample the final tick" discipline BehindTheBackAnimTest
             // arrived at by mutation: an UNBOUND clip collapses the rig to rest
@@ -498,7 +508,8 @@ public partial class ContestAnimTest : Node
                 _poseAtLastStartupTick[i].AngleTo(_poseAtLastRecoveryTick[i])));
 
         GD.Print($"[contest-anim]   worst upper-body Startup-vs-Recovery delta = {worst:F2} deg " +
-                 $"(floor {StartupVsRecoveryMinDeg:F1})");
+                 $"(floor {StartupVsRecoveryMinDeg:F1}), " +
+                 $"ticks su/ac/re = {_startupTicksObserved}/{_activeTicksObserved}/{_recoveryTicksObserved}");
 
         bool pass = _sawStartup && _sawRecovery && worst >= StartupVsRecoveryMinDeg;
         if (pass)
@@ -529,7 +540,8 @@ public partial class ContestAnimTest : Node
     private void VerdictStaysGrounded()
     {
         GD.Print($"[contest-anim]   toe excursion across all three phases = {_maxToeExcursion:F4} " +
-                 $"(ceiling {GroundedMaxToeExcursion:F2}), signed max rise = {_maxToeRise:F4}");
+                 $"(ceiling {GroundedMaxToeExcursion:F2}), signed max rise = {_maxToeRise:F4}, " +
+                 $"ticks su/ac/re = {_startupTicksObserved}/{_activeTicksObserved}/{_recoveryTicksObserved}");
 
         // Premise: all three phases must genuinely have been observed. "The feet
         // stayed down" proves nothing about a phase the run never entered, and
@@ -557,7 +569,8 @@ public partial class ContestAnimTest : Node
     private void VerdictControlLayupLeavesGround()
     {
         GD.Print($"[contest-anim]   (layup control) signed max toe rise = {_maxToeRise:F4} " +
-                 $"(floor {AirborneMinToeRise:F2}), excursion = {_maxToeExcursion:F4}");
+                 $"(floor {AirborneMinToeRise:F2}), excursion = {_maxToeExcursion:F4}, " +
+                 $"ticks su/ac/re = {_startupTicksObserved}/{_activeTicksObserved}/{_recoveryTicksObserved}");
 
         bool premise = _sawStartup && _sawActive;
         bool pass = premise && _maxToeRise >= AirborneMinToeRise;
@@ -581,7 +594,8 @@ public partial class ContestAnimTest : Node
     private void VerdictArmsRise()
     {
         GD.Print($"[contest-anim]   wrist-above-head: startup={_maxWristAboveHeadDuringStartup:F4} " +
-                 $"active={_maxWristAboveHeadDuringActive:F4}");
+                 $"active={_maxWristAboveHeadDuringActive:F4}, " +
+                 $"ticks su/ac/re = {_startupTicksObserved}/{_activeTicksObserved}/{_recoveryTicksObserved}");
 
         bool pass = _sawActive && _maxWristAboveHeadDuringActive >= ArmAboveHeadMinM;
         if (pass)
@@ -602,7 +616,8 @@ public partial class ContestAnimTest : Node
     private void VerdictControlArmsLowStartup()
     {
         GD.Print($"[contest-anim]   wrist-above-head: startup={_maxWristAboveHeadDuringStartup:F4} " +
-                 $"active={_maxWristAboveHeadDuringActive:F4}");
+                 $"active={_maxWristAboveHeadDuringActive:F4}, " +
+                 $"ticks su/ac/re = {_startupTicksObserved}/{_activeTicksObserved}/{_recoveryTicksObserved}");
 
         // Premise: Active must genuinely have gone overhead, or "Startup did not"
         // is trivially satisfied by a clip in which the arms never move.

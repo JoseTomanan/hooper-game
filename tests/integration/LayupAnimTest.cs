@@ -152,6 +152,13 @@ public partial class LayupAnimTest : Node
     private Quaternion[] _poseAtLastStartupTick;
     private Quaternion[] _poseAtLastRecoveryTick;
 
+    // Instrumentation only (#340 step 1) — how many ticks Observe() actually
+    // sampled each phase on, so a future fix can see whether a phase's window
+    // is being under-observed before changing any gate.
+    private int _startupTicksObserved;
+    private int _activeTicksObserved;
+    private int _recoveryTicksObserved;
+
     public override void _Ready()
     {
         string[] args = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).ToArray();
@@ -284,6 +291,7 @@ public partial class LayupAnimTest : Node
 
             if (node == "LayupStartup")
             {
+                _startupTicksObserved++;
                 _maxHipRiseDuringStartup = Math.Max(_maxHipRiseDuringStartup, rise);
                 _maxWristAboveHeadDuringStartup =
                     Math.Max(_maxWristAboveHeadDuringStartup, wristAboveHead);
@@ -291,12 +299,14 @@ public partial class LayupAnimTest : Node
             }
             else if (node == "LayupActive")
             {
+                _activeTicksObserved++;
                 _maxHipRiseDuringActive = Math.Max(_maxHipRiseDuringActive, rise);
                 _maxWristAboveHeadDuringActive =
                     Math.Max(_maxWristAboveHeadDuringActive, wristAboveHead);
             }
             else
             {
+                _recoveryTicksObserved++;
                 // Overwritten each Recovery tick, so it ends up holding the LAST
                 // one — the same "sample the final tick" discipline
                 // BehindTheBackAnimTest arrived at by mutation: an UNBOUND clip
@@ -383,7 +393,8 @@ public partial class LayupAnimTest : Node
                 _poseAtLastStartupTick[i].AngleTo(_poseAtLastRecoveryTick[i])));
 
         GD.Print($"[layup-anim]   worst upper-body Startup-vs-Recovery delta = {worst:F2} deg " +
-                 $"(floor {StartupVsRecoveryMinDeg:F1})");
+                 $"(floor {StartupVsRecoveryMinDeg:F1}), " +
+                 $"ticks su/ac/re = {_startupTicksObserved}/{_activeTicksObserved}/{_recoveryTicksObserved}");
 
         bool pass = _sawLayupStartup && _sawLayupRecovery && worst >= StartupVsRecoveryMinDeg;
         if (pass)
@@ -407,7 +418,8 @@ public partial class LayupAnimTest : Node
     private void VerdictAirborneActive()
     {
         GD.Print($"[layup-anim]   hip rise: startup={_maxHipRiseDuringStartup:F4} " +
-                 $"active={_maxHipRiseDuringActive:F4} (floor {AirborneMinRise:F2})");
+                 $"active={_maxHipRiseDuringActive:F4} (floor {AirborneMinRise:F2}), " +
+                 $"ticks su/ac/re = {_startupTicksObserved}/{_activeTicksObserved}/{_recoveryTicksObserved}");
 
         bool pass = _sawLayupActive && _maxHipRiseDuringActive >= AirborneMinRise;
         if (pass)
@@ -426,7 +438,8 @@ public partial class LayupAnimTest : Node
     private void VerdictControlGroundedStartup()
     {
         GD.Print($"[layup-anim]   hip rise: startup={_maxHipRiseDuringStartup:F4} " +
-                 $"active={_maxHipRiseDuringActive:F4} (startup ceiling {GroundedMaxRise:F2})");
+                 $"active={_maxHipRiseDuringActive:F4} (startup ceiling {GroundedMaxRise:F2}), " +
+                 $"ticks su/ac/re = {_startupTicksObserved}/{_activeTicksObserved}/{_recoveryTicksObserved}");
 
         // Premise: the Startup phase must genuinely have been observed, AND the
         // Active phase must genuinely have risen — otherwise "Startup stayed
@@ -452,7 +465,8 @@ public partial class LayupAnimTest : Node
     private void VerdictArmExtendsOverhead()
     {
         GD.Print($"[layup-anim]   wrist-above-head: startup={_maxWristAboveHeadDuringStartup:F4} " +
-                 $"active={_maxWristAboveHeadDuringActive:F4}");
+                 $"active={_maxWristAboveHeadDuringActive:F4}, " +
+                 $"ticks su/ac/re = {_startupTicksObserved}/{_activeTicksObserved}/{_recoveryTicksObserved}");
 
         bool pass = _sawLayupActive && _maxWristAboveHeadDuringActive > 0f;
         if (pass)
@@ -469,7 +483,8 @@ public partial class LayupAnimTest : Node
     private void VerdictControlArmLowStartup()
     {
         GD.Print($"[layup-anim]   wrist-above-head: startup={_maxWristAboveHeadDuringStartup:F4} " +
-                 $"active={_maxWristAboveHeadDuringActive:F4}");
+                 $"active={_maxWristAboveHeadDuringActive:F4}, " +
+                 $"ticks su/ac/re = {_startupTicksObserved}/{_activeTicksObserved}/{_recoveryTicksObserved}");
 
         // Premise: Active must genuinely have gone overhead, or "Startup did not"
         // is trivially satisfied by a clip in which the arm never moves.
