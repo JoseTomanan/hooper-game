@@ -22,8 +22,10 @@
 # Exit codes: 0 = all scenarios passed, 1 = at least one failed (or aborted),
 #             2 = usage / environment error.
 #
-# As of 2026-07-15 the parsed matrix is 30 scenario invocations across 10
-# scenes. If the parse ever returns 0 rows, ci.yml's invocation shape changed —
+# As of 2026-08-06 the parsed matrix is 178 scenario invocations across 42
+# scenes (~10 min serial). It was 30 across 10 on 2026-07-15 — do not treat any
+# count written here as current; run --list for the live one.
+# If the parse ever returns 0 rows, ci.yml's invocation shape changed —
 # update the grep pattern below to match.
 
 set -u

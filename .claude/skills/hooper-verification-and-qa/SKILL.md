@@ -128,9 +128,20 @@ This table is transcribed from `.github/workflows/ci.yml`'s actual run steps
 | `MovingCrossoverTest.tscn` | `retains-speed`, `stationary-forward-exit`, `hesitation-still-hard-zeroes`, `remote-pending-stick` | Startup's `GatherDecel` bleeds (never zeroes) momentum; forward burst component from a dead stop; Hesitation still hard-zeroes (the ADR-0003 amendment's own scoping guard); the server's REMOTE-player copy reaches `CrossoverBurstMath` via `_pendingRawStick`, not just the own-player `ReadInput()` path (#198) |
 | `BehindTheBackTest.tscn` | `shielded-sweep`, `narrower-exit-cone`, `dead-dribble-gate` | Ball's forward offset goes genuinely NEGATIVE (behind the holder's centerline — the discriminator vs. Crossover's in-front sweep); pure-lateral stick input yields a real forward burst through the narrower exit cone (`move_size_up` modifier wired end-to-end); same Held dead-dribble gate as Crossover/Hesitation (#194) |
 
-That's 30 single-instance `godot` invocations in CI: 2 fixed steps
-(SmokeTest, InputMapDefensiveActionsTest) + 28 scenario-flagged invocations
-(3+4+4+2+3+5+4+3) across the 8 scenario scenes.
+**The table above is a curated subset, not the matrix.** It documents the
+pre-M9 core — what each of those scenarios *asserts and why*, which is the part
+you cannot recover by reading `ci.yml`. The matrix itself is far larger and
+grows every milestone: **178 single-instance invocations across 42 scenes** as
+of 2026-08-06 (it was 30 across 10 on 2026-07-15), plus **6** `run-net-*.sh`
+dual-instance scripts.
+
+Deliberately not enumerated here — an inline list of 42 scenes would be stale
+within weeks and would bury the semantics this table exists to carry. For the
+live list run
+`powershell -File .claude/skills/hooper-diagnostics-and-tooling/scripts/run-harness-local.ps1 -List`
+(or the `.sh` twin with `--list`), which parses `ci.yml` and cannot drift. The
+M9 animation-clip scenes (`*AnimTest`) dominate the growth; their semantics
+live in the per-move issues, not here.
 
 (Two further `.tscn` files exist under `tests/integration/` —
 `HarnessPlayer.tscn` and `HarnessNetPlayer.tscn` — support scenes instanced

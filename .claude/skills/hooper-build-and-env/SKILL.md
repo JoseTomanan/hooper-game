@@ -274,18 +274,20 @@ One workflow, triggers on push to `main` + all PRs, two jobs:
    `godot --headless --build-solutions --quit || exit 0` (the deliberately
    swallowed spurious-failure step described above) → an explicit
    `dotnet build "HOOPER GAME.csproj"` (so a genuine C# error surfaces here
-   rather than as a confusing "script not found" at scene-load time) →
-   **30 single-instance harness scenario invocations** of the form
+   rather than as a confusing "script not found" at scene-load time) → the
+   **single-instance harness scenario matrix**, each invocation of the form
    `godot --headless --path . res://tests/integration/<Scene>.tscn -- --harness-scenario=<name>`
-   across SmokeTest, InputMapDefensiveActionsTest, StealTurnoverTest (3
-   scenarios), BlockTurnoverTest (4), OobTurnoverTest (4), TripleThreatTest
-   (2), CrossoverSweepTest (3), PivotPlantTest (5), MovingCrossoverTest (4),
-   BehindTheBackTest (3) — then **4 dual-instance shell-script harnesses**
-   (`run-net-handshake.sh`, `run-net-state-sync.sh`,
-   `run-net-node-replication.sh`, `run-net-behindtheback-sweep.sh`, each
-   `chmod +x`'d first, localhost ports 23456-23459). Exit-code contract
-   (ADR-0016): scene calls `GetTree().Quit(0)` = PASS, `Quit(1)` = FAIL, any
-   other code = harness crash, which also fails the job.
+   — then the **dual-instance shell-script harnesses** (`run-net-*.sh`, each
+   `chmod +x`'d first, localhost ports 23456+). Exit-code contract (ADR-0016):
+   scene calls `GetTree().Quit(0)` = PASS, `Quit(1)` = FAIL, any other code =
+   harness crash, which also fails the job.
+
+   **Do not hand-maintain the matrix here — it grows every milestone.** As of
+   2026-08-06 it is **178 invocations across 42 scenes** plus **6** `run-net-*.sh`
+   scripts (it was 30 / 10 / 4 on 2026-07-15; an enumeration in this file was
+   stale within three weeks). Get the live list with
+   `powershell -File .claude/skills/hooper-diagnostics-and-tooling/scripts/run-harness-local.ps1 -List`,
+   which parses `ci.yml` directly and so cannot drift.
 
    This job is the project's third verification surface — it boots a real
    Godot .NET engine and exercises the live simulation, which unit tests
@@ -352,8 +354,8 @@ during this skill's authoring.
    Godot to be installed — the Godot.NET.Sdk NuGet package alone compiles the
    C#.
 4. `dotnet test "tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj" --configuration Debug`.
-   Expect: `Passed: 664, Failed: 0, Skipped: 5, Total: 669` (as of
-   2026-07-12; the 5 skips are the ShotScatterCurveCharacterizationTests and
+   Expect: `Passed: 1143, Failed: 0, Skipped: 5, Total: 1148` (as of
+   2026-08-06; the 5 skips are the ShotScatterCurveCharacterizationTests and
    are intentional).
 5. Only if you need to run the headless harness or the game locally (not
    required for pure C# work): obtain a **Godot 4.7.1 stable MONO** binary
@@ -385,8 +387,10 @@ during this skill's authoring.
 ## Provenance and maintenance
 
 Verified 2026-07-12 by live re-run on the authoring machine (not merely read
-from digests); reviewed and corrected 2026-07-15 (CI harness invocation count
-22 → 30; verify-green.sh 85 → 84 lines):
+from digests); corrected 2026-07-15 (harness invocations 22 → 30;
+verify-green.sh 85 → 84 lines) and again 2026-08-06 (Godot pin 4.6.3 → 4.7.1;
+harness invocations 30 → 178 across 42 scenes; `run-net-*.sh` 4 → 6; ci.yml
+357 → 1698 lines; test count 664/669 → 1143/1148):
 - `dotnet build "HOOPER GAME.csproj" --configuration Debug` → Build
   succeeded, 0 warnings / 0 errors, ~1.1s incremental.
 - `dotnet test "tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj" --configuration Debug`
@@ -394,8 +398,9 @@ from digests); reviewed and corrected 2026-07-15 (CI harness invocation count
   Total: 1148 (re-measured 2026-08-06).
 - `dotnet --list-sdks` → 8.0.421 (the only SDK installed).
 - `HOOPER GAME.csproj`, `tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj`,
-  `.github/workflows/ci.yml` (357 lines), `.claude/hooks/verify-green.sh`
-  (84 lines), and `.claude/settings.json` read in full.
+  `.github/workflows/ci.yml` (1698 lines as of 2026-08-06),
+  `.claude/hooks/verify-green.sh` (84 lines), and `.claude/settings.json`
+  read in full.
 - `.gitignore` uid lines (26: `*.uid`; 32: `!assets/locomotion.res.uid`) read
   directly; `git check-ignore export_presets.cfg build` → both ignored
   (verified 2026-07-12 per discovery).
@@ -403,11 +408,14 @@ from digests); reviewed and corrected 2026-07-15 (CI harness invocation count
   `%LOCALAPPDATA%\GodotPortable\Godot_v4.7.1-stable_mono_win64\`, User-scope
   `GODOT` set to its `_console.exe`, `& $GODOT --version` →
   `4.7.1.stable.mono.official.a13da4feb`. The stale 4.6.3 tree remains beside
-  it in the same folder — resolve through `$GODOT`, never by globbing. The
-  `godot` MCP server's own `GODOT_PATH` was repointed to 4.7.1 the same day
-  (it had been left on 4.6.3); see the MCP note above. Full local harness
-  sweep on that binary: **178/178 PASS**, `HOOPER GAME.csproj` pin unchanged
-  afterwards.
+  it in the same folder — resolve through `$GODOT`, never by globbing.
+  The `godot` MCP server's own `GODOT_PATH` was repointed to 4.7.1 the same
+  day (it had been left on 4.6.3); see the MCP note above.
+- **Full local harness sweep on 4.7.1: 178/178 PASS** (2026-08-06, ~10 min
+  serial via `run-harness-local.ps1`). This is the first end-to-end local
+  sweep on the pinned engine — the 4.7.1 evidence before it was CI plus the
+  8 scenarios #339 touched. `HOOPER GAME.csproj` and `project.godot` were
+  unchanged afterwards.
 - Blender 5.2.0 LTS portable ZIP installed under `%LOCALAPPDATA%\BlenderPortable\`,
   `$BLENDER` env var set; `--background --version` and
   `--background --python-expr "import bpy; ..."` both verified live, exit 0

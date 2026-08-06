@@ -19,7 +19,9 @@
 # Exit codes: 0 = all passed, 1 = at least one failed, 2 = usage/env error.
 #
 # PowerShell 5.1 constraints honoured: no && / || chaining, no ternary.
-# As of 2026-07-15 the parsed matrix is 30 scenario invocations across 10 scenes.
+# As of 2026-08-06 the parsed matrix is 178 scenario invocations across 42
+# scenes (~10 min serial). It was 30 across 10 on 2026-07-15 — do not treat
+# any count written here as current; run -List for the live one.
 
 param(
     [string]$Godot = $env:GODOT,
