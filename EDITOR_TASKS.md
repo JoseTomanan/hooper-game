@@ -1,72 +1,67 @@
 # EDITOR_TASKS.md — Your Godot editor checklist (feel + verification)
 
-**Scope changed in [ADR-0011](docs/adr/0011-claude-authors-scenes.md) (2026-06-28).**
-This is no longer an *authoring* checklist. Claude Code now authors `.tscn`,
-`.tres`/`.res`, and `project.godot` by direct text-edit — adding/renaming nodes,
-setting properties, assigning exports/`NodePath`s, instancing sub-scenes, Input
-Map entries. **You** are left with the two things an AI can't do for you:
+> **Read this box, not the history.** Everything below covers **M1a–M8, all
+> closed.** This file has no live checklist. It is kept as a record of scene
+> structure and of what each harness scenario encodes — read a step as "what
+> the integration test asserts," never as "what you must click."
 
-- **Feel / tuning judgments** — deciding whether tuned values *feel* right (lean
-  degrees, burst speed, blend-space ranges, "does the telegraph read"). Claude
-  proposes the numbers; you accept or redirect.
-- **In-engine verification** — running the game (single- or dual-instance) to
-  confirm behaviour. This is what closes a `hitl` issue (`Done means proven`).
+**What is actually yours today** — the residue after four successive narrowings:
 
-Two structural exclusions also stay yours until a spike proves them
-text-authorable: **AnimationTree graph authoring** (BlendSpace points,
-state-machine nodes/transitions) and **import-dialog** settings not already
-scriptable headlessly.
+- **Feel / taste judgments** — lean degrees, telegraph readability, burst
+  weight, "does it read". Claude proposes the numbers; you accept or redirect.
+  These are **deferred indefinitely** to one consolidated, human-scheduled pass
+  (**#173**) and do **not** gate milestones
+  ([ADR-0021](docs/adr/0021-feel-taste-deferred-indefinitely.md)).
+- **Async evidence review** — CI-captured screenshots/clips attached to an
+  issue, judged from any device on your own schedule; no live editor session,
+  no dual-instance setup
+  ([ADR-0024](docs/adr/0024-hitl-async-evidence-restructure.md), Proposed).
+- **Optional vetoes** on posted decision briefs (also ADR-0024).
+- **Editor import-dialog settings that have no headless path at all** — the one
+  remaining structural exclusion.
 
-**Scope narrowed again under autopilot ([ADR-0016](docs/adr/0016-headless-verification-harness.md),
-2026-06-29).** *State-checkable* verification — scene loads clean, an export
-resolves, the score increments, the ball goes loose, a remote committed-move
-phase renders, two peers converge — has moved to the **headless Godot harness**
-under `tests/integration/` (booted `--headless`, asserting real engine state,
-reporting pass/fail by `GetTree().Quit(exitCode)`). Those checks now run in CI on
-every PR, and a `hitl` issue whose acceptance is expressible that way is closed by
-a green harness run ([ADR-0015](docs/adr/0015-autonomous-merge-proven-by-harness.md)),
-not a manual session. **What is left for you is only what a harness cannot
-assert:** *feel* — lean degrees, telegraph readability, burst weight, "does it
-look right" — collected into **one feel-acceptance pass per milestone**, plus any
-not-yet-automated residue. The historical per-milestone dual-instance checklists
-below are the spec the harness scenes encode; read them as "what the integration
-test asserts," not "what you must click."
+**What is no longer yours**, despite what the per-milestone sections below may
+imply — each was handed to Claude or the harness by a specific decision:
 
-**Scope narrowed a third time under [ADR-0024](docs/adr/0024-hitl-async-evidence-restructure.md)
-(2026-07-18, Proposed).** Once accepted: remaining `hitl` verifies decompose —
-state-checkable criteria become harness scenarios (`afk`), and visual/audio
-"does it read" judgments convert to **async artifact review** (CI-captured
-screenshots/clips attached to the issue; you judge from any device, whenever
-you choose — no live editor session, no dual-instance setup). What is left of
-this file's live duty is: async evidence review, optional vetoes on posted
-decision briefs, the consolidated deferred feel pass (#173, ADR-0021), and the
-one structural exclusion (editor import-dialog settings).
+| Was HITL | Now | Decision |
+|---|---|---|
+| Authoring `.tscn` / `.res` / `project.godot` | AFK text-edit | [ADR-0011](docs/adr/0011-claude-authors-scenes.md) |
+| State-checkable verification (scene loads, score increments, peers converge) | Headless harness in CI; closes the issue on green | [ADR-0016](docs/adr/0016-headless-verification-harness.md) + [ADR-0015](docs/adr/0015-autonomous-merge-proven-by-harness.md) |
+| AnimationTree graph authoring (BlendSpace points, state-machine nodes/transitions) | AFK — a hand-authored tree loads and runs identically | spike #87 |
+| The FBX retarget subset (`BoneMap` + `SkeletonProfile` in a `.fbx.import` `_subresources` block) | AFK — proven headless | spike #267 |
 
-The historical steps below are kept as a record of scene structure. New steps
-should be written as *verification* steps, not wiring steps — the wiring now ships
-in Claude's PR. Defer everything visual (materials, polish) until much later —
-none of it is needed to prove the game works.
+Under ADR-0024, a `hitl` issue **decomposes at pickup**: state-checkable
+criteria split out into `afk` harness scenarios, visual/audio judgments become
+async artifact review, and bounded decision gates proceed on a
+default-with-veto brief. Only the irreducible-feel residue folds into #173.
+
+New steps, if any are ever added, are *verification* steps — the wiring ships
+in Claude's PR. Defer everything visual (materials, polish); none of it is
+needed to prove the game works.
 
 ---
 
 ## One-time setup
 
-1. Download **Godot 4 — .NET / C# edition** (the build labeled .NET/Mono, NOT the
-   standard build — only the .NET build runs C#). From godotengine.org.
-2. Install the **.NET SDK** (Godot's C# build needs it to compile). Match the
-   .NET version Godot's current docs specify.
-3. Install an editor for the C# itself — **VS Code** or **Visual Studio** — and
-   point Godot at it (Editor Settings → Dotnet → external editor). This is where
-   Claude Code's files open.
-4. Launch Godot → **New Project** → give it a name and folder → renderer:
-   **Compatibility** or **Mobile** (lighter, better for your low-spec target;
-   you can change later). This creates `project.godot`.
-5. In the editor, create your first C# script once (right-click a node → Attach
-   Script → language C#). This makes Godot generate the `.sln` and `.csproj` at
-   the project root. **Leave those files where they are.**
-6. Put the whole project folder under **Git** (`git init`), and drop in the files
-   Claude Code prepared: `CLAUDE.md`, `EDITOR_TASKS.md`, the `scripts/` tree,
-   `.gitignore`. Point **Claude Code** at this folder.
+This is now just "point a machine at the existing repo" — the project-creation
+steps that used to live here (New Project, first C# script to generate the
+`.sln`, `git init`) were the one-time 2026-06 bootstrap and are long done.
+
+1. Download **Godot 4.7.1 stable, MONO/.NET build** — the version pin is
+   load-bearing (`Godot.NET.Sdk/4.7.1`), and the standard non-mono build cannot
+   run C# at all. **A mismatched 4.6.3 binary makes harness scenarios hang
+   rather than fail**, which is very hard to diagnose from the symptom.
+2. Install the **.NET SDK 8.0.x** — both csprojs target `net8.0`.
+3. Install **VS Code** or **Visual Studio** for the C# itself, and point Godot
+   at it (Editor Settings → Dotnet → external editor).
+4. Renderer is already set and **locked to Mobile** by
+   [ADR-0006](docs/adr/0006-renderer-mobile.md) — not Compatibility, not
+   Forward+. Don't change it in the editor.
+
+**Full provisioning detail — canonical install slot, the `$GODOT` convention,
+the MCP server's separate `GODOT_PATH` pin, headless Blender, and every exact
+command — is in the `hooper-build-and-env` skill.** Prefer it over this list;
+it is verified by live re-run and this section is not.
 
 ---
 

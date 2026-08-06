@@ -133,6 +133,7 @@ public partial class AuthoredClipMcpProbe : Node
         var layup = Layup.DefaultFrameData;
         var contest = ContestMove.DefaultFrameData;
         var block = BlockMove.DefaultFrameData;
+        var jabstep = JabStep.DefaultFrameData;
 
         return new[]
         {
@@ -206,6 +207,23 @@ public partial class AuthoredClipMcpProbe : Node
                 },
                 new[] { "BlockStartup", "BlockActive", "BlockRecovery" },
                 () => new BlockMove()),
+
+            // #336 — added late. Jab step (PR #334 / #304) landed on THIS branch
+            // one commit before the probe itself and was still missed, which is
+            // why the probe's "every authored clip family" claim was false on
+            // arrival. Unhanded, so no left/right split. Note the real moveId is
+            // "jab", not "jabstep" (JabStep.cs:71) — the clip names take the
+            // longer form, the resolver keys on the shorter one.
+            new Family("jabstep", "Jab step (PR #334 / #304)",
+                "assets/jabstep_authored.fbx",
+                new (string, int?)[]
+                {
+                    ("jabstepstartup",  jabstep.StartupFrames),
+                    ("jabstepactive",   jabstep.ActiveFrames),
+                    ("jabsteprecovery", jabstep.RecoveryFrames),
+                },
+                new[] { "JabStepStartup", "JabStepActive", "JabStepRecovery" },
+                () => new JabStep()),
         };
     }
 

@@ -340,7 +340,7 @@ Two distinct mechanisms — know which one you need before adding a new one:
    the game csproj (tests excluded) and the test csproj (`ImplicitUsings` on)
    — so a straight `dotnet build "HOOPER GAME.csproj"` is a real, distinct
    gate that `dotnet test` alone cannot provide. A separate `integration-test`
-   CI job boots a real headless Godot 4.6.3 .NET process; pass/fail is the
+   CI job boots a real headless Godot 4.7.1 .NET process; pass/fail is the
    process exit code.
 
 ---
@@ -583,7 +583,7 @@ by text-edit as ordinary AFK work. The fragile bits:
 - Ship scene edits in their own single-concern commit with a headless load
   check wherever a local Godot binary is available (ADR-0011's guardrail);
   never bundle a `.tscn` edit into an unrelated logic-change commit. CI uses
-  `chickensoft-games/setup-godot@v2` with Godot 4.6.3 if you need a binary
+  `chickensoft-games/setup-godot@v2` with Godot 4.7.1 if you need a binary
   reference point.
 
 ---

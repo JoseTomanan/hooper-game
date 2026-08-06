@@ -157,10 +157,12 @@ Conventions (grep-verified in `tests/integration/*.cs`):
 Two equivalent scripts live in this skill's `scripts/` directory. Both parse
 the live scenario matrix out of `.github/workflows/ci.yml` (every
 `godot --headless --path . res://tests/integration/*.tscn` invocation, in CI
-order), so they cannot drift from CI. As of 2026-07-15 that is **30 scenario
-invocations across 10 scenes**. Both need a local Godot **4.6.3 .NET** binary
+order), so they cannot drift from CI. As of 2026-08-06 that is **178 scenario
+invocations across 42 scenes**, ~10 minutes serial (it was 30 across 10 on
+2026-07-15 — run `-List`/`--list` for the live count rather than trusting this
+one). Both need a local Godot **4.7.1 .NET** binary
 (not on PATH by default; CI gets one via `chickensoft-games/setup-godot@v2`,
-version 4.6.3, `use-dotnet: true`). On Windows use the `*_console.exe`
+version 4.7.1, `use-dotnet: true`). On Windows use the `*_console.exe`
 variant so `[harness]` output reaches your terminal.
 
 Build the game assembly first (harness code compiles into it):
@@ -172,7 +174,7 @@ dotnet build "HOOPER GAME.csproj" --configuration Debug
 Git Bash:
 
 ```
-GODOT="/c/path/to/Godot_v4.6.3-stable_mono_win64_console.exe" bash .claude/skills/hooper-diagnostics-and-tooling/scripts/run-harness-local.sh
+GODOT="/c/path/to/Godot_v4.7.1-stable_mono_win64_console.exe" bash .claude/skills/hooper-diagnostics-and-tooling/scripts/run-harness-local.sh
 bash .claude/skills/hooper-diagnostics-and-tooling/scripts/run-harness-local.sh --list           # print matrix only, no binary needed
 bash .claude/skills/hooper-diagnostics-and-tooling/scripts/run-harness-local.sh "$GODOT" --stop-on-fail
 ```
@@ -180,7 +182,7 @@ bash .claude/skills/hooper-diagnostics-and-tooling/scripts/run-harness-local.sh 
 PowerShell 5.1:
 
 ```
-powershell -File .claude\skills\hooper-diagnostics-and-tooling\scripts\run-harness-local.ps1 -Godot "C:\path\to\Godot_v4.6.3-stable_mono_win64_console.exe"
+powershell -File .claude\skills\hooper-diagnostics-and-tooling\scripts\run-harness-local.ps1 -Godot "C:\path\to\Godot_v4.7.1-stable_mono_win64_console.exe"
 powershell -File .claude\skills\hooper-diagnostics-and-tooling\scripts\run-harness-local.ps1 -List
 ```
 
@@ -367,11 +369,12 @@ against `hooper-proof-and-analysis-toolkit`. Verified against:
   attributes, constants, grid loop, cross-check theory) — read directly.
 - The `--filter` behaviour (matches 1 test, stays `[SKIP]`) — executed live.
 - The five `*ForHarness` properties and their line numbers — grepped live.
-- `.github/workflows/ci.yml` scenario matrix (30 single-instance invocations,
-  10 scenes, 4 dual-instance scripts) — grepped live.
+- `.github/workflows/ci.yml` scenario matrix — grepped live: 178
+  single-instance invocations, 42 scenes, 6 dual-instance scripts
+  (2026-08-06; was 30 / 10 / 4 on 2026-07-15).
 - `[harness]`/`[net-harness]` print conventions — grepped live.
 - Both shipped scripts' `--list` output and no-binary error paths — executed
-  live (full matrix run additionally requires a local Godot 4.6.3 .NET
+  live (full matrix run additionally requires a local Godot 4.7.1 .NET
   binary; the parse/summary logic does not).
 - `docs/analysis/0079-shot-scatter-curve.md` — read directly.
 

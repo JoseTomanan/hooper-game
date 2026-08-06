@@ -183,6 +183,34 @@ path — but **only** when ALL of these are green:
 **No merge on red, ever.** The orchestrator does not merge "with known
 failures," and no agent reports an issue done while any gate above is red.
 
+#### Gate 4 is self-invocable — invoke it, do not hand it back
+
+**`/code-review` IS available to an agent session.** Invoke it with the
+`Skill` tool (`code-review:code-review`) before treating gate 4 as blocked.
+A session that hands gate 4 back to the human without trying has skipped it,
+not delegated it.
+
+This needs saying because the opposite was recorded as fact and acted on. PR
+#339's gate table reads:
+
+> `/code-review` — not self-invocable (`disable-model-invocation`) — human gate
+
+That claim is **false**, and it was not a one-off: an audit on 2026-08-06
+found **no `/code-review` evidence in any of the 24 merged PRs from #270
+through #339** — the entire per-move animation-clip campaign merged with gate
+4 unmet. The retro-review of that campaign is recorded in PR
+`fix/close-skipped-review-and-tooling-gaps`.
+
+Two related traps, both of which cost real time here:
+
+- **`/code-review` reviews your working diff; `/review <PR#>` reviews a
+  GitHub PR.** Only `/code-review ultra` is genuinely user-triggered-only
+  (it is billed), and no agent can launch it.
+- **The skill's own step 1 says to stop if the PR is closed.** That guard
+  exists to avoid commenting on dead PRs. When deliberately retro-reviewing
+  already-merged work, run the review substance anyway and report findings
+  into the follow-up PR instead of stopping with nothing delivered.
+
 ### "Done means proven" → "proven by the harness"
 
 The bar (proof before close) is unchanged; the *prover* moved from a human
