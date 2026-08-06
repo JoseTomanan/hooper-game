@@ -1,18 +1,33 @@
 ---
 name: hooper-held-ball-steal-campaign
-description: "Executable, decision-gated campaign for issue #206 — a dead-Held ball is steal-immune (pump-fake-mash beats any steal read; a stalling holder is untouchable; no travel/5-second pressure exists). Load when picking up #206 or any task about Held-ball steal vulnerability, closely-guarded/5-second rules, cradle-vs-steal race, or 'steals don't work against a held ball'. Provides the reproduce-first baseline, ranked solution menu with ADR-0014 citations, the human decision gate, per-option implementation plans, required harness scenarios with controls, and fenced-off wrong paths."
+description: "SETTLED RECORD (campaign closed 2026-07-20) of how the steal-immune dead-Held ball was fixed — #206 shipped Option A (pump-fake steal window, ADR-0018 Amendment 2026-07-19) and #255 shipped Route A (static proximity/facing exposure). The rules now live in ADR-0018's amendments; read those first. Load this only for the WHY — the rejected alternatives, the closely-guarded/5-second shape deferred to M12, the cradle-vs-steal race analysis, and the harness controls each option required. Do NOT treat it as live work: its decision gates are already resolved."
 ---
 
-# Campaign: kill the steal-immune Held ball (issue #206)
+# Campaign: kill the steal-immune Held ball (issue #206) — CLOSED
 
-This is a **campaign skill**: an ordered, gated sequence of phases for one
-specific live problem, chosen by the human (2026-07-12) as the hardest live
-problem worth a dedicated runbook. It is NOT a general how-to. If issue #206
-is closed, this skill is historical — check first:
+> **RESOLVED — do not execute this campaign.** #206, #255 and #196 are all
+> closed (verified 2026-08-06). What shipped:
+>
+> | Issue | Outcome | Where the rule lives now |
+> |---|---|---|
+> | #206 | **Option A** — a Held ball is steal-vulnerable during a JumpShot's Startup feint window | ADR-0018 Amendment 2026-07-19 |
+> | #196 | Transit (crossover-sweep) steal window | ADR-0018 Amendment 2026-07-20 |
+> | #255 | **Route A** — static proximity/facing exposure closes the dead-Held staller | ADR-0018 Amendment 2026-07-20 |
+>
+> **ADR-0018 is authoritative for the behaviour; this file is not.** If the two
+> disagree, the ADR wins and this file is stale. Route (b) from the #255 gate —
+> the closely-guarded 5-second/HUD shape — was **not** built and stays deferred
+> to M12 flow.
+>
+> Kept because the reasoning is not recoverable from the ADRs: which
+> alternatives were rejected and why, the cradle-vs-steal race analysis, and
+> the control scenarios each option needed. Everything below is the record as
+> written *during* the campaign — the decision gates in it are already
+> resolved.
 
-```
-gh issue view 206 --json state -q .state
-```
+This was a **campaign skill**: an ordered, gated sequence of phases for one
+specific problem, chosen by the human (2026-07-12) as the hardest live problem
+worth a dedicated runbook. It is NOT a general how-to.
 
 **Jargon at first use.** *Held* is a `BallState` where the holder carries the
 ball in-hand, not bouncing it. *Dead Held* means the holder has already used
