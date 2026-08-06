@@ -365,7 +365,7 @@ def main():
     # direction (it previously read 0.029890 here). A nonzero value now means an
     # over-reach clamp or a rig-geometry change, not solver error -- but nothing
     # ASSERTS it; see `plant_foot`'s docstring and #335.
-    lib.report("worst_ankle_ik_err_m", f"{geom.to_m(worst_ankle_err):.6f}")
+    lib.report_ankle_ik("worst_ankle_ik_err_m", geom.to_m(worst_ankle_err))
 
     # ---- proofs, before the export commits anything --------------------------
     # These are the library's shared gates (#315), run here both because this

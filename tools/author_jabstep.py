@@ -352,7 +352,7 @@ def main():
     bpy.ops.object.mode_set(mode="OBJECT")
     scene.frame_start, scene.frame_end = F0, F1
 
-    lib.report("worst_ankle_ik_err_m", f"{geom.to_m(worst_ankle_err):.6f}")
+    lib.report_ankle_ik("worst_ankle_ik_err_m", geom.to_m(worst_ankle_err))
     lib.report("worst_wrist_ik_err_m", f"{geom.to_m(worst_wrist_err):.6f}")
 
     all_frames = list(range(F0, F1 + 1))

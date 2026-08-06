@@ -136,6 +136,19 @@ BEND_PLANE_MIN_SIN = 1e-3
 # 1.00000000 (hips), so honest input clears this by a factor of 1000.
 LANDMARK_MIN_COS = 1e-3
 
+# Maximum distance, in METRES, between where a `plant_foot` call was asked to
+# put an ankle and where it actually put one. Matches `selftest_anim_lib`'s own
+# ANKLE_TOL_M so the library is held to one number, not two.
+#
+# TWO-SIDED EVIDENCE, which is the whole reason this is 1e-4 and not a round
+# guess. Honest noise on the Y Bot after #321's exact solve is 0.000000 for six
+# of the seven authoring scripts and 0.000001 for the seventh (steal's R-target
+# polarity), so this sits ~100x above real output. The defect it exists to catch
+# -- the pre-#321 approximate solve on a laterally-offset target -- read
+# 0.029890, which is ~300x above this. Nothing honest is near it and nothing
+# broken is under it.
+ANKLE_IK_TOL_M = 1e-4
+
 
 def log(msg):
     print(f"[author] {msg}")
@@ -148,6 +161,35 @@ def report(name, value):
     Keep the name stable across runs so a reviewer can diff two logs.
     """
     print(f"[author] {name}={value}")
+
+
+def report_ankle_ik(name, err_m):
+    """Report a worst-case ankle IK error AND refuse the run if it is too big.
+
+    Until #335 this number was REPORTED and never asserted, which made every
+    authoring script's greenness weaker than it looked: `plant_foot` passes
+    `on_overreach="warn"`, so a target outside the leg's reach is silently
+    CLAMPED and the clip exports anyway, carrying feet that never arrived. The
+    only thing standing between that and a shipped clip was a human happening to
+    read the log line. This is that reader, in code.
+
+    Reporting and gating are deliberately ONE call. Split into two, a new
+    authoring script can copy the report and forget the gate -- which is exactly
+    how the original seven ended up reporting without asserting.
+
+    The comparison is inverted (`not <=` rather than `>`) so it fails CLOSED on
+    NaN. A degenerate solve is precisely the case that yields NaN, and NaN is
+    false against `>`, so the natural form would wave through the one input most
+    likely to be genuinely broken.
+    """
+    report(name, f"{err_m:.6f}")
+    if not (err_m <= ANKLE_IK_TOL_M):
+        raise SystemExit(
+            f"FATAL: {name}={err_m:.6f} m exceeds ANKLE_IK_TOL_M="
+            f"{ANKLE_IK_TOL_M} -- an ankle did not reach its target. "
+            f"`plant_foot` clamps out-of-reach targets instead of refusing "
+            f"them, so this is a mis-specified keypose (a target outside "
+            f"femur+tibia reach), not a solver failure. Fix the spec.")
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -653,14 +695,13 @@ def plant_foot(arm, side, ankle_target, toe_dir, geom, frame=None):
     tails stop coinciding with their children's heads, shows up here as a number
     instead of as a subtly wrong pose.
 
-    BUT IT IS ONLY REPORTED, NEVER ASSERTED (#335). This call passes
-    `on_overreach="warn"`, so an out-of-reach target is CLAMPED and logged, not
-    refused -- and none of the seven authoring scripts compares the reported
-    `worst_ankle_ik_err_m` against a threshold. So the number is a tripwire only
-    for a human who reads the log. Now that the exact value is 0.000000 a hard
-    gate is finally cheap (`selftest_anim_lib` already uses 1e-4); until #335
-    adds one, do not treat a green authoring run as evidence that the feet
-    reached their targets.
+    IT IS NOW ASSERTED, NOT MERELY REPORTED (#335). This call still passes
+    `on_overreach="warn"`, so an out-of-reach target is CLAMPED here rather than
+    refused -- but every one of the seven authoring scripts now feeds its worst
+    value to `report_ankle_ik`, which fails the run above `ANKLE_IK_TOL_M`. The
+    clamp is therefore no longer silent: it survives one frame and then kills the
+    export. A green authoring run IS now evidence that the feet reached their
+    targets, which it was not before.
     """
     up_leg, leg, foot_b, _toe_b = LEG_CHAIN[side]
     # The FOOT's roll reference. Horizontal, so the sole stays flat -- see "TWO
