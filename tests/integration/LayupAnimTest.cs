@@ -140,7 +140,7 @@ public partial class LayupAnimTest : Node
     // Geometry, latched at event time (never recomputed at verdict time — by
     // then the move is over and the rig has returned to Locomotion).
     private bool _haveHipBaseline;
-    private float _hipBaselineY;          // hip height on the FIRST Startup tick
+    private float _hipBaselineY;          // hip height in the PRE-MOVE stance (see Observe)
     private float _maxHipRiseDuringStartup;
     private float _maxHipRiseDuringActive;
     // NegativeInfinity, not 0 — a wrist BELOW the head is a legitimate (and for
@@ -152,9 +152,11 @@ public partial class LayupAnimTest : Node
     private Quaternion[] _poseAtLastStartupTick;
     private Quaternion[] _poseAtLastRecoveryTick;
 
-    // Instrumentation only (#340 step 1) — how many ticks Observe() actually
-    // sampled each phase on, so a future fix can see whether a phase's window
-    // is being under-observed before changing any gate.
+    // How many ticks Observe() named each phase on — INCLUDING the first, which
+    // the geometry latches then drop (#340; see Observe). The verdicts gate on
+    // "> 1" so that a phase shortened to a single tick fails loudly instead of
+    // silently measuring nothing, which is the failure mode a phase-localised
+    // gate with no samples would otherwise have.
     private int _startupTicksObserved;
     private int _activeTicksObserved;
     private int _recoveryTicksObserved;
@@ -278,9 +280,19 @@ public partial class LayupAnimTest : Node
         if (node == "LayupStartup" || node == "LayupActive" || node == "LayupRecovery")
         {
             float hipY = MeasureHipY(skel);
-            // Baseline is the FIRST layup tick — i.e. the pose the move starts
-            // from — so every rise is measured relative to this attempt's own
-            // stance rather than to a rest pose the clip may never visit.
+            // The baseline is captured on the first layup-named tick — and per
+            // #316 that tick still holds the pose from BEFORE the move, because
+            // the AnimationTree names the state it travelled to a tick before
+            // the mixer writes that state's clip to the Skeleton3D. So this is
+            // the standing stance the attempt began from, which is exactly what
+            // JumpshotAnimTest latches deliberately (its LatchToeBaseline() runs
+            // on the last tick before BeginJumpShotForHarness). Measuring every
+            // rise against it keeps the gates relative to this attempt's own
+            // footing rather than to a rest pose the clip may never visit.
+            //
+            // #340 kept this timing rather than moving the latch pre-move: the
+            // two are the same pose, and the tick it consumes is one this method
+            // now excludes from every phase measurement below anyway.
             if (!_haveHipBaseline)
             {
                 _hipBaselineY = hipY;
@@ -289,30 +301,64 @@ public partial class LayupAnimTest : Node
             float rise = hipY - _hipBaselineY;
             float wristAboveHead = MeasureWristAboveHead(skel);
 
+            // #340 / #316: DROP EACH PHASE'S FIRST OBSERVED TICK. For the same
+            // reason the baseline above is the pre-move stance, the first tick
+            // of Active carries Startup's pose and the first tick of Recovery
+            // carries Active's. Folding those into a per-phase Math.Max
+            // attributes a neighbouring phase's pose to this one, and on a
+            // LOWER-bound gate the leaked pose can satisfy the gate by itself.
+            //
+            // MEASURED here, not assumed (#340's mutation A/B): with
+            // LayupStartup and LayupActive's clips swapped in Player.tscn — so
+            // Active plays the GROUNDED startup clip — layup-airborne-active
+            // still read active=0.1660 against its 0.15 floor and PASSED. That
+            // reading was Startup's leaked airborne pose. With the drop it reads
+            // ~0 and fails, which is the correct verdict for a grounded release.
+            //
+            // Startup/Active/Recovery run 7/4/14 ticks on the current clips, so
+            // the drop leaves 6/3/13. If a retune ever shortens a phase to a
+            // single tick the latch is left unset and the verdicts' matching
+            // *TicksObserved > 1 premises fail loudly, rather than silently
+            // measuring nothing. (JabStepAnimTest's 2-tick Active is the
+            // tightest case in the game — one sample survives there.)
             if (node == "LayupStartup")
             {
                 _startupTicksObserved++;
-                _maxHipRiseDuringStartup = Math.Max(_maxHipRiseDuringStartup, rise);
-                _maxWristAboveHeadDuringStartup =
-                    Math.Max(_maxWristAboveHeadDuringStartup, wristAboveHead);
-                _poseAtLastStartupTick = SampleUpperBody(skel);
+                if (_startupTicksObserved > 1)
+                {
+                    _maxHipRiseDuringStartup = Math.Max(_maxHipRiseDuringStartup, rise);
+                    _maxWristAboveHeadDuringStartup =
+                        Math.Max(_maxWristAboveHeadDuringStartup, wristAboveHead);
+                    _poseAtLastStartupTick = SampleUpperBody(skel);
+                }
             }
             else if (node == "LayupActive")
             {
                 _activeTicksObserved++;
-                _maxHipRiseDuringActive = Math.Max(_maxHipRiseDuringActive, rise);
-                _maxWristAboveHeadDuringActive =
-                    Math.Max(_maxWristAboveHeadDuringActive, wristAboveHead);
+                if (_activeTicksObserved > 1)
+                {
+                    _maxHipRiseDuringActive = Math.Max(_maxHipRiseDuringActive, rise);
+                    _maxWristAboveHeadDuringActive =
+                        Math.Max(_maxWristAboveHeadDuringActive, wristAboveHead);
+                }
             }
             else
             {
                 _recoveryTicksObserved++;
-                // Overwritten each Recovery tick, so it ends up holding the LAST
-                // one — the same "sample the final tick" discipline
-                // BehindTheBackAnimTest arrived at by mutation: an UNBOUND clip
-                // collapses the rig to rest within a tick (no xfade on any edge),
-                // so the final tick is where bound and unbound actually separate.
-                _poseAtLastRecoveryTick = SampleUpperBody(skel);
+                if (_recoveryTicksObserved > 1)
+                {
+                    // Overwritten each Recovery tick, so it ends up holding the
+                    // LAST one — the same "sample the final tick" discipline
+                    // BehindTheBackAnimTest arrived at by mutation: an UNBOUND
+                    // clip collapses the rig to rest within a tick (no xfade on
+                    // any edge), so the final tick is where bound and unbound
+                    // actually separate. The first-tick drop cannot cost us that
+                    // final sample unless Recovery is a single tick long, in
+                    // which case _poseAtLastRecoveryTick stays null and
+                    // layup-startup-differs-from-recovery fails on its existing
+                    // null premise.
+                    _poseAtLastRecoveryTick = SampleUpperBody(skel);
+                }
             }
         }
     }
@@ -421,7 +467,11 @@ public partial class LayupAnimTest : Node
                  $"active={_maxHipRiseDuringActive:F4} (floor {AirborneMinRise:F2}), " +
                  $"ticks su/ac/re = {_startupTicksObserved}/{_activeTicksObserved}/{_recoveryTicksObserved}");
 
-        bool pass = _sawLayupActive && _maxHipRiseDuringActive >= AirborneMinRise;
+        // _activeTicksObserved > 1 is the post-drop premise: Active's first tick
+        // is discarded as Startup's pose (#340), so one observed tick leaves the
+        // latch untouched at its seed and this must fail rather than measure it.
+        bool pass = _sawLayupActive && _activeTicksObserved > 1
+                    && _maxHipRiseDuringActive >= AirborneMinRise;
         if (pass)
             GD.Print($"[layup-anim] PASS layup-airborne-active — the hips rose {_maxHipRiseDuringActive:F4} " +
                      "above the pose the move began from during the Active (release) phase, so the finish " +
@@ -445,7 +495,9 @@ public partial class LayupAnimTest : Node
         // Active phase must genuinely have risen — otherwise "Startup stayed
         // down" is trivially true of a rig where nothing moved at all, which is
         // exactly the vacuous pass this control exists to rule out.
-        bool premise = _sawLayupStartup && _maxHipRiseDuringActive >= AirborneMinRise;
+        bool premise = _sawLayupStartup && _startupTicksObserved > 1
+                       && _activeTicksObserved > 1
+                       && _maxHipRiseDuringActive >= AirborneMinRise;
         bool pass = premise && _maxHipRiseDuringStartup <= GroundedMaxRise;
         if (pass)
             GD.Print($"[layup-anim] PASS control-layup-grounded-startup — the plant stayed down " +
@@ -468,7 +520,8 @@ public partial class LayupAnimTest : Node
                  $"active={_maxWristAboveHeadDuringActive:F4}, " +
                  $"ticks su/ac/re = {_startupTicksObserved}/{_activeTicksObserved}/{_recoveryTicksObserved}");
 
-        bool pass = _sawLayupActive && _maxWristAboveHeadDuringActive > 0f;
+        bool pass = _sawLayupActive && _activeTicksObserved > 1
+                    && _maxWristAboveHeadDuringActive > 0f;
         if (pass)
             GD.Print($"[layup-anim] PASS layup-arm-extends-overhead — a wrist reached " +
                      $"{_maxWristAboveHeadDuringActive:F4} ABOVE the head bone during Active, so the " +
@@ -488,7 +541,9 @@ public partial class LayupAnimTest : Node
 
         // Premise: Active must genuinely have gone overhead, or "Startup did not"
         // is trivially satisfied by a clip in which the arm never moves.
-        bool premise = _sawLayupStartup && _maxWristAboveHeadDuringActive > 0f;
+        bool premise = _sawLayupStartup && _startupTicksObserved > 1
+                       && _activeTicksObserved > 1
+                       && _maxWristAboveHeadDuringActive > 0f;
         float margin = _maxWristAboveHeadDuringActive - _maxWristAboveHeadDuringStartup;
         bool pass = premise && margin >= ArmRiseMinMargin;
         if (pass)
