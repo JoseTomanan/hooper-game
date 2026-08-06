@@ -141,8 +141,17 @@ public partial class LayupAnimTest : Node
     // then the move is over and the rig has returned to Locomotion).
     private bool _haveHipBaseline;
     private float _hipBaselineY;          // hip height in the PRE-MOVE stance (see Observe)
-    private float _maxHipRiseDuringStartup;
-    private float _maxHipRiseDuringActive;
+    // NegativeInfinity, not 0, for the same reason the wrist latches below use
+    // it: the gather drives the hips BELOW the stance they started from, so
+    // every genuine Startup reading is negative and a 0 seed floors the Math.Max
+    // there — printing a confident "startup=0.0000" that is the seed, not a
+    // measurement. It was never a false pass (the gate on it is a CEILING, so
+    // flooring the reading upward only makes it stricter), but it is exactly the
+    // artifact #313 caught by reading the printed number. Safe to seed at
+    // -Infinity now that every verdict gates on *TicksObserved > 1 (#340): with
+    // no post-drop sample the premise fails loudly instead of comparing a seed.
+    private float _maxHipRiseDuringStartup = float.NegativeInfinity;
+    private float _maxHipRiseDuringActive = float.NegativeInfinity;
     // NegativeInfinity, not 0 — a wrist BELOW the head is a legitimate (and for
     // Startup, expected) reading, and seeding these at 0 would floor it there,
     // printing a confident "0.0000" for a hand that is actually well below the
