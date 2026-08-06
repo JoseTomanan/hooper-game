@@ -28,17 +28,28 @@ Godot is **not** an SDK/NuGet dependency you `dotnet restore` — it's a
 separate engine binary you download yourself. It is normal for it to be
 **absent** on a fresh clone/CI runner until you provision it (see below).
 
-**Do not hardcode a specific machine's download path as load-bearing.** On the
-machine this skill was verified on, a working mono binary happened to
-live under the user's `Downloads` folder — that is a fragile, deletion-prone
-location and MUST NOT be treated as a stable contract. Instead:
+**Do not hardcode a specific machine's download path as load-bearing.** Use the
+env-var convention instead:
 
-- Recommend an env-var convention: set `$GODOT` (or `$env:GODOT` on
-  PowerShell) to the full path of your local `..._console.exe`, and have any
-  script/command reference `$GODOT` instead of a literal path. This repo's own
-  dual-instance harness scripts already take the binary as an argument
-  (`bash tests/integration/run-net-state-sync.sh "$GODOT"`), which is the same
-  idea — don't invent a second convention.
+- Set `$GODOT` (`$env:GODOT` on PowerShell) to the full path of your local
+  `..._console.exe`, and have any script/command reference `$GODOT` instead of
+  a literal path. This repo's own dual-instance harness scripts already take
+  the binary as an argument (`bash tests/integration/run-net-state-sync.sh "$GODOT"`),
+  which is the same idea — don't invent a second convention.
+- Provisioned 2026-08-06 on the authoring machine, matching the Blender
+  convention below: extracted to
+  `%LOCALAPPDATA%\GodotPortable\Godot_v4.7.1-stable_mono_win64\`, with
+  **User**-scope `GODOT` set via
+  `[Environment]::SetEnvironmentVariable("GODOT", <path to _console.exe>, "User")`.
+  That folder is a per-user, no-admin, non-repo slot — it is a convention, not
+  a contract; a fresh machine may put it anywhere as long as `$GODOT` points
+  there. Note the same User-scope gotcha the Blender section documents: an
+  already-running shell will not see the new var, so re-read it with
+  `[Environment]::GetEnvironmentVariable("GODOT", "User")` rather than trusting
+  an empty `$env:GODOT`.
+- **`%LOCALAPPDATA%\GodotPortable\` may hold more than one version.** The stale
+  4.6.3 tree is still there beside 4.7.1. Never glob that folder for "the"
+  binary — always resolve through `$GODOT`, and always `--version` it.
 - On Windows, download the **`_console.exe`** variant (e.g.
   `Godot_v4.7.1-stable_mono_win64_console.exe`), not the plain
   `Godot_v4.7.1-stable_mono_win64.exe`. The console variant prints to the
@@ -79,7 +90,27 @@ before debugging the test.** That symptom is almost always this.
 - A 4.6.3 **editor** opened on this project is separately hazardous: Godot can
   silently rewrite the csproj SDK pin to match itself. Run `git status` on
   `HOOPER GAME.csproj` after any editor session and revert an unintended pin
-  change before staging.
+  change before staging. (A *headless* 4.7.1 sweep does not do this — 178
+  scenarios on 2026-08-06 left the pin and `project.godot` untouched.)
+
+**The version pin exists in a third place: the MCP server config.** The `godot`
+MCP server (`@coding-solo/godot-mcp`) is configured in `~/.claude.json` under
+`projects.<repo path>.mcpServers.godot.env.GODOT_PATH` — an absolute binary
+path baked into the server's environment, resolved once when the server
+process spawns. A correct `$GODOT` does **not** fix it, and it was found still
+pointing at 4.6.3 on 2026-08-06 after the shell env had been corrected. Every
+`mcp__godot__run_project` / `launch_editor` call then runs on the stale engine
+with no warning.
+
+- Check it with `mcp__godot__get_godot_version` **before** trusting any MCP
+  run — it prints the binary the server actually resolved.
+- Fix it with
+  `claude mcp remove godot -s local` then
+  `claude mcp add godot --scope local --env "GODOT_PATH=<4.7.1 _console.exe>" -- npx @coding-solo/godot-mcp`.
+- The edit does **not** take effect in the current session — the already-spawned
+  server holds the old env. A `/mcp` reconnect (or session restart) is required,
+  and that is a **human action an agent cannot perform**. Ask for it rather
+  than assuming the new value is live.
 
 ### Headless Blender (animation tooling — optional, not a build dependency)
 
@@ -368,11 +399,15 @@ from digests); reviewed and corrected 2026-07-15 (CI harness invocation count
 - `.gitignore` uid lines (26: `*.uid`; 32: `!assets/locomotion.res.uid`) read
   directly; `git check-ignore export_presets.cfg build` → both ignored
   (verified 2026-07-12 per discovery).
-- A local Godot mono binary ran SmokeTest.tscn to `[harness] PASS`, exit 0
-  (verified 2026-07-12, on the then-current 4.6.3 pin). **That binary is now
-  the WRONG one** — PR #269 moved the pin to 4.7.1 on 2026-07-24. Re-verified
-  2026-08-06: the machine has 4.7.1 available but `$GODOT` was unset, and the
-  canonical `%LOCALAPPDATA%\GodotPortable\` slot still holds the stale 4.6.3.
+- Godot 4.7.1 **provisioned and verified live 2026-08-06**: moved into
+  `%LOCALAPPDATA%\GodotPortable\Godot_v4.7.1-stable_mono_win64\`, User-scope
+  `GODOT` set to its `_console.exe`, `& $GODOT --version` →
+  `4.7.1.stable.mono.official.a13da4feb`. The stale 4.6.3 tree remains beside
+  it in the same folder — resolve through `$GODOT`, never by globbing. The
+  `godot` MCP server's own `GODOT_PATH` was repointed to 4.7.1 the same day
+  (it had been left on 4.6.3); see the MCP note above. Full local harness
+  sweep on that binary: **178/178 PASS**, `HOOPER GAME.csproj` pin unchanged
+  afterwards.
 - Blender 5.2.0 LTS portable ZIP installed under `%LOCALAPPDATA%\BlenderPortable\`,
   `$BLENDER` env var set; `--background --version` and
   `--background --python-expr "import bpy; ..."` both verified live, exit 0
