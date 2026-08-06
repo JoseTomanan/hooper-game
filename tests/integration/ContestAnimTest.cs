@@ -271,6 +271,15 @@ public partial class ContestAnimTest : Node
     private Quaternion[] _poseAtLastStartupTick;
     private Quaternion[] _poseAtLastRecoveryTick;
 
+    // How many ticks Observe() named each phase on — INCLUDING the first, which
+    // the PER-PHASE latches then drop (#340; see Observe). The verdicts gate on
+    // "> 1" so that a phase shortened to a single tick fails loudly instead of
+    // silently measuring nothing. The whole-move toe accumulators above are not
+    // gated on these: they fold every tick by design.
+    private int _startupTicksObserved;
+    private int _activeTicksObserved;
+    private int _recoveryTicksObserved;
+
     public override void _Ready()
     {
         string[] args = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).ToArray();
@@ -400,38 +409,96 @@ public partial class ContestAnimTest : Node
         if (node != _startupState && node != _activeState && node != _recoveryState) return;
 
         float toe = MeasureLowestToe(skel);
-        // Baseline is the FIRST tick of the move — i.e. the stance the move
-        // starts from — so every reading is relative to this attempt's own
-        // footing rather than to a rest pose the clip may never visit.
+        // The baseline is captured on the first move-named tick — and per #316
+        // that tick still holds the pose from BEFORE the move, because the
+        // AnimationTree names the state it travelled to a tick before the mixer
+        // writes that state's clip to the Skeleton3D. So this is the standing
+        // stance the attempt began from, which is exactly what JumpshotAnimTest
+        // latches deliberately (its LatchToeBaseline() runs on the last tick
+        // before the shot begins). Measuring every reading against it keeps the
+        // gates relative to this attempt's own footing rather than to a rest
+        // pose the clip may never visit.
+        //
+        // #340 kept this timing rather than moving the latch pre-move: the two
+        // are the same pose, and the tick it consumes is one the per-phase
+        // latches below now exclude anyway.
         if (!_haveToeBaseline)
         {
             _toeBaseline = toe;
             _haveToeBaseline = true;
         }
         float rise = toe - _toeBaseline;
+        // WHOLE-MOVE accumulators — deliberately NOT subject to #340's
+        // drop-the-first-tick rule, and this is the one place in the file where
+        // that rule does not apply. The rule exists because a per-phase latch
+        // mis-ATTRIBUTES the neighbouring phase's pose to this phase. These two
+        // span Startup, Active and Recovery in a single reduction, so there is
+        // no attribution to get wrong: a pose leaked across an interior phase
+        // boundary is still a pose the move genuinely struck, and it is in fact
+        // the ONLY tick on which the phase's true final pose is ever visible.
+        // Dropping it here would delete real samples rather than clean them.
+        // The move's own first tick is definitionally rise == 0 (it IS the
+        // baseline), so it cannot inflate either reduction.
         _maxToeRise = Math.Max(_maxToeRise, rise);
         _maxToeExcursion = Math.Max(_maxToeExcursion, Math.Abs(rise));
 
+        // ── Per-phase latches: DROP EACH PHASE'S FIRST OBSERVED TICK ─────────
+        // (#340, adopting #316's discipline.) For the same reason the baseline
+        // above is the pre-move stance, the first tick of Active carries
+        // Startup's pose and the first tick of Recovery carries Active's. On a
+        // LOWER-bound gate the leaked pose can satisfy the gate by itself.
+        //
+        // MEASURED here, not assumed (#340's mutation A/B): with
+        // locomotion/conteststartup and locomotion/contestactive swapped in
+        // Player.tscn — so Active plays the arms-DOWN startup clip —
+        // contest-arms-rise still read active=0.3503 against its 0.10 floor and
+        // PASSED. That reading was the arms-up clip's pose arriving one tick
+        // late. With the drop it reads well below the floor and fails, which is
+        // the correct verdict for a contest that never raises its hands.
+        //
+        // Startup/Active/Recovery run 5/8/20 ticks on the current clips, so the
+        // drop leaves 4/7/19. If a retune ever shortens a phase to a single tick
+        // the latch is left unset and the verdicts' matching *TicksObserved > 1
+        // premises fail loudly rather than silently measuring nothing.
+        // (JabStepAnimTest's 2-tick Active is the tightest case in the game —
+        // exactly one sample survives there.)
         float wristAboveHead = MeasureWristAboveHead(skel);
         if (node == _startupState)
         {
-            _maxWristAboveHeadDuringStartup =
-                Math.Max(_maxWristAboveHeadDuringStartup, wristAboveHead);
-            _poseAtLastStartupTick = SampleUpperBody(skel);
+            _startupTicksObserved++;
+            if (_startupTicksObserved > 1)
+            {
+                _maxWristAboveHeadDuringStartup =
+                    Math.Max(_maxWristAboveHeadDuringStartup, wristAboveHead);
+                _poseAtLastStartupTick = SampleUpperBody(skel);
+            }
         }
         else if (node == _activeState)
         {
-            _maxWristAboveHeadDuringActive =
-                Math.Max(_maxWristAboveHeadDuringActive, wristAboveHead);
+            _activeTicksObserved++;
+            if (_activeTicksObserved > 1)
+            {
+                _maxWristAboveHeadDuringActive =
+                    Math.Max(_maxWristAboveHeadDuringActive, wristAboveHead);
+            }
         }
         else
         {
-            // Overwritten each Recovery tick, so it ends up holding the LAST one
-            // — the "sample the final tick" discipline BehindTheBackAnimTest
-            // arrived at by mutation: an UNBOUND clip collapses the rig to rest
-            // within a tick (no xfade on any edge), so the final tick is where
-            // bound and unbound actually separate.
-            _poseAtLastRecoveryTick = SampleUpperBody(skel);
+            _recoveryTicksObserved++;
+            if (_recoveryTicksObserved > 1)
+            {
+                // Overwritten each Recovery tick, so it ends up holding the LAST
+                // one — the "sample the final tick" discipline
+                // BehindTheBackAnimTest arrived at by mutation: an UNBOUND clip
+                // collapses the rig to rest within a tick (no xfade on any
+                // edge), so the final tick is where bound and unbound actually
+                // separate. The first-tick drop cannot cost us that final sample
+                // unless Recovery is a single tick long, in which case
+                // _poseAtLastRecoveryTick stays null and
+                // contest-startup-differs-from-recovery fails on its existing
+                // null premise.
+                _poseAtLastRecoveryTick = SampleUpperBody(skel);
+            }
         }
     }
 
@@ -498,7 +565,8 @@ public partial class ContestAnimTest : Node
                 _poseAtLastStartupTick[i].AngleTo(_poseAtLastRecoveryTick[i])));
 
         GD.Print($"[contest-anim]   worst upper-body Startup-vs-Recovery delta = {worst:F2} deg " +
-                 $"(floor {StartupVsRecoveryMinDeg:F1})");
+                 $"(floor {StartupVsRecoveryMinDeg:F1}), " +
+                 $"ticks su/ac/re = {_startupTicksObserved}/{_activeTicksObserved}/{_recoveryTicksObserved}");
 
         bool pass = _sawStartup && _sawRecovery && worst >= StartupVsRecoveryMinDeg;
         if (pass)
@@ -529,12 +597,28 @@ public partial class ContestAnimTest : Node
     private void VerdictStaysGrounded()
     {
         GD.Print($"[contest-anim]   toe excursion across all three phases = {_maxToeExcursion:F4} " +
-                 $"(ceiling {GroundedMaxToeExcursion:F2}), signed max rise = {_maxToeRise:F4}");
+                 $"(ceiling {GroundedMaxToeExcursion:F2}), signed max rise = {_maxToeRise:F4}, " +
+                 $"ticks su/ac/re = {_startupTicksObserved}/{_activeTicksObserved}/{_recoveryTicksObserved}");
 
         // Premise: all three phases must genuinely have been observed. "The feet
         // stayed down" proves nothing about a phase the run never entered, and
         // a partial traversal is exactly how this would pass vacuously.
-        bool premise = _sawStartup && _sawActive && _sawRecovery;
+        //
+        // The tick counts close the last path into that vacuous pass. The saw-
+        // latches are set from GetCurrentNode() alone, BEFORE Observe() looks
+        // for the Skeleton3D — so a rig with no Skeleton3D at all leaves all
+        // three latches true while not a single toe is ever measured, and
+        // _maxToeExcursion sits at its 0 seed reporting perfectly planted feet.
+        // A missing toe BONE is already caught (MeasureLowestToe returns NaN,
+        // which propagates through Math.Max and fails the ceiling); a missing
+        // SKELETON was not. Requiring a geometry sample in each phase closes it.
+        //
+        // "> 0" here, not the "> 1" the wrist verdicts use: these two toe
+        // reductions are whole-move and fold every tick, including the first
+        // (see Observe), so one sample in a phase is a real sample.
+        bool premise = _sawStartup && _sawActive && _sawRecovery
+                       && _startupTicksObserved > 0 && _activeTicksObserved > 0
+                       && _recoveryTicksObserved > 0;
         bool pass = premise && _maxToeExcursion <= GroundedMaxToeExcursion;
         if (pass)
             GD.Print($"[contest-anim] PASS contest-stays-grounded — across Startup, Active AND Recovery the " +
@@ -557,9 +641,16 @@ public partial class ContestAnimTest : Node
     private void VerdictControlLayupLeavesGround()
     {
         GD.Print($"[contest-anim]   (layup control) signed max toe rise = {_maxToeRise:F4} " +
-                 $"(floor {AirborneMinToeRise:F2}), excursion = {_maxToeExcursion:F4}");
+                 $"(floor {AirborneMinToeRise:F2}), excursion = {_maxToeExcursion:F4}, " +
+                 $"ticks su/ac/re = {_startupTicksObserved}/{_activeTicksObserved}/{_recoveryTicksObserved}");
 
-        bool premise = _sawStartup && _sawActive;
+        // Same geometry-sampled premise as contest-stays-grounded (see there for
+        // why the saw-latches alone are not enough). This direction is a FLOOR
+        // rather than a ceiling, so a dead instrument already fails it — the
+        // guard is here so the control and the scenario it underwrites hold
+        // themselves to the same standard.
+        bool premise = _sawStartup && _sawActive
+                       && _startupTicksObserved > 0 && _activeTicksObserved > 0;
         bool pass = premise && _maxToeRise >= AirborneMinToeRise;
         if (pass)
             GD.Print($"[contest-anim] PASS control-layup-leaves-ground — the SAME MeasureLowestToe path that " +
@@ -581,9 +672,14 @@ public partial class ContestAnimTest : Node
     private void VerdictArmsRise()
     {
         GD.Print($"[contest-anim]   wrist-above-head: startup={_maxWristAboveHeadDuringStartup:F4} " +
-                 $"active={_maxWristAboveHeadDuringActive:F4}");
+                 $"active={_maxWristAboveHeadDuringActive:F4}, " +
+                 $"ticks su/ac/re = {_startupTicksObserved}/{_activeTicksObserved}/{_recoveryTicksObserved}");
 
-        bool pass = _sawActive && _maxWristAboveHeadDuringActive >= ArmAboveHeadMinM;
+        // _activeTicksObserved > 1 is the post-drop premise: Active's first tick
+        // is discarded as Startup's pose (#340), so one observed tick leaves the
+        // latch untouched at its seed and this must fail rather than measure it.
+        bool pass = _sawActive && _activeTicksObserved > 1
+                    && _maxWristAboveHeadDuringActive >= ArmAboveHeadMinM;
         if (pass)
             GD.Print($"[contest-anim] PASS contest-arms-rise — the LOWER wrist reached " +
                      $"{_maxWristAboveHeadDuringActive:F4} above the head bone during Active (floor " +
@@ -602,11 +698,14 @@ public partial class ContestAnimTest : Node
     private void VerdictControlArmsLowStartup()
     {
         GD.Print($"[contest-anim]   wrist-above-head: startup={_maxWristAboveHeadDuringStartup:F4} " +
-                 $"active={_maxWristAboveHeadDuringActive:F4}");
+                 $"active={_maxWristAboveHeadDuringActive:F4}, " +
+                 $"ticks su/ac/re = {_startupTicksObserved}/{_activeTicksObserved}/{_recoveryTicksObserved}");
 
         // Premise: Active must genuinely have gone overhead, or "Startup did not"
         // is trivially satisfied by a clip in which the arms never move.
-        bool premise = _sawStartup && _maxWristAboveHeadDuringActive >= ArmAboveHeadMinM;
+        bool premise = _sawStartup && _startupTicksObserved > 1
+                       && _activeTicksObserved > 1
+                       && _maxWristAboveHeadDuringActive >= ArmAboveHeadMinM;
         float margin = _maxWristAboveHeadDuringActive - _maxWristAboveHeadDuringStartup;
         bool pass = premise && margin >= ArmRiseMinMargin;
         if (pass)
