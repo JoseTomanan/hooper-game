@@ -310,20 +310,21 @@ FINISH_HAND_HEIGHT_MARGIN_MIN_M = 0.10
 # tell "extended overhead" from "raised to chest" -- see the gate itself.
 FINISH_HAND_ABOVE_HEAD_MIN_M = 0.12
 
-# Drive-knee sagittal band (m), Active only: how far the drive KNEE may sit
+# Drive-knee sagittal band (m), whole clip: how far the drive KNEE may sit
 # from its own hip's sagittal plane. This is the gate that #335 was missing --
 # every existing proof in this file is about ANKLES (grounded/airborne) or
 # HANDS, and `plant_foot` guarantees the ankle by construction, so a knee
 # splayed a quarter-metre sideways passed all of them. See
 # `_APEX_DRIVE_LAT_PLACEHOLDER` for the mechanism.
 #
-# Measured: 0.0293 m post-fix, against 0.2643 m for the pose a blind
-# regeneration would have shipped. 0.12 sits between them, and the 4x apparent
-# headroom over the current reading is NOT slack -- the knee's response to the
-# apex `drive_lat_m` is roughly 6:1 in this fold band (27 cm of knee per 5 cm of
-# ankle, measured), so 0.12 m of knee is only ~2 cm of drift in the spec channel
-# anyone would actually be editing. Tightening it toward the reading would gate
-# on solver float noise instead.
+# Measured: 0.0354 m post-fix over the whole clip (frame 18, the landing
+# absorb; the Active worst is 0.0293 m at frame 10), against 0.2643 m for the
+# pose a blind regeneration would have shipped. 0.12 sits between them, and the
+# 3x apparent headroom over the current reading is NOT slack -- the knee's
+# response to the apex `drive_lat_m` is roughly 6:1 in this fold band (27 cm of
+# knee per 5 cm of ankle, measured), so 0.12 m of knee is only ~2 cm of drift in
+# the spec channel anyone would actually be editing. Tightening it toward the
+# reading would gate on solver float noise instead.
 DRIVE_KNEE_LAT_MAX_M = 0.12
 # Max per-frame lateral travel (m) of the drive knee, over the WHOLE clip. The
 # band above is a static check and would happily pass a knee that crosses the
@@ -400,12 +401,21 @@ def _drive_knee_stays_sagittal(arm, geom, active_frames, all_frames):
 
     Two separate claims, because one does not imply the other:
 
-    - the BAND: |knee lateral offset from the drive hip| during Active. Catches
-      a statically splayed, frog-legged drive knee.
-    - the POP: per-frame change in that offset, across the whole clip. Catches a
-      knee that is *in* band at both ends of a snap but teleports between them.
-      The pre-fix pose passed neither, but a naive re-tune could fix the band and
-      leave the snap.
+    - the BAND: |knee lateral offset from the drive hip|. Catches a statically
+      splayed, frog-legged drive knee.
+    - the POP: per-frame change in that offset. Catches a knee that is *in* band
+      at both ends of a snap but teleports between them. The pre-fix pose passed
+      neither, but a naive re-tune could fix the band and leave the snap.
+
+    BOTH run over the whole clip. The band was originally Active-only, on the
+    reasoning that the apex fold (~0.31 of leg reach) is the one place the bend
+    plane is ill-determined -- true, but it makes the gate blind to a splay
+    authored anywhere else, and a frog-legged landing reads just as wrong as a
+    frog-legged apex. Measured across every frame the widening costs nothing:
+    the worst non-Active reading is -0.0354 m at frame 18 (the deepest point of
+    the landing absorb, where the drive leg re-folds), against 0.0293 m for the
+    Active worst and a 0.12 m band. The Active figure is still reported on its
+    own line, because it is the number 764facd's commit body cites.
 
     Measured relative to the DRIVE HIP, not the hips centre: the femur hangs off
     the hip, so the hip is the only frame of reference in which "sagittal" means
@@ -414,6 +424,12 @@ def _drive_knee_stays_sagittal(arm, geom, active_frames, all_frames):
     scene = bpy.context.scene
     up_leg, leg, _foot, _toe = lib.LEG_CHAIN[DRIVE_KNEE_SIDE]
     body_right = geom.body_right
+    # Materialised because both are now walked more than once (worst-of-Active,
+    # worst-of-all, then a membership test in the failure message). Today's
+    # callers pass ranges, which survive that; a generator would silently come
+    # back empty on the second pass and take the gate with it.
+    active_frames = list(active_frames)
+    all_frames = list(all_frames)
 
     lateral_by_frame = {}
     with lib.preserve_frame():
@@ -423,9 +439,17 @@ def _drive_knee_stays_sagittal(arm, geom, active_frames, all_frames):
             knee = arm.pose.bones[leg].head
             lateral_by_frame[frame] = geom.to_m((knee - hip).dot(body_right))
 
-    worst_frame = max(active_frames, key=lambda f: abs(lateral_by_frame[f]))
+    # Reported on its own line, and NOT the figure the band is checked against:
+    # 764facd's commit body and DRIVE_KNEE_LAT_MAX_M's comment both quote the
+    # Active reading, so keeping it printed keeps those records checkable
+    # against a fresh run.
+    worst_active_frame = max(active_frames, key=lambda f: abs(lateral_by_frame[f]))
+    lib.report("drive_knee_worst_active_lat_m",
+               f"{lateral_by_frame[worst_active_frame]:+.4f} (frame {worst_active_frame})")
+
+    worst_frame = max(all_frames, key=lambda f: abs(lateral_by_frame[f]))
     worst_lat = lateral_by_frame[worst_frame]
-    lib.report("drive_knee_worst_active_lat_m", f"{worst_lat:+.4f} (frame {worst_frame})")
+    lib.report("drive_knee_worst_lat_m", f"{worst_lat:+.4f} (frame {worst_frame})")
 
     ordered = sorted(all_frames)
     pops = [(abs(lateral_by_frame[b] - lateral_by_frame[a]), a, b)
@@ -434,14 +458,25 @@ def _drive_knee_stays_sagittal(arm, geom, active_frames, all_frames):
     lib.report("drive_knee_worst_pop_m", f"{worst_pop:.4f} (frames {pop_from}->{pop_to})")
 
     if abs(worst_lat) > DRIVE_KNEE_LAT_MAX_M:
+        # The hint is phase-dependent. In Active the culprit is nearly always
+        # the derived apex cell; outside it, the keyposes carry authored
+        # `drive_lat_m` numbers and the reader needs pointing at those instead.
+        if worst_frame in active_frames:
+            hint = ("The cause is almost certainly the apex `drive_lat_m`: it is "
+                    "measured from the HIPS CENTRE, so it must carry the drive "
+                    "hip's own offset to put the ankle under that hip. See "
+                    "`_APEX_DRIVE_LAT_PLACEHOLDER`.")
+        else:
+            hint = (f"Frame {worst_frame} is OUTSIDE Active, so this is not the "
+                    f"derived apex cell -- check the authored `drive_lat_m` on the "
+                    f"keyposes bracketing it. Every non-apex row is authored near "
+                    f"the drive hip's own offset ({-0.09:+.2f} m) for the same "
+                    f"reason `_APEX_DRIVE_LAT_PLACEHOLDER` documents.")
         raise SystemExit(
             f"FATAL: at frame {worst_frame} the drive ({DRIVE_KNEE_SIDE}) knee sits "
             f"{worst_lat:+.4f} m from its own hip's sagittal plane -- allowed "
             f"+/-{DRIVE_KNEE_LAT_MAX_M} m. A drive knee this far outboard reads as "
-            f"frog-legged, not as a layup. The cause is almost certainly the apex "
-            f"`drive_lat_m`: it is measured from the HIPS CENTRE, so it must carry "
-            f"the drive hip's own offset to put the ankle under that hip. See "
-            f"`_APEX_DRIVE_LAT_PLACEHOLDER`.")
+            f"frog-legged, not as a layup. {hint}")
 
     if worst_pop > DRIVE_KNEE_POP_MAX_M:
         raise SystemExit(
