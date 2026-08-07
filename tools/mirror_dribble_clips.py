@@ -751,7 +751,11 @@ GATE2_REFERENCE_SRC = "assets/Dribble.fbx"
 
 
 def gate2_once():
-    """Run Gate 2 once against the stock rig, and return its trusted right axis.
+    """Run Gate 2 once against the stock rig, and return its trusted LATERAL axis.
+
+    Not "right" (#320/ecf663b): the sign this returns is a basis direction, not
+    an anatomical side, and naming it "right" is precisely the misreading that
+    convention exists to prevent. See the comment on `lateral` below.
 
     Rest geometry belongs to the shared skeleton, not to any one clip's baked
     animation, so one measurement covers both jobs. Loading is destructive
