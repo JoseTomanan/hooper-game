@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://tests/integration/InAndOutAnimTest.cs" id="1_inandoutanim"]
+
+[node name="InAndOutAnimTest" type="Node"]
+script = ExtResource("1_inandoutanim")
