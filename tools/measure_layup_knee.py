@@ -178,8 +178,35 @@ def main():
     sys.argv = ["blender", "--", src, os.devnull]
     log(f"=== phase 0: running {author_path} with plant_foot instrumented ===")
     author_globals = {"__name__": "__author_layup__", "__file__": author_path}
+    # An authoring gate that fires raises SystemExit, and this is a DIAGNOSTIC:
+    # dying of the disease it exists to diagnose is exactly backwards. The
+    # instrument you reach for when the layup's leg geometry is wrong must still
+    # print its tables when a leg gate is what went red (#335 turned
+    # `worst_ankle_ik_err_m` from a logged number into a hard failure, and #344
+    # made it fire on NaN too).
+    #
+    # Safe because the abort cannot cost us the data: every `plant_foot` call
+    # runs during pose baking, well before any of the gates, so `records` is
+    # already complete by the time one can raise -- and `DRIVE_KNEE_SIDE` is a
+    # module constant, bound at import, so the handedness check below survives an
+    # abort too. Both are asserted rather than assumed, immediately below.
+    authoring_abort = None
     with open(author_path, encoding="utf-8") as fh:
-        exec(compile(fh.read(), author_path, "exec"), author_globals)  # noqa: S102
+        try:
+            exec(compile(fh.read(), author_path, "exec"), author_globals)  # noqa: S102
+        except SystemExit as exc:
+            authoring_abort = exc
+            log(f"!!! authoring script aborted: {exc}")
+            log("!!! continuing anyway to measure the state that caused it; "
+                "this run will still exit NONZERO")
+
+    # Continuing past an abort is only defensible while the measurement is
+    # actually intact. If the gate fired before the poses were baked there is
+    # nothing to measure, and pressing on would report a confidently empty table.
+    if not records:
+        raise SystemExit(
+            "FATAL: the authoring script aborted before any plant_foot call, so "
+            f"there is nothing to measure. Underlying failure: {authoring_abort}")
 
     # The spec owns the handedness; this file must not assume it. If the layup
     # is ever re-authored off the other foot, fail loudly rather than silently
@@ -249,6 +276,14 @@ def main():
             _f, _u, spec_lat = _components(geom, target - hips_centre)
             log(f"{d:+7.3f} {spec_lat:+17.4f} {ankle[2]:+10.4f} "
                 f"{knee[0]:+9.4f} {knee[1]:+9.4f} {knee[2]:+9.4f} {fold:6.3f}")
+
+    # The tables above are the deliverable even on a failed run -- but the run
+    # still FAILED. Re-raise last, so the diagnosis gets printed and the exit
+    # code stays honest; `--python-exit-code 1` turns this into a red build.
+    if authoring_abort is not None:
+        raise SystemExit(
+            f"MEASURE_INCOMPLETE: tables above are valid, but the authoring "
+            f"script did not finish: {authoring_abort}")
 
     print("MEASURE_OK")
 
