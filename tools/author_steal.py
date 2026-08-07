@@ -172,6 +172,14 @@ import blender_anim_lib as lib  # noqa: E402  (must follow the sys.path fix)
 log = lib.log
 
 # ── clip contract (StealMove.DefaultFrameData, 60 Hz) ────────────────────────
+# The source clip this move is authored OVER, enforced by `lib.load_source`.
+# Every threshold in this file was read off a run against this file; see that
+# function's docstring for why the source is load-bearing rather than a
+# formality, and for the misdiagnosis that motivated the check. Note this is
+# the MOVING goalkeeper clip, not the stationary one the layup/block/contest
+# scripts use -- the `hips_base` rationale in `apply` below turns on that.
+EXPECTED_SOURCE = "Goalkeeper Catch Moving.fbx"
+
 FPS = 60
 STARTUP_TICKS = 8
 ACTIVE_TICKS = 8
@@ -589,7 +597,7 @@ def main():
     argv = sys.argv[sys.argv.index("--") + 1:]
     src, dst = argv[0], argv[1]
 
-    arm, _src_f0, _src_f1 = lib.load_source(src, FPS)
+    arm, _src_f0, _src_f1 = lib.load_source(src, FPS, expected=EXPECTED_SOURCE)
     scene = bpy.context.scene
 
     geom = lib.RigGeometry(arm)

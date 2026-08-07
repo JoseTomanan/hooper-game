@@ -53,6 +53,7 @@ rotation and translation deltas and is exact-zero for an unchanged script.
 """
 import contextlib
 import math
+import os.path
 
 import bpy
 from mathutils import Matrix, Vector
@@ -1522,12 +1523,52 @@ def export_fbx(arm, dst, action_name):
     log(f"exported -> {dst}")
 
 
-def load_source(src, fps):
+def load_source(src, fps, *, expected):
     """Factory-reset, import `src`, and return (armature, f0, f1).
 
     Factory reset with `use_empty=True` first: a stale scene is how a second
     armature or a leftover action silently ends up in the export.
+
+    WHY `expected` IS REQUIRED, AND KEYWORD-ONLY
+    ════════════════════════════════════════════
+    An authoring script does not generate a pose from nothing -- it poses OVER
+    this source. Only 52 of the rig's 65 bones are keyed, so the neck, head,
+    fingers and spine base come through untouched, and every arm target is
+    solved against the SOURCE's shoulder position at that frame. The source is
+    load-bearing geometry, not a formality.
+
+    Hand a script the wrong one and it does not say so. It fails hundreds of
+    lines later as an arm over-reach or an out-of-band knee -- symptoms that
+    read as defects in the clip spec. That misdiagnosis has already been made
+    once, and cost a session: `author_layup` run against `Dribble.fbx` reports
+    a +0.1843 m drive knee and dies on a gate that is working correctly, while
+    the same script against `Goalkeeper Catch Stationary.fbx` reports +0.0293 m
+    and exports clean.
+
+    So the parameter is REQUIRED rather than defaulted: a new authoring script
+    copied from an existing one gets a TypeError if it drops the argument,
+    instead of silently accepting whatever it is handed. Callers that
+    legitimately load an arbitrary path (the mirror tool re-loading its own
+    output, the selftest) pass `expected=None` explicitly -- an opt-out you
+    have to write down, not one you get by forgetting. Keyword-only so it can
+    never be mistaken for the frame-rate positionally.
+
+    Same shape as `plant_foot` enrolling its caller in the ankle-IK gate (#344):
+    make the safe thing structural, not remembered.
     """
+    if expected is not None:
+        actual = os.path.basename(src)
+        if actual != expected:
+            raise SystemExit(
+                f"FATAL: this script authors over {expected!r}, but was handed "
+                f"{actual!r}. The source clip is load-bearing -- unkeyed bones "
+                f"and the shoulder positions every arm target is solved against "
+                f"come from it, so the wrong source surfaces as a bogus reach or "
+                f"knee failure rather than as this message. If you genuinely mean "
+                f"to retarget this move onto a different source, change the "
+                f"script's EXPECTED_SOURCE and re-measure every gate threshold "
+                f"it quotes -- they were all read off {expected!r}.")
+
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.ops.import_scene.fbx(filepath=src)
     arm = next(o for o in bpy.data.objects if o.type == "ARMATURE")

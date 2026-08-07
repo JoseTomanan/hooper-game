@@ -550,7 +550,10 @@ def write_import_sidecar(src_import_path, dst_fbx_path):
 # ═════════════════════════════════════════════════════════════════════════════
 def process_job(src_path, dst_path, action_name, trusted_lateral):
     log(f"===== job: {src_path} -> {dst_path} (action {action_name!r}) =====")
-    arm, f0, f1 = lib.load_source(src_path, FPS)
+    # expected=None: this is a mirroring pipeline, not an authoring script. It
+    # runs over whatever job list it is given and has no single "own" source to
+    # pin, so the opt-out is the correct answer here rather than an oversight.
+    arm, f0, f1 = lib.load_source(src_path, FPS, expected=None)
     scene = bpy.context.scene
     geom = lib.RigGeometry(arm)
     geom.log_summary()
@@ -667,7 +670,9 @@ def gate5_roundtrip(dst_path, src_by_frame, f0, f1, expected_frame_count, expect
     re-check structure + Gate-3-style pose fidelity against the ORIGINAL
     source. Catches exporter/importer damage the in-memory checks cannot see.
     """
-    arm2, g0, g1 = lib.load_source(dst_path, FPS)
+    # expected=None: deliberately re-loading THIS RUN'S OWN OUTPUT, whose name
+    # is a destination path -- pinning it to a source basename would be wrong.
+    arm2, g0, g1 = lib.load_source(dst_path, FPS, expected=None)
     scene = bpy.context.scene
     names2 = sorted(pb.name for pb in arm2.pose.bones)
     names1 = sorted(src_by_frame[f0].keys())
@@ -768,7 +773,9 @@ def gate2_once():
     on the Blender-re-exported source. See `hand_lateral_offset_m`.
     """
     log(f"===== gate 2 (once, from {GATE2_REFERENCE_SRC}) =====")
-    arm, _f0, _f1 = lib.load_source(GATE2_REFERENCE_SRC, FPS)
+    # expected=None: the path is already a module constant, so a basename check
+    # would only restate it.
+    arm, _f0, _f1 = lib.load_source(GATE2_REFERENCE_SRC, FPS, expected=None)
     geom = lib.RigGeometry(arm)
     pairs, _midline = gate1_pairing([pb.name for pb in arm.pose.bones])
     gate2_rest_symmetry(arm, pairs, geom)

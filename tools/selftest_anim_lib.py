@@ -54,7 +54,11 @@ def check(name, passed, detail=""):
 
 def main():
     src = sys.argv[sys.argv.index("--") + 1]
-    arm, f0, f1 = lib.load_source(src, FPS)
+    # expected=None: the selftest exercises the LIBRARY's primitives, not a
+    # move spec. It asserts rig-intrinsic properties (IK convergence, mirror
+    # symmetry) that hold on any source carrying this skeleton, so pinning it
+    # to one file would narrow the test rather than harden it.
+    arm, f0, f1 = lib.load_source(src, FPS, expected=None)
     geom = lib.RigGeometry(arm)
     geom.log_summary()
     lib.enter_pose_mode(arm)

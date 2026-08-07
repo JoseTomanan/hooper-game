@@ -179,6 +179,12 @@ import blender_anim_lib as lib  # noqa: E402  (must follow the sys.path fix)
 log = lib.log
 
 # ── clip contract, 60 Hz ──────────────────────────────────────────────────────
+# The source clip this move is authored OVER, enforced by `lib.load_source`.
+# Every threshold in this file was read off a run against this file; see that
+# function's docstring for why the source is load-bearing rather than a
+# formality, and for the misdiagnosis that motivated the check.
+EXPECTED_SOURCE = "Goalkeeper Catch Stationary.fbx"
+
 FPS = 60
 STARTUP_TICKS = 10
 ACTIVE_TICKS = 8
@@ -426,7 +432,7 @@ def main():
     argv = sys.argv[sys.argv.index("--") + 1:]
     src, dst = argv[0], argv[1]
 
-    arm, _src_f0, _src_f1 = lib.load_source(src, FPS)
+    arm, _src_f0, _src_f1 = lib.load_source(src, FPS, expected=EXPECTED_SOURCE)
     scene = bpy.context.scene
 
     geom = lib.RigGeometry(arm)

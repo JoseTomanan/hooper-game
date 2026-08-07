@@ -111,6 +111,14 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import blender_anim_lib as lib  # noqa: E402  (must follow the sys.path fix)
 
 # ── clip contract (see #300 / rebuild_dribble_clips.gd) ──────────────────────
+# The source clip this move is authored OVER, enforced by `lib.load_source`.
+# Every threshold in this file was read off a run against this file; see that
+# function's docstring for why the source is load-bearing rather than a
+# formality, and for the misdiagnosis that motivated the check. This script is
+# doubly dependent on it: `_verify_bounce_count` re-measures the SOURCE's own
+# dribble bounces and refuses to author if they change.
+EXPECTED_SOURCE = "Dribble.fbx"
+
 FPS = 30
 CLIP_LENGTH_S = 2.100
 # 3 gait cycles x 0.700 s. Measured from the source clip's bounce count, not
@@ -274,7 +282,7 @@ def main():
     argv = sys.argv[sys.argv.index("--") + 1:]
     src, dst = argv[0], argv[1]
 
-    arm, f0, f1 = lib.load_source(src, FPS)
+    arm, f0, f1 = lib.load_source(src, FPS, expected=EXPECTED_SOURCE)
     scene = bpy.context.scene
 
     geom = lib.RigGeometry(arm)
