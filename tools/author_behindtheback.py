@@ -404,7 +404,7 @@ def _author_polarity(arm, geom, body_right, ball_side, frame_offset):
             err_u = lib.aim_arm(arm, side, target, hint, geom, frame=f)
             worst_wrist_err = max(worst_wrist_err, err_u)
 
-    lib.report(f"{ball_side}origin_worst_ankle_ik_err_m", f"{geom.to_m(worst_ankle_err):.6f}")
+    lib.report_ankle_ik(f"{ball_side}origin_worst_ankle_ik_err_m", geom.to_m(worst_ankle_err))
     lib.report(f"{ball_side}origin_worst_wrist_err_m", f"{geom.to_m(worst_wrist_err):.6f}")
     _ratio, _rside, _rframe, _rt = worst_reach
     lib.report(f"{ball_side}origin_worst_reach_ratio",

@@ -177,12 +177,73 @@ FINISH_APEX_EXTENSION_ABOVE_SHOULDER_M = 0.40
 #   left_fore_m,  left_lat_m,  left_height_m   (off arm)
 _APEX_HEIGHT_PLACEHOLDER = None  # patched onto the "active" apex row in main()
 
+# Patched onto BOTH "active" rows' `drive_lat_m` in main(), with the drive hip's
+# own measured lateral offset. A distinct sentinel object rather than a second
+# `None`, so neither patch loop can ever claim the other's cell.
+#
+# WHY THIS IS DERIVED AND NOT A NUMBER (#335)
+# ═══════════════════════════════════════════
+# `drive_lat_m` is measured from the HIPS CENTRE, but the femur hangs off a hip
+# that is itself 0.09 m to the side. So authoring `0.00` here does NOT put the
+# drive ankle under the drive hip -- it puts it 0.09 m lateral of it, and at the
+# apex this leg is folded to ~0.31 of full reach, where that offset is anything
+# but cosmetic.
+#
+# `plant_foot` controls the ANKLE. Nothing controls the KNEE: it is emergent
+# from the bend plane, whose normal is `dir_ankle.cross(geom.forward)`. A
+# deeply-folded leg has a short, steeply-inclined `dir_ankle`, so a small
+# lateral component tilts that plane hard and the femur sweeps a big arc.
+# Measured by `tools/measure_layup_knee.py` at frame 10, knee position relative
+# to the drive hip along `body_right`:
+#
+#     drive_lat_m   knee_up   knee_lat
+#       -0.120       +0.305     +0.178
+#       -0.100       +0.350     +0.082
+#       -0.050       +0.296     -0.189
+#        0.000       +0.175     -0.264     <- what this table used to say
+#
+# 5 cm of ankle swings the knee 27 cm, and the zero crossing sits at -0.092 --
+# the drive hip's own offset, to within the sweep's resolution. Hence: derive
+# it, do not tune it.
+#
+# #335 ASKS WHETHER THIS CELL WAS EYE-TUNED AGAINST THE OLD SOLVER. IT WAS.
+# Three independent lines, because the column pattern alone only shows the cell
+# is anomalous -- it cannot show how it got that way:
+#
+#   1. Shape. Read `drive_lat_m` down the column: -0.12, -0.05, 0.00, 0.00,
+#      -0.10, -0.14, -0.17, -0.15. Every row tracks the hip's -0.09 offset
+#      except the two apex rows, which spike to zero.
+#   2. Chronology. The table landed in 48b6890 (2026-07-30) and this column was
+#      NOT touched by df09950 (2026-08-02, the only later layup fix). The exact
+#      solve is 95012c9 (2026-08-04). So these numbers were chosen while the
+#      solver was still inexact -- a test the hypothesis could have failed, and
+#      did not.
+#   3. Method. 48b6890's own commit body specifies this pose qualitatively --
+#      "reads as a layup rather than a jump", "the silhouette already reads
+#      unmistakably" -- and gives no derivation for any lateral channel. The
+#      numbers were nudged until the render looked right.
+#
+# THE TWO ANSWERS #335 OFFERS ARE NOT RIVALS; both hold. #321 is a correct fix,
+# AND this cell was tuned against the defect it fixed. Before #321 the leg IK
+# silently swallowed lateral targets (see `plant_foot`'s docstring for the
+# shortfall formula), so an apex authored at 0.00 rendered fine -- the original
+# author never saw a splayed knee and never chose one. #321 made the solve exact
+# and the swallowed 0.09 m surfaced as a 26 cm knee splay across the whole Active
+# window, plus a 25.6 cm one-frame snap back at frame 11.
+#
+# That is why the repair is a DERIVED cell and not a re-eyeballed one: the pose
+# the author intended is recoverable by putting the ankle under its own hip,
+# which is what they believed 0.00 already did. Regenerating blind would ship the
+# splay; re-tuning by eye would replace their taste with mine. Neither is needed.
+# `_drive_knee_stays_sagittal` below is the numeric oracle that holds this closed.
+_APEX_DRIVE_LAT_PLACEHOLDER = object()
+
 _KEYPOSES_RAW = [
     # t_s,      label,      hip_off, pitch, drive_rise, drive_fore, drive_lat, plant_fore, plant_lat, right_fore, right_lat, right_h,               left_fore, left_lat, left_h
     [0.00000,  "startup",   0.00,    0.0,   0.05,       0.05,       -0.12,     0.00,       0.12,      0.05,       0.15,      -0.05,                 0.05,      -0.10,     -0.05],
     [4 / FPS,  "startup",   0.00,    5.0,   0.30,       0.15,       -0.05,     -0.02,      0.12,      0.05,       0.20,      0.10,                  0.05,      -0.12,     0.08],
-    [8 / FPS,  "active",    0.00,    10.0,  0.45,       0.20,       0.00,      0.05,       0.10,      0.05,       0.22,      0.20,                  0.05,      -0.15,     0.18],
-    [10 / FPS, "active",    0.30,    8.0,   0.50,       0.20,       0.00,      0.05,       0.10,      0.10,       0.05,      _APEX_HEIGHT_PLACEHOLDER, -0.05,   0.05,      0.15],
+    [8 / FPS,  "active",    0.00,    10.0,  0.45,       0.20,       _APEX_DRIVE_LAT_PLACEHOLDER, 0.05, 0.10,      0.05,       0.22,      0.20,                  0.05,      -0.15,     0.18],
+    [10 / FPS, "active",    0.30,    8.0,   0.50,       0.20,       _APEX_DRIVE_LAT_PLACEHOLDER, 0.05, 0.10,      0.10,       0.05,      _APEX_HEIGHT_PLACEHOLDER, -0.05,   0.05,      0.15],
     # Frame 12 is the Active/Recovery SLICE BOUNDARY -- it is the last frame of
     # `layupactive` and the first of `layuprecovery` simultaneously, so its hip
     # offset decides what BOTH clips read as at the cut. It must stay high: the
@@ -249,6 +310,35 @@ FINISH_HAND_HEIGHT_MARGIN_MIN_M = 0.10
 # tell "extended overhead" from "raised to chest" -- see the gate itself.
 FINISH_HAND_ABOVE_HEAD_MIN_M = 0.12
 
+# Drive-knee sagittal band (m), Active only: how far the drive KNEE may sit
+# from its own hip's sagittal plane. This is the gate that #335 was missing --
+# every existing proof in this file is about ANKLES (grounded/airborne) or
+# HANDS, and `plant_foot` guarantees the ankle by construction, so a knee
+# splayed a quarter-metre sideways passed all of them. See
+# `_APEX_DRIVE_LAT_PLACEHOLDER` for the mechanism.
+#
+# Measured: 0.0293 m post-fix, against 0.2643 m for the pose a blind
+# regeneration would have shipped. 0.12 sits between them, and the 4x apparent
+# headroom over the current reading is NOT slack -- the knee's response to the
+# apex `drive_lat_m` is roughly 6:1 in this fold band (27 cm of knee per 5 cm of
+# ankle, measured), so 0.12 m of knee is only ~2 cm of drift in the spec channel
+# anyone would actually be editing. Tightening it toward the reading would gate
+# on solver float noise instead.
+DRIVE_KNEE_LAT_MAX_M = 0.12
+# Max per-frame lateral travel (m) of the drive knee, over the WHOLE clip. The
+# band above is a static check and would happily pass a knee that crosses the
+# body every other frame. The pre-fix pose snapped 0.256 m between frames 10 and
+# 11 -- a full knee-width in 1/60 s, which reads as a glitch rather than a
+# motion, and legibility is a competitive requirement here (CLAUDE.md section 1),
+# not a polish item.
+#
+# Measured: 0.0258 m post-fix (frames 7->8, the drive knee's fastest genuine
+# travel), against that 0.256 m snap. 0.08 is ~3x the real motion and ~1/3 of
+# the glitch, which is the widest gap available -- the honest constraint is that
+# a legitimate 60 Hz knee swing and a one-frame teleport differ by an order of
+# magnitude here, so anywhere in the middle of that decade works.
+DRIVE_KNEE_POP_MAX_M = 0.08
+
 # Diagnostic escape hatch: skip the arm solve so a single run can report the
 # reach ratio at EVERY frame instead of dying at the first over-reach. Never
 # set for a real authoring run -- the exported FBX would have no arm keys.
@@ -293,6 +383,75 @@ def _torso_pitches_backward(arm, geom, forward):
             f"FATAL: the Startup torso pitch moved the head {shift_m:+.4f} m "
             f"ALONG forward (frame 0 -> frame {STARTUP_TICKS}) -- expected "
             f"BACKWARD (negative). Flip TORSO_PITCH_SIGN.")
+
+
+def _drive_knee_stays_sagittal(arm, geom, active_frames, all_frames):
+    """The drive KNEE must stay near its own hip's sagittal plane, and must not
+    jump laterally between frames (#335).
+
+    WHY THIS GATE EXISTS, and why nothing already in this file covers it: every
+    other proof here constrains an ANKLE (`verify_grounded`, `verify_airborne`)
+    or a HAND (the two finishing-hand gates). `plant_foot` puts the ankle on its
+    target by construction -- exactly, since #321 -- so an ankle-denominated
+    proof cannot see the knee at all. The knee is emergent from the bend plane
+    and, at the apex fold ratio (~0.31 of leg reach), hypersensitive to the
+    ankle's lateral offset. That combination is how a 0.26 m splay across the
+    whole Active window shipped under a fully green authoring run.
+
+    Two separate claims, because one does not imply the other:
+
+    - the BAND: |knee lateral offset from the drive hip| during Active. Catches
+      a statically splayed, frog-legged drive knee.
+    - the POP: per-frame change in that offset, across the whole clip. Catches a
+      knee that is *in* band at both ends of a snap but teleports between them.
+      The pre-fix pose passed neither, but a naive re-tune could fix the band and
+      leave the snap.
+
+    Measured relative to the DRIVE HIP, not the hips centre: the femur hangs off
+    the hip, so the hip is the only frame of reference in which "sagittal" means
+    anything.
+    """
+    scene = bpy.context.scene
+    up_leg, leg, _foot, _toe = lib.LEG_CHAIN[DRIVE_KNEE_SIDE]
+    body_right = geom.body_right
+
+    lateral_by_frame = {}
+    with lib.preserve_frame():
+        for frame in all_frames:
+            scene.frame_set(frame)
+            hip = arm.pose.bones[up_leg].head
+            knee = arm.pose.bones[leg].head
+            lateral_by_frame[frame] = geom.to_m((knee - hip).dot(body_right))
+
+    worst_frame = max(active_frames, key=lambda f: abs(lateral_by_frame[f]))
+    worst_lat = lateral_by_frame[worst_frame]
+    lib.report("drive_knee_worst_active_lat_m", f"{worst_lat:+.4f} (frame {worst_frame})")
+
+    ordered = sorted(all_frames)
+    pops = [(abs(lateral_by_frame[b] - lateral_by_frame[a]), a, b)
+            for a, b in zip(ordered, ordered[1:])]
+    worst_pop, pop_from, pop_to = max(pops)
+    lib.report("drive_knee_worst_pop_m", f"{worst_pop:.4f} (frames {pop_from}->{pop_to})")
+
+    if abs(worst_lat) > DRIVE_KNEE_LAT_MAX_M:
+        raise SystemExit(
+            f"FATAL: at frame {worst_frame} the drive ({DRIVE_KNEE_SIDE}) knee sits "
+            f"{worst_lat:+.4f} m from its own hip's sagittal plane -- allowed "
+            f"+/-{DRIVE_KNEE_LAT_MAX_M} m. A drive knee this far outboard reads as "
+            f"frog-legged, not as a layup. The cause is almost certainly the apex "
+            f"`drive_lat_m`: it is measured from the HIPS CENTRE, so it must carry "
+            f"the drive hip's own offset to put the ankle under that hip. See "
+            f"`_APEX_DRIVE_LAT_PLACEHOLDER`.")
+
+    if worst_pop > DRIVE_KNEE_POP_MAX_M:
+        raise SystemExit(
+            f"FATAL: the drive ({DRIVE_KNEE_SIDE}) knee moved {worst_pop:.4f} m "
+            f"laterally between frames {pop_from} and {pop_to} -- allowed "
+            f"{DRIVE_KNEE_POP_MAX_M} m per frame (1/{FPS} s). That is a visible "
+            f"snap, not a motion. Check whether `drive_lat_m` crosses the drive "
+            f"hip's own lateral offset between those keyposes: the knee's bend "
+            f"plane inverts there, and at this fold ratio the femur swings a long "
+            f"way to do it.")
 
 
 def main():
@@ -350,6 +509,44 @@ def main():
             patched = True
     if not patched:
         raise SystemExit("FATAL: no keypose row carried the apex height placeholder")
+
+    # Same treatment for the apex rows' `drive_lat_m` (#335). Measured from the
+    # REST pose, not the posed rig: the hip's lateral offset is a property of
+    # the Y Bot skeleton, so reading it off `bone.head_local` keeps it
+    # independent of whatever pose the source clip happens to carry at frame 0.
+    # See `_APEX_DRIVE_LAT_PLACEHOLDER` for why this is derived rather than
+    # authored.
+    hips_rest = arm.pose.bones[lib.HIPS].bone.head_local
+    drive_hip_rest = arm.pose.bones[lib.LEG_CHAIN[DRIVE_KNEE_SIDE][0]].bone.head_local
+    drive_hip_lat_m = geom.to_m((drive_hip_rest - hips_rest).dot(body_right))
+    lib.report("drive_hip_lat_m", f"{drive_hip_lat_m:+.4f}")
+    # The drive leg is the LEFT one, so its hip must sit on the character's
+    # LEFT -- i.e. NEGATIVE along `body_right`. Asserted rather than assumed,
+    # because a sign error here would place the apex ankle 0.18 m to the WRONG
+    # side and still pass every side-agnostic gate in this file (the #255
+    # lesson: the rig is mirror-symmetric to 0.17 mm, so only a signed check
+    # catches a mirrored placement).
+    expected_sign = -1.0 if DRIVE_KNEE_SIDE == "L" else 1.0
+    if drive_hip_lat_m * expected_sign <= 0.0:
+        raise SystemExit(
+            f"FATAL: the {DRIVE_KNEE_SIDE} hip measured {drive_hip_lat_m:+.4f} m "
+            f"along body_right, but a {DRIVE_KNEE_SIDE} hip must be "
+            f"{'negative' if expected_sign < 0 else 'positive'}. Either "
+            f"`body_right` is inverted or LEG_CHAIN is mismapped -- do not "
+            f"'fix' this by flipping the sign here.")
+
+    drive_lat_idx = 2 + _CHANNEL_NAMES.index("drive_lat_m")
+    patched_lat = 0
+    for row in _KEYPOSES_RAW:
+        if row[drive_lat_idx] is _APEX_DRIVE_LAT_PLACEHOLDER:
+            row[drive_lat_idx] = drive_hip_lat_m
+            patched_lat += 1
+    if patched_lat != 2:
+        raise SystemExit(
+            f"FATAL: expected exactly 2 keypose rows carrying the apex "
+            f"drive-lateral placeholder, found {patched_lat}. Both Active rows "
+            f"(frames {STARTUP_TICKS} and {STARTUP_TICKS + 2}) must carry it -- "
+            f"patching only one reintroduces the frame-11 knee snap #335 fixed.")
 
     finish_humerus_u, finish_ulna_u = lib.arm_lengths(arm, FINISH_ARM_SIDE)
     off_side = "L" if FINISH_ARM_SIDE == "R" else "R"
@@ -456,7 +653,7 @@ def main():
     bpy.ops.object.mode_set(mode="OBJECT")
     scene.frame_start, scene.frame_end = F0, F1
 
-    lib.report("worst_ankle_ik_err_m", f"{geom.to_m(worst_ankle_err):.6f}")
+    lib.report_ankle_ik("worst_ankle_ik_err_m", geom.to_m(worst_ankle_err))
     lib.report("worst_wrist_err_m", f"{geom.to_m(worst_wrist_err):.6f}")
     _ratio, _rside, _rframe, _rt = worst_reach
     lib.report("worst_reach_ratio", f"{_ratio:.4f} ({_rside} arm, frame {_rframe}, t={_rt:.4f}s)")
@@ -485,6 +682,14 @@ def main():
     # Recovery from ~40% of the segment (frame 18) onward: landed and grounded.
     recovery_grounded_start = STARTUP_TICKS + ACTIVE_TICKS + int(RECOVERY_TICKS * 0.4)
     lib.verify_grounded(arm, range(recovery_grounded_start, F1 + 1), RECOVERY_GROUND_BAND_TOL_M, geom)
+
+    # #335: the drive knee stays sagittal, and does not snap. Placed with the
+    # other geometric proofs and BEFORE the export, so a splayed knee fails the
+    # authoring run rather than shipping.
+    _drive_knee_stays_sagittal(
+        arm, geom,
+        active_frames=range(STARTUP_TICKS, STARTUP_TICKS + ACTIVE_TICKS + 1),
+        all_frames=all_frames)
 
     # #296: Startup must not equal Recovery.
     lib.verify_pose_distinct(
