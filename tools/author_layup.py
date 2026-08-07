@@ -557,11 +557,11 @@ def main():
     keyposes = _keyposes_for_lib()
 
     worst_wrist_err = 0.0
-    worst_ankle_err = 0.0
+    geom.reset_ankle_ik()
     worst_reach = (0.0, "", 0, 0.0)  # (ratio, side, frame, t_s)
 
     def apply(frame, _t_s, ch):
-        nonlocal worst_wrist_err, worst_ankle_err, worst_reach
+        nonlocal worst_wrist_err, worst_reach
 
         # ---- clavicles: pinned to REST, not inherited from the source ------
         # "Goalkeeper Catch Stationary.fbx" is a catch pose -- its own
@@ -610,15 +610,13 @@ def main():
                         + body_right * geom.m(ch["drive_lat_m"])
                         + up * geom.m(ch["drive_rise_m"])
                         - up * geom.m(NEUTRAL_HIP_TO_ANKLE_M))
-        _solved, drive_err = lib.plant_foot(arm, DRIVE_KNEE_SIDE, drive_ankle, toe_dir, geom, frame=frame)
-        worst_ankle_err = max(worst_ankle_err, drive_err)
+        lib.plant_foot(arm, DRIVE_KNEE_SIDE, drive_ankle, toe_dir, geom, frame=frame)
 
         plant_ankle = (hips_now
                        + forward * geom.m(ch["plant_fore_m"])
                        + body_right * geom.m(ch["plant_lat_m"])
                        - up * geom.m(NEUTRAL_HIP_TO_ANKLE_M))
-        _solved, plant_err = lib.plant_foot(arm, PLANT_FOOT_SIDE, plant_ankle, toe_dir, geom, frame=frame)
-        worst_ankle_err = max(worst_ankle_err, plant_err)
+        lib.plant_foot(arm, PLANT_FOOT_SIDE, plant_ankle, toe_dir, geom, frame=frame)
 
         # ---- arms: finishing arm + off arm from the timeline channels ------
         arm_specs = (
@@ -653,7 +651,7 @@ def main():
     bpy.ops.object.mode_set(mode="OBJECT")
     scene.frame_start, scene.frame_end = F0, F1
 
-    lib.report_ankle_ik("worst_ankle_ik_err_m", geom.to_m(worst_ankle_err))
+    lib.report_ankle_ik("worst_ankle_ik_err_m", geom)
     lib.report("worst_wrist_err_m", f"{geom.to_m(worst_wrist_err):.6f}")
     _ratio, _rside, _rframe, _rt = worst_reach
     lib.report("worst_reach_ratio", f"{_ratio:.4f} ({_rside} arm, frame {_rframe}, t={_rt:.4f}s)")

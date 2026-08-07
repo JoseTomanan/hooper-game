@@ -307,7 +307,7 @@ def main():
 
     lib.enter_pose_mode(arm)
     lean_q = Matrix.Rotation(math.radians(LEAN_DEGREES), 4, right)
-    worst_ankle_err = 0.0
+    geom.reset_ankle_ik()
 
     for i, f in enumerate(range(f0, f1 + 1)):
         scene.frame_set(f)
@@ -353,9 +353,7 @@ def main():
                 pitch = math.sin(math.pi * s)
                 toe_dir = (forward * 0.90 - up * (0.44 - 0.34 * pitch)).normalized()
 
-            _solved, ankle_err = lib.plant_foot(
-                arm, side, ankle, toe_dir, geom, frame=f)
-            worst_ankle_err = max(worst_ankle_err, ankle_err)
+            lib.plant_foot(arm, side, ankle, toe_dir, geom, frame=f)
 
     bpy.ops.object.mode_set(mode="OBJECT")
 
@@ -363,9 +361,9 @@ def main():
     # Reads 0.000000 since #321 made `plant_foot`'s bend-plane axis
     # perpendicular by construction, so the solve is exact for ANY target
     # direction (it previously read 0.029890 here). A nonzero value now means an
-    # over-reach clamp or a rig-geometry change, not solver error -- but nothing
-    # ASSERTS it; see `plant_foot`'s docstring and #335.
-    lib.report_ankle_ik("worst_ankle_ik_err_m", geom.to_m(worst_ankle_err))
+    # over-reach clamp or a rig-geometry change, not solver error -- and #335
+    # made that a hard failure rather than a number in the log.
+    lib.report_ankle_ik("worst_ankle_ik_err_m", geom)
 
     # ---- proofs, before the export commits anything --------------------------
     # These are the library's shared gates (#315), run here both because this

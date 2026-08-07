@@ -452,11 +452,11 @@ def main():
     keyposes = _keyposes_for_lib()
 
     worst_wrist_err = 0.0
-    worst_ankle_err = 0.0
+    geom.reset_ankle_ik()
     worst_reach = (0.0, "", 0, 0.0)  # (ratio, side, frame, t_s)
 
     def apply(frame, _t_s, ch):
-        nonlocal worst_wrist_err, worst_ankle_err, worst_reach
+        nonlocal worst_wrist_err, worst_reach
 
         # ---- clavicles: pinned to REST, not inherited from the source --------
         # "Goalkeeper Catch Stationary.fbx" is a catch pose whose own
@@ -513,8 +513,7 @@ def main():
                      + forward * geom.m(ch["foot_fore_m"])
                      + body_right * geom.m(lat_sign * half_width_m)
                      - up * geom.m(NEUTRAL_HIP_TO_ANKLE_M))
-            _solved, err = lib.plant_foot(arm, side, ankle, toe_dir, geom, frame=frame)
-            worst_ankle_err = max(worst_ankle_err, err)
+            lib.plant_foot(arm, side, ankle, toe_dir, geom, frame=frame)
 
         # ---- arms: ONE set of channels, mirrored per side ---------------------
         for side, lat_sign in (("R", 1.0), ("L", -1.0)):
@@ -548,7 +547,7 @@ def main():
     bpy.ops.object.mode_set(mode="OBJECT")
     scene.frame_start, scene.frame_end = F0, F1
 
-    lib.report_ankle_ik("worst_ankle_ik_err_m", geom.to_m(worst_ankle_err))
+    lib.report_ankle_ik("worst_ankle_ik_err_m", geom)
     lib.report("worst_wrist_ik_err_m", f"{geom.to_m(worst_wrist_err):.6f}")
     lib.report("worst_reach_ratio",
                f"{worst_reach[0]:.4f} ({worst_reach[1]} arm, frame {worst_reach[2]})")

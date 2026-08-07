@@ -328,7 +328,9 @@ def _author_polarity(arm, geom, body_right, ball_side, frame_offset):
         f"recv={geom.to_m(recv_humerus_u + recv_ulna_u):.4f} m")
 
     worst_wrist_err = 0.0
-    worst_ankle_err = 0.0
+    # Per-polarity scope: `main()` builds `geom` ONCE and calls this twice, so
+    # without the reset the R run would inherit L's worst reading.
+    geom.reset_ankle_ik()
     worst_reach = (0.0, "", 0, 0.0)  # (ratio, side, frame, t_s)
     scene = bpy.context.scene
 
@@ -371,8 +373,7 @@ def _author_polarity(arm, geom, body_right, ball_side, frame_offset):
                      + forward * geom.m(fore_m)
                      + body_right * (side_sign * geom.m(lat_m))
                      - up * geom.m(NEUTRAL_HIP_TO_ANKLE_M))
-            _solved, ankle_err = lib.plant_foot(arm, side, ankle, toe_dir, geom, frame=f)
-            worst_ankle_err = max(worst_ankle_err, ankle_err)
+            lib.plant_foot(arm, side, ankle, toe_dir, geom, frame=f)
 
         # ---- arms: aim_arm from the (own-side) hand table --------------------
         for side, table, side_sign, hint_spec, humerus_u, ulna_u in (
@@ -404,7 +405,7 @@ def _author_polarity(arm, geom, body_right, ball_side, frame_offset):
             err_u = lib.aim_arm(arm, side, target, hint, geom, frame=f)
             worst_wrist_err = max(worst_wrist_err, err_u)
 
-    lib.report_ankle_ik(f"{ball_side}origin_worst_ankle_ik_err_m", geom.to_m(worst_ankle_err))
+    lib.report_ankle_ik(f"{ball_side}origin_worst_ankle_ik_err_m", geom)
     lib.report(f"{ball_side}origin_worst_wrist_err_m", f"{geom.to_m(worst_wrist_err):.6f}")
     _ratio, _rside, _rframe, _rt = worst_reach
     lib.report(f"{ball_side}origin_worst_reach_ratio",

@@ -401,11 +401,13 @@ def _author_polarity(arm, geom, body_right, polarity, frame_offset):
         hips_base = arm.pose.bones[lib.HIPS].head.copy()
 
     worst_wrist_err = 0.0
-    worst_ankle_err = 0.0
+    # Per-polarity scope: `main()` builds `geom` ONCE and calls this twice, so
+    # without the reset the R run would inherit L's worst reading.
+    geom.reset_ankle_ik()
     worst_reach = (0.0, "", 0, 0.0)  # (ratio, side, frame, t_s)
 
     def apply(frame, _t_s_unused, ch):
-        nonlocal worst_wrist_err, worst_ankle_err, worst_reach
+        nonlocal worst_wrist_err, worst_reach
 
         # ---- hips: crouch + lateral weight commit, as an ABSOLUTE target off
         # `hips_base`, NOT `lib.drop_hips`'s delta-on-the-source's-own-root-
@@ -464,8 +466,7 @@ def _author_polarity(arm, geom, body_right, polarity, frame_offset):
                      + forward * geom.m(fore_m)
                      + body_right * (side_sign * geom.m(lat_m))
                      - up * geom.m(NEUTRAL_HIP_TO_ANKLE_M))
-            _solved, ankle_err = lib.plant_foot(arm, side, ankle, toe_dir, geom, frame=frame)
-            worst_ankle_err = max(worst_ankle_err, ankle_err)
+            lib.plant_foot(arm, side, ankle, toe_dir, geom, frame=frame)
 
         # ---- arms: swipe arm from the timeline channels, rest arm held -----
         arm_specs = (
@@ -495,7 +496,7 @@ def _author_polarity(arm, geom, body_right, polarity, frame_offset):
 
     lib.bake_timeline(arm, keyposes, apply, f0, f1, FPS)
 
-    lib.report_ankle_ik(f"{polarity}target_worst_ankle_ik_err_m", geom.to_m(worst_ankle_err))
+    lib.report_ankle_ik(f"{polarity}target_worst_ankle_ik_err_m", geom)
     lib.report(f"{polarity}target_worst_wrist_err_m", f"{geom.to_m(worst_wrist_err):.6f}")
     _ratio, _rside, _rframe, _rt = worst_reach
     lib.report(f"{polarity}target_worst_reach_ratio",

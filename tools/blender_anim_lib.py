@@ -137,8 +137,11 @@ BEND_PLANE_MIN_SIN = 1e-3
 LANDMARK_MIN_COS = 1e-3
 
 # Maximum distance, in METRES, between where a `plant_foot` call was asked to
-# put an ankle and where it actually put one. Matches `selftest_anim_lib`'s own
-# ANKLE_TOL_M so the library is held to one number, not two.
+# put an ankle and where it actually put one. `selftest_anim_lib` IMPORTS this
+# rather than restating it, so the library really is held to one number -- until
+# #344 the selftest carried its own 1e-4 and the two merely happened to agree,
+# which meant tightening this one silently left the selftest's 90 leg checks
+# bounding something looser than the authoring gate demanded.
 #
 # TWO-SIDED EVIDENCE, which is the whole reason this is 1e-4 and not a round
 # guess. Honest noise on the Y Bot after #321's exact solve is 0.000000 for six
@@ -163,8 +166,9 @@ def report(name, value):
     print(f"[author] {name}={value}")
 
 
-def report_ankle_ik(name, err_m):
-    """Report a worst-case ankle IK error AND refuse the run if it is too big.
+def report_ankle_ik(name, geom):
+    """Report the worst ankle IK error `geom` has seen, and refuse the run if it
+    is too big.
 
     Until #335 this number was REPORTED and never asserted, which made every
     authoring script's greenness weaker than it looked: `plant_foot` passes
@@ -173,15 +177,22 @@ def report_ankle_ik(name, err_m):
     only thing standing between that and a shipped clip was a human happening to
     read the log line. This is that reader, in code.
 
-    Reporting and gating are deliberately ONE call. Split into two, a new
-    authoring script can copy the report and forget the gate -- which is exactly
-    how the original seven ended up reporting without asserting.
+    ACCUMULATING, reporting and gating are deliberately ONE mechanism. Split
+    them and a new authoring script can copy one part and forget another --
+    which is exactly how the original seven ended up reporting without
+    asserting, and then (#344) accumulating in a way that defeated the assert.
+    That is why this takes `geom` and NOT a caller-computed float: the number it
+    gates is the one `plant_foot` recorded, so a caller cannot hand it a
+    friendlier one. Scope it with `geom.reset_ankle_ik()`.
 
     The comparison is inverted (`not <=` rather than `>`) so it fails CLOSED on
     NaN. A degenerate solve is precisely the case that yields NaN, and NaN is
     false against `>`, so the natural form would wave through the one input most
-    likely to be genuinely broken.
+    likely to be genuinely broken. `observe_ankle_ik` inverts its comparison for
+    the same reason and must keep doing so -- see #344 there for what happens
+    when only one of the two is careful.
     """
+    err_m = geom.worst_ankle_ik_m
     report(name, f"{err_m:.6f}")
     if not (err_m <= ANKLE_IK_TOL_M):
         raise SystemExit(
@@ -401,6 +412,13 @@ class RigGeometry:
         self.body_right = derive_body_right(arm, self.lateral)
         self.units_per_metre = units_per_metre(arm)
         self.femur, self.tibia, self.foot = bone_lengths(arm)
+        # Worst ankle IK error seen this scope, in ARMATURE UNITS. Owned here
+        # rather than by each authoring script because `geom` is ALREADY handed
+        # to every `plant_foot` call and is already what converts to metres at
+        # report time -- so it is the one object that knows both halves. See
+        # `observe_ankle_ik` for why the seven scripts no longer do this
+        # themselves.
+        self._worst_ankle_ik = 0.0
 
     def m(self, metres):
         """Metres -> armature units. Convert every spec constant through this."""
@@ -409,6 +427,54 @@ class RigGeometry:
     def to_m(self, units):
         """Armature units -> metres. For reporting measurements only."""
         return units / self.units_per_metre
+
+    def reset_ankle_ik(self):
+        """Start a fresh ankle-IK measurement scope.
+
+        Call at the top of each build that reports its own number. The two
+        two-polarity scripts (`author_steal`, `author_behindtheback`) construct
+        `geom` ONCE in `main()` and then run their build twice, so without this
+        the second polarity would inherit the first's worst reading.
+
+        FORGETTING THIS IS FAIL-CLOSED: a stale accumulator can only be too
+        HIGH, so the cost is a false alarm, never a silent export. That
+        asymmetry is deliberate and is why this is a plain call rather than a
+        context manager wrapping every build loop.
+        """
+        self._worst_ankle_ik = 0.0
+
+    def observe_ankle_ik(self, err_u):
+        """Record one ankle IK error, in ARMATURE UNITS. Called by `plant_foot`.
+
+        The comparison is `not (err_u <= worst)` rather than the natural
+        `max(worst, err_u)`. This is not a style preference -- it is the #344
+        bug, and it is worth stating precisely because the natural form looks
+        obviously correct.
+
+        CPython's two-arg `max` evaluates `b > a`. `nan > 0.0` is False, so with
+        the accumulator in the FIRST position -- which is how all seven
+        authoring scripts wrote it, `max(worst_ankle_err, err)` -- `max`
+        silently discards NaN and returns the running value. `report_ankle_ik`
+        then gated a clean 0.000000 and exported the clip. A degenerate
+        femur/tibia solve is precisely the case that yields NaN, so the
+        accumulator was throwing away the one input most likely to be genuinely
+        broken, and the gate's own careful fail-closed comparison never got to
+        see it. Two correct-looking halves, one hole between them.
+
+        The inverted form PROPAGATES NaN instead: `nan <= worst` is False, so
+        `not (...)` is True and the NaN becomes the worst value, where the gate
+        can fail on it. `selftest_anim_lib` section 4h asserts exactly this.
+        """
+        if not (err_u <= self._worst_ankle_ik):
+            self._worst_ankle_ik = err_u
+
+    @property
+    def worst_ankle_ik_m(self):
+        """Worst ankle IK error seen this scope, in METRES.
+
+        Read by `report_ankle_ik`; NaN-preserving, because `to_m` only divides.
+        """
+        return self.to_m(self._worst_ankle_ik)
 
     @property
     def leg_reach(self):
@@ -697,11 +763,17 @@ def plant_foot(arm, side, ankle_target, toe_dir, geom, frame=None):
 
     IT IS NOW ASSERTED, NOT MERELY REPORTED (#335). This call still passes
     `on_overreach="warn"`, so an out-of-reach target is CLAMPED here rather than
-    refused -- but every one of the seven authoring scripts now feeds its worst
-    value to `report_ankle_ik`, which fails the run above `ANKLE_IK_TOL_M`. The
-    clamp is therefore no longer silent: it survives one frame and then kills the
-    export. A green authoring run IS now evidence that the feet reached their
-    targets, which it was not before.
+    refused -- but every solve is recorded into `geom` (see `observe_ankle_ik`),
+    and `report_ankle_ik` fails the run above `ANKLE_IK_TOL_M`. The clamp is
+    therefore no longer silent: it survives one frame and then kills the export.
+    A green authoring run IS now evidence that the feet reached their targets,
+    which it was not before.
+
+    #344 moved that accumulation OFF the seven authoring scripts and into
+    `geom`. They each ran `max(worst, err)`, which discards NaN -- so a
+    degenerate solve, the exact failure this gate exists for, reported 0.000000
+    and exported. Recording from inside this function removes the caller's
+    ability to get it wrong.
     """
     up_leg, leg, foot_b, _toe_b = LEG_CHAIN[side]
     # The FOOT's roll reference. Horizontal, so the sole stays flat -- see "TWO
@@ -760,6 +832,13 @@ def plant_foot(arm, side, ankle_target, toe_dir, geom, frame=None):
     # limitation in the docstring; without this the shortfall is unobservable,
     # because `solved` reports the REQUEST, not the RESULT.
     ankle_err = (ankle_head - ankle_target).length
+    # Enrol this solve in the run's ankle-IK gate. Done HERE, not by the caller,
+    # so that calling `plant_foot` at all is what puts a script under the gate
+    # -- a new authoring script cannot forget to accumulate (#344). Still
+    # returned as well, because two callers want the per-call value: the
+    # selftest checks each target individually, and `measure_layup_knee` spies
+    # on it per frame.
+    geom.observe_ankle_ik(ankle_err)
     arm.pose.bones[foot_b].matrix = aim_matrix(ankle_head, toe_dir, sole_axis)
     bpy.context.view_layer.update()
 
