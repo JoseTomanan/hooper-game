@@ -134,6 +134,7 @@ public partial class AuthoredClipMcpProbe : Node
         var contest = ContestMove.DefaultFrameData;
         var block = BlockMove.DefaultFrameData;
         var jabstep = JabStep.DefaultFrameData;
+        var inandout = InAndOut.DefaultFrameData;
 
         return new[]
         {
@@ -224,6 +225,30 @@ public partial class AuthoredClipMcpProbe : Node
                 },
                 new[] { "JabStepStartup", "JabStepActive", "JabStepRecovery" },
                 () => new JabStep()),
+
+            // #308 (PR #349). Added in the SAME follow-up that #336's comment
+            // above predicted would be needed: that comment records jab step
+            // being missed on arrival, and in-and-out was then missed the exact
+            // same way -- the family list is a hand-maintained duplicate of
+            // MoveAnimResolver.ClippedMovePrefixes, so nothing fails when the
+            // two drift and the probe just reports a smaller "every family".
+            //
+            // Unhanded, and unlike every other unhanded family here the ball
+            // NEVER swaps hands (InAndOut.cs) -- which is why it must stay out
+            // of MoveAnimResolver.HandedMoves. The ctor takes a burstDirection
+            // (the move carries a burst payload even though it is not
+            // hand-directional); +1f is the right-side burst, matching the
+            // fixed polarity the clip is baked to.
+            new Family("inandout", "In-and-out (PR #349 / #308)",
+                "assets/inandout_authored.fbx",
+                new (string, int?)[]
+                {
+                    ("inandoutstartup",  inandout.StartupFrames),
+                    ("inandoutactive",   inandout.ActiveFrames),
+                    ("inandoutrecovery", inandout.RecoveryFrames),
+                },
+                new[] { "InAndOutStartup", "InAndOutActive", "InAndOutRecovery" },
+                () => new InAndOut(1f)),
         };
     }
 
