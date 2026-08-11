@@ -25,7 +25,7 @@ namespace HOOPERGAME.Tests.Integration;
 //   …=jabstep-no-placeholder-leak | jabstep-segment-lengths | jabstep-edges
 //   …=jabstep-startup-differs-from-recovery
 //   …=jabstep-torso-pitches-forward-in-active | control-jabstep-torso-modest-in-startup
-//   …=jabstep-differs-from-retreatdribble (guarded — #305 not yet on main, see below)
+//   …=jabstep-differs-from-retreatdribble (two-move cross-clip comparison, #333)
 //   Exit: 0 = PASS, 1 = FAIL (via GetTree().Quit) — the ADR-0016 exit-code contract.
 //
 // ── moveId is "jab", not "jabstep" ───────────────────────────────────────────
@@ -55,16 +55,19 @@ namespace HOOPERGAME.Tests.Integration;
 // Player.tscn with no JabStep states at all. Only the live
 // AnimationNodeStateMachinePlayback proves wiring.
 //
-// ── The retreat-dribble contrast (#305) ──────────────────────────────────────
+// ── The retreat-dribble contrast (#305/#333) ─────────────────────────────────
 // Jab step and retreat dribble share the identical 3/2/4-tick shape off the
 // same source (assets/Dribble.fbx); the issue's own motion spec names torso
 // lean SIGN as the only automated defence against the two clips converging.
-// As of this PR #305 (handoff 05) has NOT landed on main, so
-// jabstep-differs-from-retreatdribble is written but GUARDED: it checks
-// whether scenes/Player.tscn's state machine has a "RetreatDribbleActive"
-// state and, if not, prints a clear SKIPPED message and exits 0 rather than
-// silently omitting the scenario or asserting a false premise. A follow-up
-// issue tracks wiring the real comparison once #305 lands (see the PR body).
+//
+// #305 has now landed, so jabstep-differs-from-retreatdribble is LIVE (#333).
+// It is no longer a static resource check: it runs BOTH moves back to back on
+// one actor — the jab first, then a retreat dribble after starting a real
+// dribble, which RetreatDribble's dead-dribble gate requires and JabStep's does
+// not — and asserts their Active-phase torso travel has opposite sign, each
+// clearing the same magnitude floor its own dedicated scenario uses. See
+// VerdictDiffersFromRetreatDribble for why the comparison is of DELTAS off each
+// move's own baseline and not of absolute leans.
 public partial class JabStepAnimTest : Node
 {
     private const double TimeoutSeconds = 15.0;
@@ -118,8 +121,6 @@ public partial class JabStepAnimTest : Node
     // wider gap the move was never authored to have.
     private const float TorsoForwardSettleMinM = 0.015f;
 
-    private const string RetreatDribbleActiveState = "RetreatDribbleActive";
-
     private static readonly string[] KnownScenarios =
     {
         "jabstep-phases",
@@ -133,10 +134,14 @@ public partial class JabStepAnimTest : Node
     };
 
     // Scenarios that need no live tree — pure resource/scene inspection.
+    //
+    // `jabstep-differs-from-retreatdribble` USED to be in this list, back when
+    // it was a guard that only checked whether a RetreatDribbleActive state
+    // existed. #305 landed that state, so the scenario now does the real
+    // cross-move comparison and needs a live rig for BOTH moves (#333).
     private static readonly string[] StaticScenarios =
     {
         "jabstep-no-placeholder-leak", "jabstep-segment-lengths", "jabstep-edges",
-        "jabstep-differs-from-retreatdribble",
     };
 
     private string _scenario = "jabstep-phases";
@@ -149,7 +154,12 @@ public partial class JabStepAnimTest : Node
     private double _elapsed;
     private bool _finished;
 
-    private enum Step { AwaitTipoff, Act, Observe }
+    // The cross-move scenario (#333) runs TWO moves back to back on the same
+    // actor: the jab step first, then — after starting a real dribble, which
+    // RetreatDribble's dead-dribble gate requires and JabStep's does not — a
+    // retreat dribble. StartDribble/AwaitDribble/Act2/Observe2 are that second
+    // leg and are entered ONLY by that scenario.
+    private enum Step { AwaitTipoff, Act, Observe, StartDribble, AwaitDribble, Act2, Observe2 }
     private Step _step = Step.AwaitTipoff;
     private int _stepDeadlineFrame;
 
@@ -178,6 +188,15 @@ public partial class JabStepAnimTest : Node
     private float _leanAtLastRecoveryTick = float.NaN;
     private Quaternion[] _poseAtLastStartupTick;
     private Quaternion[] _poseAtLastRecoveryTick;
+
+    // Second leg (#333, `jabstep-differs-from-retreatdribble` only): the same
+    // three quantities re-measured for a RETREAT DRIBBLE on the same actor, in
+    // the same skeleton space, against the same `_cachedForward` axis.
+    private bool _sawRdActive;
+    private int _jabActiveTicks;
+    private int _rdActiveTicks;
+    private float _leanBeforeRetreat = float.NaN;
+    private float _leanAtLastRdActiveTick = float.NaN;
 
     public override void _Ready()
     {
@@ -278,6 +297,70 @@ public partial class JabStepAnimTest : Node
 
             case Step.Observe:
                 Observe();
+                if (_frame < _stepDeadlineFrame) break;
+                if (_scenario == "jabstep-differs-from-retreatdribble")
+                {
+                    // The jab leg is done and `_leanAtLastActiveTick` holds its
+                    // Active-end reading. Hand off to the retreat-dribble leg
+                    // rather than rendering a verdict.
+                    _step = Step.StartDribble;
+                    break;
+                }
+                RenderVerdict();
+                break;
+
+            // ── Second leg: the retreat dribble (#333) ───────────────────────
+            case Step.StartDribble:
+                // Re-pin the actor. The jab step's recovery hands control back
+                // to Move(), so between the two legs the actor is free to drift
+                // — and the comparison is only meaningful if both moves are
+                // measured from the same stance and the same heading.
+                _actor.GlobalPosition = ActorSpot;
+                _actor.SetHeadingForHarness(
+                    Mathf.Atan2(RimCenter.X - ActorSpot.X, RimCenter.Z - ActorSpot.Z));
+                // RetreatDribble sits inside BeginCommittedMove's dead-dribble
+                // gate ("you cannot retreat-dribble a ball you haven't started
+                // bouncing"); JabStep does not, which is why leg 1 needed no
+                // such step.
+                _ball.TryStartDribble(1);
+                _step = Step.AwaitDribble;
+                _stepDeadlineFrame = _frame + ActFrames;
+                break;
+
+            case Step.AwaitDribble:
+                if (_frame < _stepDeadlineFrame) break;
+                if (_ball.State != BallState.Dribbling)
+                {
+                    Fail($"{_scenario}: TryStartDribble(1) did not reach BallState.Dribbling by frame " +
+                         $"{_frame} (got {_ball.State}) — the retreat-dribble half of this comparison " +
+                         "cannot legally begin without a live dribble.");
+                    Finish();
+                    return;
+                }
+                _step = Step.Act2;
+                _stepDeadlineFrame = _frame + ActFrames;
+                break;
+
+            case Step.Act2:
+                if (_frame < _stepDeadlineFrame) break;
+                {
+                    var skelPre = FindSkeleton(_actor);
+                    if (skelPre != null) _leanBeforeRetreat = MeasureSpineHeadForward(skelPre);
+                }
+                if (!_actor.BeginMoveForHarness(new RetreatDribble()))
+                {
+                    Fail($"{_scenario}: BeginMoveForHarness(new RetreatDribble()) returned false — " +
+                         "the actor's machine was not Inactive at begin, or the dead-dribble gate " +
+                         $"refused it (ball state {_ball.State}).");
+                    Finish();
+                    return;
+                }
+                _step = Step.Observe2;
+                _stepDeadlineFrame = _frame + ObserveFrames;
+                break;
+
+            case Step.Observe2:
+                ObserveRetreatDribble();
                 if (_frame >= _stepDeadlineFrame) RenderVerdict();
                 break;
         }
@@ -315,6 +398,7 @@ public partial class JabStepAnimTest : Node
         }
         else if (node == "JabStepActive")
         {
+            _jabActiveTicks++;
             _leanAtLastActiveTick = lean;
         }
         else
@@ -327,6 +411,27 @@ public partial class JabStepAnimTest : Node
         }
     }
 
+    // Second leg of `jabstep-differs-from-retreatdribble` (#333). Deliberately
+    // a separate method rather than a prefix-parameterised `Observe()`: the two
+    // legs latch into different fields and only one of them needs the pose
+    // snapshots, so parameterising would add a branch to every line of the
+    // hot path to save nine.
+    private void ObserveRetreatDribble()
+    {
+        string node = _actor.ActiveAnimNodeForHarness;
+        if (node != "RetreatDribbleActive") return;
+
+        var skel = FindSkeleton(_actor);
+        if (skel == null) return;
+
+        _sawRdActive = true;
+        _rdActiveTicks++;
+        // Overwritten every Active tick, so it ends up holding the LAST one —
+        // the same "sample the final tick" discipline leg 1 uses, and the same
+        // reason (#316's phase-label-leads-pose-by-one-tick trap).
+        _leanAtLastRdActiveTick = MeasureSpineHeadForward(skel);
+    }
+
     private void RenderVerdict()
     {
         switch (_scenario)
@@ -335,7 +440,100 @@ public partial class JabStepAnimTest : Node
             case "jabstep-startup-differs-from-recovery":       VerdictStartupDiffersFromRecovery(); break;
             case "jabstep-torso-pitches-forward-in-active":     VerdictTorsoPitchesForward(); break;
             case "control-jabstep-torso-modest-in-startup":     VerdictControlTorsoModestInStartup(); break;
+            case "jabstep-differs-from-retreatdribble":         VerdictDiffersFromRetreatDribble(); break;
         }
+    }
+
+    // ── Scenario: jabstep-differs-from-retreatdribble (#333) ────────────────
+    // The only automated defence against the two clips converging, and the
+    // reason it is worth the cross-file coupling: jab step and retreat dribble
+    // are 3/2/4 ticks off the SAME assets/Dribble.fbx with the same
+    // three-held-poses structure, so at 0.150 s the torso lean SIGN is the only
+    // read that separates them (handoffs 04 and 05 both say so in as many
+    // words). Two indistinguishable committed moves is an ADR-0003 false read.
+    //
+    // WAS a guard. Until #305 landed there was no RetreatDribbleActive state,
+    // so this scenario detected its absence, printed SKIPPED and exited 0 —
+    // and, once the state DID appear, deliberately hard-Failed with "implement
+    // it against #305's actual authored shape rather than a guess made before
+    // #305 existed". That tripwire fired as designed; this is the implementation
+    // it was holding the place for.
+    //
+    // ── Why the comparison is of DELTAS, not of absolute leans ─────────────
+    // Because the absolute reading has no stable zero, and MEASUREMENT SHOWS
+    // IT MOVING. This quantity is projected onto `_cachedForward`, a horizontal
+    // axis derived once from the skeleton's own foot->toe vector at whichever
+    // pose the harness happened to cache it at — which is NOT anatomical
+    // vertical. The very same retreat-dribble Active-end pose reads:
+    //
+    //     -0.0171   here          (axis cached at the JAB's pre-move Locomotion pose)
+    //     +0.0503   RetreatDribbleAnimTest (axis cached at the DRIBBLE pose)
+    //
+    // So an absolute-value comparison would be reporting on where the axis got
+    // cached as much as on the clips. The DELTA off each move's own immediately
+    // preceding baseline cancels that offset exactly, and it is also precisely
+    // the quantity #333 asks for ("sample both moves' Active-phase
+    // torso-forward-lean DELTA ... and assert the two deltas have opposite
+    // sign"). MEASURED here:
+    //
+    //     jab step         +0.1356   (leans INTO the stab)
+    //     retreat dribble  -0.1804   (leans AWAY over a retreating base)
+    //
+    // The ABSOLUTE "past vertical" claim about the retreat dribble is a real
+    // one, but it is asserted where the reference IS well-defined:
+    // rebuild_retreatdribble_clips.gd's G5 (-0.0460 m, against Y Bot's rest
+    // chain) and author_retreatdribble.py's `_verify_torso_at_or_past_vertical`
+    // (-0.0402 m, against the rig's rest-derived `up`).
+    //
+    // Both legs run on ONE actor, in ONE skeleton space, against ONE cached
+    // forward axis, so this is a genuine comparison rather than two readings
+    // taken in different frames.
+    private void VerdictDiffersFromRetreatDribble()
+    {
+        float jabDelta = _leanAtLastActiveTick - _leanBeforeMove;
+        float rdDelta = _leanAtLastRdActiveTick - _leanBeforeRetreat;
+
+        GD.Print($"[jabstep-anim]   jab step:        beforeMove={_leanBeforeMove:F4} " +
+                 $"activeEnd={_leanAtLastActiveTick:F4} delta={jabDelta:+0.0000;-0.0000} " +
+                 $"(activeTicks={_jabActiveTicks})");
+        GD.Print($"[jabstep-anim]   retreat dribble: beforeMove={_leanBeforeRetreat:F4} " +
+                 $"activeEnd={_leanAtLastRdActiveTick:F4} delta={rdDelta:+0.0000;-0.0000} " +
+                 $"(activeTicks={_rdActiveTicks})");
+
+        // Premise, asserted rather than assumed. Both moves must actually have
+        // been observed on their Active state for MORE THAN ONE tick — on a
+        // single observation the "last" tick IS the first, which under #316 can
+        // still hold the previous phase's pose. Active is 2 ticks for both
+        // moves, the tightest window in the batch.
+        bool premise = _sawActive && _sawRdActive &&
+                       _jabActiveTicks >= 2 && _rdActiveTicks >= 2 &&
+                       !float.IsNaN(_leanBeforeMove) && !float.IsNaN(_leanBeforeRetreat);
+
+        // Each delta must clear the same magnitude floor its own move's
+        // dedicated scenario uses, in its own direction. A bare sign test would
+        // be satisfied by two clips that barely moved at all — including two
+        // UNBOUND clips, whose collapse to rest would produce arbitrary small
+        // deltas of arbitrary sign.
+        bool jabLeansIn = jabDelta >= TorsoForwardGrowthMinM;
+        bool rdLeansAway = rdDelta <= -TorsoForwardGrowthMinM;
+        bool pass = premise && jabLeansIn && rdLeansAway;
+
+        if (pass)
+            GD.Print($"[jabstep-anim] PASS jabstep-differs-from-retreatdribble — the two clips' Active-phase " +
+                     $"torso travel has OPPOSITE SIGN off their own pre-move baselines (jab step " +
+                     $"{jabDelta:+0.0000;-0.0000}, retreat dribble {rdDelta:+0.0000;-0.0000}, each clearing " +
+                     $"±{TorsoForwardGrowthMinM:F2}). The jab leans INTO the stab, the retreat leans AWAY — " +
+                     "so the two moves, which share tick counts, source FBX and pose structure, remain " +
+                     "distinguishable at 0.150 s.");
+        else
+            Fail($"jabstep-differs-from-retreatdribble: jabDelta={jabDelta:+0.0000;-0.0000} " +
+                 $"(need >= +{TorsoForwardGrowthMinM:F2}), rdDelta={rdDelta:+0.0000;-0.0000} " +
+                 $"(need <= -{TorsoForwardGrowthMinM:F2}), premise={premise} " +
+                 $"(sawActive={_sawActive}, sawRdActive={_sawRdActive}, jabActiveTicks={_jabActiveTicks}, " +
+                 $"rdActiveTicks={_rdActiveTicks}, both need >= 2). Same-sign deltas mean the two clips have " +
+                 "CONVERGED on one read — check TORSO_PITCH_SIGN in author_jabstep.py " +
+                 "(-1.0, forward) and author_retreatdribble.py (+1.0, backward).");
+        Finish(pass ? 0 : 1);
     }
 
     // ── Scenario: jabstep-phases (positive) ─────────────────────────────────
@@ -474,7 +672,6 @@ public partial class JabStepAnimTest : Node
             case "jabstep-no-placeholder-leak":         RunNoPlaceholderLeakCheck(); break;
             case "jabstep-segment-lengths":              RunSegmentLengthsCheck(); break;
             case "jabstep-edges":                        RunEdgesCheck(); break;
-            case "jabstep-differs-from-retreatdribble":  RunDiffersFromRetreatDribbleCheck(); break;
         }
     }
 
@@ -683,62 +880,6 @@ public partial class JabStepAnimTest : Node
             GD.PrintErr("[jabstep-anim] FAIL jabstep-edges — see missing transitions above.");
 
         Finish(pass ? 0 : 1);
-    }
-
-    // ── Scenario: jabstep-differs-from-retreatdribble (GUARDED) ─────────────
-    // The issue's own load-bearing extra scenario: sample the Active pose of
-    // both jab step and retreat dribble and assert the torso lean has OPPOSITE
-    // sign. Retreat dribble (#305, handoff 05) has NOT landed on main as of
-    // this PR — checked live: scenes/Player.tscn has no "RetreatDribbleActive"
-    // state. Per the issue's own instruction ("do NOT silently skip; guard it
-    // and note the gap"), this scenario is written in full but exits 0 with a
-    // clearly-printed SKIPPED verdict when retreat dribble's state does not
-    // exist yet, rather than omitting the file or asserting a premise this
-    // repo cannot currently test. A follow-up issue tracks wiring the real
-    // comparison once #305 lands (named in the PR body).
-    private void RunDiffersFromRetreatDribbleCheck()
-    {
-        var sm = LoadStateMachine();
-        if (sm == null)
-        {
-            Fail("could not read an AnimationNodeStateMachine off scenes/Player.tscn's AnimationTree tree_root.");
-            Finish(1);
-            return;
-        }
-
-        if (!sm.HasNode(RetreatDribbleActiveState))
-        {
-            GD.Print($"[jabstep-anim] SKIPPED jabstep-differs-from-retreatdribble — scenes/Player.tscn has no " +
-                     $"'{RetreatDribbleActiveState}' state yet (#305/handoff 05 has not landed on main as of " +
-                     "this PR). This is a real, tracked gap, not a silent omission — see the PR body for the " +
-                     "filed follow-up issue. Exiting 0 rather than failing on a premise this repo cannot yet test.");
-            Finish(0);
-            return;
-        }
-
-        // #305 has landed: do the real comparison. Sample both clips' Active
-        // pose (by manual FK, the same technique the rebuild scripts use) and
-        // assert the spine->head forward lean has OPPOSITE sign.
-        var lib = GD.Load<AnimationLibrary>("res://assets/locomotion.res");
-        if (lib == null || !lib.HasAnimation("jabstepactive") || !lib.HasAnimation("retreatdribbleactive"))
-        {
-            Fail("jabstep-differs-from-retreatdribble: RetreatDribbleActive state exists but " +
-                 "'jabstepactive'/'retreatdribbleactive' clips are missing from locomotion.res.");
-            Finish(1);
-            return;
-        }
-
-        // This repo's convention for a cross-move comparison is a live geometry
-        // sample via the resolved skeleton, not a resource-side FK reimplementation
-        // duplicated a third time. Since the concrete assertion depends on
-        // #305's own authored channel names/shape (not yet decided), this stub
-        // deliberately stops at detecting the state exists and defers the real
-        // comparison's authorship to the follow-up issue, rather than guessing
-        // at #305's not-yet-written internals.
-        Fail("jabstep-differs-from-retreatdribble: RetreatDribbleActive now exists but this scenario's real " +
-             "comparison body was deferred to the #305 follow-up issue (see PR body) — implement it there " +
-             "against #305's actual authored shape rather than a guess made before #305 existed.");
-        Finish(1);
     }
 
     private static AnimationNodeStateMachine LoadStateMachine()

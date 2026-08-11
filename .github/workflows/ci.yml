@@ -1401,12 +1401,32 @@ jobs:
       # pose by Startup's own end, the same choice author_contest.py made for
       # its own Startup/Active boundary).
       #
-      # jabstep-differs-from-retreatdribble is GUARDED: #305 (retreat dribble)
-      # has not landed on main as of this PR, so the scenario detects the
-      # absence of Player.tscn's "RetreatDribbleActive" state and exits 0 with
-      # a printed SKIPPED verdict rather than silently omitting the file or
-      # asserting an untestable premise. See PR #304's body for the filed
-      # follow-up issue that tracks wiring the real comparison once #305 lands.
+      # jabstep-differs-from-retreatdribble is NO LONGER GUARDED (#333). #305
+      # landed the RetreatDribbleActive state, so the scenario that used to
+      # detect its absence and print SKIPPED now runs the real comparison: it
+      # drives BOTH moves back to back on one actor — the jab, then a retreat
+      # dribble after TryStartDribble (RetreatDribble sits inside
+      # BeginCommittedMove's dead-dribble gate; JabStep does not) — and asserts
+      # their Active-phase torso travel has OPPOSITE SIGN, each delta clearing
+      # the same ±0.02 floor its own move's dedicated scenario uses.
+      #
+      # Measured live: jab step +0.1356, retreat dribble -0.1804.
+      #
+      # The comparison is of DELTAS off each move's own pre-move baseline, NOT
+      # of absolute leans, and that is load-bearing rather than stylistic: the
+      # measurement axis is a cached foot->toe vector with no anatomical zero,
+      # so the SAME retreat-dribble pose reads -0.0171 in this harness and
+      # +0.0503 in RetreatDribbleAnimTest depending on which pose the axis was
+      # cached at. Deltas cancel that offset; absolute values would be reporting
+      # on the axis. The absolute "past vertical" claim is asserted instead
+      # where the reference is well-defined — rebuild_retreatdribble_clips.gd's
+      # G5 (-0.0460 m) and author_retreatdribble.py's
+      # _verify_torso_at_or_past_vertical (-0.0402 m).
+      #
+      # Mutation-proven: pointing RetreatDribbleActive at locomotion/jabstepactive
+      # (the opposite-lean clip — i.e. the two-clips-converge failure this
+      # scenario exists to prevent) flips the retreat delta to +0.0620 and
+      # reddens it.
       # Each scenario exits 0=PASS/1=FAIL (ADR-0016).
       - name: Run jab step per-move animation state harness
         run: |
@@ -1418,6 +1438,97 @@ jobs:
           godot --headless --path . res://tests/integration/JabStepAnimTest.tscn -- --harness-scenario=jabstep-torso-pitches-forward-in-active
           godot --headless --path . res://tests/integration/JabStepAnimTest.tscn -- --harness-scenario=control-jabstep-torso-modest-in-startup
           godot --headless --path . res://tests/integration/JabStepAnimTest.tscn -- --harness-scenario=jabstep-differs-from-retreatdribble
+
+      # Retreat dribble per-move clips (issue #305, #302 batch 2) — JAB STEP'S
+      # TWIN, and the pair must be read together. Identical 3/2/4 tick shape,
+      # identical source (assets/Dribble.fbx), identical three-held-poses
+      # structure. At 0.150 s total the ONLY read that separates them is the
+      # torso lean SIGN, which is why this move's own torso scenario and the
+      # cross-move jabstep-differs-from-retreatdribble above both exist.
+      #
+      # Before #305 "retreatdribble" fell through
+      # MoveAnimResolver.ResolveStateName's default case onto the shared generic
+      # states (#296: a looping idle for Startup/Recovery, a sprint-stride
+      # fragment for Active).
+      #
+      # retreatdribble-torso-goes-back-in-active is the read. Measured live: the
+      # pre-move-baseline -> Active-end delta is -0.2016 m (floor -0.02, ~10x
+      # headroom), the opposite sign to jab step's +0.1356 off the identically
+      # shaped gate. control-retreatdribble-torso-modest-in-startup proves the
+      # lean is still deepening when Active begins — Startup's own travel is
+      # -0.0951 against Active's -0.2016, a 0.1065 margin (floor 0.04). That
+      # floor is set materially higher than jab step's 0.015 because this clip
+      # has the room and the jab does not: this Startup completes only 25 of its
+      # 35 deg of counter-rotation.
+      #
+      # retreatdribble-hips-stay-in-place is the gate specific to THIS move, and
+      # it guards a defect nothing else in the pipeline can see.
+      # PlayerController's RetreatDribble branch already moves the player on
+      # JustEnteredActive (Velocity = 4.0 m/s backward, RetreatDribbleBurstSpeed),
+      # so the clip is authored IN PLACE — the retreat is expressed as the FEET
+      # drifting forward relative to the hips, never as root translation. A clip
+      # that also translated its root would play the retreat TWICE and slide the
+      # mesh off its collider while binding, resolving, slicing to length and
+      # passing every pose comparison. Measured in SKELETON space (the character
+      # node genuinely IS moving at 4 m/s here, by design): the Hips swept a
+      # horizontal box 0.0004 m across, against a 0.01 m ceiling.
+      #
+      # What is gated is the SPAN of the move's own samples, not their distance
+      # from the pre-move baseline (code review of PR #351). The baseline is
+      # sampled in the Dribble BlendSpace — a different clip — so a
+      # baseline-relative gate folds in the constant offset between the two
+      # clips' hip positions, and a later re-author of dribble_move_authored.fbx
+      # would redden this scenario while blaming a retreat clip that never
+      # changed. Both readings are printed; only the span is gated.
+      #
+      # retreatdribble-segment-lengths matters as much as jab step's for the
+      # same reason: Active is 2 ticks = 0.0333 s, so a one-tick mis-slice is a
+      # 50% length error. Tolerance is a float-noise band (1e-3 s).
+      #
+      # MUTATION-PROVEN (a green scenario that cannot fail is worse than none):
+      #   RetreatDribbleRecovery -> the Startup clip
+      #       -> retreatdribble-startup-differs-from-recovery AND
+      #          retreatdribble-no-placeholder-leak reddened
+      #          (retreatdribble-phases stayed green, correctly — the state is
+      #          still entered, which is exactly why the pose gate exists)
+      #   RetreatDribbleActive -> locomotion/jabstepactive (the opposite lean)
+      #       -> retreatdribble-torso-goes-back-in-active reddened, delta
+      #          flipping -0.2016 -> +0.0710; the control and the cross-move
+      #          scenario reddened too
+      #   RetreatDribbleActive -> locomotion/run (a clip with real root travel)
+      #       -> retreatdribble-hips-stay-in-place reddened at a 0.3127 m span
+      #          (780x the honest 0.0004 m reading)
+      #   MeasureHipsLocal's bone name -> an unresolvable one
+      #       -> retreatdribble-hips-stay-in-place reddened on its premise
+      #          (hipsBoneMissing=True, spannedTicks=0). Run twice, because the
+      #          point was the CONTRAST: with the earlier Vector3.Zero fallback
+      #          restored, the same unresolvable bone printed "PASS … swept a
+      #          horizontal box only 0.0000 m across" — every sample and the
+      #          baseline collapsing to the same Zero. This file's signature
+      #          gate was vacuous for exactly one reachable reason (the
+      #          mixamorig_ vs mixamorig: prefix trap, an fbx/naming_version
+      #          change, a rig swap), which is why MeasureHipsLocal now returns
+      #          null and the premise rejects it.
+      #   deleted the DribbleRight -> RetreatDribbleStartup edge
+      #       -> retreatdribble-edges reddened; retreatdribble-phases stayed
+      #          GREEN, confirming README trap 8 (Travel()'s pathfinder routes
+      #          around a missing edge, so only the resource-level check sees it)
+      #   rebuild_retreatdribble_clips.gd ACTIVE_TICKS 2 -> 3
+      #       -> retreatdribble-segment-lengths reddened (0.0500 vs 0.0333 s)
+      #   author_retreatdribble.py TORSO_PITCH_SIGN +1.0 -> -1.0
+      #       -> the Blender authoring run itself exits 1 on
+      #          _torso_pitch_sign_is_backward, before any export
+      # Each scenario exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run retreat dribble per-move animation state harness
+        run: |
+          godot --headless --path . res://tests/integration/RetreatDribbleAnimTest.tscn -- --harness-scenario=retreatdribble-phases
+          godot --headless --path . res://tests/integration/RetreatDribbleAnimTest.tscn -- --harness-scenario=retreatdribble-no-placeholder-leak
+          godot --headless --path . res://tests/integration/RetreatDribbleAnimTest.tscn -- --harness-scenario=retreatdribble-segment-lengths
+          godot --headless --path . res://tests/integration/RetreatDribbleAnimTest.tscn -- --harness-scenario=retreatdribble-edges
+          godot --headless --path . res://tests/integration/RetreatDribbleAnimTest.tscn -- --harness-scenario=retreatdribble-startup-differs-from-recovery
+          godot --headless --path . res://tests/integration/RetreatDribbleAnimTest.tscn -- --harness-scenario=retreatdribble-torso-goes-back-in-active
+          godot --headless --path . res://tests/integration/RetreatDribbleAnimTest.tscn -- --harness-scenario=control-retreatdribble-torso-modest-in-startup
+          godot --headless --path . res://tests/integration/RetreatDribbleAnimTest.tscn -- --harness-scenario=retreatdribble-hips-stay-in-place
 
       # Block per-move clips (issue #283, #302 batch 2). The EXACT INVERSE of the
       # contest harness above, and the pair should be read together: the two

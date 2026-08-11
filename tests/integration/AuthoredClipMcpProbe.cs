@@ -135,6 +135,7 @@ public partial class AuthoredClipMcpProbe : Node
         var block = BlockMove.DefaultFrameData;
         var jabstep = JabStep.DefaultFrameData;
         var inandout = InAndOut.DefaultFrameData;
+        var retreatdribble = RetreatDribble.DefaultFrameData;
 
         return new[]
         {
@@ -175,6 +176,83 @@ public partial class AuthoredClipMcpProbe : Node
                 },
                 new[] { "StealStartupLeft", "StealActiveLeft", "StealRecoveryLeft" },
                 () => new StealMove(HandSide.Left, -1f)),
+
+            // ORDER IS LOAD-BEARING FROM HERE TO THE END OF THIS LIST, and it
+            // constrains in BOTH directions, so this is not a free reshuffle.
+            //
+            // StartLiveDribble runs exactly ONCE, at boot. The layup family
+            // below cradles on begin (BeginCommittedMove calls
+            // CradleForShotStartup for JumpShot/Layup/DriveGather/EuroStep),
+            // which stops the dribble and sets HasDribbled -- and the probe
+            // never changes possession, so DeadDribbleRule refuses every later
+            // TryStartDribble. Every family after layup therefore runs from a
+            // dead Held ball, permanently.
+            //
+            // So the two dribble-gated families must sit BEFORE layup: both
+            // in-and-out and retreat dribble are inside BeginCommittedMove's
+            // #193 dead-dribble gate and need BallState.Dribbling. Registered
+            // after layup (as both originally were) their live half is inert --
+            // BeginMoveForHarness returns false on every run and the probe
+            // prints only their static numbers.
+            //
+            // They cannot simply be appended and layup moved to the end,
+            // either: jabstep is the INVERSE gate (JabStepLegalityResolver --
+            // legal from Held, ILLEGAL from Dribbling), so it depends on
+            // running after the cradle has killed the dribble.
+            // #308 (PR #349). Added in the SAME follow-up that #336's comment on
+            // the jabstep family predicted would be needed: that comment records
+            // jab step being missed on arrival, and in-and-out was then missed the
+            // exact same way -- the family list is a hand-maintained duplicate of
+            // MoveAnimResolver.ClippedMovePrefixes, so nothing fails when the
+            // two drift and the probe just reports a smaller "every family".
+            //
+            // Unhanded, and unlike every other unhanded family here the ball
+            // NEVER swaps hands (InAndOut.cs) -- which is why it must stay out
+            // of MoveAnimResolver.HandedMoves. The ctor takes a burstDirection
+            // (the move carries a burst payload even though it is not
+            // hand-directional); +1f is the right-side burst, matching the
+            // fixed polarity the clip is baked to.
+            new Family("inandout", "In-and-out (PR #349 / #308)",
+                "assets/inandout_authored.fbx",
+                new (string, int?)[]
+                {
+                    ("inandoutstartup",  inandout.StartupFrames),
+                    ("inandoutactive",   inandout.ActiveFrames),
+                    ("inandoutrecovery", inandout.RecoveryFrames),
+                },
+                new[] { "InAndOutStartup", "InAndOutActive", "InAndOutRecovery" },
+                () => new InAndOut(1f)),
+
+            // #305. Registered ON ARRIVAL rather than in a follow-up, which is
+            // the whole point of the comment above: jab step was missed, then
+            // in-and-out was missed the same way, because this list is a
+            // hand-maintained duplicate of MoveAnimResolver.ClippedMovePrefixes
+            // and nothing fails when the two drift.
+            //
+            // JAB STEP'S TWIN — same 3/2/4 ticks off the same
+            // assets/Dribble.fbx, separated only by torso lean sign. Reading
+            // the two families' output side by side in this probe is the
+            // fastest way to eyeball that they have not converged; the
+            // automated version is JabStepAnimTest's
+            // jabstep-differs-from-retreatdribble (#333).
+            //
+            // Unhanded (the ball never leaves the dribbling hand), so it must
+            // stay out of MoveAnimResolver.HandedMoves. The ctor takes no burst
+            // direction at all — unlike in-and-out, the retreat is a fixed hop
+            // straight back along Heading, applied by PlayerController rather
+            // than carried in the clip. It DOES need the live dribble
+            // StartLiveDribble establishes: RetreatDribble sits inside
+            // BeginCommittedMove's dead-dribble gate.
+            new Family("retreatdribble", "Retreat dribble (#305)",
+                "assets/retreatdribble_authored.fbx",
+                new (string, int?)[]
+                {
+                    ("retreatdribblestartup",  retreatdribble.StartupFrames),
+                    ("retreatdribbleactive",   retreatdribble.ActiveFrames),
+                    ("retreatdribblerecovery", retreatdribble.RecoveryFrames),
+                },
+                new[] { "RetreatDribbleStartup", "RetreatDribbleActive", "RetreatDribbleRecovery" },
+                () => new RetreatDribble()),
 
             new Family("layup", "Layup (PR #326 / #313)",
                 "assets/layup_authored.fbx",
@@ -225,30 +303,6 @@ public partial class AuthoredClipMcpProbe : Node
                 },
                 new[] { "JabStepStartup", "JabStepActive", "JabStepRecovery" },
                 () => new JabStep()),
-
-            // #308 (PR #349). Added in the SAME follow-up that #336's comment
-            // above predicted would be needed: that comment records jab step
-            // being missed on arrival, and in-and-out was then missed the exact
-            // same way -- the family list is a hand-maintained duplicate of
-            // MoveAnimResolver.ClippedMovePrefixes, so nothing fails when the
-            // two drift and the probe just reports a smaller "every family".
-            //
-            // Unhanded, and unlike every other unhanded family here the ball
-            // NEVER swaps hands (InAndOut.cs) -- which is why it must stay out
-            // of MoveAnimResolver.HandedMoves. The ctor takes a burstDirection
-            // (the move carries a burst payload even though it is not
-            // hand-directional); +1f is the right-side burst, matching the
-            // fixed polarity the clip is baked to.
-            new Family("inandout", "In-and-out (PR #349 / #308)",
-                "assets/inandout_authored.fbx",
-                new (string, int?)[]
-                {
-                    ("inandoutstartup",  inandout.StartupFrames),
-                    ("inandoutactive",   inandout.ActiveFrames),
-                    ("inandoutrecovery", inandout.RecoveryFrames),
-                },
-                new[] { "InAndOutStartup", "InAndOutActive", "InAndOutRecovery" },
-                () => new InAndOut(1f)),
         };
     }
 
