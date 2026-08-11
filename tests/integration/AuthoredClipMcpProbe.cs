@@ -177,60 +177,32 @@ public partial class AuthoredClipMcpProbe : Node
                 new[] { "StealStartupLeft", "StealActiveLeft", "StealRecoveryLeft" },
                 () => new StealMove(HandSide.Left, -1f)),
 
-            new Family("layup", "Layup (PR #326 / #313)",
-                "assets/layup_authored.fbx",
-                new (string, int?)[]
-                {
-                    ("layupstartup",  layup.StartupFrames),
-                    ("layupactive",   layup.ActiveFrames),
-                    ("layuprecovery", layup.RecoveryFrames),
-                },
-                new[] { "LayupStartup", "LayupActive", "LayupRecovery" },
-                () => new Layup()),
-
-            new Family("contest", "Contest (PR #327 / #314)",
-                "assets/contest_authored.fbx",
-                new (string, int?)[]
-                {
-                    ("conteststartup", contest.StartupFrames),
-                    ("contestactive",  contest.ActiveFrames),
-                    ("contestrecovery",contest.RecoveryFrames),
-                },
-                new[] { "ContestStartup", "ContestActive", "ContestRecovery" },
-                () => new ContestMove()),
-
-            new Family("block", "Block (PR #332 / #283)",
-                "assets/block_authored.fbx",
-                new (string, int?)[]
-                {
-                    ("blockstartup",  block.StartupFrames),
-                    ("blockactive",   block.ActiveFrames),
-                    ("blockrecovery", block.RecoveryFrames),
-                },
-                new[] { "BlockStartup", "BlockActive", "BlockRecovery" },
-                () => new BlockMove()),
-
-            // #336 — added late. Jab step (PR #334 / #304) landed on THIS branch
-            // one commit before the probe itself and was still missed, which is
-            // why the probe's "every authored clip family" claim was false on
-            // arrival. Unhanded, so no left/right split. Note the real moveId is
-            // "jab", not "jabstep" (JabStep.cs:71) — the clip names take the
-            // longer form, the resolver keys on the shorter one.
-            new Family("jabstep", "Jab step (PR #334 / #304)",
-                "assets/jabstep_authored.fbx",
-                new (string, int?)[]
-                {
-                    ("jabstepstartup",  jabstep.StartupFrames),
-                    ("jabstepactive",   jabstep.ActiveFrames),
-                    ("jabsteprecovery", jabstep.RecoveryFrames),
-                },
-                new[] { "JabStepStartup", "JabStepActive", "JabStepRecovery" },
-                () => new JabStep()),
-
-            // #308 (PR #349). Added in the SAME follow-up that #336's comment
-            // above predicted would be needed: that comment records jab step
-            // being missed on arrival, and in-and-out was then missed the exact
-            // same way -- the family list is a hand-maintained duplicate of
+            // ORDER IS LOAD-BEARING FROM HERE TO THE END OF THIS LIST, and it
+            // constrains in BOTH directions, so this is not a free reshuffle.
+            //
+            // StartLiveDribble runs exactly ONCE, at boot. The layup family
+            // below cradles on begin (BeginCommittedMove calls
+            // CradleForShotStartup for JumpShot/Layup/DriveGather/EuroStep),
+            // which stops the dribble and sets HasDribbled -- and the probe
+            // never changes possession, so DeadDribbleRule refuses every later
+            // TryStartDribble. Every family after layup therefore runs from a
+            // dead Held ball, permanently.
+            //
+            // So the two dribble-gated families must sit BEFORE layup: both
+            // in-and-out and retreat dribble are inside BeginCommittedMove's
+            // #193 dead-dribble gate and need BallState.Dribbling. Registered
+            // after layup (as both originally were) their live half is inert --
+            // BeginMoveForHarness returns false on every run and the probe
+            // prints only their static numbers.
+            //
+            // They cannot simply be appended and layup moved to the end,
+            // either: jabstep is the INVERSE gate (JabStepLegalityResolver --
+            // legal from Held, ILLEGAL from Dribbling), so it depends on
+            // running after the cradle has killed the dribble.
+            // #308 (PR #349). Added in the SAME follow-up that #336's comment on
+            // the jabstep family predicted would be needed: that comment records
+            // jab step being missed on arrival, and in-and-out was then missed the
+            // exact same way -- the family list is a hand-maintained duplicate of
             // MoveAnimResolver.ClippedMovePrefixes, so nothing fails when the
             // two drift and the probe just reports a smaller "every family".
             //
@@ -281,6 +253,56 @@ public partial class AuthoredClipMcpProbe : Node
                 },
                 new[] { "RetreatDribbleStartup", "RetreatDribbleActive", "RetreatDribbleRecovery" },
                 () => new RetreatDribble()),
+
+            new Family("layup", "Layup (PR #326 / #313)",
+                "assets/layup_authored.fbx",
+                new (string, int?)[]
+                {
+                    ("layupstartup",  layup.StartupFrames),
+                    ("layupactive",   layup.ActiveFrames),
+                    ("layuprecovery", layup.RecoveryFrames),
+                },
+                new[] { "LayupStartup", "LayupActive", "LayupRecovery" },
+                () => new Layup()),
+
+            new Family("contest", "Contest (PR #327 / #314)",
+                "assets/contest_authored.fbx",
+                new (string, int?)[]
+                {
+                    ("conteststartup", contest.StartupFrames),
+                    ("contestactive",  contest.ActiveFrames),
+                    ("contestrecovery",contest.RecoveryFrames),
+                },
+                new[] { "ContestStartup", "ContestActive", "ContestRecovery" },
+                () => new ContestMove()),
+
+            new Family("block", "Block (PR #332 / #283)",
+                "assets/block_authored.fbx",
+                new (string, int?)[]
+                {
+                    ("blockstartup",  block.StartupFrames),
+                    ("blockactive",   block.ActiveFrames),
+                    ("blockrecovery", block.RecoveryFrames),
+                },
+                new[] { "BlockStartup", "BlockActive", "BlockRecovery" },
+                () => new BlockMove()),
+
+            // #336 — added late. Jab step (PR #334 / #304) landed on THIS branch
+            // one commit before the probe itself and was still missed, which is
+            // why the probe's "every authored clip family" claim was false on
+            // arrival. Unhanded, so no left/right split. Note the real moveId is
+            // "jab", not "jabstep" (JabStep.cs:71) — the clip names take the
+            // longer form, the resolver keys on the shorter one.
+            new Family("jabstep", "Jab step (PR #334 / #304)",
+                "assets/jabstep_authored.fbx",
+                new (string, int?)[]
+                {
+                    ("jabstepstartup",  jabstep.StartupFrames),
+                    ("jabstepactive",   jabstep.ActiveFrames),
+                    ("jabsteprecovery", jabstep.RecoveryFrames),
+                },
+                new[] { "JabStepStartup", "JabStepActive", "JabStepRecovery" },
+                () => new JabStep()),
         };
     }
 
