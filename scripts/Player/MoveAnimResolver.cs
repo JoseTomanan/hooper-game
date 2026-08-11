@@ -176,6 +176,7 @@ public static class MoveAnimResolver
         ["contest"]       = "Contest", // #314 — unhanded, symmetric by design; see ContestAnimTest
         ["jab"]           = "JabStep", // #304 — unhanded; the CommittedMove.Id is "jab" (JabStep.cs), not "jabstep"
         ["inandout"]      = "InAndOut", // #308 — unhanded; the ball NEVER swaps hands (InAndOut.cs), so it must NOT join HandedMoves — see that set's docstring
+        ["retreatdribble"] = "RetreatDribble", // #305 — unhanded; the ball never leaves the dribbling hand (RetreatDribble.cs), so it must NOT join HandedMoves
     };
 
     /// <summary>
@@ -332,7 +333,7 @@ public static class MoveAnimResolver
     /// nonexistent state that Travel() would silently no-op against.
     ///
     /// Every other combination — an unclipped/unknown moveId on any phase (as of
-    /// #304: spin, betweenthelegs and the rest of #302's batch; consult
+    /// #305: spin, betweenthelegs and the rest of #302's batch; consult
     /// <see cref="ClippedMovePrefixes"/> rather than this list, which goes stale
     /// each time a clip lands), or a null/empty moveId (no move in flight) —
     /// degrades to the generic fallback name (<c>generic.ToString()</c>),
