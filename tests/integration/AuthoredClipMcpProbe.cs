@@ -135,6 +135,7 @@ public partial class AuthoredClipMcpProbe : Node
         var block = BlockMove.DefaultFrameData;
         var jabstep = JabStep.DefaultFrameData;
         var inandout = InAndOut.DefaultFrameData;
+        var retreatdribble = RetreatDribble.DefaultFrameData;
 
         return new[]
         {
@@ -249,6 +250,37 @@ public partial class AuthoredClipMcpProbe : Node
                 },
                 new[] { "InAndOutStartup", "InAndOutActive", "InAndOutRecovery" },
                 () => new InAndOut(1f)),
+
+            // #305. Registered ON ARRIVAL rather than in a follow-up, which is
+            // the whole point of the comment above: jab step was missed, then
+            // in-and-out was missed the same way, because this list is a
+            // hand-maintained duplicate of MoveAnimResolver.ClippedMovePrefixes
+            // and nothing fails when the two drift.
+            //
+            // JAB STEP'S TWIN — same 3/2/4 ticks off the same
+            // assets/Dribble.fbx, separated only by torso lean sign. Reading
+            // the two families' output side by side in this probe is the
+            // fastest way to eyeball that they have not converged; the
+            // automated version is JabStepAnimTest's
+            // jabstep-differs-from-retreatdribble (#333).
+            //
+            // Unhanded (the ball never leaves the dribbling hand), so it must
+            // stay out of MoveAnimResolver.HandedMoves. The ctor takes no burst
+            // direction at all — unlike in-and-out, the retreat is a fixed hop
+            // straight back along Heading, applied by PlayerController rather
+            // than carried in the clip. It DOES need the live dribble
+            // StartLiveDribble establishes: RetreatDribble sits inside
+            // BeginCommittedMove's dead-dribble gate.
+            new Family("retreatdribble", "Retreat dribble (#305)",
+                "assets/retreatdribble_authored.fbx",
+                new (string, int?)[]
+                {
+                    ("retreatdribblestartup",  retreatdribble.StartupFrames),
+                    ("retreatdribbleactive",   retreatdribble.ActiveFrames),
+                    ("retreatdribblerecovery", retreatdribble.RecoveryFrames),
+                },
+                new[] { "RetreatDribbleStartup", "RetreatDribbleActive", "RetreatDribbleRecovery" },
+                () => new RetreatDribble()),
         };
     }
 
