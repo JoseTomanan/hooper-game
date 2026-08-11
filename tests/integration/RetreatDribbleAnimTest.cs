@@ -661,9 +661,9 @@ public partial class RetreatDribbleAnimTest : Node
     // ── Scenario: retreatdribble-hips-stay-in-place ─────────────────────────
     // THE TRAP WITH THIS ISSUE'S NAME ON IT, asserted on the live rig.
     //
-    // PlayerController.cs:3919-3920 already moves the character: on
-    // JustEnteredActive it sets Velocity to RetreatDribbleBurstSpeed (4.0 m/s)
-    // straight back along Heading. Handoff 05's motion spec nonetheless
+    // PlayerController already moves the character: its JustEnteredActive
+    // branch for RetreatDribble sets Velocity to RetreatDribbleBurstSpeed
+    // (4.0 m/s) straight back along Heading. Handoff 05's motion spec nonetheless
     // describes Active as "hips displaced back ~0.25 m", and authoring THAT as
     // clip translation plays the retreat TWICE and slides the mesh off its own
     // collider. So the clip is authored IN PLACE — the retreat is expressed as
@@ -907,7 +907,11 @@ public partial class RetreatDribbleAnimTest : Node
             ("RetreatDribbleStartup", "RetreatDribbleActive"),
             ("RetreatDribbleActive", "RetreatDribbleRecovery"),
             ("RetreatDribbleRecovery", "Locomotion"),
-            ("RetreatDribbleStartup", "RetreatDribbleRecovery"), // feint / early-out
+            // Startup -> Recovery direct. Named "feint / early-out" in the
+            // sibling families, but RetreatDribble has feintWindowFrames: 0, so
+            // for THIS move it is only the interrupt/abort path. The edge is
+            // kept for shape-consistency across the batch.
+            ("RetreatDribbleStartup", "RetreatDribbleRecovery"),
             ("RetreatDribbleStartup", "Locomotion"),             // abort
             // The dribble family, doubled by #294.
             ("DribbleLeft", "RetreatDribbleStartup"),

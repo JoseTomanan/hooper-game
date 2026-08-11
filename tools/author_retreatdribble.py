@@ -62,7 +62,7 @@ AUTHORED IN PLACE -- THE GAME ALREADY MOVES THE CHARACTER
 Handoff 05's motion spec says Active has "hips displaced back ~0.25 m". That
 number must NOT reach a translation channel.
 
-`PlayerController.cs:3919-3920` already sets, on `JustEnteredActive`:
+`PlayerController`'s RetreatDribble branch already sets, on `JustEnteredActive`:
 
     Vector2 backward = -HeadingMath.Forward(Heading);
     Velocity = new Vector3(backward.X, 0f, backward.Y) * RetreatDribbleBurstSpeed;

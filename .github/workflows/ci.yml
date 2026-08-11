@@ -1463,7 +1463,7 @@ jobs:
       #
       # retreatdribble-hips-stay-in-place is the gate specific to THIS move, and
       # it guards a defect nothing else in the pipeline can see.
-      # PlayerController.cs:3919-3920 already moves the player on
+      # PlayerController's RetreatDribble branch already moves the player on
       # JustEnteredActive (Velocity = 4.0 m/s backward, RetreatDribbleBurstSpeed),
       # so the clip is authored IN PLACE — the retreat is expressed as the FEET
       # drifting forward relative to the hips, never as root translation. A clip
