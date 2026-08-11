@@ -210,10 +210,25 @@ public partial class RetreatDribbleAnimTest : Node
     private Quaternion[] _poseAtLastRecoveryTick;
 
     // Hips bone origin in SKELETON space, sampled pre-move and then on every
-    // tick of the move. Horizontal drift off the pre-move reading is the
+    // tick of the move. The horizontal SPAN of the move's own samples is the
     // in-place proof; see VerdictHipsStayInPlace.
     private Vector3? _hipsBeforeMove;
-    private float _worstHipsHorizontalDrift;
+    private float _worstHipsBaselineOffset;   // informational only, not gated
+    private bool _hipsBoneMissing;            // a resolution failure must be RED, not 0.0000
+    private int _hipsObservedTicks;
+    private int _hipsSpannedTicks;            // observed ticks minus the #316 lead-in tick
+    private float _hipsMinX = float.PositiveInfinity;
+    private float _hipsMaxX = float.NegativeInfinity;
+    private float _hipsMinZ = float.PositiveInfinity;
+    private float _hipsMaxZ = float.NegativeInfinity;
+
+    // The diagonal of the horizontal bounding box the Hips swept during the
+    // move. Zero-width when fewer than two ticks contributed, which the
+    // verdict's premise rejects rather than reads as a clean pass.
+    private float HipsHorizontalSpan =>
+        _hipsSpannedTicks < 2
+            ? 0f
+            : new Vector2(_hipsMaxX - _hipsMinX, _hipsMaxZ - _hipsMinZ).Length();
 
     public override void _Ready()
     {
@@ -383,11 +398,47 @@ public partial class RetreatDribbleAnimTest : Node
         // phase's last, because the in-place claim is about the whole
         // trajectory: a clip that translates out and back would have zero
         // endpoint drift and a large excursion in between.
-        if (_hipsBeforeMove != null)
+        //
+        // What is GATED is the horizontal SPAN of the move's own samples, not
+        // the distance from the pre-move baseline. The baseline is sampled in
+        // the Dribble BlendSpace — a DIFFERENT clip — so a baseline-relative
+        // gate quietly folds in the constant offset between the two clips' hip
+        // positions. It reads 0.0004 m today only because the two happen to
+        // agree; a future re-author of dribble_move_authored.fbx that shifted
+        // the stance 2 cm fore would redden this scenario while blaming root
+        // translation in a retreat clip that never changed. The span measures
+        // exactly what the scenario name claims — this clip does not move its
+        // own root — and the baseline offset is still printed as information.
+        //
+        // The move's FIRST observed tick is excluded from the span: the phase
+        // label leads the pose by one tick (#316), so that sample still holds
+        // the pre-move dribble pose and would drag the inter-clip offset back
+        // in through the side door.
+        Vector3? hipsNow = MeasureHipsLocal(skel);
+        if (hipsNow == null)
         {
-            Vector3 d = MeasureHipsLocal(skel) - _hipsBeforeMove.Value;
-            d.Y = 0f; // vertical hip motion IS authored (the crouch); horizontal is not
-            _worstHipsHorizontalDrift = Math.Max(_worstHipsHorizontalDrift, d.Length());
+            _hipsBoneMissing = true;
+        }
+        else
+        {
+            _hipsObservedTicks++;
+            if (_hipsObservedTicks > 1)
+            {
+                // X/Z only: vertical hip motion IS authored (the crouch drops
+                // the hips 0.11 m); only the horizontal plane is claimed.
+                _hipsMinX = Math.Min(_hipsMinX, hipsNow.Value.X);
+                _hipsMaxX = Math.Max(_hipsMaxX, hipsNow.Value.X);
+                _hipsMinZ = Math.Min(_hipsMinZ, hipsNow.Value.Z);
+                _hipsMaxZ = Math.Max(_hipsMaxZ, hipsNow.Value.Z);
+                _hipsSpannedTicks++;
+            }
+
+            if (_hipsBeforeMove != null)
+            {
+                Vector3 d = hipsNow.Value - _hipsBeforeMove.Value;
+                d.Y = 0f;
+                _worstHipsBaselineOffset = Math.Max(_worstHipsBaselineOffset, d.Length());
+            }
         }
 
         if (node == "RetreatDribbleStartup")
@@ -606,28 +657,48 @@ public partial class RetreatDribbleAnimTest : Node
     // by design, and a world-space reading would be dominated by exactly the
     // motion that is supposed to be there.
     //
-    // Y is zeroed because vertical hip motion IS authored: the keypose table
-    // drops the hips 0.11 m into the loaded recovery stance. Only the
-    // horizontal plane is claimed.
+    // Only X/Z are measured, because vertical hip motion IS authored: the
+    // keypose table drops the hips 0.11 m into the loaded recovery stance. Only
+    // the horizontal plane is claimed.
     //
     // Sampled on EVERY tick of the move rather than at the endpoints, because a
     // clip that translated out and back would show zero endpoint drift and a
-    // large mid-move excursion.
+    // large mid-move excursion. The gate is the SPAN of those samples (see
+    // Observe) rather than their distance from the pre-move baseline, so that
+    // the reading depends on this clip alone and not on the dribble clip the
+    // baseline happens to be sampled in.
     private void VerdictHipsStayInPlace()
     {
-        GD.Print($"[retreatdribble-anim]   worst Hips horizontal drift (skeleton space) = " +
-                 $"{_worstHipsHorizontalDrift:F4} m (max {HipsHorizontalDriftMaxM:F2})");
+        float span = HipsHorizontalSpan;
+        GD.Print($"[retreatdribble-anim]   Hips horizontal span across the move (skeleton space) = " +
+                 $"{span:F4} m (max {HipsHorizontalDriftMaxM:F2}) over {_hipsSpannedTicks} spanned tick(s); " +
+                 $"offset from the pre-move dribble stance = {_worstHipsBaselineOffset:F4} m (informational)");
 
-        bool premise = _sawStartup && _sawActive && _sawRecovery && _hipsBeforeMove != null;
-        bool pass = premise && _worstHipsHorizontalDrift <= HipsHorizontalDriftMaxM;
+        bool premise = _sawStartup && _sawActive && _sawRecovery
+                       && _hipsBeforeMove != null && !_hipsBoneMissing && _hipsSpannedTicks >= 2;
+        bool pass = premise && span <= HipsHorizontalDriftMaxM;
         if (pass)
-            GD.Print("[retreatdribble-anim] PASS retreatdribble-hips-stay-in-place — the Hips bone never " +
-                     $"travelled more than {_worstHipsHorizontalDrift:F4} m horizontally in skeleton space " +
-                     "across the whole move, so the clip is authored IN PLACE and the only thing moving the " +
+            GD.Print("[retreatdribble-anim] PASS retreatdribble-hips-stay-in-place — across the whole move " +
+                     $"the Hips bone swept a horizontal box only {span:F4} m across in skeleton space, " +
+                     "so the clip is authored IN PLACE and the only thing moving the " +
                      "player backward is RetreatDribbleBurstSpeed. No double-counted retreat.");
+        else if (!premise)
+            // Separated from the drift failure below because the two want
+            // opposite investigations, and a premise break wearing the drift
+            // message sends the reader to the clip when the problem is the
+            // measurement. hipsBoneMissing=True in particular means the gate
+            // measured NOTHING — the state that used to read 0.0000 m and print
+            // PASS before this scenario stopped trusting a Zero fallback.
+            Fail($"retreatdribble-hips-stay-in-place: PREMISE FAILED — " +
+                 $"hipsBoneMissing={_hipsBoneMissing} (did the rig's bone naming change? " +
+                 "mixamorig_ vs mixamorig: is the standing trap), " +
+                 $"spannedTicks={_hipsSpannedTicks} (need >= 2), " +
+                 $"baselineSampled={_hipsBeforeMove != null}, " +
+                 $"sawStartup={_sawStartup}, sawActive={_sawActive}, sawRecovery={_sawRecovery}. " +
+                 "Nothing was measured, so this fails rather than passes.");
         else
-            Fail($"retreatdribble-hips-stay-in-place: worst horizontal Hips drift was " +
-                 $"{_worstHipsHorizontalDrift:F4} m (max {HipsHorizontalDriftMaxM:F2}), premise={premise}. " +
+            Fail($"retreatdribble-hips-stay-in-place: Hips horizontal span was " +
+                 $"{span:F4} m (max {HipsHorizontalDriftMaxM:F2}) over {_hipsSpannedTicks} ticks. " +
                  "The clip is translating its own root, which double-counts the burst " +
                  "PlayerController already applies on JustEnteredActive and slides the mesh off its " +
                  "collider. Express the retreat as the FEET drifting forward relative to the hips " +
@@ -925,10 +996,19 @@ public partial class RetreatDribbleAnimTest : Node
     // `retreatdribble-hips-stay-in-place` needs: the character node is moving at
     // RetreatDribbleBurstSpeed during the window being measured, and that motion
     // must NOT enter the reading.
-    private static Vector3 MeasureHipsLocal(Skeleton3D skel)
+    //
+    // Returns null — NOT Vector3.Zero — when the bone does not resolve. That
+    // distinction is the whole point: a Zero fallback would make every sample
+    // AND the baseline identical, so the drift would read exactly 0.0000 m and
+    // this scenario would print PASS while measuring nothing at all. The rig
+    // has a live way to reach that state (the mixamorig: vs mixamorig_ prefix
+    // trap, an fbx/naming_version change, a rig swap), so the failure mode is
+    // reachable rather than theoretical. MeasureSpineHeadForward already
+    // degrades to NaN for the same reason; this now matches it.
+    private static Vector3? MeasureHipsLocal(Skeleton3D skel)
     {
         int hips = skel.FindBone("mixamorig_Hips");
-        return hips < 0 ? Vector3.Zero : skel.GetBoneGlobalPose(hips).Origin;
+        return hips < 0 ? null : skel.GetBoneGlobalPose(hips).Origin;
     }
 
     private static Quaternion[] SampleComparedBones(Skeleton3D skel)

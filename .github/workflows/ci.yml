@@ -1470,8 +1470,16 @@ jobs:
       # that also translated its root would play the retreat TWICE and slide the
       # mesh off its collider while binding, resolving, slicing to length and
       # passing every pose comparison. Measured in SKELETON space (the character
-      # node genuinely IS moving at 4 m/s here, by design): 0.0004 m of
-      # horizontal Hips drift, against a 0.01 m ceiling.
+      # node genuinely IS moving at 4 m/s here, by design): the Hips swept a
+      # horizontal box 0.0004 m across, against a 0.01 m ceiling.
+      #
+      # What is gated is the SPAN of the move's own samples, not their distance
+      # from the pre-move baseline (code review of PR #351). The baseline is
+      # sampled in the Dribble BlendSpace — a different clip — so a
+      # baseline-relative gate folds in the constant offset between the two
+      # clips' hip positions, and a later re-author of dribble_move_authored.fbx
+      # would redden this scenario while blaming a retreat clip that never
+      # changed. Both readings are printed; only the span is gated.
       #
       # retreatdribble-segment-lengths matters as much as jab step's for the
       # same reason: Active is 2 ticks = 0.0333 s, so a one-tick mis-slice is a
@@ -1488,8 +1496,19 @@ jobs:
       #          flipping -0.2016 -> +0.0710; the control and the cross-move
       #          scenario reddened too
       #   RetreatDribbleActive -> locomotion/run (a clip with real root travel)
-      #       -> retreatdribble-hips-stay-in-place reddened at 0.3123 m
+      #       -> retreatdribble-hips-stay-in-place reddened at a 0.3127 m span
       #          (780x the honest 0.0004 m reading)
+      #   MeasureHipsLocal's bone name -> an unresolvable one
+      #       -> retreatdribble-hips-stay-in-place reddened on its premise
+      #          (hipsBoneMissing=True, spannedTicks=0). Run twice, because the
+      #          point was the CONTRAST: with the earlier Vector3.Zero fallback
+      #          restored, the same unresolvable bone printed "PASS … swept a
+      #          horizontal box only 0.0000 m across" — every sample and the
+      #          baseline collapsing to the same Zero. This file's signature
+      #          gate was vacuous for exactly one reachable reason (the
+      #          mixamorig_ vs mixamorig: prefix trap, an fbx/naming_version
+      #          change, a rig swap), which is why MeasureHipsLocal now returns
+      #          null and the premise rejects it.
       #   deleted the DribbleRight -> RetreatDribbleStartup edge
       #       -> retreatdribble-edges reddened; retreatdribble-phases stayed
       #          GREEN, confirming README trap 8 (Travel()'s pathfinder routes
