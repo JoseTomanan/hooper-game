@@ -175,6 +175,7 @@ public static class MoveAnimResolver
         ["layup"]         = "Layup", // #313 — unhanded; see LayupAnimTest
         ["contest"]       = "Contest", // #314 — unhanded, symmetric by design; see ContestAnimTest
         ["jab"]           = "JabStep", // #304 — unhanded; the CommittedMove.Id is "jab" (JabStep.cs), not "jabstep"
+        ["inandout"]      = "InAndOut", // #308 — unhanded; the ball NEVER swaps hands (InAndOut.cs), so it must NOT join HandedMoves — see that set's docstring
     };
 
     /// <summary>

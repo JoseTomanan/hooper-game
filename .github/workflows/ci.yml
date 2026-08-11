@@ -1462,6 +1462,103 @@ jobs:
           godot --headless --path . res://tests/integration/BlockAnimTest.tscn -- --harness-scenario=block-airborne-active
           godot --headless --path . res://tests/integration/BlockAnimTest.tscn -- --harness-scenario=control-block-grounded-startup
 
+      # In-and-out per-move clips (issue #308, #302 batch 2). Before #308
+      # "inandout" fell through MoveAnimResolver.ResolveStateName's default
+      # case onto the shared generic states (#296). This move commits to ONE
+      # fixed ball-hand polarity (it never crosses the ball) so it is clipped
+      # but deliberately UNHANDED, like jabstep/layup/contest before it —
+      # inandout-stays-unsuffixed is the issue-mandated regression guard for
+      # the predictable wrong "completion": adding "inandout" to
+      # MoveAnimResolver.HandedMoves compiles clean and throws nothing, it
+      # just silently inverts Active/Recovery's read via OriginHand, because
+      # the hand never actually swaps.
+      #
+      # ── The signed-vs-unsigned distinction (do NOT "consistency-fix" this) ──
+      # inandout-ball-hand-goes-in-then-out and inandout-offhand-stays-out-in-
+      # active/control-inandout-ballhand-does-come-in measure the SAME two
+      # wrist readings but deliberately do NOT share a sign convention, and a
+      # future author "tidying" them onto one form would silently break
+      # whichever scenario lost its form:
+      #   * ball-hand-goes-in-then-out needs the SIGNED lateral offset
+      #     ("outness": + on the ball hand's own side, 0 at the midline,
+      #     NEGATIVE once it has crossed) — only the sign can distinguish "at
+      #     the midline" from "crossed over", which is the entire difference
+      #     between an in-and-out and the crossover it impersonates. An
+      #     abs()-based alignment gate was mutation-proven blind to exactly
+      #     this on #339.
+      #   * offhand-stays-out-in-active / control-ballhand-does-come-in need
+      #     the UNSIGNED distance from the midline for BOTH wrists — their
+      #     claim is "the off-hand is FAR from the midline and the ball hand
+      #     is NOT", a claim about distance, not direction. A crossed ball
+      #     hand and a withdrawn off-hand produce the SAME positive SIGNED
+      #     difference as this move's real reveal pose, so the signed form
+      #     cannot tell them apart; only the unsigned form refuses a
+      #     crossover-shaped pose here (mutation-proven below).
+      #
+      # Mutation-proven (scenes/Player.tscn edits, each applied then reverted
+      # before the next):
+      #   misspelled clip name                    -> inandout-no-placeholder-leak reddened
+      #   InAndOutStartup -> locomotion/idle       -> inandout-no-placeholder-leak reddened
+      #     (#296's literal generic-placeholder defect, in the "GENERIC
+      #     PLACEHOLDER" branch specifically)
+      #   InAndOutRecovery -> the Startup clip     -> inandout-ball-hand-goes-in-then-out
+      #     reddened (recovery ballOut read 0.0900, short of the "came back
+      #     out past the fake" floor); inandout-startup-differs-from-recovery
+      #     did NOT redden on this mutation (worst delta 15.60 deg still
+      #     cleared its 15.0 floor — the LOOP_NONE Startup clip's held final
+      #     frame differs enough from Startup's own last-observed tick to
+      #     read as "different"). This is the SAME documented non-catch
+      #     ContestAnimTest/LayupAnimTest's own headers describe for the
+      #     identical mutation; no-placeholder-leak (which pins each state to
+      #     its own clip by NAME) reddens on it instead, so coverage is
+      #     complete across the two scenarios, neither alone.
+      #   InAndOutStartup <-> InAndOutActive swapped -> inandout-ball-hand-goes-in-then-out
+      #     reddened (wentIn=False — the "fake" no longer shows the ball
+      #     hand approaching the midline first)
+      #   InAndOutActive -> locomotion/crossoveractiveleft -> both
+      #     inandout-offhand-stays-out-in-active AND
+      #     control-inandout-ballhand-does-come-in reddened much harder than
+      #     their unmutated baseline (sep swung from +0.1483 m to -0.2754 m;
+      #     ballDist swung from 0.0413 m to 0.5325 m against a 0.10 m
+      #     ceiling) — proof the unsigned-distance gate genuinely
+      #     discriminates a crossover-shaped pose.
+      #
+      # ── Why the Active-phase floor is BELOW the authored keyframe ────────
+      # inandout-offhand-stays-out-in-active's floor is deliberately NOT the
+      # clip's authored f7 separation, and a future author "restoring" it to
+      # that value would redden a green gate that is doing real work.
+      #
+      # Active is only 3 ticks (0.05 s), and the mandatory one-tick
+      # phase-label-lead discipline (README trap 6/#316) plus the mandatory
+      # drop-the-phase's-first-observed-tick discipline (#340) together mean
+      # the LAST tick this harness can attribute to Active lands about one
+      # tick short of the clip's true final (f7) pose — the exact caveat the
+      # settled harness spec warned about: "the live values will NOT equal
+      # the table [of authored keyframe measurements]". The clip itself is
+      # sound; the true f7 pose clears the authoring/slice-side 0.15 m gate
+      # on BOTH sides of the FBX round-trip (author_inandout.py's
+      # SEPARATION_MIN_M, re-proven on the sliced Godot resource by G5 in
+      # tools/rebuild_inandout_clips.gd). What the harness can sample is a
+      # strict subset of that window, so it gets its own, lower floor.
+      #
+      # The floor's value and full derivation live in ONE place —
+      # tests/integration/InAndOutAnimTest.cs:136-153 — and the scenario
+      # prints it into its own PASS/FAIL line at runtime. Deliberately NOT
+      # restated here: this block previously carried a stale copy from an
+      # abandoned iteration and invented a human decision gate that never
+      # existed. Read the constant, not a comment about the constant.
+      - name: Run in-and-out per-move animation state harness
+        run: |
+          godot --headless --path . res://tests/integration/InAndOutAnimTest.tscn -- --harness-scenario=inandout-phases
+          godot --headless --path . res://tests/integration/InAndOutAnimTest.tscn -- --harness-scenario=inandout-no-placeholder-leak
+          godot --headless --path . res://tests/integration/InAndOutAnimTest.tscn -- --harness-scenario=inandout-segment-lengths
+          godot --headless --path . res://tests/integration/InAndOutAnimTest.tscn -- --harness-scenario=inandout-edges
+          godot --headless --path . res://tests/integration/InAndOutAnimTest.tscn -- --harness-scenario=inandout-startup-differs-from-recovery
+          godot --headless --path . res://tests/integration/InAndOutAnimTest.tscn -- --harness-scenario=inandout-stays-unsuffixed
+          godot --headless --path . res://tests/integration/InAndOutAnimTest.tscn -- --harness-scenario=inandout-ball-hand-goes-in-then-out
+          godot --headless --path . res://tests/integration/InAndOutAnimTest.tscn -- --harness-scenario=inandout-offhand-stays-out-in-active
+          godot --headless --path . res://tests/integration/InAndOutAnimTest.tscn -- --harness-scenario=control-inandout-ballhand-does-come-in
+
       # Moving crossover — momentum-aware burst with left-stick exit (issue
       # #198, ADR-0003 amendment). CrossoverBurstMathTests already pin the
       # pure composition function; this drives a REAL PlayerController
