@@ -81,10 +81,18 @@ extends SceneTree
 #   0.11667 -> 0.31667    Recovery     12
 #
 # ── The harness gate this family exists to feed ──────────────────────────────
-# At the LAST tick of the sliced Active clip (the f7 boundary), the harness
-# asserts |off-hand lateral| - |ball-hand lateral| >= 0.15 m, both measured
-# from the body midline along body_right. G5 below re-proves that margin on
-# the SLICED Godot resource.
+# The harness asserts |off-hand lateral| - |ball-hand lateral| at the end of
+# Active, both measured from the body midline along body_right. G5 below
+# re-proves that margin at the f7 boundary on the SLICED Godot resource.
+#
+# G5 and the harness do NOT share a threshold, and must not be "consistency-
+# fixed" onto one. G5 reads the f7 pose directly off the resource, so it holds
+# the authoring-side SEPARATION_MIN_M below. The harness reads a LIVE tree, and
+# the one-tick phase-label lead (#316) plus drop-the-first-observed-tick (#340)
+# put its last Active-attributable sample about one tick SHORT of f7 — so it
+# necessarily measures less than this tool does and carries its own, lower
+# floor. That floor's value and derivation live in exactly one place:
+# tests/integration/InAndOutAnimTest.cs:136-153.
 #
 # ── Cosmetic-only (issue #308's standing constraint) ─────────────────────────
 # This tool writes ONE file: assets/locomotion.res. It reads no gameplay

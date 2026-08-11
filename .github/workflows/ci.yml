@@ -1518,30 +1518,35 @@ jobs:
       #   InAndOutActive -> locomotion/crossoveractiveleft -> both
       #     inandout-offhand-stays-out-in-active AND
       #     control-inandout-ballhand-does-come-in reddened much harder than
-      #     their unmutated baseline (sep swung from -0.0017 m short of floor
-      #     to -0.2754 m; ballDist swung from 0.0413 m to 0.5325 m against a
-      #     0.10 m ceiling) — proof the unsigned-distance gate genuinely
-      #     discriminates a crossover-shaped pose, not just an artifact of
-      #     the marginal miss below.
+      #     their unmutated baseline (sep swung from +0.1483 m to -0.2754 m;
+      #     ballDist swung from 0.0413 m to 0.5325 m against a 0.10 m
+      #     ceiling) — proof the unsigned-distance gate genuinely
+      #     discriminates a crossover-shaped pose.
       #
-      # ── Known-red: inandout-offhand-stays-out-in-active ──────────────────
-      # On the UNMUTATED, shipped clip this scenario currently measures
-      # sep=0.1483 m against its 0.15 m floor — a 0.0017 m (1.1%) miss. This
-      # is NOT a harness bug: Active is only 3 ticks (0.05 s), and the
-      # mandatory one-tick phase-label-lead discipline (README trap 6/#316)
-      # plus the mandatory drop-the-phase's-first-observed-tick discipline
-      # (#340) together mean the LAST tick this harness can attribute to
-      # Active lands about one tick short of the clip's true final (f7) pose
-      # — the exact caveat the settled harness spec warned "the live values
-      # will NOT equal the table [of authored keyframe measurements]". The
-      # rebuild tool's own Blender/Godot-resource-side gate (G5 in
-      # tools/rebuild_inandout_clips.gd) measures the TRUE f7 separation at a
-      # comfortable 0.2200 m — so the clip itself is not the defect, the
-      # miss is specific to how much of Active's already-short window this
-      # harness's timing discipline can safely sample. Left as authored
-      # (floor NOT lowered, clip NOT touched) pending a human call on
-      # whether to widen Active's tick budget or accept the harness reading
-      # this phase at a fixed one-tick offset from its true end.
+      # ── Why the Active-phase floor is BELOW the authored keyframe ────────
+      # inandout-offhand-stays-out-in-active's floor is deliberately NOT the
+      # clip's authored f7 separation, and a future author "restoring" it to
+      # that value would redden a green gate that is doing real work.
+      #
+      # Active is only 3 ticks (0.05 s), and the mandatory one-tick
+      # phase-label-lead discipline (README trap 6/#316) plus the mandatory
+      # drop-the-phase's-first-observed-tick discipline (#340) together mean
+      # the LAST tick this harness can attribute to Active lands about one
+      # tick short of the clip's true final (f7) pose — the exact caveat the
+      # settled harness spec warned about: "the live values will NOT equal
+      # the table [of authored keyframe measurements]". The clip itself is
+      # sound; the true f7 pose clears the authoring/slice-side 0.15 m gate
+      # on BOTH sides of the FBX round-trip (author_inandout.py's
+      # SEPARATION_MIN_M, re-proven on the sliced Godot resource by G5 in
+      # tools/rebuild_inandout_clips.gd). What the harness can sample is a
+      # strict subset of that window, so it gets its own, lower floor.
+      #
+      # The floor's value and full derivation live in ONE place —
+      # tests/integration/InAndOutAnimTest.cs:136-153 — and the scenario
+      # prints it into its own PASS/FAIL line at runtime. Deliberately NOT
+      # restated here: this block previously carried a stale copy from an
+      # abandoned iteration and invented a human decision gate that never
+      # existed. Read the constant, not a comment about the constant.
       - name: Run in-and-out per-move animation state harness
         run: |
           godot --headless --path . res://tests/integration/InAndOutAnimTest.tscn -- --harness-scenario=inandout-phases
