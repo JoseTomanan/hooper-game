@@ -91,8 +91,10 @@ extends SceneTree
 # the one-tick phase-label lead (#316) plus drop-the-first-observed-tick (#340)
 # put its last Active-attributable sample about one tick SHORT of f7 — so it
 # necessarily measures less than this tool does and carries its own, lower
-# floor. That floor's value and derivation live in exactly one place:
-# tests/integration/InAndOutAnimTest.cs:136-153.
+# floor. That floor's value and derivation live in exactly one place: the
+# SeparationFloorM constant in tests/integration/InAndOutAnimTest.cs. Cited by
+# NAME rather than line number -- a line range is the same duplicated fact that
+# produced the stale comment this header replaced.
 #
 # ── Cosmetic-only (issue #308's standing constraint) ─────────────────────────
 # This tool writes ONE file: assets/locomotion.res. It reads no gameplay

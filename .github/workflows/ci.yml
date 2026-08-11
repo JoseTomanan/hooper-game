@@ -1541,9 +1541,11 @@ jobs:
       # tools/rebuild_inandout_clips.gd). What the harness can sample is a
       # strict subset of that window, so it gets its own, lower floor.
       #
-      # The floor's value and full derivation live in ONE place —
-      # tests/integration/InAndOutAnimTest.cs:136-153 — and the scenario
-      # prints it into its own PASS/FAIL line at runtime. Deliberately NOT
+      # The floor's value and full derivation live in ONE place — the
+      # SeparationFloorM constant in tests/integration/InAndOutAnimTest.cs —
+      # and the scenario prints it into its own PASS/FAIL line at runtime.
+      # Cited by NAME, not by line number, on purpose: a line range is the same
+      # duplicated-fact this block exists to stop carrying. Deliberately NOT
       # restated here: this block previously carried a stale copy from an
       # abandoned iteration and invented a human decision gate that never
       # existed. Read the constant, not a comment about the constant.
