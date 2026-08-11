@@ -526,14 +526,25 @@ public partial class RetreatDribbleAnimTest : Node
         GD.Print($"[retreatdribble-anim]   worst Startup-vs-Recovery bone delta = {worst:F2} deg " +
                  $"(floor {StartupVsRecoveryMinDeg:F1})");
 
-        bool pass = _sawStartup && _sawRecovery && worst >= StartupVsRecoveryMinDeg;
+        // The >= 2 tick premise is not boilerplate. The phase label leads the
+        // pose by one tick (#316), so a phase observed for exactly ONE tick
+        // leaves _poseAtLastStartupTick holding the pre-move DRIBBLE pose. This
+        // verdict would then be comparing the dribble stance against Recovery
+        // and would pass green even with both states pointing at the identical
+        // clip — precisely the #296 defect it exists to catch. #238's tuning
+        // pass is open and free to retune DefaultFrameData to a 1-tick Startup,
+        // so this is a reachable state, not a hypothetical one.
+        bool premise = _sawStartup && _sawRecovery && _startupTicks >= 2 && _recoveryTicks >= 2;
+        bool pass = premise && worst >= StartupVsRecoveryMinDeg;
         if (pass)
             GD.Print("[retreatdribble-anim] PASS retreatdribble-startup-differs-from-recovery — the last " +
                      $"Startup pose and the last Recovery pose differ by {worst:F2} deg, so the wind-up and " +
                      "the settled reset are visibly distinct silhouettes (#296) even at 9 ticks total.");
         else
             Fail($"retreatdribble-startup-differs-from-recovery: worst delta {worst:F2} deg < " +
-                 $"{StartupVsRecoveryMinDeg:F1}. Either the two states point at the same clip, or the clips " +
+                 $"{StartupVsRecoveryMinDeg:F1}, premise={premise} (startupTicks={_startupTicks}, " +
+                 $"recoveryTicks={_recoveryTicks}, both need >= 2). " +
+                 "Either the two states point at the same clip, or the clips " +
                  "bind to nothing on this rig (check for Blender's 'Armature/' track-path prefix) and both " +
                  "poses collapsed to rest.");
         Finish(pass ? 0 : 1);
