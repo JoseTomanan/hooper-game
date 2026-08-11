@@ -352,8 +352,19 @@ public partial class RetreatDribbleAnimTest : Node
                 // BallState gating StepBackTest owns.
                 if (!_actor.BeginMoveForHarness(new RetreatDribble()))
                 {
+                    // Name BOTH causes, and print the ball state. The
+                    // dead-dribble gate (#193 family) rejects RetreatDribble
+                    // from a Held ball, and during development THIS message —
+                    // naming only the move machine — is what that rejection
+                    // surfaced as, which sent the search in the wrong
+                    // direction. Two physics ticks separate the AwaitDribble
+                    // check from this Begin, so the state can still change in
+                    // between; the message must not pre-judge which cause it was.
                     Fail($"{_scenario}: BeginMoveForHarness(new RetreatDribble()) returned false — " +
-                         "the actor's machine was not Inactive at begin.");
+                         "either a move was already running (the actor's machine was not Inactive), " +
+                         $"or a begin gate rejected it. Ball state = {_ball?.State} " +
+                         "(RetreatDribble is inside BeginCommittedMove's dead-dribble gate and " +
+                         "needs Dribbling, #193).");
                     Finish();
                     return;
                 }
