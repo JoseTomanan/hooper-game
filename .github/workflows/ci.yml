@@ -1530,6 +1530,94 @@ jobs:
           godot --headless --path . res://tests/integration/RetreatDribbleAnimTest.tscn -- --harness-scenario=control-retreatdribble-torso-modest-in-startup
           godot --headless --path . res://tests/integration/RetreatDribbleAnimTest.tscn -- --harness-scenario=retreatdribble-hips-stay-in-place
 
+      # Step-back per-move clips (issue #306, #302 batch 2) — RETREAT
+      # DRIBBLE'S TEMPLATE (author_stepback.py's own docstring), not its
+      # twin: 7/4/8 ticks off the SAME assets/Dribble.fbx, unhanded, same
+      # dribble-family edges and backward-burst-on-JustEnteredActive class,
+      # but BOTH feet genuinely leave the ground during Active (unlike
+      # retreat dribble's one-weight-bearing-foot-throughout shape) and the
+      # torso claim at Active's end is a two-sided BAND around vertical, not
+      # a one-sided floor — leaning back reads as the fadeaway (#318) and
+      # FadeawayTriggerResolver already splits the two.
+      #
+      # Before #306 "stepback" fell through MoveAnimResolver.ResolveStateName's
+      # default case onto the shared generic states — a 7-tick LOOPING IDLE
+      # for Startup, i.e. StepBack.cs's own class doc ("the biggest
+      # separation move telegraphs the longest") rendering as no telegraph at
+      # all, plus a looping SPRINT for Active while the player bursts
+      # backward, an actively FALSE read rather than merely a missing one.
+      #
+      # stepback-active-displaces-back / control-stepback-startup-displaces-
+      # forward measure Hips position relative to the TRAIL (rear) foot, not
+      # raw Hips translation (which is deliberately zero by construction —
+      # StepBackBurstMath already applies the real burst via Velocity, so a
+      # translating Hips would double it) and not an average of both feet
+      # (measured, and rejected: the lead foot advancing and the trail foot
+      # retreating during Startup mostly cancel in an average, leaving
+      # near-zero signal). The trail foot's own trajectory genuinely reverses
+      # between the two phases — retreating during Startup as the plant
+      # commits onto the lead foot, then swinging sharply forward during
+      # Active as the exploding body leaves it behind — which is what gives
+      # the pair a real, large-margin, non-vacuous opposite-sign contrast.
+      # Measured live: Startup's own delta off the pre-move dribble baseline
+      # is +0.4378 m (floor 0.01); Active's delta off STARTUP'S OWN end pose
+      # (not the pre-move baseline — an earlier draft compared against that
+      # and read a false positive driven by the stance-shape jump at
+      # move-entry, not anything Active itself did) is -0.1457 m (floor
+      # -0.02).
+      #
+      # stepback-recovery-hands-off-to-jumpshot is the ADR-0014 legibility
+      # call handoff 06 asks for explicitly: no threshold existed before this
+      # issue. #253's cradle-race fix exists BECAUSE StepBack cradles the
+      # ball for a shot that follows, and every AnimationTree transition is a
+      # hard cut (xfade_time 0 everywhere), so a large pose discontinuity
+      # between StepBackRecovery's end and JumpshotStartup's start SNAPS at
+      # the most-watched moment in the game. The metric took two rejected
+      # attempts to land on (see tools/rebuild_stepback_clips.gd's G6 for the
+      # full story): raw per-bone rotation distance read 179.6 deg
+      # worst-case, but a control against `idle` — a long-shipped clip
+      # unrelated to this move — showed the SAME 150-180 deg order of
+      # magnitude on the same limb bones, matching README's documented
+      # rotation-family/bone-roll noise rather than a real pose difference.
+      # Absolute FK landmark position fixed that but introduced a coordinate-
+      # ANCHOR artifact instead (Hips is the root bone and each clip's
+      # position track is anchored to its own source FBX's raw armature
+      # offset), reading RightFoot jumping 0.55-0.63 m from the mismatch
+      # alone. The final metric measures landmark position RELATIVE TO EACH
+      # CLIP'S OWN HIPS, which cancels both artifacts. This C# scenario is
+      # the THIRD independent re-measurement of the same quantity (own FK
+      # walk, own code, no shared implementation with the .gd tool) and it
+      # agrees with rebuild_stepback_clips.gd's own number EXACTLY (0.3483 m
+      # worst landmark, LeftFoot) — corroborating evidence both are sound.
+      # Floor is 0.45 m, ~30% headroom over that reading.
+      #
+      # MUTATION-PROVEN (a green scenario that cannot fail is worse than none):
+      #   StepBackRecovery -> the Startup clip
+      #       -> stepback-startup-differs-from-recovery AND
+      #          stepback-no-placeholder-leak reddened (stepback-phases
+      #          stayed green, correctly — the state is still entered)
+      #   StepBackActive -> locomotion/idle (a dead, unbound-reading clip)
+      #       -> stepback-active-displaces-back reddened
+      #   deleted the DribbleRight -> StepBackStartup edge
+      #       -> stepback-edges reddened; stepback-phases stayed GREEN,
+      #          confirming README trap 8 (Travel()'s pathfinder routes
+      #          around the gap, so only the resource-level check sees it)
+      #   rebuild_stepback_clips.gd ACTIVE_TICKS 4 -> 5
+      #       -> stepback-segment-lengths reddened
+      #   StepBackRecovery -> locomotion/run (a clip with a very different pose)
+      #       -> stepback-recovery-hands-off-to-jumpshot reddened
+      # Each scenario exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run step-back per-move animation state harness
+        run: |
+          godot --headless --path . res://tests/integration/StepBackAnimTest.tscn -- --harness-scenario=stepback-phases
+          godot --headless --path . res://tests/integration/StepBackAnimTest.tscn -- --harness-scenario=stepback-no-placeholder-leak
+          godot --headless --path . res://tests/integration/StepBackAnimTest.tscn -- --harness-scenario=stepback-segment-lengths
+          godot --headless --path . res://tests/integration/StepBackAnimTest.tscn -- --harness-scenario=stepback-edges
+          godot --headless --path . res://tests/integration/StepBackAnimTest.tscn -- --harness-scenario=stepback-startup-differs-from-recovery
+          godot --headless --path . res://tests/integration/StepBackAnimTest.tscn -- --harness-scenario=stepback-active-displaces-back
+          godot --headless --path . res://tests/integration/StepBackAnimTest.tscn -- --harness-scenario=control-stepback-startup-displaces-forward
+          godot --headless --path . res://tests/integration/StepBackAnimTest.tscn -- --harness-scenario=stepback-recovery-hands-off-to-jumpshot
+
       # Block per-move clips (issue #283, #302 batch 2). The EXACT INVERSE of the
       # contest harness above, and the pair should be read together: the two
       # moves raise the same arms off the same source FBX (Goalkeeper Catch
