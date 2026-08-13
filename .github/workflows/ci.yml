@@ -1559,12 +1559,25 @@ jobs:
       # commits onto the lead foot, then swinging sharply forward during
       # Active as the exploding body leaves it behind — which is what gives
       # the pair a real, large-margin, non-vacuous opposite-sign contrast.
-      # Measured live: Startup's own delta off the pre-move dribble baseline
-      # is +0.4378 m (floor 0.01); Active's delta off STARTUP'S OWN end pose
-      # (not the pre-move baseline — an earlier draft compared against that
-      # and read a false positive driven by the stance-shape jump at
-      # move-entry, not anything Active itself did) is -0.1457 m (floor
-      # -0.02).
+      # BOTH gates anchor inside their own phase, never on the pre-move
+      # dribble baseline. An earlier draft anchored there and read a false
+      # positive driven by the stance-shape jump at move-entry rather than
+      # anything the clip did. That was fixed for the Active gate but
+      # originally left in the CONTROL, where it was mutation-caught: with
+      # `locomotion/idle` swapped into the StepBackStartup slot the control
+      # still PASSED, and passed HARDER (+0.5062 vs the honest +0.0165) —
+      # it was measuring the Dribble -> Startup stance discontinuity, which
+      # any clip in that slot produces. The control now differences Startup's
+      # last tick against its SECOND observed tick (the first is dropped:
+      # #316's trap means the tick that GetCurrentNode() first labels
+      # "StepBackStartup" still holds the Dribble pose), so it sees the
+      # clip's own authored drift.
+      #
+      # Measured live: Startup's internal drift is +0.0165 m (floor 0.01) —
+      # note this is genuinely tight, ~1.65x the floor, because a 7-tick
+      # telegraph that sells a drive plants the foot rather than travelling
+      # far; Active's delta off Startup's own end pose is -0.1457 m
+      # (floor -0.02).
       #
       # stepback-recovery-hands-off-to-jumpshot is the ADR-0014 legibility
       # call handoff 06 asks for explicitly: no threshold existed before this
@@ -1606,6 +1619,12 @@ jobs:
       #       -> stepback-segment-lengths reddened
       #   StepBackRecovery -> locomotion/run (a clip with a very different pose)
       #       -> stepback-recovery-hands-off-to-jumpshot reddened
+      #   StepBackStartup -> locomotion/idle (an inert, non-travelling clip)
+      #       -> control-stepback-startup-displaces-forward reddened
+      #          (delta -0.0001 vs the +0.01 floor). Under the ORIGINAL
+      #          pre-move-baseline anchor this same mutation left it green,
+      #          which is why the anchor moved — a control that cannot fail
+      #          guards nothing.
       # Each scenario exits 0=PASS/1=FAIL (ADR-0016).
       - name: Run step-back per-move animation state harness
         run: |

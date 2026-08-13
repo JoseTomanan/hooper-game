@@ -193,6 +193,7 @@ public partial class StepBackAnimTest : Node
 
     private Vector3? _cachedForward;
     private float _hipsRelBeforeMove = float.NaN;     // sampled one tick before Begin
+    private float _hipsRelAtFirstValidStartupTick = float.NaN; // 2nd observed Startup tick (#316 lead)
     private float _hipsRelAtLastStartupTick = float.NaN;
     private float _hipsRelAtLastActiveTick = float.NaN;
     private Quaternion[] _poseAtLastStartupTick;
@@ -338,6 +339,16 @@ public partial class StepBackAnimTest : Node
         if (node == "StepBackStartup")
         {
             _startupTicks++;
+            // The SECOND observed Startup tick is this phase's first sample whose
+            // pose is genuinely Startup's: #316's trap means the first tick that
+            // GetCurrentNode() labels "StepBackStartup" still holds the PREVIOUS
+            // (Dribble) pose. Anchoring the control here rather than at the
+            // pre-move baseline is what makes it measure the CLIP's own authored
+            // drift instead of the Dribble -> Startup stance discontinuity — the
+            // same re-anchoring VerdictActiveDisplacesBack already does, and
+            // without it the control passes on an inert `locomotion/idle` in the
+            // Startup slot (mutation-proven).
+            if (_startupTicks == 2) _hipsRelAtFirstValidStartupTick = hipsRel;
             _hipsRelAtLastStartupTick = hipsRel;
             _poseAtLastStartupTick = SampleComparedBones(skel);
         }
@@ -455,11 +466,18 @@ public partial class StepBackAnimTest : Node
     // sign from Active's claim.
     private void VerdictControlStartupDisplacesForward()
     {
-        float delta = _hipsRelAtLastStartupTick - _hipsRelBeforeMove;
-        GD.Print($"[stepback-anim]   hips-relative-to-feet: beforeMove={_hipsRelBeforeMove:F4} " +
-                 $"startupEnd={_hipsRelAtLastStartupTick:F4} delta={delta:F4} (want >= {HipsAheadOfBaseStartupMinM:F2})");
+        float delta = _hipsRelAtLastStartupTick - _hipsRelAtFirstValidStartupTick;
+        GD.Print($"[stepback-anim]   hips-relative-to-trail-foot: startupFirstValid=" +
+                 $"{_hipsRelAtFirstValidStartupTick:F4} startupEnd={_hipsRelAtLastStartupTick:F4} " +
+                 $"delta={delta:F4} (want >= {HipsAheadOfBaseStartupMinM:F2}) " +
+                 $"[pre-move baseline, NOT the anchor: {_hipsRelBeforeMove:F4}]");
 
-        bool premise = _sawStartup && _startupTicks >= 2 && !float.IsNaN(_hipsRelBeforeMove);
+        // >= 3 so that dropping the lead tick still leaves two real samples to
+        // difference. The pre-move baseline is still required non-NaN because a
+        // poisoned measurement helper would otherwise go unnoticed.
+        bool premise = _sawStartup && _startupTicks >= 3
+                       && !float.IsNaN(_hipsRelAtFirstValidStartupTick)
+                       && !float.IsNaN(_hipsRelBeforeMove);
         bool pass = premise && delta >= HipsAheadOfBaseStartupMinM;
         if (pass)
             GD.Print("[stepback-anim] PASS control-stepback-startup-displaces-forward — Startup's own travel " +
@@ -468,7 +486,7 @@ public partial class StepBackAnimTest : Node
                      "the two floors happening to both pass.");
         else
             Fail($"control-stepback-startup-displaces-forward: delta={delta:F4}, need >= " +
-                 $"{HipsAheadOfBaseStartupMinM:F2}, premise={premise} (startupTicks={_startupTicks}, need >= 2). " +
+                 $"{HipsAheadOfBaseStartupMinM:F2}, premise={premise} (startupTicks={_startupTicks}, need >= 3). " +
                  "If the premise broke, this fails rather than passes.");
         Finish(pass ? 0 : 1);
     }
