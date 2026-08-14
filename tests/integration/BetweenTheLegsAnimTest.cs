@@ -351,7 +351,16 @@ public partial class BetweenTheLegsAnimTest : Node
         }
     }
 
-    private PlayerController HolderNode() => _holderId == 1 ? _p1 : _p2;
+    // null until the tipoff actually assigns a holder. The obvious
+    // `_holderId == 1 ? _p1 : _p2` silently returns PLAYER 2 while _holderId is
+    // still 0, which matters in exactly one place and it is the worst place: the
+    // timeout diagnostic. A run that times out in Step.AwaitTipoff is a run
+    // where no holder was ever assigned, and that message would have printed
+    // player 2's anim node labelled "lastAnimNode", pointing whoever debugs it
+    // at the wrong node. The `?.` at the timeout site is what makes this
+    // readable — it prints empty rather than a confident wrong answer.
+    private PlayerController HolderNode() =>
+        _holderId == 0 ? null : (_holderId == 1 ? _p1 : _p2);
 
     private void Observe()
     {
@@ -823,6 +832,15 @@ public partial class BetweenTheLegsAnimTest : Node
     private const float StartupVsRecoveryMinDeg = 8.0f;
     private const float IdenticalMaxDeg = 0.5f;
 
+    // Degrees the control's time-sensitivity leg must see between ONE clip
+    // sampled at two DIFFERENT instants. Guards a comparator that honoured only
+    // its first time argument: with a == b that bug is invisible, and with
+    // ta == tb it is invisible too, so the identity legs alone cannot see it.
+    // Measured on locomotion/idle: 8.6643 deg at t=0 vs t=L/2. Note this is
+    // deliberately NOT t=0 vs t=end -- idle is a perfect loop, so the seam reads
+    // 0.0560 deg and would make this leg fail on a healthy comparator.
+    private const float TimeSensitivityMinDeg = 3.0f;
+
     // ── Scenario: betweenthelegs-startup-differs-from-recovery ───────────────
     // #296's actual complaint, stated directly. Under the pre-#309 fallback,
     // Startup and Recovery both resolved to locomotion/idle and were therefore
@@ -990,12 +1008,42 @@ public partial class BetweenTheLegsAnimTest : Node
             }
         }
 
+        // ── Time-sensitivity leg ────────────────────────────────────────────
+        // The two legs above hold `a == b` AND `ta == tb`, so between them they
+        // cannot see a comparator that honoured only its FIRST time argument.
+        // That bug is not hypothetical in shape: under it, the main scenario's
+        // phase-exit sample would compare startup@0.100 against recovery@0.100
+        // instead of recovery@0.183 — a different, wronger question that still
+        // reports tens of degrees and still passes.
+        //
+        // So sample ONE clip at two DIFFERENT instants and require a real
+        // separation. Deliberately t=0 vs t=L/2, not t=0 vs t=end: idle is a
+        // perfect loop, so its seam reads 0.0560 deg — the same as the identity
+        // legs — and would fail this on a perfectly healthy comparator.
+        {
+            float half = (float)(idle.Get("length").AsDouble() * 0.5);
+            float deg = WorstBoneSeparationDeg(idle, idle, 0f, half, out int compared, out string worstBone);
+            GD.Print($"[betweenthelegs-anim]   idle-vs-idle/t=0-vs-t=L/2: worst-bone separation = {deg:F4} deg " +
+                     $"({worstBone}), bones compared = {compared}");
+            if (!(deg >= TimeSensitivityMinDeg))
+            {
+                Fail($"control-identical-clips-read-as-identical: one clip sampled at t=0 and t={half:F4} " +
+                     $"reported only {deg:F4} deg of separation (need >= {TimeSensitivityMinDeg:F1}) over " +
+                     $"{compared} bones. The comparator is not honouring its SECOND time argument — most " +
+                     "likely both samples are being taken at `ta`. betweenthelegs-startup-differs-from-recovery " +
+                     "would still pass under that bug while comparing the wrong pair of instants, so its " +
+                     "result must not be trusted until this is fixed.");
+                pass = false;
+            }
+        }
+
         if (pass)
             GD.Print("[betweenthelegs-anim] PASS control-identical-clips-read-as-identical — the same " +
                      "comparator betweenthelegs-startup-differs-from-recovery uses reports ~0 deg when handed " +
                      "two identical clips (locomotion/idle, the very clip #296's fallback resolved to), over a " +
-                     "non-empty bone set. It can therefore distinguish 'different' from 'the same', which is " +
-                     "the premise that scenario's pass depends on.");
+                     "non-empty bone set, AND reports a real separation when handed one clip at two different " +
+                     "instants. It therefore distinguishes 'different' from 'the same' and honours both time " +
+                     "arguments — the two premises that scenario's pass depends on.");
         else
             GD.PrintErr("[betweenthelegs-anim] FAIL control-identical-clips-read-as-identical — see above.");
 

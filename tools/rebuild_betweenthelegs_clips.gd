@@ -310,7 +310,7 @@ func _initialize() -> void:
 		var delta := _pose_delta_at(startup, startup.length, recovery, recovery.length)
 		print("[rebuild-betweenthelegs] G3 %s-origin startup-end vs recovery-end max bone delta = %.1f deg (want >= %.1f)"
 			% [polarity, delta, STARTUP_VS_RECOVERY_MIN_DEG])
-		if delta < STARTUP_VS_RECOVERY_MIN_DEG:
+		if not (delta >= STARTUP_VS_RECOVERY_MIN_DEG):
 			push_error("[rebuild-betweenthelegs] G3 FAILED for %s-origin: only %.1f deg (< %.1f) -- Startup's end "
 				% [polarity, delta, STARTUP_VS_RECOVERY_MIN_DEG] + "pose and Recovery's end pose do not read as "
 				+ "distinct (#296).")
@@ -325,7 +325,7 @@ func _initialize() -> void:
 	var g4_delta := _max_pose_delta(active_left, active_right)
 	print("[rebuild-betweenthelegs] G4 activeleft-vs-activeright max bone delta = %.1f deg (want >= %.1f)"
 		% [g4_delta, LEFT_VS_RIGHT_ACTIVE_MIN_DEG])
-	if g4_delta < LEFT_VS_RIGHT_ACTIVE_MIN_DEG:
+	if not (g4_delta >= LEFT_VS_RIGHT_ACTIVE_MIN_DEG):
 		push_error("[rebuild-betweenthelegs] G4 FAILED: only %.1f deg (< %.1f) -- the two Active polarities do "
 			% [g4_delta, LEFT_VS_RIGHT_ACTIVE_MIN_DEG] + "not read as distinct silhouettes.")
 		quit(1)
@@ -361,25 +361,25 @@ func _initialize() -> void:
 			var at_startup := _lateral_from_midline(startup, 0.0, "mixamorig_%sFoot" % side)
 			var at_active := _lateral_from_midline(active, 0.0, "mixamorig_%sFoot" % side)
 			widen[side] = at_active - at_startup
-		var widen_min: float = minf(widen["Left"], widen["Right"])
+		var widen_min: float = _min_strict(widen["Left"], widen["Right"])
 		print("[rebuild-betweenthelegs] G5a %s-origin stance widen: L=%+.4f m R=%+.4f m min=%+.4f (want >= %.2f)"
 			% [polarity, widen["Left"], widen["Right"], widen_min, STANCE_WIDEN_MIN_M])
-		if widen_min < STANCE_WIDEN_MIN_M:
+		if not (widen_min >= STANCE_WIDEN_MIN_M):
 			push_error("[rebuild-betweenthelegs] G5a FAILED for %s-origin: the narrower ankle widened only "
 				% polarity + "%+.4f m (< %.2f) -- stance WIDTH is half this move's signature."
 				% [widen_min, STANCE_WIDEN_MIN_M])
 			g5_ok = false
 
-		var knee_min := minf(
+		var knee_min := _min_strict(
 			_lateral_from_midline(active, 0.0, "mixamorig_LeftLeg"),
 			_lateral_from_midline(active, 0.0, "mixamorig_RightLeg"))
 		var margins := {}
 		for side in ["Left", "Right"]:
 			margins[side] = knee_min - _lateral_from_midline(active, 0.0, "mixamorig_%sHand" % side)
-		var margin_min: float = minf(margins["Left"], margins["Right"])
+		var margin_min: float = _min_strict(margins["Left"], margins["Right"])
 		print("[rebuild-betweenthelegs] G5b %s-origin hands inside knees: narrowestKnee=%.4f m L margin=%+.4f R margin=%+.4f min=%+.4f (want >= %.2f)"
 			% [polarity, knee_min, margins["Left"], margins["Right"], margin_min, HANDS_INSIDE_KNEES_MIN_M])
-		if margin_min < HANDS_INSIDE_KNEES_MIN_M:
+		if not (margin_min >= HANDS_INSIDE_KNEES_MIN_M):
 			push_error("[rebuild-betweenthelegs] G5b FAILED for %s-origin: a wrist sits only %+.4f m inside the "
 				% [polarity, margin_min] + "narrower knee (< %.2f) -- both hands must be BETWEEN the knees, or "
 				% HANDS_INSIDE_KNEES_MIN_M + "they disagree with BallSweepPath.ThroughLegs routing the ball "
@@ -412,7 +412,7 @@ func _initialize() -> void:
 		var gap := recv_h - origin_h
 		print("[rebuild-betweenthelegs] G6 %s-origin recovery-end: recv(%s) height - origin(%s) height = %+.4f m (want >= %.2f)"
 			% [polarity, recv_hand, origin_hand, gap, RECV_HAND_HIGHER_MIN_M])
-		if gap < RECV_HAND_HIGHER_MIN_M:
+		if not (gap >= RECV_HAND_HIGHER_MIN_M):
 			push_error("[rebuild-betweenthelegs] G6 FAILED for %s-origin: the receiving hand (%s) sits only "
 				% [polarity, recv_hand] + "%+.4f m above the origin hand (%s) (< %.2f). The polarity is "
 				% [gap, origin_hand, RECV_HAND_HIGHER_MIN_M] + "inverted or absent -- and this is the only "
@@ -673,6 +673,25 @@ func _matching_rotation_track(anim: Animation, bone: String) -> int:
 # (An unsigned form is the wrong choice for a "travelled in then out" claim and
 # the right one for a "how far from the midline" claim -- the #308/#339 lesson
 # is that the form must match the CLAIM, not be swept one way globally.)
+# A NaN-PROPAGATING min. minf() is not NaN-safe, and its asymmetry is the
+# dangerous part rather than a curiosity -- both verified on this project's own
+# Godot 4.7.1 binary:
+#
+#     minf(NAN, 0.5) -> 0.5      minf(0.5, NAN) -> nan
+#
+# So whether a poisoned limb survives the reduction depends on which ARGUMENT
+# SLOT it landed in. Every "both limbs" gate below passes Left first, so a
+# poisoned LEFT measurement was being silently replaced by the Right limb's
+# healthy value -- defeating the exact min-reduction the symmetric claim depends
+# on (README trap 17: "both arms up" asserted with the wrong reducer passes on a
+# one-armed clip). This propagates instead, so a poisoned limb reaches the gate
+# and the gate fails closed.
+func _min_strict(a: float, b: float) -> float:
+	if is_nan(a) or is_nan(b):
+		return NAN
+	return minf(a, b)
+
+
 func _lateral_from_midline(anim: Animation, t: float, bone: String) -> float:
 	var hips := _pose_origin(anim, t, "mixamorig_Hips")
 	var p := _pose_origin(anim, t, bone)
@@ -701,8 +720,15 @@ func _pose_origin(anim: Animation, t: float, bone: String) -> Vector3:
 	if idx < 0:
 		# Poisoned rather than Vector3.ZERO: a Zero fallback makes an
 		# unresolvable bone read as "at the origin" and lets a gate print a
-		# plausible number while measuring nothing (#305's lesson). NAN
-		# propagates through every comparison below as false, so the gate fails.
+		# plausible number while measuring nothing (#305's lesson).
+		#
+		# The poison only works if every CONSUMER is written to fail closed, and
+		# that is not automatic -- NAN compares false against EVERYTHING, so the
+		# natural-looking `if measured < FLOOR: fail` skips its own fail branch
+		# and reports GREEN on a measurement that never happened. Every gate
+		# below is therefore written `if not (measured >= FLOOR)`, and the
+		# min-reductions go through _min_strict rather than minf. Preserve both
+		# if you add a gate here.
 		return Vector3(NAN, NAN, NAN)
 
 	var rot_track_of := {}
