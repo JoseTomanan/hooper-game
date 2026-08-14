@@ -566,6 +566,66 @@ public class MoveAnimResolverTests
     }
 
     [Fact]
+    public void ResolveStateName_BetweenTheLegs_ReturnsPerMoveStatesHanded()
+    {
+        // (#309) BetweenTheLegs is clipped AND handed: the ball swaps to the
+        // other hand on the FIRST Active tick (PlayerController's burst branch
+        // fires on JustEnteredActive for the Crossover/BehindTheBack/
+        // BetweenTheLegs/InAndOut family and swaps for all but InAndOut), which
+        // is exactly the timing OriginHand's phase-conditioned formula assumes.
+        //
+        // So the suffix names the hand the ball STARTED in, and it must stay
+        // CONSTANT across the arc even though the authoritative HandSide flips
+        // partway through — which is what these two blocks pin. Read them as a
+        // pair: the same origin hand, expressed as the pre-swap HandSide during
+        // Startup and as the post-swap HandSide from Active onward, must
+        // produce the SAME suffix.
+        //
+        // Ball starts LEFT: HandSide reads Left during Startup, Right after.
+        Assert.Equal("BetweenTheLegsStartupLeft",
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Startup, "betweenthelegs", HandSide.Left, HandSide.Right));
+        Assert.Equal("BetweenTheLegsActiveLeft",
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "betweenthelegs", HandSide.Right, HandSide.Left));
+        Assert.Equal("BetweenTheLegsRecoveryLeft",
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Recovery, "betweenthelegs", HandSide.Right, HandSide.Left));
+
+        // Ball starts RIGHT: the mirror. Asserted explicitly rather than left to
+        // symmetry — the Y Bot rig is mirror-symmetric to 0.17 mm, so "it works
+        // for one side" is exactly the reasoning that shipped the #255 bug.
+        Assert.Equal("BetweenTheLegsStartupRight",
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Startup, "betweenthelegs", HandSide.Right, HandSide.Left));
+        Assert.Equal("BetweenTheLegsActiveRight",
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "betweenthelegs", HandSide.Left, HandSide.Right));
+        Assert.Equal("BetweenTheLegsRecoveryRight",
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Recovery, "betweenthelegs", HandSide.Left, HandSide.Right));
+    }
+
+    [Fact]
+    public void ResolveStateName_BetweenTheLegsAndInAndOut_ShareAParamButNotAnAxis()
+    {
+        // The trap this pair exists to pin (README trap 4). BetweenTheLegs and
+        // InAndOut both carry a BurstDirection parameter and both ride the same
+        // CrossoverBurstMath composition, so "does this move carry a direction"
+        // would put BOTH in HandedMoves. The discriminator is the swap TIMING:
+        // InAndOut is the one move in that family whose ball never crosses, so
+        // it must stay unsuffixed while BetweenTheLegs is split.
+        //
+        // Getting this backwards does not fail loudly. An InAndOut wrongly
+        // handed would resolve to "InAndOutActiveLeft", a state the tree does
+        // not have, and Travel() to a missing state only LOGS (#257) — the move
+        // silently stops animating. A BetweenTheLegs wrongly unhanded resolves
+        // to a state that DOES exist and plays cleanly while telegraphing
+        // nothing. Both are silent, so they are pinned here.
+        foreach (var ballHand in new[] { HandSide.Left, HandSide.Right })
+            Assert.Equal("InAndOutActive",
+                MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "inandout", ballHand, HandSide.Right));
+
+        Assert.NotEqual(
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "betweenthelegs", HandSide.Left, HandSide.Right),
+            MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "betweenthelegs", HandSide.Right, HandSide.Left));
+    }
+
+    [Fact]
     public void ResolveStateName_UnclippedMoveActive_ReturnsGenericFallback()
     {
         // "spin" is a real committed move (RequestBeginMove sends it) but is NOT
