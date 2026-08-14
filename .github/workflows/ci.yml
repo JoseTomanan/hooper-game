@@ -1779,6 +1779,71 @@ jobs:
           godot --headless --path . res://tests/integration/InAndOutAnimTest.tscn -- --harness-scenario=inandout-offhand-stays-out-in-active
           godot --headless --path . res://tests/integration/InAndOutAnimTest.tscn -- --harness-scenario=control-inandout-ballhand-does-come-in
 
+      # Between-the-legs per-move animation states (issue #309). The THIRD
+      # handed dribble-family move, after crossover (#280) and behind-the-back
+      # (#281): betweenthelegs is one of the three moves PlayerController swaps
+      # the ball hand for at Active-entry, so MoveAnimResolver.OriginHand's
+      # phase-conditioned formula is valid and it gets six states rather than
+      # three. Contrast the in-and-out block immediately above, which shares the
+      # same BurstDirection param but is UNSUFFIXED — the discriminator is swap
+      # TIMING, never the param.
+      #
+      # 'betweenthelegs-phases' / 'btl-right-origin' walk the Startup->Active->
+      # Recovery arc per polarity via GetCurrentNode() on the live tree, never
+      # the resolver's return value (the #257 trap: calling ResolveStateName
+      # directly passes on a Player.tscn with none of the six states wired).
+      # 'btl-single-polarity' is the load-bearing one: it collects every
+      # DISTINCT BetweenTheLegs* node the tree reported over one move and fails
+      # on a MIX of suffixes, which is exactly what a resolver reading live
+      # HandSide per tick would produce across the Active-entry swap.
+      # 'no-unsuffixed-btl-state' Travel()s at a node that must not exist;
+      # 'control-unsuffixed-probe' is its premise proof, Travel()ing at one that
+      # must, under identical setup — without it the negative would pass just as
+      # happily on a broken probe. This is deliberately NOT an edge-level
+      # assertion: #279 mutation-proved those unreliable, because Travel() is a
+      # pathfinder that routes around a missing EDGE. A missing NODE has no path
+      # to route around.
+      # 'betweenthelegs-segment-lengths' pins all six durations against
+      # BetweenTheLegs.DefaultFrameData (read, not hardcoded) within a
+      # float-noise band rather than the one tick #309 allows — measured
+      # deviation is 0.000000s on all six, and a one-tick bar would let a
+      # StartupFrames 6->7 retune that forgot the rebuild tool report green.
+      # 'betweenthelegs-no-placeholder-leak' pins state->clip by an ALLOWLIST,
+      # so it catches a copy-paste off the adjacent behind-the-back block as
+      # well as a #296 locomotion/idle leak.
+      # 'betweenthelegs-startup-differs-from-recovery' is #296's actual
+      # complaint: under the old fallback both phases played locomotion/idle and
+      # were pixel-identical, so an opponent could not tell "committing" from
+      # "punish window". It compares CLIP CONTENT (per-bone local rotations at
+      # phase entry and exit, both polarities, min-reduced) rather than names,
+      # because two differently-NAMED clips can still be byte-identical and
+      # every name-based check above waves that through. Measured 39-48 deg.
+      # 'control-identical-clips-read-as-identical' is that scenario's premise
+      # proof, and the reason it is not vacuous: its pass shape is "the number
+      # came out LARGE", which a comparator ignoring its second argument would
+      # also produce on every input. So the same comparator is run on the exact
+      # pre-#309 defect — locomotion/idle against itself — and must report ~0
+      # over a NON-EMPTY bone set (asserted separately: "small over zero bones"
+      # is the one place an empty measurement could look like success).
+      # 'btl-poses-the-skeleton' closes the gap all of the above leave open:
+      # #313 shipped clips whose track paths carried an "Armature/" prefix, so
+      # they bound to nothing and were SILENT no-ops — reachability, durations
+      # and the state->clip mapping were all still correct and the mesh never
+      # moved.
+      # Each exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run between-the-legs per-move animation state harness
+        run: |
+          godot --headless --path . res://tests/integration/BetweenTheLegsAnimTest.tscn -- --harness-scenario=betweenthelegs-phases
+          godot --headless --path . res://tests/integration/BetweenTheLegsAnimTest.tscn -- --harness-scenario=btl-right-origin
+          godot --headless --path . res://tests/integration/BetweenTheLegsAnimTest.tscn -- --harness-scenario=btl-single-polarity
+          godot --headless --path . res://tests/integration/BetweenTheLegsAnimTest.tscn -- --harness-scenario=no-unsuffixed-btl-state
+          godot --headless --path . res://tests/integration/BetweenTheLegsAnimTest.tscn -- --harness-scenario=control-unsuffixed-probe
+          godot --headless --path . res://tests/integration/BetweenTheLegsAnimTest.tscn -- --harness-scenario=betweenthelegs-segment-lengths
+          godot --headless --path . res://tests/integration/BetweenTheLegsAnimTest.tscn -- --harness-scenario=betweenthelegs-no-placeholder-leak
+          godot --headless --path . res://tests/integration/BetweenTheLegsAnimTest.tscn -- --harness-scenario=betweenthelegs-startup-differs-from-recovery
+          godot --headless --path . res://tests/integration/BetweenTheLegsAnimTest.tscn -- --harness-scenario=control-identical-clips-read-as-identical
+          godot --headless --path . res://tests/integration/BetweenTheLegsAnimTest.tscn -- --harness-scenario=btl-poses-the-skeleton
+
       # Moving crossover — momentum-aware burst with left-stick exit (issue
       # #198, ADR-0003 amendment). CrossoverBurstMathTests already pin the
       # pure composition function; this drives a REAL PlayerController
