@@ -147,10 +147,10 @@ public static class MoveAnimResolver
     ///
     /// Deliberately NOT exhaustive over every <c>CommittedMove.Id</c>: moves
     /// without their own captured clip still fall back to the shared generic
-    /// clip via <see cref="ResolveStateName"/>'s default case. As of #309 that
-    /// remaining set is spin, hesitation, drivegather and eurostep — but read
-    /// this dictionary rather than that list, which goes stale every time a
-    /// clip lands (#309 removed betweenthelegs from it; #308 removed inandout
+    /// clip via <see cref="ResolveStateName"/>'s default case. As of #307 that
+    /// remaining set is spin, drivegather and eurostep — but read this
+    /// dictionary rather than that list, which goes stale every time a clip
+    /// lands (#307 removed hesitation from it; #309 removed betweenthelegs
     /// before that).
     ///
     /// That fallback is a SAFETY NET, not a destination. It used to be
@@ -182,6 +182,7 @@ public static class MoveAnimResolver
         ["retreatdribble"] = "RetreatDribble", // #305 — unhanded; the ball never leaves the dribbling hand (RetreatDribble.cs), so it must NOT join HandedMoves
         ["stepback"]      = "StepBack", // #306 — unhanded; StepBack.cs's own class doc: "No hand swap: there is no ball transit", so it must NOT join HandedMoves
         ["betweenthelegs"] = "BetweenTheLegs", // #309 — HANDED (six states); the ball swaps at Active-entry, so OriginHand's formula holds — see HandedMoves
+        ["hesitation"]    = "Hesitation", // #307 — unhanded; Hesitation.cs's own class doc: "No ball swap ... applies NO lateral velocity impulse", so it must NOT join HandedMoves — see that set's docstring
     };
 
     /// <summary>
@@ -351,9 +352,9 @@ public static class MoveAnimResolver
     /// nonexistent state that Travel() would silently no-op against.
     ///
     /// Every other combination — an unclipped/unknown moveId on any phase (as of
-    /// #309: spin, hesitation, drivegather and eurostep, the remainder of #302's
-    /// batch; consult <see cref="ClippedMovePrefixes"/> rather than this list,
-    /// which goes stale each time a clip lands), or a null/empty moveId (no move
+    /// #307: spin, drivegather and eurostep, the remainder of #302's batch;
+    /// consult <see cref="ClippedMovePrefixes"/> rather than this list, which
+    /// goes stale each time a clip lands), or a null/empty moveId (no move
     /// in flight) —
     /// degrades to the generic fallback name (<c>generic.ToString()</c>),
     /// matching Resolve's "never throw in a tick loop" stance: a moveId this
