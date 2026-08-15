@@ -269,6 +269,22 @@ HIP_DROP_RECOVERY_MIN_M = 0.08
 # absolute band would not.
 TORSO_VERTICAL_MARGIN_M = 0.05
 
+# ...and the OTHER side of that claim: the torso must not sail PAST vertical
+# into a backward lean, which reads as a fadeaway rather than a hesitation.
+# author_stepback.py's `_verify_torso_band_at_active_end` is two-sided for the
+# same reason ("NOT past vertical, which would read as the fadeaway"); without
+# a ceiling this gate gets MORE comfortable the worse the over-rotation gets,
+# since raising `torso_back_deg` only grows `delta`.
+#
+# Expressed as a SIGN check with tolerance, not as a magnitude band, so it
+# keeps the relative-over-absolute property the module docstring's "THE TORSO"
+# section argues for: the source-clip frame-sampling wobble it warns about
+# moves the lean's MAGNITUDE, and anything from -0.02 m upward passes here.
+# Only a genuine sign flip -- the torso actually tipping backward -- trips it.
+# MEASURED: the shipped clip reaches +0.006 m at Active's end (still a hair
+# forward of vertical), so it clears this by the full tolerance.
+TORSO_PAST_VERTICAL_TOL_M = 0.02
+
 
 def _keyposes_for_lib():
     """`_KEYPOSES_RAW` translated into `blender_anim_lib.Keypose` objects."""
@@ -340,6 +356,22 @@ def _verify_torso_more_vertical_at_active_end(arm, geom, forward):
             f"stance (frame {F0}) to Active's end (frame {ACTIVE_END}), need >= "
             f"{TORSO_VERTICAL_MARGIN_M}. Handoff 07: 'torso pitches toward vertical' "
             f"-- retune torso_back_deg at the Active row.")
+    # TWO-SIDED, following author_stepback.py's _verify_torso_band_at_active_end
+    # ("checks BOTH directions around 0") rather than retreat dribble's
+    # one-sided form. A one-sided gate gets MORE comfortable the further the
+    # torso over-rotates: raise torso_back_deg far enough and `delta` grows
+    # without bound while the clip ships a hesitation leaning BACKWARD past
+    # vertical -- which reads as a fadeaway, an ADR-0003 false read reaching
+    # the rig through a green gate. Hesitation's target is "essentially
+    # vertical, squares to the rim", so it has the most to lose from
+    # over-rotation of any move in the batch, and needs the ceiling most.
+    if fore_active_end < -TORSO_PAST_VERTICAL_TOL_M:
+        raise SystemExit(
+            f"FATAL: at Active's end (frame {ACTIVE_END}) the torso projects "
+            f"{fore_active_end:+.4f} m -- a BACKWARD lean past vertical, beyond the "
+            f"{TORSO_PAST_VERTICAL_TOL_M} m tolerance. That reads as a FADEAWAY, not a "
+            f"hesitation (handoff 07: 'torso essentially vertical, squares to the "
+            f"rim'). Lower torso_back_deg at the Active row.")
 
 
 def _verify_hips_stay_in_place(arm, geom, hips_base, up, forward, body_right, frames):

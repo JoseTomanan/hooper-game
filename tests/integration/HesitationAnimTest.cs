@@ -212,6 +212,30 @@ public partial class HesitationAnimTest : Node
     // MEASURED on the live rig: Active 1.35 deg/tick (over 6 intervals),
     // Startup 3.21 deg/tick (over its 1). Set between them with roughly
     // balanced headroom — 1.5x over Active's reading, 1.6x under Startup's.
+    //
+    // KNOWN LIMIT of the control side, stated rather than papered over.
+    // Startup yields exactly ONE clean interval, and blender_anim_lib's
+    // PHASE_EASING maps "startup" to ease_in (f(t)=t^2), so the per-interval
+    // share of Startup's swing across its 4 ticks runs roughly
+    // 6.25/18.75/31.25/43.75% — a ~7x spread. The control's 1.6x margin is
+    // therefore partly a property of WHICH interval gets sampled, not only of
+    // how much Startup moves; if a Godot bump shifted the observation window
+    // onto the slowest segment the control could read ~1.1 deg/tick and redden
+    // without anything having regressed.
+    //
+    // That window is not freely adjustable: a TRACE of the live rig shows the
+    // first tick labelled HesitationStartup carries a TRANSITIONAL pose
+    // (145.6 deg from rest, against ~179.8 for every settled tick, with a
+    // 145 deg jump to the next), so it cannot be included; and the move's
+    // first authored tick elapses inside the same physics frame
+    // BeginMoveForHarness runs in, so it can never be observed at all.
+    // Observing earlier — the intuitive fix — captures the pre-move pose and
+    // buys nothing. Four authored ticks minus those two leaves one interval.
+    //
+    // The mitigation is diagnostic rather than structural: the premises below
+    // pin the observed tick counts and print them, so a shifted window fails
+    // as a PREMISE with the counts named, not as a claim failure blaming the
+    // measurement. See the PR's "known sampling limit" section.
     private const float HoldMaxDegPerTick = 2.0f;
 
     private static readonly string[] KnownScenarios =
@@ -427,7 +451,24 @@ public partial class HesitationAnimTest : Node
         var skel = FindSkeleton(_actor);
         if (skel == null) return;
 
-        float hipY = skel.GetBoneGlobalPose(skel.FindBone("mixamorig_Hips")).Origin.Y;
+        // Guarded for the same reason SampleBones poisons: GetBoneGlobalPose(-1)
+        // returns identity, so an unresolved Hips would silently feed 0.0 into
+        // EVERY phase's mean and make hesitation-active-raises-hips report
+        // "mean(Active) - mean(Startup) = 0.0000 m" — a confident geometric
+        // reading that sends the reader to the clip and author_hesitation.py's
+        // hip_offset_m table when the real defect is a bone-name lookup (the
+        // mixamorig: vs mixamorig_ prefix trap, or an fbx/naming_version bump).
+        // Leaving the count un-incremented instead trips the hipCount premise,
+        // which names the actual problem. Matches RetreatDribbleAnimTest.cs's
+        // own guard on this exact call.
+        int hipsIdx = skel.FindBone("mixamorig_Hips");
+        if (hipsIdx < 0)
+        {
+            GD.PrintErr("[hesitation-anim] FAIL: bone 'mixamorig_Hips' does not resolve on the live Skeleton3D — " +
+                        "every hip-height measurement in this file is unavailable, so no hip-keyed premise can hold.");
+            return;
+        }
+        float hipY = skel.GetBoneGlobalPose(hipsIdx).Origin.Y;
 
         if (node == "HesitationStartup")
         {
@@ -751,9 +792,16 @@ public partial class HesitationAnimTest : Node
                      $"{startupDelta:F2} deg/tick, ABOVE the {HoldMaxDegPerTick:F1} deg/tick ceiling Active must " +
                      "stay under: the same measurement that reads Active as arrested reads Startup as moving.");
         else
-            Fail($"control-hesitation-startup-is-not-held: maxPerTickDeltaDeg={startupDelta:F2} deg/tick, need " +
-                 $"> {HoldMaxDegPerTick:F1}. If Startup reads as held by the same measurement that calls Active " +
-                 "held, then hesitation-active-is-held is not discriminating anything and its green is worthless.");
+            // TWO causes, and they need different responses — do not assume the
+            // first. See HoldMaxDegPerTick's "KNOWN LIMIT" note.
+            Fail($"control-hesitation-startup-is-not-held: maxPerTickDeltaDeg={startupDelta:F2} deg/tick over " +
+                 $"{_perTickIntervalsStartup} interval(s) (startupTicks={_startupTicks}), need > " +
+                 $"{HoldMaxDegPerTick:F1}. EITHER (a) the hold measurement has gone dead, in which case " +
+                 "hesitation-active-is-held is no longer discriminating anything and its green is worthless; " +
+                 "OR (b) the observation window shifted onto an earlier, slower segment of Startup's ease_in " +
+                 "ramp, which spans a ~7x per-interval spread across only 4 authored ticks — a sampling artefact, " +
+                 "not a regression. startupTicks=3 is the calibrated value; anything else points at (b). Check it " +
+                 "BEFORE touching the clip or the threshold.");
         Finish(pass ? 0 : 1);
     }
 
