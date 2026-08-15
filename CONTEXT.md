@@ -22,11 +22,11 @@ Do not add design reasoning here. If a decision belongs somewhere, it belongs in
 
 **Timing windows** — A subordinate system: discrete input windows for shot release, steal, and block. They live inside the spacing spine and are not co-equal with it. see: [CLAUDE.md §1](CLAUDE.md)
 
-**Shot release timing window** — During a shot attempt, the window of frames where releasing the shoot input produces a "perfect" (green) result with maximum accuracy; early or late releases degrade the shot. Modeled on NBA 2K's shot meter / green-window system. see: [CLAUDE.md §1](CLAUDE.md)
+**Shot release timing window** — *Historical intent; never built.* The original design imagined an NBA 2K–style green window on shot release. What shipped instead is ADR-0009's deterministic distance-based scatter, with no user-timed release input at all. Whether the game wants a user-timed execution axis is an open identity question, not a settled one. see: [ADR-0009](docs/adr/0009-shot-accuracy-scatter.md), issue #347
 
-**Steal timing window** — When a ball-handler is exposed (mid-dribble, off-balance, etc.), the discrete window where a steal attempt succeeds cleanly; outside it the attempt produces a foul or a failed reach. Modeled on NBA 2K's steal system. see: [CLAUDE.md §1](CLAUDE.md)
+**Steal timing window** — When a ball-handler is exposed, the interval during which a steal attempt succeeds. Resolved as an *overlap* between the defender's active frames and the exposure interval, not as a point sample. A missed window simply whiffs; the defender's recovery frames are the punishment. There are no fouls. see: [ADR-0018](docs/adr/0018-defensive-timing-window-model.md)
 
-**Block timing window** — During a shot attempt, the discrete window where pressing block legally contests or rejects the shot; outside it the attempt results in a foul or a miss. Modeled on NBA 2K's block system. see: [CLAUDE.md §1](CLAUDE.md)
+**Block timing window** — During a shot attempt, the interval during which a block attempt contests or rejects the shot. Same interval-overlap resolution as the steal, and likewise punished only by recovery frames. There are no fouls. see: [ADR-0018](docs/adr/0018-defensive-timing-window-model.md)
 
 **Stamina / resource** — A visible resource bar that degrades from executing committed moves and active defense, modeled on UFC Undisputed 3's stamina system. Depleted stamina slows and weakens committed moves. Subordinate to the spacing spine — it constrains options without replacing the commitment/mind-game layer. see: [CLAUDE.md §1](CLAUDE.md)
 
