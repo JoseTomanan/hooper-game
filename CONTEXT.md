@@ -40,6 +40,14 @@ Do not add design reasoning here. If a decision belongs somewhere, it belongs in
 
 **Change of pace** — Varying movement speed within the continuous neutral game to manipulate the defender's positioning. Driven by left stick. see: [ADR-0003](docs/adr/0003-input-model-hybrid.md)
 
+**Body contact** — What happens when two players' bodies meet: the denial half of the spacing spine. Resolved by a deterministic contact term, never by the physics solver — the solver plays no part in player-to-player contact. see: [ADR-0025](docs/adr/0025-on-ball-body-contact.md), issue #347
+
+**Set / legal guarding position** — The binary condition under which a player absorbs contact rather than being driven through: low speed *and* facing the contact. A defender who is set stops the drive; one backpedalling or turned sideways gets driven through. Server-authoritative; never derived from cosmetic facing. see: [ADR-0025](docs/adr/0025-on-ball-body-contact.md)
+
+**Driven through** — The outcome of contact against a player who is not set: the body yields and the drive continues. The spatial counterpart to the blow-by's timing payoff. see: [ADR-0025](docs/adr/0025-on-ball-body-contact.md), issue #100
+
+**Box-out** — Body contact applied at the rim during a live rebound: the player uses position to deny the opponent access to the loose ball. Works only by changing where the bodies are — it never affects how the loose-ball contest resolves. see: [ADR-0025](docs/adr/0025-on-ball-body-contact.md), [ADR-0008](docs/adr/0008-possession-rules.md)
+
 **Cosmetic facing** — The player visual's rotation to face its horizontal movement direction, holding the last facing when stationary. Derived locally each frame from velocity; never networked and never part of authoritative state. see: [ADR-0004](docs/adr/0004-deterministic-ball-physics.md), issue #39
 
 **Burst lean** — A cosmetic tilt of the player visual toward the crossover's burst direction during the Active phase, returning upright in Recovery. Counters the decoupled-from-body "slide" look (ADR-0003 anti-goal) without a rig. Visual-only; never affects velocity or authoritative state. see: [ADR-0003](docs/adr/0003-input-model-hybrid.md), [ADR-0004](docs/adr/0004-deterministic-ball-physics.md), issue #39
