@@ -146,9 +146,12 @@ public static class MoveAnimResolver
     /// was already playing.
     ///
     /// Deliberately NOT exhaustive over every <c>CommittedMove.Id</c>: moves
-    /// without their own captured clip (spin, betweenthelegs, ...) still
-    /// fall back to the shared generic clip via
-    /// <see cref="ResolveStateName"/>'s default case.
+    /// without their own captured clip still fall back to the shared generic
+    /// clip via <see cref="ResolveStateName"/>'s default case. As of #309 that
+    /// remaining set is spin, hesitation, drivegather and eurostep — but read
+    /// this dictionary rather than that list, which goes stale every time a
+    /// clip lands (#309 removed betweenthelegs from it; #308 removed inandout
+    /// before that).
     ///
     /// That fallback is a SAFETY NET, not a destination. It used to be
     /// described here as a settled placeholder-art decision; issue #296
@@ -178,6 +181,7 @@ public static class MoveAnimResolver
         ["inandout"]      = "InAndOut", // #308 — unhanded; the ball NEVER swaps hands (InAndOut.cs), so it must NOT join HandedMoves — see that set's docstring
         ["retreatdribble"] = "RetreatDribble", // #305 — unhanded; the ball never leaves the dribbling hand (RetreatDribble.cs), so it must NOT join HandedMoves
         ["stepback"]      = "StepBack", // #306 — unhanded; StepBack.cs's own class doc: "No hand swap: there is no ball transit", so it must NOT join HandedMoves
+        ["betweenthelegs"] = "BetweenTheLegs", // #309 — HANDED (six states); the ball swaps at Active-entry, so OriginHand's formula holds — see HandedMoves
     };
 
     /// <summary>
@@ -216,8 +220,21 @@ public static class MoveAnimResolver
     /// OriginHand's correction has nothing to undo and would simply invert the
     /// polarity from Active onward. It is split by a different rule instead —
     /// see <see cref="TargetHandedMoves"/>.
+    ///
+    /// #309 added "betweenthelegs", and its swap timing was re-verified the
+    /// same way #281 verified behind-the-back's — against the control flow, not
+    /// against the paragraph above describing it. PlayerController's burst
+    /// branch fires on <c>JustEnteredActive &amp;&amp; CurrentMove is Crossover
+    /// or BehindTheBack or BetweenTheLegs or InAndOut</c> and, inside it, swaps
+    /// the hand for everything except InAndOut. So BetweenTheLegs swaps on the
+    /// FIRST Active tick and OriginHand's formula holds.
+    ///
+    /// Note that BetweenTheLegs and InAndOut carry the SAME
+    /// <c>BurstDirection</c> parameter and get OPPOSITE answers here. That is
+    /// the point of this set existing at all: the discriminator is the swap
+    /// TIMING, never the presence of a direction parameter.
     /// </summary>
-    private static readonly HashSet<string> HandedMoves = new() { "crossover", "behindtheback" };
+    private static readonly HashSet<string> HandedMoves = new() { "crossover", "behindtheback", "betweenthelegs" };
 
     /// <summary>
     /// (Issue #282) The moves whose per-phase states are split by hand side
@@ -334,9 +351,10 @@ public static class MoveAnimResolver
     /// nonexistent state that Travel() would silently no-op against.
     ///
     /// Every other combination — an unclipped/unknown moveId on any phase (as of
-    /// #306: spin, betweenthelegs and the rest of #302's batch; consult
-    /// <see cref="ClippedMovePrefixes"/> rather than this list, which goes stale
-    /// each time a clip lands), or a null/empty moveId (no move in flight) —
+    /// #309: spin, hesitation, drivegather and eurostep, the remainder of #302's
+    /// batch; consult <see cref="ClippedMovePrefixes"/> rather than this list,
+    /// which goes stale each time a clip lands), or a null/empty moveId (no move
+    /// in flight) —
     /// degrades to the generic fallback name (<c>generic.ToString()</c>),
     /// matching Resolve's "never throw in a tick loop" stance: a moveId this
     /// resolver doesn't recognize just plays the shared clip instead of
@@ -433,8 +451,9 @@ public static class MoveAnimResolver
             // split in two, and the suffix names the hand the ball STARTED in —
             // so "Left" is the crossover that carries the ball toward the
             // body's RIGHT. There is no unsuffixed fallback: scenes/Player.tscn
-            // holds only the handed states (six per handed move — crossover and
-            // behindtheback), because HandSide is a two-valued enum and
+            // holds only the handed states (six per handed move — crossover,
+            // behindtheback and, since #309, betweenthelegs), because HandSide
+            // is a two-valued enum and
             // OriginHand is total over it, so no third case can arise.
             return HandedMoves.Contains(moveId)
                 ? prefix + generic + OriginHand(generic, ballHand)
