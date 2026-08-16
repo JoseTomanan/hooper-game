@@ -1981,16 +1981,32 @@ jobs:
       #          genuinely IS a different pose. That mutation asks a question
       #          this scenario never claimed to answer; the idle/idle mutation
       #          above is the one that matches its actual claim.
-      # Each scenario exits 0=PASS/1=FAIL (ADR-0016). Edge-level coverage
-      # (a deleted transition) is NOT available — Travel()'s pathfinder routes
-      # around a missing edge, so GetCurrentNode() cannot detect the loss
-      # (README trap 8, proven by mutation in #279); this harness asserts
-      # reachability (hesitation-phases) and duration only.
+      #   deleted the DribbleRight -> HesitationStartup edge
+      #       -> hesitation-edges reddened; hesitation-phases stayed GREEN,
+      #          confirming README trap 8 from the other side (Travel()'s
+      #          pathfinder routes around the gap, so only the resource-level
+      #          check sees it).
+      #
+      # ── hesitation-edges exists because trap 8 is a reason FOR it, not
+      # against it ──────────────────────────────────────────────────────────
+      # This block previously stated that "edge-level coverage is NOT
+      # available" because Travel()'s pathfinder routes around a missing edge.
+      # That inverts README trap 8. Trap 8 says a RUNTIME assertion built on
+      # GetCurrentNode() cannot see a deleted edge — which is precisely why
+      # the check has to read the TRANSITION TABLE off the .tscn resource
+      # instead, exactly as layup/contest/jab-step/in-and-out/retreat-dribble/
+      # step-back all already do. The claim it makes is static ("the twelve
+      # edges exist"), so the pathfinder never enters into it. Without this
+      # scenario the twelve edges were wired but wholly unguarded: any future
+      # edit dropping one would ship silently green, since hesitation-phases
+      # demonstrably survives the deletion (see the mutation above).
+      # Each scenario exits 0=PASS/1=FAIL (ADR-0016).
       - name: Run hesitation per-move animation state harness
         run: |
           godot --headless --path . res://tests/integration/HesitationAnimTest.tscn -- --harness-scenario=hesitation-phases
           godot --headless --path . res://tests/integration/HesitationAnimTest.tscn -- --harness-scenario=hesitation-no-placeholder-leak
           godot --headless --path . res://tests/integration/HesitationAnimTest.tscn -- --harness-scenario=hesitation-segment-lengths
+          godot --headless --path . res://tests/integration/HesitationAnimTest.tscn -- --harness-scenario=hesitation-edges
           godot --headless --path . res://tests/integration/HesitationAnimTest.tscn -- --harness-scenario=hesitation-startup-differs-from-recovery
           godot --headless --path . res://tests/integration/HesitationAnimTest.tscn -- --harness-scenario=hesitation-clip-drives-the-rig
           godot --headless --path . res://tests/integration/HesitationAnimTest.tscn -- --harness-scenario=hesitation-active-raises-hips

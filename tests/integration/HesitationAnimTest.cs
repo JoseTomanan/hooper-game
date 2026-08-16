@@ -22,7 +22,7 @@ namespace HOOPERGAME.Tests.Integration;
 // batch whose entire content is standing tall and freezing.
 //
 //   godot --headless --path . res://tests/integration/HesitationAnimTest.tscn -- --harness-scenario=hesitation-phases
-//   …=hesitation-no-placeholder-leak | hesitation-segment-lengths
+//   …=hesitation-no-placeholder-leak | hesitation-segment-lengths | hesitation-edges
 //   …=hesitation-startup-differs-from-recovery | hesitation-clip-drives-the-rig
 //   …=hesitation-active-raises-hips | control-hesitation-recovery-lowers-hips
 //   …=hesitation-active-is-held | control-hesitation-startup-is-not-held
@@ -243,6 +243,7 @@ public partial class HesitationAnimTest : Node
         "hesitation-phases",
         "hesitation-no-placeholder-leak",
         "hesitation-segment-lengths",
+        "hesitation-edges",
         "hesitation-startup-differs-from-recovery",
         "hesitation-clip-drives-the-rig",
         "hesitation-active-raises-hips",
@@ -256,6 +257,7 @@ public partial class HesitationAnimTest : Node
     {
         "hesitation-no-placeholder-leak",
         "hesitation-segment-lengths",
+        "hesitation-edges",
     };
 
     private string _scenario = "hesitation-phases";
@@ -812,7 +814,84 @@ public partial class HesitationAnimTest : Node
         {
             case "hesitation-no-placeholder-leak": RunNoPlaceholderLeakCheck(); break;
             case "hesitation-segment-lengths":       RunSegmentLengthsCheck(); break;
+            case "hesitation-edges":                 RunEdgesCheck(); break;
         }
+    }
+
+    // ── Scenario: hesitation-edges ──────────────────────────────────────────
+    // README trap 8 / #279: a DELETED transition edge is INVISIBLE to
+    // GetCurrentNode(). Travel()'s pathfinder simply routes around the gap, so
+    // `hesitation-phases` stays GREEN with an edge missing — this
+    // resource-level check is the only thing in the suite that can see one.
+    // That is why it exists as its own scenario rather than folding into the
+    // phases walk, and why every sibling in #302's batch (layup, contest, jab
+    // step, in-and-out, retreat dribble, step-back) carries the same guard.
+    //
+    // Hesitation is a dribble-family OFFENSIVE move, so it needs the six
+    // standard edges AND the dribble-family entries/exits — the latter
+    // DOUBLED by #294's DribbleLeft/DribbleRight split, because a
+    // live-dribbling holder sits in DribbleLeft or DribbleRight, never in the
+    // pre-#294 single `Dribble` state. That gives the same 12-edge shape
+    // retreat dribble and step-back already use.
+    //
+    // The Startup -> Recovery edge is kept even though Hesitation.cs sets
+    // feintWindowFrames = 0 (there is no recall — "the absence of a cancel IS
+    // the mind game", per that class's own doc). It is retained for SHAPE
+    // consistency with every other move's state graph, exactly as step-back
+    // retains its own unused feint edge; a state machine whose edge set varies
+    // with a gameplay constant is far harder to reason about than one that is
+    // uniform, and an unused edge costs nothing at runtime.
+    private void RunEdgesCheck()
+    {
+        var sm = LoadStateMachine();
+        if (sm == null)
+        {
+            Fail("could not read an AnimationNodeStateMachine off scenes/Player.tscn's AnimationTree tree_root.");
+            Finish(1);
+            return;
+        }
+
+        (string From, string To)[] required =
+        {
+            ("Locomotion", "HesitationStartup"),
+            ("HesitationStartup", "HesitationActive"),
+            ("HesitationActive", "HesitationRecovery"),
+            ("HesitationRecovery", "Locomotion"),
+            ("HesitationStartup", "HesitationRecovery"),   // feint / early-out path (feintWindowFrames=0, kept for shape)
+            ("HesitationStartup", "Locomotion"),           // abort
+            ("DribbleLeft", "HesitationStartup"),
+            ("DribbleRight", "HesitationStartup"),
+            ("HesitationRecovery", "DribbleLeft"),
+            ("HesitationRecovery", "DribbleRight"),
+            ("HesitationStartup", "DribbleLeft"),
+            ("HesitationStartup", "DribbleRight"),
+        };
+
+        var present = new System.Collections.Generic.HashSet<string>();
+        for (int i = 0; i < sm.GetTransitionCount(); i++)
+            present.Add($"{sm.GetTransitionFrom(i)}->{sm.GetTransitionTo(i)}");
+
+        bool pass = true;
+        foreach (var (from, to) in required)
+        {
+            bool here = present.Contains($"{from}->{to}");
+            GD.Print($"[hesitation-anim]   edge {from} -> {to}: {(here ? "present" : "MISSING")}");
+            if (!here)
+            {
+                Fail($"scenes/Player.tscn has no transition '{from}' -> '{to}'. Travel()'s pathfinder will " +
+                     "route around the gap, so NO runtime scenario can catch this — only this resource-level " +
+                     "check can.");
+                pass = false;
+            }
+        }
+
+        if (pass)
+            GD.Print($"[hesitation-anim] PASS hesitation-edges — all {required.Length} required transitions are " +
+                     "present (6 standard + 6 dribble-family, the latter doubled by #294's DribbleLeft/DribbleRight split).");
+        else
+            GD.PrintErr("[hesitation-anim] FAIL hesitation-edges — see missing transitions above.");
+
+        Finish(pass ? 0 : 1);
     }
 
     // ── Scenario: hesitation-segment-lengths ────────────────────────────────
