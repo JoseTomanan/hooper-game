@@ -1844,6 +1844,176 @@ jobs:
           godot --headless --path . res://tests/integration/BetweenTheLegsAnimTest.tscn -- --harness-scenario=control-identical-clips-read-as-identical
           godot --headless --path . res://tests/integration/BetweenTheLegsAnimTest.tscn -- --harness-scenario=btl-poses-the-skeleton
 
+      # Hesitation per-move clips (issue #307, #302 batch 2) — the only move
+      # in this batch that goes UP: every other clip drops the hips (a load,
+      # a plant, a crouch); a hesitation stands TALL and freezes, baiting the
+      # defender into a reactive lean. handoff 07 / author_hesitation.py's own
+      # docstring cover the full contrast, notably why the stand-up completes
+      # DURING Startup (the slice boundary means Startup's own last pose IS
+      # Active's own first pose, so putting the rise there leaves Active free
+      # to be a genuine HOLD) and why this move is grounded throughout
+      # (`verify_grounded`, not step-back's `verify_airborne` — the rise comes
+      # entirely from leg extension, never a jump).
+      #
+      # Before #307 "hesitation" fell through MoveAnimResolver.
+      # ResolveStateName's default case onto the shared generic states — a
+      # looping IDLE for Startup/Recovery (pixel-identical, so the defender
+      # cannot read "committing" vs "punish window") and a looping SPRINT for
+      # Active, an outright false read for the one move whose entire content
+      # is standing still.
+      #
+      # hesitation-active-raises-hips / control-hesitation-recovery-lowers-
+      # hips measure the Hips' MEAN vertical position per phase, not an
+      # endpoint comparison — the slice boundary makes max(Startup) ==
+      # min(Active) by construction, so a max-vs-max (or endpoint-vs-endpoint)
+      # form is unsatisfiable. Startup's own ease_in shape spends most ticks
+      # low before rising late, so its MEAN reads well under Active's, which
+      # itself barely drifts (the hold).
+      #
+      # hesitation-active-is-held is the one scenario in this batch whose
+      # claim is ABSENCE of motion, so it ships as two required PREMISE halves
+      # plus the claim. Half A: on Active's own last observed tick, some bone
+      # departs from skeleton REST by a floor (README's a45bd1d guard — a clip
+      # whose TRACKS don't resolve collapses to literal rest). Half B (added
+      # after mutation found Half A alone insufficient — see below): Active's
+      # own baseline pose must differ from STARTUP's own last pose by a floor
+      # — catches the DIFFERENT failure mode of a blank/unresolvable
+      # animation NAME, which does not collapse to rest at all; Godot's
+      # AnimationMixer just contributes nothing, so the rig FREEZES at
+      # whatever pose the PREVIOUS state left it in (far from skeleton rest,
+      # so Half A alone passes it vacuously). The claim: the per-bone delta
+      # between Active's own 2nd observed tick and its own LAST observed tick
+      # stays under a small ceiling — a baseline-to-LAST comparison, not a
+      # running max across every intermediate tick (see below for why).
+      #
+      # control-hesitation-startup-is-not-held runs the SAME measurement code
+      # path and the SAME constant on Startup, asserted in the OPPOSITE
+      # direction: Startup must EXCEED the very ceiling Active must stay
+      # under. One constant, two directions — that is what makes the pair a
+      # discriminator rather than two independently-tuned numbers.
+      #
+      # Both compare on DEGREES PER TICK (the largest per-bone delta between
+      # any two consecutive observed ticks), not on each phase's total swing.
+      # The phases yield structurally unequal windows — Active 6 usable
+      # intervals, Startup exactly 1 — so comparing totals is unfair in
+      # Startup's disfavour and inverts the inequality outright (measured:
+      # Active totals 5.58 deg, Startup 3.21, reading as "the held phase moved
+      # more" purely because it was sampled six times as often). Per-tick is
+      # the same reduction applied fairly to both and recovers the real
+      # relationship: Active 1.35 deg/tick vs Startup 3.21 deg/tick, either
+      # side of a 2.0 ceiling. It is also strictly stronger than a
+      # baseline-to-last comparison, which sees only the endpoints and so
+      # reads a pose that swings away mid-phase and returns as "held".
+      #
+      # hesitation-clip-drives-the-rig asserts departure from rest on the LAST
+      # tick of the whole move (Recovery's own last observed tick), not the
+      # max across it — README's verification floor: both naive metrics
+      # (max-departure-from-rest, max-change-across-the-arc) pass on a
+      # deliberately-unbound clip, and only the final-tick reading separates
+      # a bound clip from one that collapsed to rest a tick after entry.
+      #
+      # This harness begins the move via BeginMoveForHarness(new Hesitation())
+      # — DefensiveMoveHarnessSeam.cs's generic seam, reaching
+      # BeginCommittedMove directly — which bypasses BOTH of
+      # PlayerController.SampleMoveInput's hesitation dispatch sites (the held
+      # GestureKind.Crossover branch and the quick-return GestureKind.
+      # QuickReturn branch both construct an identical `new Hesitation()`), so
+      # it proves the clip/wiring half of both paths equally but does NOT
+      # exercise RightStickGestureRecognizer's own gesture classification
+      # (RightStickGestureRecognizerTests' job, not this harness's).
+      #
+      # ONE DEVIATION FROM THIS HANDOFF'S ORIGINAL BRIEF, MEASURED rather than
+      # silently shipped — see the PR for the full reasoning:
+      #
+      #   Hesitation's own Startup is only 4 ticks, and this harness's
+      #   Act->Observe handoff loses it ONE MORE raw tick beyond the usual
+      #   #316/#340 pose-lag drop (measured: 3 raw ticks observed, not the
+      #   naively-expected 4). That leaves only 2 usable Startup samples — the
+      #   SAME regime JabStepAnimTest's own even-shorter 3-tick Startup already
+      #   set an ">= 2" precedent for. Startup-keyed premises here follow that
+      #   precedent; StartupVsRecoveryMinDeg (8.0, not the Blender-side 15.0)
+      #   and RecoveryLowersHipsMinM (0.035, not 0.05) are set from what this
+      #   harness can actually observe live, not from the Blender/resource-side
+      #   numbers. This is a sampling limit, NOT a weakening of any claim: the
+      #   scenarios 8/9 pair still asserts the full strength the brief called
+      #   for, once the per-tick normalisation above makes the two phases'
+      #   unequal windows comparable.
+      #
+      # MUTATION-PROVEN (a green scenario that cannot fail is worse than none).
+      # Every row below was re-run and re-measured against the final
+      # thresholds:
+      #   misspelled "locomotion/hesitationactve" on HesitationActive's clip
+      #       -> hesitation-no-placeholder-leak reddened; hesitation-phases
+      #          correctly stayed GREEN (the state is still entered
+      #          regardless of whether its clip resolves — matches
+      #          StepBackAnimTest's own documented precedent, NOT the
+      #          "misspell -> phases" line in this handoff's original brief)
+      #   HesitationActive repointed at the shared locomotion/run placeholder
+      #       -> hesitation-no-placeholder-leak AND hesitation-active-is-held
+      #          (the claim half, 5.95 deg/tick vs the 2.0 ceiling) reddened;
+      #          control-hesitation-startup-is-not-held correctly stayed GREEN
+      #          (it measures Startup, which this mutation does not touch);
+      #          hesitation-active-raises-hips did NOT redden (a running
+      #          clip's mean hip height is even TALLER than hesitation's own
+      #          authored raise, so that specific claim still passed —
+      #          reported rather than silently accepted)
+      #   rebuild_hesitation_clips.gd ACTIVE_TICKS 8 -> 10
+      #       -> hesitation-segment-lengths reddened
+      #   HesitationActive repointed at a blank/unresolvable animation
+      #       -> hesitation-active-is-held's boundness Half B reddened
+      #          (activeEntryVsStartupEndDeg 8.93 deg vs the 20.0 floor, a
+      #          2.2x margin, against 38.30 deg healthy) while BOTH the claim
+      #          half and Half A read GREEN — the claim because a frozen rig
+      #          is trivially "held" (0.00 deg/tick), Half A because the
+      #          frozen carry-over pose sits 179.98 deg from skeleton rest.
+      #          Half B is the ONLY thing standing between this defect and a
+      #          green board, which is why its floor is placed between the two
+      #          measured populations rather than just above the mutation.
+      #   BOTH HesitationStartup and HesitationRecovery repointed at
+      #   locomotion/idle — i.e. the literal pre-#307 state this whole issue
+      #   exists to fix, where the two phases render pixel-identically
+      #       -> hesitation-startup-differs-from-recovery reddened hard
+      #          (0.29 deg vs the 8.0 floor, against 11.83 deg healthy).
+      #          NOTE: repointing Recovery at the hesitationSTARTUP clip
+      #          instead does NOT redden it, and that is correct rather than a
+      #          gap — Startup's captured pose is an early sample of its own
+      #          ramp, so the same clip played to completion in Recovery
+      #          genuinely IS a different pose. That mutation asks a question
+      #          this scenario never claimed to answer; the idle/idle mutation
+      #          above is the one that matches its actual claim.
+      #   deleted the DribbleRight -> HesitationStartup edge
+      #       -> hesitation-edges reddened; hesitation-phases stayed GREEN,
+      #          confirming README trap 8 from the other side (Travel()'s
+      #          pathfinder routes around the gap, so only the resource-level
+      #          check sees it).
+      #
+      # ── hesitation-edges exists because trap 8 is a reason FOR it, not
+      # against it ──────────────────────────────────────────────────────────
+      # This block previously stated that "edge-level coverage is NOT
+      # available" because Travel()'s pathfinder routes around a missing edge.
+      # That inverts README trap 8. Trap 8 says a RUNTIME assertion built on
+      # GetCurrentNode() cannot see a deleted edge — which is precisely why
+      # the check has to read the TRANSITION TABLE off the .tscn resource
+      # instead, exactly as layup/contest/jab-step/in-and-out/retreat-dribble/
+      # step-back all already do. The claim it makes is static ("the twelve
+      # edges exist"), so the pathfinder never enters into it. Without this
+      # scenario the twelve edges were wired but wholly unguarded: any future
+      # edit dropping one would ship silently green, since hesitation-phases
+      # demonstrably survives the deletion (see the mutation above).
+      # Each scenario exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run hesitation per-move animation state harness
+        run: |
+          godot --headless --path . res://tests/integration/HesitationAnimTest.tscn -- --harness-scenario=hesitation-phases
+          godot --headless --path . res://tests/integration/HesitationAnimTest.tscn -- --harness-scenario=hesitation-no-placeholder-leak
+          godot --headless --path . res://tests/integration/HesitationAnimTest.tscn -- --harness-scenario=hesitation-segment-lengths
+          godot --headless --path . res://tests/integration/HesitationAnimTest.tscn -- --harness-scenario=hesitation-edges
+          godot --headless --path . res://tests/integration/HesitationAnimTest.tscn -- --harness-scenario=hesitation-startup-differs-from-recovery
+          godot --headless --path . res://tests/integration/HesitationAnimTest.tscn -- --harness-scenario=hesitation-clip-drives-the-rig
+          godot --headless --path . res://tests/integration/HesitationAnimTest.tscn -- --harness-scenario=hesitation-active-raises-hips
+          godot --headless --path . res://tests/integration/HesitationAnimTest.tscn -- --harness-scenario=control-hesitation-recovery-lowers-hips
+          godot --headless --path . res://tests/integration/HesitationAnimTest.tscn -- --harness-scenario=hesitation-active-is-held
+          godot --headless --path . res://tests/integration/HesitationAnimTest.tscn -- --harness-scenario=control-hesitation-startup-is-not-held
+
       # Moving crossover — momentum-aware burst with left-stick exit (issue
       # #198, ADR-0003 amendment). CrossoverBurstMathTests already pin the
       # pure composition function; this drives a REAL PlayerController

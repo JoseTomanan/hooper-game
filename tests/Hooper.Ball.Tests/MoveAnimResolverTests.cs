@@ -655,6 +655,26 @@ public class MoveAnimResolverTests
     }
 
     [Fact]
+    public void ResolveStateName_Hesitation_ReturnsPerMoveStatesUnhanded()
+    {
+        // (#307) Hesitation is clipped but deliberately UNHANDED — Hesitation.cs's
+        // own class doc: "No ball swap: the ball stays in the same hand
+        // throughout" AND "applies NO lateral velocity impulse". All three
+        // phases must resolve to the bare "Hesitation*" names with NO
+        // Left/Right suffix, identically whichever hand the ball is in.
+        // moveId IS "hesitation" (Hesitation.cs's ctor), unlike JabStep's "jab".
+        foreach (var ballHand in new[] { HandSide.Left, HandSide.Right })
+        {
+            Assert.Equal("HesitationStartup",
+                MoveAnimResolver.ResolveStateName(MoveAnimState.Startup, "hesitation", ballHand, HandSide.Right));
+            Assert.Equal("HesitationActive",
+                MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "hesitation", ballHand, HandSide.Right));
+            Assert.Equal("HesitationRecovery",
+                MoveAnimResolver.ResolveStateName(MoveAnimState.Recovery, "hesitation", ballHand, HandSide.Right));
+        }
+    }
+
+    [Fact]
     public void ResolveStateName_NullMoveIdActive_ReturnsGenericFallback()
     {
         // No move in flight (own player's own-role reconstruction can pass

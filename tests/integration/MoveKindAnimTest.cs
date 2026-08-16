@@ -339,7 +339,10 @@ public partial class MoveKindAnimTest : Node
     // BetweenTheLegsAnimTest both use it.
     //
     // When #310 clips the spin, this control has to move again. The successor
-    // then is hesitation, drivegather or eurostep, by the same three criteria.
+    // then is drivegather or eurostep, by the same three criteria. (#307
+    // clipped hesitation, so it is no longer a candidate — this list goes
+    // stale every time a clip lands; check MoveAnimResolver.ClippedMovePrefixes
+    // rather than trusting it.)
     private void TickUnclippedStaysGeneric()
     {
         PlayerController holder;
