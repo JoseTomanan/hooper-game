@@ -213,12 +213,9 @@ current milestone unless asked.
   v1.3.0). An editor plugin, not game code: it runs an HTTP MCP server *inside
   the running Godot editor process* so a Claude Code session can read live
   editor/scene/runtime state (selected node, output, diagnostics) that a
-  filesystem snapshot can't see. To use it in a session: open the project in
-  the Godot .NET editor, enable it under `Project Settings > Plugins`, open the
-  `MCPDock` and start the service (default `http://127.0.0.1:3000/mcp`), then
-  from a session whose cwd is this repo run
-  `claude mcp add --transport http --scope local godot-mcp http://127.0.0.1:3000/mcp`
-  (a new server needs a session restart, or `/mcp`, before its tools load).
+  filesystem snapshot can't see. Setup steps (enabling the plugin, starting the
+  `MCPDock` service, the `claude mcp add` invocation) are in
+  `docs/godot-mcp-setup.md`.
   Its `dotnet_bridge/` subproject is excluded from the game assembly the same
   way `tests/` is (see `HOOPER GAME.csproj`) — never remove that exclusion, the
   bridge references Roslyn packages the game assembly doesn't have. Enabling
