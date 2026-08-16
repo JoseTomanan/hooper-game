@@ -238,40 +238,57 @@ current milestone unless asked.
   any) they must do to see it run — you cannot do them.
 - Prefer one clear path; explain the tradeoff in a sentence and proceed.
 
-### Issue tracker
+### Issue tracker & change control
 
 GitHub Issues is the sole task tracker. TASKS.md no longer exists.
 
-- Issues labeled `afk` are Claude Code's to implement.
-- Issues labeled `hitl` require an editor-level verification step (see EDITOR_TASKS.md) before they can close. Under autopilot ([ADR-0016](docs/adr/0016-headless-verification-harness.md)) that verification is performed by the **headless harness** wherever the acceptance criterion is state-checkable; only irreducibly *feel* criteria still need a human (deferred to the consolidated human-scheduled pass, [ADR-0021](docs/adr/0021-feel-taste-deferred-indefinitely.md)).
-- **`hitl` issues decompose at pickup ([ADR-0024](docs/adr/0024-hitl-async-evidence-restructure.md), once accepted).** State-checkable criteria split out into `afk` harness-scenario issues (close on merge); visual/audio judgments convert to **async artifact review** (CI-captured evidence, human judges on their own schedule — no live editor session); bounded decision gates that block AFK work proceed on a **default-with-veto** decision brief. Only the irreducible-feel residue folds into #173.
-- **AFK build and HITL verify are separate issues** ([ADR-0013](docs/adr/0013-afk-hitl-separate-issues.md)). An issue is single-purpose: either an `afk` build issue (closes on merge) or a `hitl` verify issue (closes only when proven in-engine) — **do not file or leave an issue carrying both labels.** If work has a build half and a verification half, split it; the `afk` issue merges and a separate `hitl` issue holds the dual-instance verify. When a legacy dual-labelled `afk` issue's code merges, close it and move the verify into a `hitl` issue (name the destination in the closing comment, name the sources in the verify issue — the #83–#86 → #114 pattern). One `hitl` issue may consolidate several AFK features proven in the same editor session.
-- **Done means proven, not written** — *proven* now means **proven by the harness** ([ADR-0015](docs/adr/0015-autonomous-merge-proven-by-harness.md)/[ADR-0016](docs/adr/0016-headless-verification-harness.md)). A `hitl` issue whose acceptance criteria are state-checkable is closed when the headless harness asserts them green in CI; a criterion that is irreducibly *feel* stays open until the deferred, human-scheduled consolidated pass ([ADR-0021](docs/adr/0021-feel-taste-deferred-indefinitely.md)). The bar (proof before close) is unchanged — the prover moved from a human to the harness. Never close on code/compile alone.
-- When finishing a unit of work, tell the human which issue(s) to close and which EDITOR_TASKS steps (if any) they must complete first.
-- **Closing keyword placement.** Exactly one artifact closes an issue, and it carries `Closes #X` in its *description/body* (never the subject line), so GitHub auto-closes the issue and the close is traceable:
-  - **Single-commit fix → straight to `main`:** that commit's body carries `Closes #X` (the M1a pattern).
-  - **Multi-commit work → branch + PR:** the *PR body* carries `Closes #X`; the commits do not (see Branching below).
+**Full detail — the incident behind each rule, the merge-gate mechanics, the
+ADR-0014 reference tiers, the partial-PR discipline — lives in the
+`hooper-change-control` skill. Invoke it before opening a PR, closing an issue,
+or writing an ADR.** The invariants below stay resident because they gate
+irreversible actions:
+
+- Issues labeled `afk` are Claude Code's to implement; `hitl` issues need proof,
+  not code. **Never file or leave an issue carrying both labels** (ADR-0013) —
+  split it into a build half and a verify half.
+- **Done means proven, not written** — and *proven* means **proven by the headless
+  harness** (ADR-0015/ADR-0016). Never close on code/compile alone. Irreducibly
+  *feel* criteria stay open for the deferred human pass (ADR-0021, #173).
+- `hitl` issues **decompose at pickup** (ADR-0024): state-checkable criteria split
+  out into `afk` harness-scenario issues, visual/audio judgments become async
+  artifact review, and only the irreducible-feel residue folds into #173.
+- **Closing keyword placement.** Exactly one artifact closes an issue, and it
+  carries `Closes #X` in its *body*, **never the subject line**. Single-commit fix
+  → that commit's body. Multi-commit work → the **PR** body; the commits use
+  `Refs #X` only.
+- **Branch per issue**, named `<type>/<issue#>-<slug>` (e.g. `feat/5-host-join`).
+  Default to small: a single focused commit goes straight to `main`. Keep commits
+  single-concern with conventional subjects (`feat(net): ...`).
+- **Merge, don't squash** — the per-step history is the documentation trail for a
+  big change; squashing discards it.
+- **No merge on red, ever.** ALL gates green before anything lands on `main`: game
+  build, full `dotnet test`, the headless harness for harness-checkable issues,
+  and `/code-review` with no unresolved correctness findings (ADR-0015). **Feel is
+  never auto-accepted.**
+- When finishing a unit of work, tell the human which issue(s) to close and which
+  EDITOR_TASKS steps (if any) they must complete first.
 
 ### Starting AFK work (do this first, every time)
 
 Before writing any code for an `afk` issue, decide which discipline fits and
-**invoke it** — do not start coding unguided. This is a standing instruction for
-every agent on this repo; the human should not have to ask for it each time.
+**invoke it** — do not start coding unguided, and state which you chose and why in
+your first response on the issue. This is a standing instruction for every agent on
+this repo; the human should not have to ask for it each time.
 
-- Investigate the task, then pick one:
-  - **`/tdd`** — when the task has a clear, testable spec and the risk is *getting
-    the behaviour right* (new logic, bug fixes, the deterministic ball, scoring/
-    possession rules). Red-green-refactor pins the behaviour.
-  - **`/doubt-driven-development`** — when the task is in unfamiliar code, the
-    stakes are high (netcode, irreversible/authoritative state), or a wrong-but-
-    confident answer would be costly to debug later. It subjects each non-trivial
-    decision to a fresh-context adversarial review.
-- The two are not mutually exclusive — if a task is both well-specced *and* high-
-  stakes, run `/tdd` for the behaviour and lean on doubt-driven review for the
-  risky decisions within it. When genuinely unsure, default to
-  `/doubt-driven-development`.
-- State which one you chose and why in your first response on the issue, then
-  invoke it.
+- **`/tdd`** — the spec is clear and testable and the risk is *getting the
+  behaviour right* (new logic, bug fixes, the deterministic ball, scoring/
+  possession rules). Red-green-refactor pins the behaviour.
+- **`/doubt-driven-development`** — the code is unfamiliar, the stakes are high
+  (netcode, irreversible/authoritative state), or a wrong-but-confident answer
+  would be costly to debug later.
+- Not mutually exclusive: a well-specced *and* high-stakes task runs `/tdd` for the
+  behaviour with doubt-driven review on the risky decisions inside it. **When
+  genuinely unsure, default to `/doubt-driven-development`.**
 
 ### Delegate the dirty work to Sonnet subagents
 
@@ -283,20 +300,12 @@ work goes to a **Sonnet** subagent (`model: "sonnet"`) with high effort. The
 human steers and verifies; the orchestrating model must not burn its own context
 on volume it has already fully specified.
 
-**Delegate** — mechanical, high-volume, or long-running work whose shape is
-already decided:
-
-- writing a new harness/test file from an existing template (the
-  `DribbleLoopTest` → new-scenario-file pattern), and registering it in
-  `.github/workflows/ci.yml`;
-- running the full local harness sweep (~5 min, 114+ scenarios) and reporting
-  only the failures;
-- mutation runs — apply a named mutation, confirm the target scenario goes red,
-  revert, repeat;
-- bulk mechanical edits across many files (renames, signature changes, comment
-  sweeps), and repetitive asset/scene edits once the pattern is proven on one;
-- gathering evidence: reading long logs, bisecting, diffing a branch against
-  updated `main`.
+**Delegate** mechanical, high-volume, or long-running work whose shape is already
+decided — new harness files from an existing template, the full local harness
+sweep, mutation runs, bulk mechanical edits, evidence-gathering. *(The full
+taxonomy and the briefing rules-of-engagement — brief them with the decisions not
+the problem, name the traps explicitly, worktree isolation — are in the
+`hooper-change-control` skill, §"Delegating to Sonnet subagents".)*
 
 **Do NOT delegate** — anything where being wrong is cheap to write and expensive
 to discover:
@@ -308,62 +317,12 @@ to discover:
   — that distinction is the whole value of the doubt-driven pass;
 - merges, issue closes, and anything touching a locked ADR.
 
-**Rules of engagement:**
+**Verify the deliverable yourself.** Re-read the assertions it wrote and confirm
+the mutation evidence is real. A returned "all green" is a claim, not proof —
+treat it the way you would treat your own untested code.
 
-- **Brief them with the decisions already made, not the problem.** A cold agent
-  re-derives context you already hold, which is the expensive path. State the
-  conclusion, the template file to copy, the traps that apply, and the exact
-  commands — then let it execute.
-- **Name the traps explicitly in the prompt.** A subagent has not read the
-  handoff or this file's failure history. Spell out the ones that apply (the
-  #257 `GetCurrentNode()` rule, the a45bd1d rest-pose trap, "never pipe Godot's
-  output to `head`", control scenarios must assert their own premise).
-- **Verify the deliverable yourself.** Re-read the assertions it wrote and
-  confirm the mutation evidence is real. A returned "all green" is a claim, not
-  proof — treat it the way you would treat your own untested code.
-- **Isolation:** pass `isolation: "worktree"` when fanning out **several**
-  agents at once, or they collide in the main checkout. A single serial agent
-  continuing in-progress work stays in the main checkout — a worktree cannot
-  check out a branch that is already checked out here, and it will not see
-  uncommitted work. **Commit before dispatching either way.**
-- Worktree isolation prevents *checkout* collisions, not *semantic* ones: a
-  fan-out over a shared surface still needs a serial merge-train re-verified
-  against updated `main`.
-
-### Branching & multi-commit issues
-
-Default to small: if an issue is one focused commit, commit straight to `main`.
-When an issue's solution naturally spans several commits — most M1b+ work will —
-isolate it on a branch and land it via a PR. This keeps `main` releasable and
-gives the change a single review surface.
-
-- **Branch per issue.** Name it `<type>/<issue#>-<slug>`, e.g. `feat/5-host-join`.
-  One branch per issue, or per epic if its sub-issues are tightly coupled.
-- **Keep commits single-concern on the branch.** The commit-clean discipline
-  still applies to each commit; several focused commits is the goal, NOT one
-  mega-commit. Subjects stay conventional (`feat(net): ...`). A commit body may
-  link the issue with `Refs #X`, but must NOT use a closing keyword — only the
-  PR closes.
-- **The PR closes the issue.** Put `Closes #X` (plus any sibling sub-issues the
-  PR fully resolves) in the PR *body*. Merging to `main` is what closes them.
-- **Merge, don't squash.** Preserve the focused commit history — the per-step
-  rationale is the documentation trail for a big change; squashing discards it.
-- **`hitl` still means proven.** A PR may merge the *code*, but the issue closes
-  only on proof. Under autopilot the **harness** supplies that proof for
-  state-checkable criteria ([ADR-0016](docs/adr/0016-headless-verification-harness.md)):
-  a `hitl` issue's `Closes #X` may ride the PR when its acceptance is asserted by
-  a green integration test in CI. Where proof is irreducibly *feel*, omit `Closes`
-  and leave it for the deferred, human-scheduled consolidated pass
-  ([ADR-0021](docs/adr/0021-feel-taste-deferred-indefinitely.md)) to close.
-  `Done means proven` (now proven-by-harness) still overrides bare auto-close.
-- **Merges are autonomous on green ([ADR-0015](docs/adr/0015-autonomous-merge-proven-by-harness.md)).**
-  The orchestrator opens the PR with `gh` and merges it (merge-commit, not squash)
-  once ALL gates are green: game build, full `dotnet test`, the headless harness
-  (ADR-0016) for harness-checkable issues, and `/code-review` with no unresolved
-  correctness findings. **No merge on red, ever.** Feel is never auto-accepted as
-  feel — it is the deferred, human-scheduled consolidated pass
-  ([ADR-0021](docs/adr/0021-feel-taste-deferred-indefinitely.md)). (Pre-autopilot
-  default, still valid when not running the autopilot: the human owns the merge.)
+**Commit before dispatching**, and pass `isolation: "worktree"` when fanning out
+several agents at once or they collide in the main checkout.
 
 ### Decision Discipline
 
@@ -371,10 +330,8 @@ If during a session we make or change an architectural decision (engine,
 networking model, input model, ball physics, community model — anything currently
 recorded in `docs/adr/`), do not just act on it — **add a new ADR or update the
 Status/Superseded-by fields of an existing one in `docs/adr/`**, with the
-reasoning and the rejected alternative, in the same commit as the code.
-
-If a decision is entirely new (no existing ADR covers it), create the next
-numbered ADR file following the template in `docs/adr/0000-template.md`.
+reasoning and the rejected alternative, in the same commit as the code. A brand-new
+decision gets the next numbered file per `docs/adr/0000-template.md`.
 
 If I ask you to do something that contradicts a locked ADR, stop and flag the
 contradiction before writing code; don't silently comply.

@@ -425,6 +425,63 @@ is safe to land (that is still §4's merge gates, unconditionally, for every
 PR regardless of milestone). Outside this autopilot walk, the standing rule
 holds: do not build ahead of the current milestone unless asked.
 
+## 8b. Delegating to Sonnet subagents
+
+Standing instruction for every feature and every GitHub issue on this repo. The
+expensive model's job is *judgment*: choosing the approach, resolving the
+non-obvious call, and deciding whether the evidence actually proves what it claims.
+Everything downstream of a settled decision is **dirty work**, and dirty work goes
+to a **Sonnet** subagent (`model: "sonnet"`) with high effort. The human steers and
+verifies; the orchestrating model must not burn its own context on volume it has
+already fully specified.
+
+*(`CLAUDE.md` carries the standing rule and the do-NOT-delegate list; this section
+is the full taxonomy it points at.)*
+
+### Delegate — mechanical, high-volume, or long-running work whose shape is decided
+
+- writing a new harness/test file from an existing template (the `DribbleLoopTest`
+  → new-scenario-file pattern), and registering it in `.github/workflows/ci.yml`;
+- running the full local harness sweep (~5 min, 114+ scenarios) and reporting only
+  the failures;
+- mutation runs — apply a named mutation, confirm the target scenario goes red,
+  revert, repeat;
+- bulk mechanical edits across many files (renames, signature changes, comment
+  sweeps), and repetitive asset/scene edits once the pattern is proven on one;
+- gathering evidence: reading long logs, bisecting, diffing a branch against
+  updated `main`.
+
+### Do NOT delegate — where being wrong is cheap to write and expensive to discover
+
+- the discipline choice (§7), or any ADR-0014 design call (§6);
+- deciding *what* an assertion should assert, or whether a green result is honest
+  (a subagent will happily report a vacuous pass as a win);
+- judging whether a threshold that went red is a real defect or a bad assertion —
+  that distinction is the whole value of the doubt-driven pass;
+- merges, issue closes, and anything touching a locked ADR.
+
+### Rules of engagement
+
+- **Brief them with the decisions already made, not the problem.** A cold agent
+  re-derives context you already hold, which is the expensive path. State the
+  conclusion, the template file to copy, the traps that apply, and the exact
+  commands — then let it execute.
+- **Name the traps explicitly in the prompt.** A subagent has not read the handoff
+  or `CLAUDE.md`'s failure history. Spell out the ones that apply (the #257
+  `GetCurrentNode()` rule, the a45bd1d rest-pose trap, "never pipe Godot's output
+  to `head`", control scenarios must assert their own premise).
+- **Verify the deliverable yourself.** Re-read the assertions it wrote and confirm
+  the mutation evidence is real. A returned "all green" is a claim, not proof —
+  treat it the way you would treat your own untested code.
+- **Isolation:** pass `isolation: "worktree"` when fanning out **several** agents
+  at once, or they collide in the main checkout. A single serial agent continuing
+  in-progress work stays in the main checkout — a worktree cannot check out a
+  branch that is already checked out here, and it will not see uncommitted work.
+  **Commit before dispatching either way.**
+- Worktree isolation prevents *checkout* collisions, not *semantic* ones: a fan-out
+  over a shared surface still needs a serial merge-train re-verified against
+  updated `main`.
+
 ## 9. Do-not-do list
 
 - **Never close an issue on code/compile alone.** "Done means proven" is
