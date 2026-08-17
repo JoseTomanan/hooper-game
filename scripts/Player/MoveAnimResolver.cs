@@ -147,11 +147,10 @@ public static class MoveAnimResolver
     ///
     /// Deliberately NOT exhaustive over every <c>CommittedMove.Id</c>: moves
     /// without their own captured clip still fall back to the shared generic
-    /// clip via <see cref="ResolveStateName"/>'s default case. As of #307 that
-    /// remaining set is spin, drivegather and eurostep — but read this
+    /// clip via <see cref="ResolveStateName"/>'s default case. As of #310 that
+    /// remaining set is drivegather and eurostep — but read this
     /// dictionary rather than that list, which goes stale every time a clip
-    /// lands (#307 removed hesitation from it; #309 removed betweenthelegs
-    /// before that).
+    /// lands (#310 removed spin from it; #307 removed hesitation before that).
     ///
     /// That fallback is a SAFETY NET, not a destination. It used to be
     /// described here as a settled placeholder-art decision; issue #296
@@ -183,6 +182,7 @@ public static class MoveAnimResolver
         ["stepback"]      = "StepBack", // #306 — unhanded; StepBack.cs's own class doc: "No hand swap: there is no ball transit", so it must NOT join HandedMoves
         ["betweenthelegs"] = "BetweenTheLegs", // #309 — HANDED (six states); the ball swaps at Active-entry, so OriginHand's formula holds — see HandedMoves
         ["hesitation"]    = "Hesitation", // #307 — unhanded; Hesitation.cs's own class doc: "No ball swap ... applies NO lateral velocity impulse", so it must NOT join HandedMoves — see that set's docstring
+        ["spin"]          = "Spin", // #310 — unhanded DESPITE swapping hands: the swap lands on the LAST Active tick, so OriginHand's formula is wrong for 5 of Active's 6 ticks. It must NOT join HandedMoves — see that set's docstring, and SpinAnimTest's `spin-stays-unsuffixed` regression guard
     };
 
     /// <summary>
@@ -234,6 +234,22 @@ public static class MoveAnimResolver
     /// <c>BurstDirection</c> parameter and get OPPOSITE answers here. That is
     /// the point of this set existing at all: the discriminator is the swap
     /// TIMING, never the presence of a direction parameter.
+    ///
+    /// #310 clipped spin and deliberately did NOT add it here, and it is the
+    /// clearest case in the table for why this set is not
+    /// <c>ClippedMovePrefixes.Keys</c>: spin genuinely DOES swap the ball hand,
+    /// so every heuristic short of reading the swap timing would admit it. But
+    /// PlayerController's Spin branch fires that swap at
+    /// <c>FrameInPhase == ActiveFrames - 1</c> — the LAST Active tick — so
+    /// <see cref="OriginHand"/> would return <c>Opposite(ballHand)</c> for all
+    /// six Active ticks while the ball is actually still in the ORIGINAL hand
+    /// for the first five of them. The resulting clip would be correct in
+    /// Startup and mirrored for the rest of the move: a state that exists,
+    /// plays cleanly, and telegraphs the wrong side. Fixing that properly would
+    /// need a rule conditioned on a tick index INSIDE a phase, which this
+    /// resolver has no input for and should not gain one for a cosmetic clip.
+    /// <c>SpinAnimTest</c>'s <c>spin-stays-unsuffixed</c> scenario is the
+    /// standing regression guard against a future author adding it here.
     /// </summary>
     private static readonly HashSet<string> HandedMoves = new() { "crossover", "behindtheback", "betweenthelegs" };
 
@@ -352,7 +368,7 @@ public static class MoveAnimResolver
     /// nonexistent state that Travel() would silently no-op against.
     ///
     /// Every other combination — an unclipped/unknown moveId on any phase (as of
-    /// #307: spin, drivegather and eurostep, the remainder of #302's batch;
+    /// #310: drivegather and eurostep, the remainder of #302's batch;
     /// consult <see cref="ClippedMovePrefixes"/> rather than this list, which
     /// goes stale each time a clip lands), or a null/empty moveId (no move
     /// in flight) —

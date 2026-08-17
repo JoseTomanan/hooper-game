@@ -628,10 +628,25 @@ public class MoveAnimResolverTests
     [Fact]
     public void ResolveStateName_UnclippedMoveActive_ReturnsGenericFallback()
     {
-        // "spin" is a real committed move (RequestBeginMove sends it) but is NOT
-        // in the clipped-move table, so it must fall back to the shared Active
-        // clip rather than throwing or resolving to a nonexistent state name.
-        Assert.Equal("Active", MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "spin", HandSide.Left, HandSide.Right));
+        // A real committed move (RequestBeginMove sends it) that is NOT in the
+        // clipped-move table must fall back to the shared Active clip rather
+        // than throwing or resolving to a nonexistent state name.
+        //
+        // This test necessarily names a literal moveId — ClippedMovePrefixes is
+        // private — so it CHURNS once per clip in #302's campaign, as each
+        // subject graduates out of the fallback set. It has already been
+        // repointed off "spin" (#310) and, before that, off "hesitation" (#307).
+        // As of #310 the remaining unclipped moves are drivegather (#311) and
+        // eurostep (#312); both are asserted so the next clip only has to delete
+        // a line rather than rediscover a replacement.
+        //
+        // When the LAST one is clipped, do not delete this test — the fallback
+        // branch still exists and still needs pinning. Replace these ids with a
+        // synthetic one ("__unclipped__") and say in the comment that no real
+        // move reaches the branch any more.
+        foreach (var unclipped in new[] { "drivegather", "eurostep" })
+            Assert.Equal("Active",
+                MoveAnimResolver.ResolveStateName(MoveAnimState.Active, unclipped, HandSide.Left, HandSide.Right));
     }
 
     [Fact]
@@ -671,6 +686,42 @@ public class MoveAnimResolverTests
                 MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "hesitation", ballHand, HandSide.Right));
             Assert.Equal("HesitationRecovery",
                 MoveAnimResolver.ResolveStateName(MoveAnimState.Recovery, "hesitation", ballHand, HandSide.Right));
+        }
+    }
+
+    [Fact]
+    public void ResolveStateName_Spin_ReturnsPerMoveStatesUnhanded()
+    {
+        // (#310) Spin is clipped and — unlike Layup, JabStep and Hesitation — it
+        // GENUINELY SWAPS HANDS, so this is the sharpest case in the file for why
+        // HandedMoves is not simply ClippedMovePrefixes.Keys.
+        //
+        // The discriminator is the swap TIMING, not whether a swap happens.
+        // Spin.cs fires its swap at FrameInPhase == ActiveFrames - 1, i.e. the
+        // LAST Active tick. OriginHand's formula assumes the swap has ALREADY
+        // happened when an Active clip is chosen, so handing spin would pick the
+        // wrong side for 5 of Active's 6 ticks — visibly wrong for most of the
+        // phase, correct only on the final frame. An unhanded clip is right
+        // throughout, so spin ships with symmetric arms and no suffix.
+        //
+        // Failing this silently is the danger (README trap 4): a wrongly-handed
+        // spin resolves to "SpinActiveLeft", which the tree does not have, and
+        // Travel() to a missing state only LOGS (#257) — the move simply stops
+        // animating. Pinned here, and again live in SpinAnimTest's
+        // `spin-stays-unsuffixed`, which additionally proves no such state exists
+        // in scenes/Player.tscn for a mis-route to land on.
+        //
+        // reachSide is deliberately varied opposite to ballHand so a stray
+        // TargetHandedMoves entry could not hide behind a matching pair.
+        foreach (var ballHand in new[] { HandSide.Left, HandSide.Right })
+        {
+            var reachSide = ballHand == HandSide.Left ? HandSide.Right : HandSide.Left;
+            Assert.Equal("SpinStartup",
+                MoveAnimResolver.ResolveStateName(MoveAnimState.Startup, "spin", ballHand, reachSide));
+            Assert.Equal("SpinActive",
+                MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "spin", ballHand, reachSide));
+            Assert.Equal("SpinRecovery",
+                MoveAnimResolver.ResolveStateName(MoveAnimState.Recovery, "spin", ballHand, reachSide));
         }
     }
 
