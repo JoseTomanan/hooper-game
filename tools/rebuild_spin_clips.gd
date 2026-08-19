@@ -368,6 +368,24 @@ func _initialize() -> void:
 	var twist_ac := _twist_deg(active, active.length)
 	print("[rebuild-spin] G5 shoulder-vs-hip yaw: startup-end=%+.2f deg active-end=%+.2f deg "
 		% [twist_su, twist_ac] + "(each needs magnitude >= %.1f, and OPPOSITE signs)" % TWIST_MIN_DEG)
+	# The poison check MUST come first and MUST be its own branch. Every check
+	# below is written as "fail if <condition>", and EVERY comparison against
+	# NAN is false in GDScript -- verified on 4.7.1: `absf(NAN) < 20.0` is
+	# false and `NAN * NAN >= 0.0` is false. So a NAN reading would skip both
+	# push_error branches and G5 would PASS on a measurement that never
+	# happened. That is a fail-OPEN, the exact inversion of what a poisoned
+	# helper is for (#305), and it is why G4 above also tests `res[0] < 0`
+	# up front rather than relying on a downstream comparison.
+	if is_nan(twist_su) or is_nan(twist_ac):
+		push_error("[rebuild-spin] G5 FAILED: the twist measurement is POISONED (startup-end=%s, "
+			% str(twist_su) + "active-end=%s). " % str(twist_ac)
+			+ "_twist_deg returns NAN when a span degenerates -- in practice because one of "
+			+ "%s / %s / %s / %s did not resolve against this skeleton (a rig rename), " % [
+				HIP_L_BONE, HIP_R_BONE, ARM_L_BONE, ARM_R_BONE]
+			+ "or because the two spans are vertical. Nothing about the twist claim was "
+			+ "actually measured, so this gate cannot pass.")
+		quit(1)
+		return
 	if absf(twist_su) < TWIST_MIN_DEG or absf(twist_ac) < TWIST_MIN_DEG:
 		push_error("[rebuild-spin] G5 FAILED: shoulder-vs-hip yaw magnitudes are %.2f / %.2f deg "
 			% [absf(twist_su), absf(twist_ac)] + "(want >= %.1f each). The spine twist is the ONLY "
@@ -507,12 +525,26 @@ func _twist_deg(anim: Animation, t: float) -> float:
 # Signed angle from `a` to `b` about `_up`, right-hand rule, in DEGREES. Both
 # are projected onto the horizontal plane first, so this is pure yaw.
 #
-# Returns NAN — never 0.0 — on a degenerate projection. 0.0 would be a
-# *passing* magnitude for nothing and a *failing* one for G5's magnitude check,
-# so a silent degradation would be confusingly wrong in both directions; NAN
-# propagates through the comparisons as false and fails the gate closed
-# (measurement-helpers-must-poison-on-failure, #305).
+# Returns NAN — never 0.0 — on a degenerate projection (including a span built
+# from an unresolved bone, which _pose_origin poisons with NANs). 0.0 would be
+# a *passing* magnitude for nothing and a *failing* one for G5's magnitude
+# check, so a silent degradation would be confusingly wrong in both directions.
+#
+# NAN does NOT fail a gate closed by itself — an earlier version of this
+# comment claimed it did, and that was exactly backwards. Every comparison
+# against NAN is FALSE in GDScript, so a NAN flowing into a "fail if
+# <condition>" check SKIPS the failure and passes. Callers must test is_nan()
+# explicitly; G5 does (measurement-helpers-must-poison-on-failure, #305).
 func _signed_yaw_deg(a: Vector3, b: Vector3) -> float:
+	# The non-finite check must be EXPLICIT and must come first, for the same
+	# reason G5's is_nan() branch does: `NAN < 1e-4` is FALSE, so a NAN span
+	# would sail straight past the degeneracy guard below and come out of
+	# atan2() as a confident 0.00 rather than as NAN. That was observed, not
+	# theorised -- renaming ARM_L_BONE made this return +0.00 deg, which
+	# happened to still fail G5's magnitude check but for the wrong reason and
+	# with a misleading message. Poison has to stay poison all the way up.
+	if not a.is_finite() or not b.is_finite():
+		return NAN
 	var pa := a - _up * a.dot(_up)
 	var pb := b - _up * b.dot(_up)
 	if pa.length() < 1e-4 or pb.length() < 1e-4:
@@ -631,11 +663,18 @@ func _pose_delta_at(a: Animation, ta: float, b: Animation, tb: float) -> float:
 # kinematics (verbatim rebuild_hesitation_clips.gd approach). Returns
 # Vector3.ZERO only if the bone genuinely fails to resolve on Y Bot, which G2
 # above already refuses to let through silently.
+# Returns a Vector3 of NANs -- never Vector3.ZERO -- for a bone that does not
+# resolve. ZERO is a real, plausible-looking coordinate: two unresolved bones
+# would subtract to a ZERO span, which reads as "degenerate projection" only by
+# luck, and a single unresolved bone would silently place a joint at the origin
+# and yield a confidently WRONG angle rather than no angle at all. NAN
+# propagates into _signed_yaw_deg, which G5 now rejects explicitly
+# (measurement-helpers-must-poison-on-failure, #305).
 func _pose_origin(anim: Animation, t: float, bone: String) -> Vector3:
 	var res := _resolve_bone(bone)
 	var idx: int = res[0]
 	if idx < 0:
-		return Vector3.ZERO
+		return Vector3(NAN, NAN, NAN)
 
 	var rot_track_of := {}
 	var pos_track_of := {}
