@@ -2046,10 +2046,13 @@ jobs:
       #       fallback -- the mutation that matches the claim)
       #       -> spin-phases RED. no-placeholder-leak stayed GREEN, correctly:
       #          it reads the .tscn, which the resolver does not touch.
-      #   pointed all three states at locomotion/idle
+      #   pointed all three states at locomotion/idle -- i.e. restored the
+      #       exact pre-#296 fallback this issue exists to remove, which is the
+      #       mutation that matches these gates' claim
       #       -> startup-differs-from-recovery RED (0.77 deg vs floor 15),
       #          shoulder-twist-reverses RED, does-not-rotate-root RED via its
-      #          PREMISE (shoulder excursion 0.00 vs floor 25).
+      #          PREMISE (shoulder excursion 0.00 vs floor 25), and
+      #          clip-drives-the-rig RED (travel 2.14 deg vs floor 30).
       #   pointed SpinActive at locomotion/pivot (a clip that DOES turn)
       #       -> does-not-rotate-root RED (HIP span 39.043 deg vs ceiling 1.0)
       #          while spin-phases stayed GREEN -- the wiring is fine, the
@@ -2057,9 +2060,9 @@ jobs:
       #   misspelled ALL THREE clip names (trap 13's family-wide unbound
       #       signature) -> clip-drives-the-rig RED (travel 0.00 deg).
       #   misspelled ONE clip name -> no-placeholder-leak RED;
-      #       clip-drives-the-rig stayed GREEN, correctly (two of three clips
-      #       still animate, so the rig still travels -- identity is
-      #       no-placeholder-leak's claim, not this one's).
+      #       clip-drives-the-rig stayed GREEN at 76.31, correctly (two of three
+      #       clips still animate -- identity is no-placeholder-leak's claim,
+      #       not this one's).
       #   deleted the DribbleRight -> SpinStartup edge
       #       -> spin-edges RED; spin-phases stayed GREEN, confirming README
       #          trap 8 from the other side (Travel()'s pathfinder routes
@@ -2078,12 +2081,16 @@ jobs:
       # asks a question this scenario never claimed to answer; the idle/idle
       # one above is the one that matches its claim.
       #
-      # -- clip-drives-the-rig measures TRAVEL, not departure from rest -----
+      # -- clip-drives-the-rig measures WITHIN-PHASE TRAVEL --------------
       # It originally measured departure from REST and was VACUOUS: it read
       # 145.57 deg and PASSED with all three clips unbound, because this rig's
       # retargeted clips sit 150-180 deg from the Y Bot's rest pose, so any
-      # held pose -- including a frozen one -- reads enormous. Accumulated
-      # tick-to-tick travel is the honest form: 319.04 healthy vs 0.00 unbound.
+      # held pose -- including a frozen one -- reads enormous.
+      # Accumulated tick-to-tick travel replaced it, and then had to exclude
+      # PHASE-BOUNDARY jumps as well: counting them left 209.75 deg of pure
+      # snap in the total (319.04 -> 109.29 once removed), which alone would
+      # have cleared the floor for three frozen single-keyframe clips. Only
+      # after both fixes does the gate redden on the pre-#296 idle fallback.
       # Each scenario exits 0=PASS/1=FAIL (ADR-0016).
       - name: Run spin per-move animation state harness
         run: |

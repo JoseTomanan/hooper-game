@@ -130,21 +130,29 @@ public partial class SpinAnimTest : Node
     // pose TRAVEL (see _poseTravelDeg for why travel and not departure-from-rest
     // — the latter was vacuous on this rig and mutation proved it).
     //
-    // MEASURED on the live rig: 319.04 deg summed over 22 deltas, against 0.00
-    // deg with all three Spin states repointed at nonexistent clips. That is a
-    // clean separation, so the floor is not delicately placed: anything between
-    // roughly 5 and 300 would discriminate. It sits at 30 because the failure
-    // being excluded is "the rig is frozen", and a frozen rig scores ~0 — the
-    // floor only has to be clear of measurement noise, not close to the healthy
-    // reading. Setting it near 319 would instead redden on any legitimate
-    // re-author that made the move calmer.
+    // MEASURED on the live rig: 109.29 deg summed over 17 within-phase deltas.
+    // Against that:
+    //   all three states repointed at NONEXISTENT clips  ->   0.00  (RED)
+    //   all three states repointed at locomotion/idle    ->   2.14  (RED)
+    //   ONE clip name misspelled                         ->  76.31  (GREEN)
     //
-    // What this gate does NOT claim, deliberately: that the clips are the RIGHT
-    // ones. With all three states repointed at locomotion/idle it reads 179.45
-    // and PASSES, and with one clip name misspelled it reads 283.22 and PASSES —
-    // both correct, because a real bound clip really is driving the rig in each
-    // case. `spin-no-placeholder-leak` is the scenario that owns clip IDENTITY,
-    // and it reddens on both of those mutations.
+    // The idle/idle row is the important one: that mutation restores the exact
+    // pre-#296 generic fallback this whole issue exists to remove, and the gate
+    // now catches it. It did NOT before the phase-boundary fix — it read 179.45
+    // and passed, because the three state RESTARTS contributed big snap deltas
+    // that swamped the near-static idle. Excluding boundary jumps is what turned
+    // this gate from "something is bound" into "the clips actually animate".
+    //
+    // The floor is not delicately placed: healthy sits 3.6x above it and every
+    // failure mode above scores under 3. It stays at 30 rather than near 109
+    // because the excluded failure is "the rig barely moves", so the floor only
+    // has to clear measurement noise — pinning it near the healthy reading would
+    // instead redden on any legitimate re-author that made the move calmer.
+    //
+    // What this gate still does NOT claim, deliberately: that the clips are the
+    // RIGHT ones. One misspelled name leaves the other two animating, so travel
+    // stays high and this correctly passes. `spin-no-placeholder-leak` owns clip
+    // IDENTITY and reddens on that mutation.
     private const float DrivesRigMinDeg = 30.0f;
 
     // TRAP A's live gate, in DEGREES: the largest yaw excursion of the HIP SPAN
@@ -262,9 +270,14 @@ public partial class SpinAnimTest : Node
     // It is also not a restatement of `spin-startup-differs-from-recovery`:
     // that compares two ENDPOINTS and would pass on a clip that snapped
     // between two held poses, whereas travel requires continuous motion.
+    //
+    // Travel is summed strictly WITHIN a phase — see AccumulateTravel for why
+    // crossing a phase boundary would silently restore most of the weakness
+    // this measurement exists to remove.
     private float _poseTravelDeg;
     private Quaternion[] _poseAtPreviousUsableTick;
     private int _travelSamples;
+    private string _travelPhase;
 
     // ── Yaw accumulators (trap A + the twist) ───────────────────────────────
     // Both spans are read with the SAME helper on the SAME ticks. `_hipYaw*`
@@ -448,22 +461,52 @@ public partial class SpinAnimTest : Node
             if (_recoveryTicks >= 2) AccumulateYaw(skel);
         }
 
-        // Pose travel spans the WHOLE move rather than any one phase, so it is
-        // accumulated here, after the per-phase branches. The same
-        // first-usable-tick drop the yaw accumulators apply is applied via each
-        // phase's own >= 2 guard being irrelevant here: the FIRST sample only
-        // seeds the reference (no delta is added for it), which has the same
-        // effect of never charging the phase-entry pose jump to the clip.
-        AccumulateTravel(skel);
+        // Travel is summed WITHIN each phase and never ACROSS a phase
+        // boundary. The tick counter is the phase's own, so this applies the
+        // same >= 2 drop the yaw accumulators use, per phase.
+        int phaseTicks = node == "SpinStartup" ? _startupTicks
+                       : node == "SpinActive" ? _activeTicks
+                       : _recoveryTicks;
+        AccumulateTravel(skel, node, phaseTicks);
     }
 
-    // Folds one observed tick into the whole-move pose-travel accumulator.
-    // The first call only seeds the reference, so the dribble -> Spin entry jump
-    // is never counted as travel the clip performed.
-    private void AccumulateTravel(Skeleton3D skel)
+    // Folds one observed tick into the pose-travel accumulator, EXCLUDING every
+    // pose jump that is not travel the clip performed.
+    //
+    // Two exclusions, and both are load-bearing (the first version of this
+    // method had neither, and the gate was correspondingly weaker than its own
+    // doc claimed):
+    //
+    //   1. The phase's FIRST observed tick is skipped outright. Under the
+    //      #316/#340 phase-label lag that tick still holds the PREVIOUS phase's
+    //      pose, so any delta touching it is a phase-boundary snap.
+    //   2. The phase's SECOND observed tick only SEEDS the reference. Seeding
+    //      one tick later than the skip is what actually excludes the boundary:
+    //      resetting on the phase change alone would still charge the
+    //      stale-tick -> first-real-pose jump to the clip.
+    //
+    // Concretely, without these the accumulator counted the dribble -> Startup
+    // entry snap plus the Startup -> Active and Active -> Recovery boundary
+    // snaps. Three CONSTANT clips holding three different poses would then have
+    // scored three big deltas and cleared the floor comfortably — even though a
+    // single-keyframe clip is one of the exact failure modes this gate claims
+    // to catch. Now such a clip scores 0 within every phase and the gate fails,
+    // as it should.
+    private void AccumulateTravel(Skeleton3D skel, string phaseNode, int phaseTicks)
     {
+        if (phaseTicks < 2) return;
+
         Quaternion[] now = SampleMeasuredBones(skel);
         if (now == null) return;
+
+        if (phaseNode != _travelPhase)
+        {
+            // First USABLE tick of this phase: seed only, never a delta.
+            _travelPhase = phaseNode;
+            _poseAtPreviousUsableTick = now;
+            return;
+        }
+
         if (_poseAtPreviousUsableTick != null)
         {
             float worst = 0f;
