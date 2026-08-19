@@ -38,7 +38,7 @@ namespace HOOPERGAME.Tests.Integration;
 // A live AnimationTree only exists on the REAL scenes/Player.tscn (bare
 // `new PlayerController()`, as most non-anim harnesses use, has no mesh/
 // AnimationTree at all — ApplyAnimation's Travel() call would be a no-op
-// against a null tree). But BehindTheBack/DriveGather are DRIBBLE-family committed
+// against a null tree). But BehindTheBack/EuroStep are DRIBBLE-family committed
 // moves: BeginCommittedMove's Held-holder dead-dribble gate (#193) refuses
 // them outright unless the ball is actually Dribbling — see
 // BehindTheBackTest.cs's "dead-dribble-gate" scenario and its "cannot Begin
@@ -51,21 +51,22 @@ namespace HOOPERGAME.Tests.Integration;
 // checks never see a real Dribbling state, which is not what a real client
 // ever does for these two moves.
 //
-// ── Why BehindTheBack (clipped) / DriveGather (unclipped) specifically ─────
+// ── Why BehindTheBack (clipped) / EuroStep (unclipped) specifically ────────
 // Both gate identically (Dribbling-only, #193) and — the reason they make a
 // meaningful control PAIR here — MoveAnimResolver.ClippedMovePrefixes lists
 // "behindtheback" (mapping to the real per-move BehindTheBack states
-// scenes/Player.tscn has) but does NOT list "drivegather". So scenario 1 proves the
+// scenes/Player.tscn has) but does NOT list "eurostep". So scenario 1 proves the
 // per-move path is really wired; scenario 2 proves the SAME harness setup,
 // unchanged except for which move begins, stays on the generic "Active" node
 // and never drifts onto a per-move state that doesn't exist for it (there is
-// no "DriveGatherActive" node in the tree at all) — which is what makes scenario 1's
+// no "EuroStepActive" node in the tree at all) — which is what makes scenario 1's
 // pass meaningful rather than a harness premise that could never have failed.
 //
 // Scenario 2's move is load-bearing but NOT permanent: it is whichever
 // dribble-family move is currently unclipped, and it moved from
-// BetweenTheLegs to Spin (#309) to DriveGather (#310). See that scenario's
-// own comment for the three criteria a successor has to meet.
+// BetweenTheLegs to Spin (#309) to DriveGather (#310) to EuroStep (#311).
+// See that scenario's own comment for the three criteria a successor has to
+// meet — and note that EuroStep is the LAST real move that meets them.
 //
 // ── Out of scope ────────────────────────────────────────────────────────────
 // Whether BehindTheBackActive{Left,Right}'s clip LOOKS right (correct limbs,
@@ -306,57 +307,57 @@ public partial class MoveKindAnimTest : Node
     }
 
     // ── Scenario: unclipped-stays-generic (the control) ────────────────────
-    // DriveGather is deliberately NOT in ClippedMovePrefixes — the same gate (#193),
+    // EuroStep is deliberately NOT in ClippedMovePrefixes — the same gate (#193),
     // the same live-Dribbling setup, but a different move. Asserts the generic
     // "Active" node is actually reached during MovePhase.Active (proving the
     // fallback path itself is live, not merely "nothing broke"), AND that the
     // per-move state name it would have gotten had it wrongly been clipped
-    // ("DriveGatherActive" — a node that does not exist in the tree at all) is never
+    // ("EuroStepActive" — a node that does not exist in the tree at all) is never
     // observed, every single frame of the run. This is the control that makes
     // scenario 1's pass meaningful: it proves the harness COULD have caught a
     // per-move state wrongly appearing.
     //
-    // ── This scenario's subject keeps graduating, and #310 moved it again
+    // ── This scenario's subject keeps graduating, and #311 moves it for the last time
     // A control whose whole premise is "this move is UNCLIPPED" has a shelf
     // life: it expires the moment that move gets its clip. #309 clipped
-    // betweenthelegs, then #310 clipped spin — each would have turned this
-    // green control red, not because anything regressed, but because its
-    // subject graduated. #310's full local sweep caught exactly that: 232
-    // scenarios passed and this one failed on "SpinActive" at frame 13, which
-    // is the control working as designed rather than a defect in it.
+    // betweenthelegs, #310 clipped spin, #311 clipped drivegather — each would
+    // have turned this green control red, not because anything regressed but
+    // because its subject graduated. #310's full local sweep caught exactly
+    // that: 232 scenarios passed and this one failed on "SpinActive" at frame
+    // 13, which is the control working as designed rather than a defect in it.
     //
-    // DriveGather is the correct successor rather than the nearest one to hand. The
-    // requirements are that the move share this scenario's setup exactly, so
-    // the only variable between the two scenarios stays "which move began":
-    // it must be dribble-family (so the live-Dribbling setup is required, not
-    // incidental), gated identically by BeginCommittedMove's #193
-    // dead-dribble list, and still absent from ClippedMovePrefixes.
-    // DriveGather sits in that list alongside the rest of the family, and its
-    // own clip (#311) is still open. EuroStep meets the same three criteria but
-    // was NOT chosen: it carries ADR-0023's rim-range gate on top of the shared
-    // dead-dribble gate, so a future tuning of that range could stop the move
-    // beginning from this harness's ActorSpot and redden the control for a
-    // reason that has nothing to do with what it asserts.
+    // A successor has to share this scenario's setup EXACTLY, so the only
+    // variable between the two scenarios stays "which move began": dribble-
+    // family (so the live-Dribbling setup is required, not incidental), gated
+    // identically by BeginCommittedMove's #193 dead-dribble list, and still
+    // absent from ClippedMovePrefixes.
     //
-    // Unlike its predecessors DriveGather DOES end the dribble (it is a
-    // gather). That is fine here, and deliberately so: the settle assertion
+    // EuroStep is now the ONLY remaining move meeting all three, so it is the
+    // successor by exhaustion rather than by preference. #310 explicitly passed
+    // it over in favour of DriveGather, and that reservation still stands and is
+    // worth carrying forward: EuroStep also carries ADR-0023's rim-range gate on
+    // top of the shared dead-dribble gate, so a future tuning of that range
+    // could stop the move beginning from this harness's spot and redden this
+    // control for a reason that has nothing to do with what it asserts. If that
+    // happens the fix is the synthetic id described below — NOT widening the
+    // range or moving the actor, either of which would be editing the subject to
+    // suit the test.
+    //
+    // Like DriveGather before it, EuroStep DOES end the dribble (its beat 1 IS
+    // the gather). That is fine here and deliberately so: the settle assertion
     // derives its expected state from live ball state rather than hardcoding
     // "Dribble", exactly so it keeps its meaning for such a move — see
     // ExpectedSettledNode's own comment.
     //
     // It goes through DefensiveMoveHarnessSeam's generic BeginMoveForHarness
     // rather than a move-specific seam because no such seam exists and one
-    // move-typed passthrough is not worth a new file; that seam reaches the
-    // same private BeginCommittedMove, so the production gates still run.
-    // BetweenTheLegsHarnessSeam.cs stays — BetweenTheLegsTest and the new
-    // BetweenTheLegsAnimTest both use it.
+    // move-typed passthrough is not worth a new file; that seam reaches the same
+    // private BeginCommittedMove, so the production gates still run.
     //
-    // When #311 clips the drive-gather, this control has to move again. The
-    // only remaining candidate is then eurostep (with the range-gate caveat
-    // above) — and when #312 clips THAT, the dribble family is exhausted and
-    // this control can no longer be expressed with a real move. At that point
-    // do NOT delete it: give it a synthetic unclipped moveId instead, since the
-    // fallback branch it guards still exists. (This list goes stale every time
+    // When #312 clips the euro-step the dribble family is EXHAUSTED and this
+    // control can no longer be expressed with a real move. Do NOT delete it at
+    // that point — the fallback branch it guards still exists. Give it a
+    // synthetic unclipped moveId instead. (This reasoning goes stale every time
     // a clip lands; check MoveAnimResolver.ClippedMovePrefixes, not this
     // comment.)
     private void TickUnclippedStaysGeneric()
@@ -383,20 +384,25 @@ public partial class MoveKindAnimTest : Node
                 if (_ball.State != BallState.Dribbling)
                 {
                     Fail($"unclipped-stays-generic: expected TryStartDribble to reach Dribbling " +
-                         $"(DriveGather cannot Begin from Held, #193); got state={_ball.State}.");
+                         $"(EuroStep cannot Begin from Held, #193); got state={_ball.State}.");
                     Finish();
                     return;
                 }
                 holder = NodeForPeer(_holderId);
-                bool began = holder.BeginMoveForHarness(new DriveGather());
+                // lateralDirection +1 = step right. The sign is inert for this
+                // scenario — it shapes the Active-entry burst, not which anim
+                // state resolves — but the constructor requires one.
+                bool began = holder.BeginMoveForHarness(new EuroStep(lateralDirection: 1f));
                 if (!began)
                 {
-                    Fail("unclipped-stays-generic: BeginMoveForHarness(new DriveGather()) returned false " +
-                         "— machine was not Inactive or the dead-dribble gate refused it.");
+                    Fail("unclipped-stays-generic: BeginMoveForHarness(new EuroStep(1f)) returned false " +
+                         "— machine was not Inactive, the dead-dribble gate refused it, or ADR-0023's " +
+                         "rim-range gate did. See this scenario's comment: widen nothing, switch to a " +
+                         "synthetic unclipped moveId instead.");
                     Finish();
                     return;
                 }
-                GD.Print($"[movekind-anim] DriveGather begun on holder={_holderId}.");
+                GD.Print($"[movekind-anim] EuroStep begun on holder={_holderId}.");
                 _step = Step.Observing;
                 return;
 
@@ -409,10 +415,10 @@ public partial class MoveKindAnimTest : Node
                 // appear, at any point in the run — not just during Active.
                 // It does not exist as a node in scenes/Player.tscn at all,
                 // so this also stands as a sanity check on the harness itself.
-                if (animNode == "DriveGatherActive")
+                if (animNode == "EuroStepActive")
                 {
                     Fail($"unclipped-stays-generic: ActiveAnimNodeForHarness was " +
-                         $"\"DriveGatherActive\" at frame {_frame} — that state does not exist " +
+                         $"\"EuroStepActive\" at frame {_frame} — that state does not exist " +
                          "in scenes/Player.tscn and must never be reachable for an unclipped move.");
                     Finish();
                     return;
@@ -453,7 +459,7 @@ public partial class MoveKindAnimTest : Node
         {
             GD.Print("[movekind-anim] PASS unclipped-stays-generic — the AnimationTree state " +
                      "machine reached the generic \"Active\" node during MovePhase.Active (never a " +
-                     $"per-move state — \"DriveGatherActive\" never appeared), then settled back " +
+                     $"per-move state — \"EuroStepActive\" never appeared), then settled back " +
                      $"onto \"{expectedNeutral}\" once the move's lifecycle finished.");
         }
         else
@@ -474,9 +480,15 @@ public partial class MoveKindAnimTest : Node
     // Before #285 this was unconditionally "Locomotion". It is now possession-
     // dependent: a live-dribbling holder settles onto the Dribble stance
     // instead (MoveAnimResolver's Inactive branch). Both scenarios here call
-    // TryStartDribble before their move — BehindTheBack and DriveGather cannot Begin
-    // from Held (#193) — and neither move ends the dribble, so in practice both
-    // now settle on "Dribble" + the holder's HandSide (#294).
+    // TryStartDribble before their move — BehindTheBack and EuroStep cannot Begin
+    // from Held (#193).
+    //
+    // They then diverge, which is exactly the case this helper was written for:
+    // BehindTheBack keeps the dribble alive and settles on "Dribble" + the
+    // holder's HandSide (#294), while EuroStep CRADLES at Startup-begin (its
+    // beat 1 is the gather) and so settles on "Locomotion". Deriving the
+    // expectation from live ball state is what lets one assertion cover both
+    // without either scenario hardcoding an answer.
     //
     // Derived from live ball state rather than hardcoded to "Dribble" so the
     // assertion keeps its meaning if a scenario is ever pointed at a move that
