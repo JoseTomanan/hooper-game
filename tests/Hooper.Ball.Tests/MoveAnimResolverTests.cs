@@ -635,18 +635,45 @@ public class MoveAnimResolverTests
         // This test necessarily names a literal moveId — ClippedMovePrefixes is
         // private — so it CHURNS once per clip in #302's campaign, as each
         // subject graduates out of the fallback set. It has already been
-        // repointed off "spin" (#310) and, before that, off "hesitation" (#307).
-        // As of #310 the remaining unclipped moves are drivegather (#311) and
-        // eurostep (#312); both are asserted so the next clip only has to delete
-        // a line rather than rediscover a replacement.
+        // repointed off "spin" (#310), off "hesitation" (#307), and now off
+        // "drivegather" (#311).
         //
-        // When the LAST one is clipped, do not delete this test — the fallback
-        // branch still exists and still needs pinning. Replace these ids with a
-        // synthetic one ("__unclipped__") and say in the comment that no real
-        // move reaches the branch any more.
-        foreach (var unclipped in new[] { "drivegather", "eurostep" })
+        // As of #311 eurostep (#312) is the LAST real move in the fallback set.
+        // When it is clipped, do not delete this test — the fallback branch
+        // still exists and still needs pinning. Replace the id with a synthetic
+        // one ("__unclipped__") and say in the comment that no real move reaches
+        // the branch any more.
+        foreach (var unclipped in new[] { "eurostep" })
             Assert.Equal("Active",
                 MoveAnimResolver.ResolveStateName(MoveAnimState.Active, unclipped, HandSide.Left, HandSide.Right));
+    }
+
+    [Fact]
+    public void ResolveStateName_DriveGather_ReturnsPerMoveStatesUnhanded()
+    {
+        // (#311) DriveGather is clipped but deliberately UNHANDED, and the
+        // reason is stronger than "we did not bother": the gather ENDS the
+        // dribble. There is no ball transit, so there is no second polarity
+        // that could be mistimed, and OriginHand's phase-conditioned formula
+        // has nothing to correct. All three phases must resolve to the bare
+        // "DriveGather*" names with NO Left/Right suffix, identically
+        // whichever hand the ball is in.
+        //
+        // Both hand arguments are swept, not just ballHand: a move wrongly
+        // added to HandedMoves would suffix off originHand, so holding that
+        // fixed would leave the likeliest regression untested.
+        foreach (var ballHand in new[] { HandSide.Left, HandSide.Right })
+        {
+            foreach (var otherHand in new[] { HandSide.Left, HandSide.Right })
+            {
+                Assert.Equal("DriveGatherStartup",
+                    MoveAnimResolver.ResolveStateName(MoveAnimState.Startup, "drivegather", ballHand, otherHand));
+                Assert.Equal("DriveGatherActive",
+                    MoveAnimResolver.ResolveStateName(MoveAnimState.Active, "drivegather", ballHand, otherHand));
+                Assert.Equal("DriveGatherRecovery",
+                    MoveAnimResolver.ResolveStateName(MoveAnimState.Recovery, "drivegather", ballHand, otherHand));
+            }
+        }
     }
 
     [Fact]

@@ -147,10 +147,11 @@ public static class MoveAnimResolver
     ///
     /// Deliberately NOT exhaustive over every <c>CommittedMove.Id</c>: moves
     /// without their own captured clip still fall back to the shared generic
-    /// clip via <see cref="ResolveStateName"/>'s default case. As of #310 that
-    /// remaining set is drivegather and eurostep — but read this
+    /// clip via <see cref="ResolveStateName"/>'s default case. As of #311 that
+    /// remaining set is eurostep alone — but read this
     /// dictionary rather than that list, which goes stale every time a clip
-    /// lands (#310 removed spin from it; #307 removed hesitation before that).
+    /// lands (#311 removed drivegather from it; #310 removed spin, and #307
+    /// removed hesitation before that).
     ///
     /// That fallback is a SAFETY NET, not a destination. It used to be
     /// described here as a settled placeholder-art decision; issue #296
@@ -183,6 +184,7 @@ public static class MoveAnimResolver
         ["betweenthelegs"] = "BetweenTheLegs", // #309 — HANDED (six states); the ball swaps at Active-entry, so OriginHand's formula holds — see HandedMoves
         ["hesitation"]    = "Hesitation", // #307 — unhanded; Hesitation.cs's own class doc: "No ball swap ... applies NO lateral velocity impulse", so it must NOT join HandedMoves — see that set's docstring
         ["spin"]          = "Spin", // #310 — unhanded DESPITE swapping hands: the swap lands on the LAST Active tick, so OriginHand's formula is wrong for 5 of Active's 6 ticks. It must NOT join HandedMoves — see that set's docstring, and SpinAnimTest's `spin-stays-unsuffixed` regression guard
+        ["drivegather"]   = "DriveGather", // #311 — unhanded; the gather ENDS the dribble, so there is no ball transit and no second polarity to mistime. Must NOT join HandedMoves
     };
 
     /// <summary>
@@ -368,7 +370,7 @@ public static class MoveAnimResolver
     /// nonexistent state that Travel() would silently no-op against.
     ///
     /// Every other combination — an unclipped/unknown moveId on any phase (as of
-    /// #310: drivegather and eurostep, the remainder of #302's batch;
+    /// #311: eurostep, the last of #302's batch;
     /// consult <see cref="ClippedMovePrefixes"/> rather than this list, which
     /// goes stale each time a clip lands), or a null/empty moveId (no move
     /// in flight) —
