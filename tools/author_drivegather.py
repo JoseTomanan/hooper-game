@@ -290,16 +290,16 @@ _KEYPOSES_RAW = [
     # LEAD foot just off the floor mid-swing, the RIGHT hand out on the ball and
     # the LEFT hand clearly away from it. This last cue is the CONTROL for the
     # whole convergence claim -- see `_verify_hand_convergence`.
-    [0.00000,           "startup",  -0.10,    6.0,   -0.04,     0.06,    0.00,       0.00,     0.28,    0.24,   -0.06, 0.02,    -0.24,  0.00],
+    [0.00000,           "startup",  -0.10,    6.0,   -0.04,     0.06,    -0.04,      0.00,     0.28,    0.24,   -0.06, 0.02,    -0.24,  0.00],
     # Frame 6 -- the Startup/Active SLICE BOUNDARY: simultaneously the last
     # frame of `drivegatherstartup` and the first of `drivegatheractive`. THE
     # LAST DRIBBLE, fully sold. Hips at their LOWEST (-0.18) and loaded BACK
-    # over the trail foot (trail_fore +0.10 puts that foot forward relative to
-    # the sinking hips), chest at its DEEPEST forward pitch (+12 off the ~30 deg
+    # over the trail foot (trail_fore -0.04 -> +0.16 puts that foot forward
+    # relative to the sinking hips), chest at its DEEPEST forward pitch (+12 off the ~30 deg
     # baseline, i.e. ~42 deg absolute -- handoff 11's "~40 deg, the deepest lean
     # in the batch"), the ball pushed out ahead and low in ONE hand, the LEFT
     # hand still out of it.
-    [STARTUP_END / FPS, "active",   -0.18,    12.0,  0.16,      0.10,    0.10,       0.00,     0.34,    0.20,   -0.06, 0.00,    -0.26,  0.02],
+    [STARTUP_END / FPS, "active",   -0.18,    12.0,  0.16,      0.10,    0.16,       0.00,     0.34,    0.20,   -0.06, 0.00,    -0.26,  0.02],
     # Frame 11 -- mid-Active. Handoff 11: "Animate it properly; this is not a
     # held pose." Ten ticks is the longest Active in the dribble family and the
     # one segment in this clip that genuinely has room for an arc, so it gets an
@@ -395,10 +395,21 @@ STEP_LENGTH_MIN_M = 0.55
 HIPS_TRAVEL_FORWARD_MIN_M = 0.10
 
 # ...and travel BACKWARD over the same measure during Startup: the gather LOADS
-# before it goes. Authored -0.10 m (trail_fore 0.00 -> +0.10). This is the
+# before it goes. Authored -0.20 m (trail_fore -0.04 -> +0.16). This is the
 # opposite-sign control that makes the figure above mean something rather than
 # being one of two floors that both happen to pass -- the same structure
 # author_stepback.py's Startup/Active pair uses, mirrored.
+#
+# The authored figure is deliberately DOUBLE an earlier -0.10 draft, and the
+# reason is downstream rather than aesthetic. Startup is six ticks and its
+# `ease_in` curve concentrates the motion at the END of the segment -- but the
+# live harness cannot see that end: the #316 phase-label lag costs the first
+# observed tick, and the phase boundary costs the authored last one, so
+# `control-drivegather-startup-loads-back` differences ticks 2..5 of 6 and reads
+# only a fraction of what is authored here. At -0.10 it measured -0.0248 against
+# its 0.02 floor -- green, but 1.24x is a flake waiting to happen. Doubling the
+# authored load is the right lever; lowering the harness floor would have been
+# the wrong one.
 HIPS_LOAD_BACK_MIN_M = 0.04
 
 # The torso is DEEPEST at Startup's end and has come up by Active's end.
