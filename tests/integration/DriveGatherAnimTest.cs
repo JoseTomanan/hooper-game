@@ -129,10 +129,11 @@ public partial class DriveGatherAnimTest : Node
     // MEASURED on the live rig: worst bone delta 47.90 deg, i.e. 3.2x the floor.
     // Floor matches every sibling harness's 15.0.
     //
-    // WHAT THIS GATE DOES AND DOES NOT CATCH, measured rather than assumed --
-    // and it is NOT what _new-move-wiring.md's mutation table predicts, so the
-    // correction is recorded here rather than left for the next author to
-    // rediscover:
+    // WHAT THIS GATE DOES AND DOES NOT CATCH, measured rather than assumed. It
+    // is NOT what _new-move-wiring.md's mutation table predicts, and this is the
+    // THIRD move to measure the same correction (ci.yml records it for both
+    // hesitation and spin) -- so the wiring doc's table, not the three gates, is
+    // the thing that is wrong:
     //
     //   all three states -> the pre-#296 generic fallback   2.59 deg  RED
     //   Recovery repointed at the STARTUP clip             26.36 deg  GREEN
