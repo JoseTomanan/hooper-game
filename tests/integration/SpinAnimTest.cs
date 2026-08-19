@@ -85,8 +85,8 @@ public partial class SpinAnimTest : Node
     private static readonly Vector3 FarSpot = new(12f, 0f, 12f); // out of PickupRadius
     private static readonly Vector3 RimCenter = new(0f, 3.05f, 0f); // BallController.DefaultRimCenter
 
-    // Bones for the Startup-vs-Recovery pose comparison and the
-    // departure-from-rest readings — the whole-body set every dribble-family
+    // Bones for the Startup-vs-Recovery pose comparison and the pose-travel
+    // accumulator — the whole-body set every dribble-family
     // script in this batch uses, since a spin's read (torso twist + hip drop +
     // pivot/trail footwork + tucked arms) touches all of them.
     private static readonly string[] MeasuredBones =
@@ -126,14 +126,25 @@ public partial class SpinAnimTest : Node
     // 28.37 deg (mixamorig_RightArm), i.e. 1.9x this floor.
     private const float StartupVsRecoveryMinDeg = 15.0f;
 
-    // The "clip physically drives the rig" floor — README's verification floor
-    // / #281's mutation lesson: max-departure-from-rest and
-    // max-change-across-the-arc both pass on a deliberately-unbound clip; only
-    // the FINAL-tick reading separates a bound clip from a collapsed one.
-    // MEASURED on the live rig: 177.04 deg off rest on the last Recovery tick.
-    // The floor stays low (30) on purpose — this gate separates "bound" from
-    // "collapsed to rest", and a tight floor near 177 would instead redden on
-    // any legitimate re-author of the Recovery pose.
+    // The "clip physically drives the rig" floor, in accumulated tick-to-tick
+    // pose TRAVEL (see _poseTravelDeg for why travel and not departure-from-rest
+    // — the latter was vacuous on this rig and mutation proved it).
+    //
+    // MEASURED on the live rig: 319.04 deg summed over 22 deltas, against 0.00
+    // deg with all three Spin states repointed at nonexistent clips. That is a
+    // clean separation, so the floor is not delicately placed: anything between
+    // roughly 5 and 300 would discriminate. It sits at 30 because the failure
+    // being excluded is "the rig is frozen", and a frozen rig scores ~0 — the
+    // floor only has to be clear of measurement noise, not close to the healthy
+    // reading. Setting it near 319 would instead redden on any legitimate
+    // re-author that made the move calmer.
+    //
+    // What this gate does NOT claim, deliberately: that the clips are the RIGHT
+    // ones. With all three states repointed at locomotion/idle it reads 179.45
+    // and PASSES, and with one clip name misspelled it reads 283.22 and PASSES —
+    // both correct, because a real bound clip really is driving the rig in each
+    // case. `spin-no-placeholder-leak` is the scenario that owns clip IDENTITY,
+    // and it reddens on both of those mutations.
     private const float DrivesRigMinDeg = 30.0f;
 
     // TRAP A's live gate, in DEGREES: the largest yaw excursion of the HIP SPAN
@@ -230,9 +241,30 @@ public partial class SpinAnimTest : Node
     private Quaternion[] _poseAtLastStartupTick;
     private Quaternion[] _poseAtLastRecoveryTick;
 
-    // Departure from rest on the LAST tick of the WHOLE MOVE, i.e. Recovery's
-    // own last observed tick.
-    private float _departureFromRestAtLastRecoveryTick = float.NaN;
+    // ── `spin-clip-drives-the-rig`'s accumulator ────────────────────────────
+    // Total per-tick pose TRAVEL summed over every usable observed tick of the
+    // move: for each tick, the worst-bone rotation delta against the PREVIOUS
+    // usable tick, added up.
+    //
+    // This deliberately does NOT measure departure from REST, which is what
+    // this scenario originally did and what the sibling per-move harnesses do.
+    // On THIS rig that reading is vacuous, and mutation proved it: with all
+    // three Spin states repointed at nonexistent clips, departure-from-rest
+    // still read 145.57 deg and the scenario passed. The cause is the recorded
+    // two-rotation-families property of locomotion.res — the retargeted clips
+    // sit 150-180 deg away from the Y Bot's rest pose, so ANY pose the rig
+    // holds (including a frozen one it is merely coasting on) reads as a
+    // enormous "departure from rest". The floor could never be crossed.
+    //
+    // Travel is the honest form of the same claim. A frozen rig — unbound
+    // clips, a missing animation name, or a clip authored with a single
+    // keyframe — accumulates ~0 regardless of how far from rest it is parked.
+    // It is also not a restatement of `spin-startup-differs-from-recovery`:
+    // that compares two ENDPOINTS and would pass on a clip that snapped
+    // between two held poses, whereas travel requires continuous motion.
+    private float _poseTravelDeg;
+    private Quaternion[] _poseAtPreviousUsableTick;
+    private int _travelSamples;
 
     // ── Yaw accumulators (trap A + the twist) ───────────────────────────────
     // Both spans are read with the SAME helper on the SAME ticks. `_hipYaw*`
@@ -414,12 +446,33 @@ public partial class SpinAnimTest : Node
             _recoveryTicks++;
             _poseAtLastRecoveryTick = SampleMeasuredBones(skel);
             if (_recoveryTicks >= 2) AccumulateYaw(skel);
-            // Overwritten every Recovery tick — ends up holding the LAST one,
-            // which is what "clip-drives-the-rig" needs (README's verification
-            // floor: max-across-the-arc passes vacuously on a clip that
-            // collapsed to rest a tick after entry).
-            _departureFromRestAtLastRecoveryTick = DepartureFromRestDeg(skel);
         }
+
+        // Pose travel spans the WHOLE move rather than any one phase, so it is
+        // accumulated here, after the per-phase branches. The same
+        // first-usable-tick drop the yaw accumulators apply is applied via each
+        // phase's own >= 2 guard being irrelevant here: the FIRST sample only
+        // seeds the reference (no delta is added for it), which has the same
+        // effect of never charging the phase-entry pose jump to the clip.
+        AccumulateTravel(skel);
+    }
+
+    // Folds one observed tick into the whole-move pose-travel accumulator.
+    // The first call only seeds the reference, so the dribble -> Spin entry jump
+    // is never counted as travel the clip performed.
+    private void AccumulateTravel(Skeleton3D skel)
+    {
+        Quaternion[] now = SampleMeasuredBones(skel);
+        if (now == null) return;
+        if (_poseAtPreviousUsableTick != null)
+        {
+            float worst = 0f;
+            for (int i = 0; i < now.Length && i < _poseAtPreviousUsableTick.Length; i++)
+                worst = Math.Max(worst, Mathf.RadToDeg(now[i].AngleTo(_poseAtPreviousUsableTick[i])));
+            _poseTravelDeg += worst;
+            _travelSamples++;
+        }
+        _poseAtPreviousUsableTick = now;
     }
 
     // Folds one observed tick into BOTH span-yaw excursions. Deliberately ONE
@@ -505,15 +558,17 @@ public partial class SpinAnimTest : Node
     // ── Scenario: spin-clip-drives-the-rig (positive) ─────────────────────
     private void VerdictClipDrivesTheRig()
     {
-        bool premise = _sawRecovery && _recoveryTicks >= 3 && !float.IsNaN(_departureFromRestAtLastRecoveryTick);
-        bool pass = premise && _departureFromRestAtLastRecoveryTick >= DrivesRigMinDeg;
+        bool premise = _sawRecovery && _recoveryTicks >= 3 && _travelSamples >= 6;
+        bool pass = premise && _poseTravelDeg >= DrivesRigMinDeg;
+        GD.Print($"[spin-anim]   pose travel summed over {_travelSamples} tick-to-tick deltas = " +
+                 $"{_poseTravelDeg:F2} deg (floor {DrivesRigMinDeg:F1})");
         if (pass)
-            GD.Print($"[spin-anim] PASS spin-clip-drives-the-rig — on the last observed Recovery tick the " +
-                     $"rig was still {_departureFromRestAtLastRecoveryTick:F2} deg off rest (floor " +
+            GD.Print($"[spin-anim] PASS spin-clip-drives-the-rig — the rig travelled " +
+                     $"{_poseTravelDeg:F2} deg of accumulated tick-to-tick rotation across the move (floor " +
                      $"{DrivesRigMinDeg:F1}), so the clips' tracks bind and hold this rig rather than collapsing it.");
         else
-            Fail($"spin-clip-drives-the-rig: departureFromRestAtLastRecoveryTick=" +
-                 $"{_departureFromRestAtLastRecoveryTick:F4} deg (need >= {DrivesRigMinDeg:F1}), premise={premise} " +
+            Fail($"spin-clip-drives-the-rig: poseTravel={_poseTravelDeg:F4} deg over {_travelSamples} " +
+                 $"deltas (need >= {DrivesRigMinDeg:F1}), premise={premise} " +
                  $"(sawRecovery={_sawRecovery}, recoveryTicks={_recoveryTicks}, need >= 3). Most likely the clips' " +
                  "track NODE PATHS do not bind on scenes/Player.tscn (an 'Armature/' prefix), or the clip is a " +
                  "dead no-op that collapsed to rest a tick after entry.");
@@ -1043,23 +1098,12 @@ public partial class SpinAnimTest : Node
             GD.Print($"[spin-anim]     {label} {names[i],-24} {Mathf.RadToDeg(a[i].AngleTo(b[i])):F2} deg");
     }
 
-    // Worst MeasuredBones rotation off REST on the live Skeleton3D, this tick.
-    // Returns NaN — not 0 — when no bone resolves (#305).
-    private static float DepartureFromRestDeg(Skeleton3D skel)
-    {
-        float worst = 0f;
-        int measured = 0;
-        foreach (string boneName in MeasuredBones)
-        {
-            int idx = skel.FindBone(boneName);
-            if (idx < 0) continue;
-            measured++;
-            Quaternion rest = skel.GetBoneRest(idx).Basis.GetRotationQuaternion().Normalized();
-            Quaternion pose = skel.GetBonePose(idx).Basis.GetRotationQuaternion().Normalized();
-            worst = Math.Max(worst, Mathf.RadToDeg(rest.AngleTo(pose)));
-        }
-        return measured == 0 ? float.NaN : worst;
-    }
+    // NOTE for future authors: there is deliberately NO DepartureFromRestDeg
+    // helper here, though the sibling per-move harnesses in this batch have one.
+    // It was removed once mutation proved the reading is vacuous on this rig (see
+    // _poseTravelDeg). Do not reintroduce it — the Y Bot's rest pose sits
+    // 150-180 deg from every retargeted clip in locomotion.res, so "off rest"
+    // reads enormous even for a rig frozen on a stale pose.
 
     private static Skeleton3D FindSkeleton(Node root)
     {
