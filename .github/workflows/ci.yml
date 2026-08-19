@@ -2014,6 +2014,90 @@ jobs:
           godot --headless --path . res://tests/integration/HesitationAnimTest.tscn -- --harness-scenario=hesitation-active-is-held
           godot --headless --path . res://tests/integration/HesitationAnimTest.tscn -- --harness-scenario=control-hesitation-startup-is-not-held
 
+      # Spin per-move animation clips (issue #310, batch 2 of #302). Before
+      # #310 "spin" fell through MoveAnimResolver's default case onto the
+      # shared generic states, which per #296 play locomotion/idle for BOTH
+      # Startup and Recovery (pixel-identical) and a looping locomotion/run
+      # for Active. For a move whose entire visible content is a body
+      # rotation that is not a MISSING telegraph but an actively FALSE one.
+      #
+      # -- TRAP A: the clip must not rotate the root ----------------------
+      # Player heading is server-authoritative (ADR-0010) and spin's ~180 deg
+      # arc is already driven as gameplay state by SpinHeadingMath inside
+      # Move(). A clip that also turned the Hips would double-apply the turn
+      # and fight reconciliation on the remote copy, whose broadcast heading
+      # is ~1 RTT stale -- a defect visible ONLY under network conditions, so
+      # no visual report would ever find it. author_spin.py PINS the Hips
+      # basis and keys it every frame (true by construction, not omission),
+      # rebuild_spin_clips.gd's G4 re-proves the exported track survived and
+      # is constant, and spin-clip-does-not-rotate-root gates it live.
+      #
+      # -- TRAP B: spin is UNHANDED despite genuinely swapping hands -------
+      # The swap lands on the LAST Active tick, but OriginHand's formula
+      # assumes the swap has ALREADY happened when an Active clip is chosen,
+      # so handing spin would pick the wrong side for 5 of Active's 6 ticks.
+      # spin-stays-unsuffixed is the standing guard against a future author
+      # "fixing" this by adding spin to HandedMoves.
+      #
+      # -- Mutation record (each run on production code, never on an
+      #    assertion; the tree was rebuilt for every one, since a stale DLL
+      #    fabricates reds) --------------------------------------------------
+      #   dropped spin from ClippedMovePrefixes (restores the pre-#296
+      #       fallback -- the mutation that matches the claim)
+      #       -> spin-phases RED. no-placeholder-leak stayed GREEN, correctly:
+      #          it reads the .tscn, which the resolver does not touch.
+      #   pointed all three states at locomotion/idle
+      #       -> startup-differs-from-recovery RED (0.77 deg vs floor 15),
+      #          shoulder-twist-reverses RED, does-not-rotate-root RED via its
+      #          PREMISE (shoulder excursion 0.00 vs floor 25).
+      #   pointed SpinActive at locomotion/pivot (a clip that DOES turn)
+      #       -> does-not-rotate-root RED (HIP span 39.043 deg vs ceiling 1.0)
+      #          while spin-phases stayed GREEN -- the wiring is fine, the
+      #          CONTENT is not, which is exactly the split intended.
+      #   misspelled ALL THREE clip names (trap 13's family-wide unbound
+      #       signature) -> clip-drives-the-rig RED (travel 0.00 deg).
+      #   misspelled ONE clip name -> no-placeholder-leak RED;
+      #       clip-drives-the-rig stayed GREEN, correctly (two of three clips
+      #       still animate, so the rig still travels -- identity is
+      #       no-placeholder-leak's claim, not this one's).
+      #   deleted the DribbleRight -> SpinStartup edge
+      #       -> spin-edges RED; spin-phases stayed GREEN, confirming README
+      #          trap 8 from the other side (Travel()'s pathfinder routes
+      #          around the gap, so only the resource-level check sees it).
+      #   Spin.DefaultFrameData startupFrames 8 -> 9 -> segment-lengths RED.
+      #   added spin to HandedMoves (TRAP B inverted)
+      #       -> stays-unsuffixed RED ('SpinRecoveryLeft'), and spin-phases
+      #          RED too, since the tree has no such state to travel to.
+      #
+      # -- One mutation deliberately does NOT redden, and that is correct ---
+      # Repointing SpinRecovery at the spinSTARTUP clip leaves
+      # startup-differs-from-recovery GREEN at 22.42 deg. Same finding as the
+      # hesitation block above: the last OBSERVABLE Startup tick is a mid-ramp
+      # sample (phase-label lag drops tick 1) while Recovery plays that same
+      # clip to COMPLETION, so they really are different poses. That mutation
+      # asks a question this scenario never claimed to answer; the idle/idle
+      # one above is the one that matches its claim.
+      #
+      # -- clip-drives-the-rig measures TRAVEL, not departure from rest -----
+      # It originally measured departure from REST and was VACUOUS: it read
+      # 145.57 deg and PASSED with all three clips unbound, because this rig's
+      # retargeted clips sit 150-180 deg from the Y Bot's rest pose, so any
+      # held pose -- including a frozen one -- reads enormous. Accumulated
+      # tick-to-tick travel is the honest form: 319.04 healthy vs 0.00 unbound.
+      # Each scenario exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run spin per-move animation state harness
+        run: |
+          godot --headless --path . res://tests/integration/SpinAnimTest.tscn -- --harness-scenario=spin-phases
+          godot --headless --path . res://tests/integration/SpinAnimTest.tscn -- --harness-scenario=spin-no-placeholder-leak
+          godot --headless --path . res://tests/integration/SpinAnimTest.tscn -- --harness-scenario=spin-segment-lengths
+          godot --headless --path . res://tests/integration/SpinAnimTest.tscn -- --harness-scenario=spin-edges
+          godot --headless --path . res://tests/integration/SpinAnimTest.tscn -- --harness-scenario=spin-stays-unsuffixed
+          godot --headless --path . res://tests/integration/SpinAnimTest.tscn -- --harness-scenario=spin-startup-differs-from-recovery
+          godot --headless --path . res://tests/integration/SpinAnimTest.tscn -- --harness-scenario=spin-clip-drives-the-rig
+          godot --headless --path . res://tests/integration/SpinAnimTest.tscn -- --harness-scenario=spin-clip-does-not-rotate-root
+          godot --headless --path . res://tests/integration/SpinAnimTest.tscn -- --harness-scenario=spin-shoulder-twist-reverses
+          godot --headless --path . res://tests/integration/SpinAnimTest.tscn -- --harness-scenario=control-spin-startup-twist-does-not-reverse
+
       # Moving crossover — momentum-aware burst with left-stick exit (issue
       # #198, ADR-0003 amendment). CrossoverBurstMathTests already pin the
       # pure composition function; this drives a REAL PlayerController
