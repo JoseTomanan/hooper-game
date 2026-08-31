@@ -409,6 +409,7 @@ jobs:
           godot --headless --path . res://tests/integration/EuroStepTest.tscn -- --harness-scenario=euro-step-beats-committed-defender
           godot --headless --path . res://tests/integration/EuroStepTest.tscn -- --harness-scenario=euro-step-read-still-contests
           godot --headless --path . res://tests/integration/EuroStepTest.tscn -- --harness-scenario=euro-step-whiff-recovery
+          godot --headless --path . res://tests/integration/EuroStepAnimTest.tscn
 
       # Jab step — triple threat's stance bait (issue #200). Unit tests
       # already pin the pure legality gate (JabStepLegalityResolverTests.cs)
