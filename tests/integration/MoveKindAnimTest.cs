@@ -75,6 +75,13 @@ namespace HOOPERGAME.Tests.Integration;
 // REACHABILITY, never clip content.
 public partial class MoveKindAnimTest : Node
 {
+    // All production moves are now clipped (#312), so the fallback control must
+    // use a synthetic committed move rather than pretending a real move is not.
+    private sealed class UnclippedMove : CommittedMove
+    {
+        public UnclippedMove() : base("__unclipped__", "Unclipped", new MoveFrameData(3, 3, 3, 0)) { }
+    }
+
     private const double TimeoutSeconds = 10.0;
     private const int ArmFrames = 2;          // ticks for TryAssignTipoffHolder to run
     private const int ActionMarginFrames = 3; // ticks to let TryStartDribble's effect settle
@@ -392,7 +399,7 @@ public partial class MoveKindAnimTest : Node
                 // lateralDirection +1 = step right. The sign is inert for this
                 // scenario — it shapes the Active-entry burst, not which anim
                 // state resolves — but the constructor requires one.
-                bool began = holder.BeginMoveForHarness(new EuroStep(lateralDirection: 1f));
+                bool began = holder.BeginMoveForHarness(new UnclippedMove());
                 if (!began)
                 {
                     Fail("unclipped-stays-generic: BeginMoveForHarness(new EuroStep(1f)) returned false " +
