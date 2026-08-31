@@ -147,8 +147,8 @@ public static class MoveAnimResolver
     ///
     /// Deliberately NOT exhaustive over every <c>CommittedMove.Id</c>: moves
     /// without their own captured clip still fall back to the shared generic
-    /// clip via <see cref="ResolveStateName"/>'s default case. As of #311 that
-    /// remaining set is eurostep alone — but read this
+    /// clip via <see cref="ResolveStateName"/>'s default case. As of #312 every
+    /// committed move has a per-move clip — but read this
     /// dictionary rather than that list, which goes stale every time a clip
     /// lands (#311 removed drivegather from it; #310 removed spin, and #307
     /// removed hesitation before that).
@@ -185,6 +185,7 @@ public static class MoveAnimResolver
         ["hesitation"]    = "Hesitation", // #307 — unhanded; Hesitation.cs's own class doc: "No ball swap ... applies NO lateral velocity impulse", so it must NOT join HandedMoves — see that set's docstring
         ["spin"]          = "Spin", // #310 — unhanded DESPITE swapping hands: the swap lands on the LAST Active tick, so OriginHand's formula is wrong for 5 of Active's 6 ticks. It must NOT join HandedMoves — see that set's docstring, and SpinAnimTest's `spin-stays-unsuffixed` regression guard
         ["drivegather"]   = "DriveGather", // #311 — unhanded; the gather ENDS the dribble, so there is no ball transit and no second polarity to mistime. Must NOT join HandedMoves
+        ["eurostep"]      = "EuroStep", // #312 — unhanded: lateral direction is not OriginHand, and the gathered ball never swaps hands.
     };
 
     /// <summary>
@@ -369,9 +370,8 @@ public static class MoveAnimResolver
     /// shared "FadeawayActive" name, never "JumpshotFadeawayActive" — a
     /// nonexistent state that Travel() would silently no-op against.
     ///
-    /// Every other combination — an unclipped/unknown moveId on any phase (as of
-    /// #311: eurostep, the last of #302's batch;
-    /// consult <see cref="ClippedMovePrefixes"/> rather than this list, which
+    /// Every other combination — an unclipped/unknown moveId on any phase;
+    /// consult <see cref="ClippedMovePrefixes"/> rather than a stale list, which
     /// goes stale each time a clip lands), or a null/empty moveId (no move
     /// in flight) —
     /// degrades to the generic fallback name (<c>generic.ToString()</c>),
