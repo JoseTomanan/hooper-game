@@ -2105,6 +2105,115 @@ jobs:
           godot --headless --path . res://tests/integration/SpinAnimTest.tscn -- --harness-scenario=spin-shoulder-twist-reverses
           godot --headless --path . res://tests/integration/SpinAnimTest.tscn -- --harness-scenario=control-spin-startup-twist-does-not-reverse
 
+      # Drive-gather per-move animation states (issue #311, batch #302). Before
+      # this, "drivegather" fell through MoveAnimResolver's default case onto the
+      # shared generic states, which per #296 play locomotion/idle for BOTH
+      # Startup and Recovery (pixel-identical) and a looping locomotion/run for
+      # Active.
+      #
+      # For THIS move that is not a missing telegraph but a RULES LIE. The gather
+      # is the frame after which the dribble is DEAD (ADR-0022 builds the whole
+      # rim-finishing vertical on it), so a looping run advertises a drive the
+      # holder can no longer legally make. MoveAnimState's own doc names exactly
+      # that as "an actively FALSE read, which is worse than no signal" -- which
+      # is why drivegather-active-brings-both-hands-to-ball exists as a gate at
+      # all, and why its control is not ceremonial.
+      #
+      # -- The rules signal, and why it is a PAIR ---------------------------
+      # A convergence ceiling on its own is satisfied by a clip whose hands were
+      # NEVER apart, which is precisely what locomotion/idle does (both arms held
+      # in one fixed relationship for every phase). control-drivegather-startup-
+      # hands-apart is the premise that makes the ceiling mean "they CAME
+      # together". Same structure for displaces-forward / loads-back: one metric,
+      # read with OPPOSITE SIGNS, because a gather loads the weight back over the
+      # rear leg before driving off it. Two same-signed floors would prove
+      # nothing about the two phases differing.
+      #
+      # -- Mutation record (every mutation on production code, never on an
+      #    assertion) ------------------------------------------------------
+      #   pointed all three states at the exact pre-#296 fallback
+      #       (idle / run / idle) -- the mutation that matches these gates' claim
+      #       -> no-placeholder-leak RED; startup-differs-from-recovery RED
+      #          (2.59 deg vs floor 15); brings-both-hands RED (0.7044 m vs
+      #          ceiling 0.30); active-displaces-forward RED (-0.0868 m vs floor
+      #          +0.05, i.e. the sign inverted); control-startup-loads-back RED
+      #          (-0.0001 m vs need <= -0.02).
+      #       -> clip-drives-the-rig stayed GREEN at 76.16 deg, CORRECTLY, and
+      #          this differs from spin's equivalent row (2.14, RED) for an
+      #          honest reason: spin's mutation put a STATIC idle in all three
+      #          slots, whereas the true pre-#296 ACTIVE fallback is a LOOPING
+      #          locomotion/run, which genuinely animates. That gate never
+      #          claimed the clips were the RIGHT ones.
+      #       -> control-startup-hands-apart also stayed GREEN (0.6498 m),
+      #          correctly: idle holds the arms at the sides, so the premise it
+      #          asserts still holds. A control that reddened here would just be
+      #          a duplicate of the positive gate.
+      #   misspelled ALL THREE clip names (trap 13's family-wide unbound
+      #       signature) -> clip-drives-the-rig RED at 0.00 deg exactly;
+      #       drivegather-phases stayed GREEN, reproducing the #257 trap in situ
+      #       (Travel() enters a state whether or not its clip binds).
+      #   misspelled ONE clip name -> no-placeholder-leak RED;
+      #       clip-drives-the-rig stayed GREEN at 142.22 (the other two clips
+      #       still animate -- identity is no-placeholder-leak's claim).
+      #   deleted the DribbleRight -> DriveGatherStartup edge
+      #       -> drivegather-edges RED; drivegather-phases stayed GREEN,
+      #          confirming README trap 8 from the other side (Travel()'s
+      #          pathfinder routes around the gap, so only the resource-level
+      #          check sees it).
+      #   rebuild_drivegather_clips.gd ACTIVE_TICKS 10 -> 12, then re-sliced
+      #       -> drivegather-segment-lengths RED (0.200000s vs 0.166667s).
+      #          Worth noting WHY the rebuild tool's own G1 stays green under
+      #          this: it checks against its own mutated constant. The harness
+      #          catches it by reading DriveGather.DefaultFrameData from the C#
+      #          side, which is exactly what makes that duplication safe rather
+      #          than merely duplicated.
+      #
+      # -- One mutation deliberately does NOT redden, for the THIRD time ----
+      # Repointing DriveGatherRecovery at the drivegatherSTARTUP clip leaves
+      # startup-differs-from-recovery GREEN at 26.36 deg. Identical finding to
+      # the hesitation and spin blocks above, and by now it is the wiring doc's
+      # mutation table that is wrong rather than three independent gates: the
+      # last OBSERVABLE Startup tick is a mid-ramp sample (the #316 phase-label
+      # lag drops tick 1) while Recovery plays that same clip to COMPLETION and
+      # then holds, so the two really are different poses. Healthy reads 47.90
+      # against that 26.36, only 1.8x -- far too tight to place a floor in, and
+      # raising it would be fitting to one mutation. Clip IDENTITY is owned by
+      # no-placeholder-leak, which reddens on it and whose failure message names
+      # that exact copy-paste case.
+      #
+      # -- clip-drives-the-rig measures WITHIN-PHASE TRAVEL -----------------
+      # Inherited from #310 along with its reasoning: departure-from-rest is
+      # VACUOUS on this rig (145.57 deg with every clip unbound), and travel that
+      # includes phase-boundary jumps is nearly as weak, since three frozen
+      # single-keyframe clips would score three big snaps. Both exclusions are
+      # live here.
+      #
+      # -- The layup hand-off, and the finding inside it ---------------------
+      # PlayerController begins the finish as a SEPARATE "layup" request from the
+      # displaced position (PlayerController.cs:2332) and every AnimationTree
+      # transition is a hard cut, so drivegather-recovery-hands-off-to-layup
+      # gates the pose discontinuity. It passes at 0.1851 m against a 0.45
+      # ceiling -- but the dominant term is NOT this clip. layupstartup is
+      # authored off Goalkeeper Catch Stationary.fbx (standing hips at world Y
+      # 0.9239) while every Dribble.fbx-sourced clip in batch #302 carries the
+      # crouch's 0.6389, so a ~0.19 m vertical hip pop already exists on EVERY
+      # transition into the layup. Pre-existing, out of #311's scope, raised in
+      # its PR.
+      # Each scenario exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run drive-gather per-move animation state harness
+        run: |
+          godot --headless --path . res://tests/integration/DriveGatherAnimTest.tscn -- --harness-scenario=drivegather-phases
+          godot --headless --path . res://tests/integration/DriveGatherAnimTest.tscn -- --harness-scenario=drivegather-no-placeholder-leak
+          godot --headless --path . res://tests/integration/DriveGatherAnimTest.tscn -- --harness-scenario=drivegather-segment-lengths
+          godot --headless --path . res://tests/integration/DriveGatherAnimTest.tscn -- --harness-scenario=drivegather-edges
+          godot --headless --path . res://tests/integration/DriveGatherAnimTest.tscn -- --harness-scenario=drivegather-startup-differs-from-recovery
+          godot --headless --path . res://tests/integration/DriveGatherAnimTest.tscn -- --harness-scenario=drivegather-clip-drives-the-rig
+          godot --headless --path . res://tests/integration/DriveGatherAnimTest.tscn -- --harness-scenario=drivegather-active-brings-both-hands-to-ball
+          godot --headless --path . res://tests/integration/DriveGatherAnimTest.tscn -- --harness-scenario=control-drivegather-startup-hands-apart
+          godot --headless --path . res://tests/integration/DriveGatherAnimTest.tscn -- --harness-scenario=drivegather-active-displaces-forward
+          godot --headless --path . res://tests/integration/DriveGatherAnimTest.tscn -- --harness-scenario=control-drivegather-startup-loads-back
+          godot --headless --path . res://tests/integration/DriveGatherAnimTest.tscn -- --harness-scenario=drivegather-recovery-hands-off-to-layup
+
       # Moving crossover — momentum-aware burst with left-stick exit (issue
       # #198, ADR-0003 amendment). CrossoverBurstMathTests already pin the
       # pure composition function; this drives a REAL PlayerController
