@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash 'C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.codex\\hooks\\verify-green.sh'",
+            "timeout": 300
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash 'C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.codex\\hooks\\verify-green.sh'",
+            "timeout": 300
+          }
+        ]
+      }
+    ]
+  }
+}

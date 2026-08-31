@@ -643,7 +643,7 @@ public class MoveAnimResolverTests
         // still exists and still needs pinning. Replace the id with a synthetic
         // one ("__unclipped__") and say in the comment that no real move reaches
         // the branch any more.
-        foreach (var unclipped in new[] { "eurostep" })
+        foreach (var unclipped in new[] { "__unclipped__" })
             Assert.Equal("Active",
                 MoveAnimResolver.ResolveStateName(MoveAnimState.Active, unclipped, HandSide.Left, HandSide.Right));
     }
