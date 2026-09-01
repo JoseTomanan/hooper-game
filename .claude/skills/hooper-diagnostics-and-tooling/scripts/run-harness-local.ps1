@@ -71,6 +71,17 @@ if (-not (Test-Path $Godot)) {
 
 Set-Location $RepoRoot
 
+# Godot 4.7.1 Mono can crash natively if its default user://logs location is
+# unavailable (for example, under a filesystem-sandboxed agent). Keep harness
+# logs in the writable, ignored project cache instead.
+$harnessLogDirectory = Join-Path $RepoRoot '.godot\harness-logs'
+try {
+    New-Item -ItemType Directory -Force -Path $harnessLogDirectory -ErrorAction Stop | Out-Null
+} catch {
+    Write-Error "cannot create local Godot harness log directory '$harnessLogDirectory': $($_.Exception.Message)"
+    exit 2
+}
+
 Write-Output "Godot binary : $Godot"
 Write-Output "Repo root    : $RepoRoot"
 Write-Output ("Scenarios    : {0} (parsed from ci.yml, CI order)" -f $invocations.Count)
@@ -90,8 +101,11 @@ foreach ($inv in $invocations) {
     $argString = $inv.Substring('godot '.Length)
     $argv = $argString -split ' '
 
+    if ($scenario -ne '') { $logName = "$scene-$scenario.log" } else { $logName = "$scene.log" }
+    $logFile = Join-Path $harnessLogDirectory $logName
+
     Write-Output "=== RUN  $label"
-    & $Godot @argv
+    & $Godot --log-file $logFile @argv
     $rc = $LASTEXITCODE
 
     if ($rc -eq 0) {

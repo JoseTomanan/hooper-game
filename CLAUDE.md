@@ -231,6 +231,13 @@ current milestone unless asked.
   a box has independent X/Y/Z extents. The visual `MeshInstance3D` may still be
   scaled freely; only the collision shape is constrained. If you find a scaled
   round collider in a `.tscn`, flag it.
+- **Local Godot logging:** when launching a headless Godot command from a
+  filesystem-sandboxed Windows agent, always add `--log-file .godot/<unique>.log`.
+  Godot 4.7.1 Mono can native-crash when its default `user://logs` path is not
+  writable. The shipped harness launchers already do this; use a distinct log
+  file for concurrent server/client processes. Do not launch the Godot editor
+  inside that sandbox: its editor-settings writes still require an unsandboxed
+  process.
 - One script = one node responsibility. `partial` class extending the node type.
 - Comment the "why," not the "what," especially around netcode and the
   deterministic ball, because the human is learning the engine.

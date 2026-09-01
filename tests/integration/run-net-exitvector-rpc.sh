@@ -48,6 +48,12 @@ PORT="${HARNESS_PORT:-23461}"   # 23456-23460 belong to the handshake/state-sync
                                  # node-replication/behindtheback/defensive-telegraph harnesses
 SERVER_BIND_WAIT="${SERVER_BIND_WAIT:-6}"
 MAX_ATTEMPTS="${MAX_ATTEMPTS:-3}"  # see the "Bounded retry" header block
+LOG_DIR=".godot/harness-logs"
+mkdir -p "$LOG_DIR" || { echo "[run-net-exitvector-rpc:$SCENARIO] FAIL: cannot create $LOG_DIR" >&2; exit 2; }
+case "$(uname -s)" in
+  MINGW*|MSYS*) GODOT_LOG_DIR="$(pwd -W)/$LOG_DIR" ;;
+  *)            GODOT_LOG_DIR="$PWD/$LOG_DIR" ;;
+esac
 
 log() { echo "[run-net-exitvector-rpc:$SCENARIO] $*"; }
 
@@ -61,7 +67,7 @@ run_once() {
   local attempt="$1"
   local server_pid client_pid server_rc
 
-  "$GODOT" --headless --path . "$SCENE" -- --harness-role=server --harness-port="$PORT" --harness-scenario="$SCENARIO" &
+  "$GODOT" --log-file "$GODOT_LOG_DIR/net-exitvector-rpc-$SCENARIO-$attempt-server.log" --headless --path . "$SCENE" -- --harness-role=server --harness-port="$PORT" --harness-scenario="$SCENARIO" &
   server_pid=$!
   log "attempt $attempt/$MAX_ATTEMPTS: server launched (pid $server_pid); waiting ${SERVER_BIND_WAIT}s to bind…"
 
@@ -73,7 +79,7 @@ run_once() {
   fi
 
   log "attempt $attempt: launching client (backgrounded — server carries the verdict)…"
-  "$GODOT" --headless --path . "$SCENE" -- --harness-role=client --harness-port="$PORT" --harness-scenario="$SCENARIO" &
+  "$GODOT" --log-file "$GODOT_LOG_DIR/net-exitvector-rpc-$SCENARIO-$attempt-client.log" --headless --path . "$SCENE" -- --harness-role=client --harness-port="$PORT" --harness-scenario="$SCENARIO" &
   client_pid=$!
 
   wait "$server_pid"

@@ -54,7 +54,11 @@ def check(name, passed, detail=""):
 
 def main():
     src = sys.argv[sys.argv.index("--") + 1]
-    arm, f0, f1 = lib.load_source(src, FPS)
+    # expected=None: the selftest exercises the LIBRARY's primitives, not a
+    # move spec. It asserts rig-intrinsic properties (IK convergence, mirror
+    # symmetry) that hold on any source carrying this skeleton, so pinning it
+    # to one file would narrow the test rather than harden it.
+    arm, f0, f1 = lib.load_source(src, FPS, expected=None)
     geom = lib.RigGeometry(arm)
     geom.log_summary()
     lib.enter_pose_mode(arm)
@@ -268,7 +272,12 @@ def main():
     # and "inboard" in the labels below are ANATOMICALLY true on both legs. With
     # the old basis axis a fixed sign meant outboard on one side and inboard on
     # the other, so the four cases were really two cases run twice.
-    ANKLE_TOL_M = 1e-4
+    # IMPORTED, not restated (#344). These 8 checks and the gate every authoring
+    # script runs at export must be the SAME number: while this file carried its
+    # own 1e-4 the two merely happened to agree, so tightening the authoring gate
+    # would have silently left these bounding something looser than the gate
+    # demanded -- a suite that passes while the thing it certifies fails.
+    ANKLE_TOL_M = lib.ANKLE_IK_TOL_M
     for side in ("L", "R"):
         # Deliberately not `hip_head` -- that name is the HIPS bone above and is
         # read again by section 6g. This is the femur root.
@@ -618,6 +627,59 @@ def main():
               "sign it returned is a coin flip")
     except SystemExit:
         check("body_right_refuses_coinflip", True)
+
+    # ---- 4h. the ankle-IK accumulator cannot be defeated by NaN -------------
+    # THE #344 DEFECT, pinned. Every authoring script used to fold its ankle
+    # errors together itself with `worst = max(worst, err)`, then hand the result
+    # to `report_ankle_ik`. Both halves looked right. Between them was a hole:
+    # CPython's two-arg `max(a, b)` returns `b if b > a else a`, and `nan > 0.0`
+    # is False -- so with the accumulator FIRST, `max` silently DISCARDS a NaN
+    # and reports the largest finite error instead. A rig that had degenerated
+    # into NaN exported clean.
+    #
+    # Deliberately placed AFTER 4c/4e/4f, which over-reach on purpose: that
+    # leaves a real, nonzero reading in the accumulator, so `reset_ankle_ik`
+    # below is clearing genuine pollution rather than an already-zero field.
+    geom.reset_ankle_ik()
+    check("ankle_acc_resets", geom.worst_ankle_ik_m == 0.0,
+          f"reset_ankle_ik left {geom.worst_ankle_ik_m} behind; an authoring "
+          f"script that builds twice (author_steal, author_behindtheback) would "
+          f"judge its second polarity against the first one's worst reading")
+
+    # A finite reading first, so the NaN below has something to be swallowed BY.
+    # A NaN arriving into an empty accumulator would propagate even under the
+    # buggy `max`, so this ordering is what makes the gate discriminating.
+    geom.observe_ankle_ik(geom.m(0.5))
+    check("ankle_acc_premise", abs(geom.worst_ankle_ik_m - 0.5) < 1e-9,
+          f"expected the accumulator to hold 0.5 m, got "
+          f"{geom.worst_ankle_ik_m}; the NaN case below would prove nothing")
+
+    # THE CONTROL. Assert that the OLD formulation really does swallow it --
+    # without this the gate below could be passing for some unrelated reason,
+    # and the reader has no evidence the rewrite was necessary at all.
+    swallowed = max(geom.m(0.5), float("nan"))
+    check("ankle_acc_max_would_swallow_nan", swallowed == geom.m(0.5),
+          f"`max(acc, nan)` returned {swallowed}, not the accumulator; this "
+          f"Python no longer has the behaviour #344 was written against, so "
+          f"this section is guarding a bug that cannot happen here")
+
+    geom.observe_ankle_ik(float("nan"))
+    worst = geom.worst_ankle_ik_m
+    lib.report("ankle_acc_worst_after_nan", f"{worst}")
+    check("ankle_acc_propagates_nan", worst != worst,
+          f"a NaN ankle solve left the accumulator at {worst}; the run would "
+          f"export a degenerate rig and report a healthy number")
+
+    # ...and the gate on top of it must REFUSE, not merely report. `not (x <=
+    # tol)` is True for NaN; the tempting `x > tol` is False and would let it by.
+    try:
+        lib.report_ankle_ik("selftest_nan_probe", geom)
+        check("ankle_gate_refuses_nan", False,
+              "report_ankle_ik accepted a NaN worst-error instead of raising; "
+              "the comparison has been flipped to a fail-open form")
+    except SystemExit:
+        check("ankle_gate_refuses_nan", True)
+    geom.reset_ankle_ik()
 
     # ---- 5. none of the above introduced a pose scale -----------------------
     # `aim_arm` passes the bend-plane normal to `aim_matrix` as the side axis

@@ -23,12 +23,18 @@ SCENARIO="${2:-telegraph}"
 SCENE="res://tests/integration/NetDefensiveTelegraphTest.tscn"
 PORT="${HARNESS_PORT:-23460}"   # 23456-23459 belong to the handshake/state-sync/node-replication/behindtheback harnesses
 SERVER_BIND_WAIT="${SERVER_BIND_WAIT:-6}"
+LOG_DIR=".godot/harness-logs"
+mkdir -p "$LOG_DIR" || { echo "[run-net-defensive-telegraph:$SCENARIO] FAIL: cannot create $LOG_DIR" >&2; exit 2; }
+case "$(uname -s)" in
+  MINGW*|MSYS*) GODOT_LOG_DIR="$(pwd -W)/$LOG_DIR" ;;
+  *)            GODOT_LOG_DIR="$PWD/$LOG_DIR" ;;
+esac
 
 log() { echo "[run-net-defensive-telegraph:$SCENARIO] $*"; }
 
 log "godot=$GODOT scene=$SCENE port=$PORT"
 
-"$GODOT" --headless --path . "$SCENE" -- --harness-role=server --harness-port="$PORT" --harness-scenario="$SCENARIO" &
+"$GODOT" --log-file "$GODOT_LOG_DIR/net-defensive-telegraph-$SCENARIO-server.log" --headless --path . "$SCENE" -- --harness-role=server --harness-port="$PORT" --harness-scenario="$SCENARIO" &
 SERVER_PID=$!
 log "server launched (pid $SERVER_PID); waiting ${SERVER_BIND_WAIT}s to bind…"
 
@@ -49,7 +55,7 @@ if ! kill -0 "$SERVER_PID" 2>/dev/null; then
 fi
 
 log "launching client…"
-"$GODOT" --headless --path . "$SCENE" -- --harness-role=client --harness-port="$PORT" --harness-scenario="$SCENARIO"
+"$GODOT" --log-file "$GODOT_LOG_DIR/net-defensive-telegraph-$SCENARIO-client.log" --headless --path . "$SCENE" -- --harness-role=client --harness-port="$PORT" --harness-scenario="$SCENARIO"
 CLIENT_RC=$?
 
 log "client exit code: $CLIENT_RC"

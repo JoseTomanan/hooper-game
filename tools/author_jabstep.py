@@ -128,6 +128,12 @@ import blender_anim_lib as lib  # noqa: E402  (must follow the sys.path fix)
 log = lib.log
 
 # ── clip contract, 60 Hz (JabStep.DefaultFrameData) ──────────────────────────
+# The source clip this move is authored OVER, enforced by `lib.load_source`.
+# Every threshold in this file was read off a run against this file; see that
+# function's docstring for why the source is load-bearing rather than a
+# formality, and for the misdiagnosis that motivated the check.
+EXPECTED_SOURCE = "Dribble.fbx"
+
 FPS = 60
 STARTUP_TICKS = 3
 ACTIVE_TICKS = 2
@@ -255,7 +261,7 @@ def main():
     argv = sys.argv[sys.argv.index("--") + 1:]
     src, dst = argv[0], argv[1]
 
-    arm, _src_f0, _src_f1 = lib.load_source(src, FPS)
+    arm, _src_f0, _src_f1 = lib.load_source(src, FPS, expected=EXPECTED_SOURCE)
     scene = bpy.context.scene
 
     geom = lib.RigGeometry(arm)
@@ -289,10 +295,10 @@ def main():
     keyposes = _keyposes_for_lib()
 
     worst_wrist_err = 0.0
-    worst_ankle_err = 0.0
+    geom.reset_ankle_ik()
 
     def apply(frame, _t_s, ch):
-        nonlocal worst_wrist_err, worst_ankle_err
+        nonlocal worst_wrist_err
 
         # ---- clavicles: pinned to REST, not inherited from the source -------
         # Dribble.fbx's own Shoulder(clavicle) bones carry uncontrolled idle
@@ -326,14 +332,12 @@ def main():
         # lift the feet by exactly the crouch depth).
         toe_dir = (forward * 0.90 - up * 0.44).normalized()
 
-        _solved, plant_err = lib.plant_foot(arm, "L", plant_ankle, toe_dir, geom, frame=frame)
-        worst_ankle_err = max(worst_ankle_err, plant_err)
+        lib.plant_foot(arm, "L", plant_ankle, toe_dir, geom, frame=frame)
 
         jab_ankle = (jab_ankle_base
                      + forward * geom.m(ch["jab_fore_m"])
                      + up * geom.m(ch["jab_up_m"]))
-        _solved, jab_err = lib.plant_foot(arm, "R", jab_ankle, toe_dir, geom, frame=frame)
-        worst_ankle_err = max(worst_ankle_err, jab_err)
+        lib.plant_foot(arm, "R", jab_ankle, toe_dir, geom, frame=frame)
 
         # ---- arms: ONE set of channels, mirrored per side, CONSTANT ----------
         # See the module docstring: the ball does not travel with the foot, so
@@ -352,7 +356,7 @@ def main():
     bpy.ops.object.mode_set(mode="OBJECT")
     scene.frame_start, scene.frame_end = F0, F1
 
-    lib.report_ankle_ik("worst_ankle_ik_err_m", geom.to_m(worst_ankle_err))
+    lib.report_ankle_ik("worst_ankle_ik_err_m", geom)
     lib.report("worst_wrist_ik_err_m", f"{geom.to_m(worst_wrist_err):.6f}")
 
     all_frames = list(range(F0, F1 + 1))
