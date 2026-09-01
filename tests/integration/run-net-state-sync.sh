@@ -17,12 +17,18 @@ GODOT="${1:-godot}"
 SCENE="res://tests/integration/NetStateSyncTest.tscn"
 PORT="${HARNESS_PORT:-23457}"   # distinct from the handshake harness port
 SERVER_BIND_WAIT="${SERVER_BIND_WAIT:-6}"
+LOG_DIR=".godot/harness-logs"
+mkdir -p "$LOG_DIR" || { echo "[run-net-state-sync] FAIL: cannot create $LOG_DIR" >&2; exit 2; }
+case "$(uname -s)" in
+  MINGW*|MSYS*) GODOT_LOG_DIR="$(pwd -W)/$LOG_DIR" ;;
+  *)            GODOT_LOG_DIR="$PWD/$LOG_DIR" ;;
+esac
 
 log() { echo "[run-net-state-sync] $*"; }
 
 log "godot=$GODOT scene=$SCENE port=$PORT"
 
-"$GODOT" --headless --path . "$SCENE" -- --harness-role=server --harness-port="$PORT" &
+"$GODOT" --log-file "$GODOT_LOG_DIR/net-state-sync-server.log" --headless --path . "$SCENE" -- --harness-role=server --harness-port="$PORT" &
 SERVER_PID=$!
 log "server launched (pid $SERVER_PID); waiting ${SERVER_BIND_WAIT}s to bind…"
 
@@ -43,7 +49,7 @@ if ! kill -0 "$SERVER_PID" 2>/dev/null; then
 fi
 
 log "launching client…"
-"$GODOT" --headless --path . "$SCENE" -- --harness-role=client --harness-port="$PORT"
+"$GODOT" --log-file "$GODOT_LOG_DIR/net-state-sync-client.log" --headless --path . "$SCENE" -- --harness-role=client --harness-port="$PORT"
 CLIENT_RC=$?
 
 log "client exit code: $CLIENT_RC"

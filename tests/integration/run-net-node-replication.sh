@@ -18,12 +18,18 @@ GODOT="${1:-godot}"
 SCENE="res://tests/integration/NetNodeReplicationTest.tscn"
 PORT="${HARNESS_PORT:-23458}"   # distinct from the handshake (23456) and state-sync (23457) harnesses
 SERVER_BIND_WAIT="${SERVER_BIND_WAIT:-6}"
+LOG_DIR=".godot/harness-logs"
+mkdir -p "$LOG_DIR" || { echo "[run-net-node-replication] FAIL: cannot create $LOG_DIR" >&2; exit 2; }
+case "$(uname -s)" in
+  MINGW*|MSYS*) GODOT_LOG_DIR="$(pwd -W)/$LOG_DIR" ;;
+  *)            GODOT_LOG_DIR="$PWD/$LOG_DIR" ;;
+esac
 
 log() { echo "[run-net-node-replication] $*"; }
 
 log "godot=$GODOT scene=$SCENE port=$PORT"
 
-"$GODOT" --headless --path . "$SCENE" -- --harness-role=server --harness-port="$PORT" &
+"$GODOT" --log-file "$GODOT_LOG_DIR/net-node-replication-server.log" --headless --path . "$SCENE" -- --harness-role=server --harness-port="$PORT" &
 SERVER_PID=$!
 log "server launched (pid $SERVER_PID); waiting ${SERVER_BIND_WAIT}s to bind…"
 
@@ -44,7 +50,7 @@ if ! kill -0 "$SERVER_PID" 2>/dev/null; then
 fi
 
 log "launching client…"
-"$GODOT" --headless --path . "$SCENE" -- --harness-role=client --harness-port="$PORT"
+"$GODOT" --log-file "$GODOT_LOG_DIR/net-node-replication-client.log" --headless --path . "$SCENE" -- --harness-role=client --harness-port="$PORT"
 CLIENT_RC=$?
 
 log "client exit code: $CLIENT_RC"
