@@ -1089,6 +1089,10 @@ jobs:
           godot --headless --path . res://tests/integration/JumpshotAnimTest.tscn -- --harness-scenario=jumpshot-airborne-active
           godot --headless --path . res://tests/integration/JumpshotAnimTest.tscn -- --harness-scenario=control-jumpshot-grounded-startup
           godot --headless --path . res://tests/integration/JumpshotAnimTest.tscn -- --harness-scenario=jumpshot-track-completeness
+          godot --headless --path . res://tests/integration/JumpshotAnimTest.tscn -- --harness-scenario=fadeaway-leans-back
+          godot --headless --path . res://tests/integration/JumpshotAnimTest.tscn -- --harness-scenario=control-jumpshot-active-is-upright
+          godot --headless --path . res://tests/integration/JumpshotAnimTest.tscn -- --harness-scenario=fadeaway-segment-length
+          godot --headless --path . res://tests/integration/JumpshotAnimTest.tscn -- --harness-scenario=fadeaway-track-completeness
 
       # Crossover hand-side animation states (issue #280). Player.tscn now
       # carries SIX crossover states (Crossover{Startup,Active,Recovery}
