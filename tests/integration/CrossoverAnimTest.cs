@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
@@ -107,7 +108,9 @@ public partial class CrossoverAnimTest : Node
 
     private static readonly string[] KnownScenarios =
     {
-        "crossover-left-origin", "crossover-right-origin", "crossover-single-polarity", "no-unsuffixed-crossover-state"
+        "crossover-left-origin", "crossover-right-origin", "crossover-single-polarity", "no-unsuffixed-crossover-state",
+        "crossover-track-completeness", "crossover-active-distinct-from-siblings",
+        "crossover-polarity-content",
     };
 
     private string _scenario = "crossover-left-origin";
@@ -158,6 +161,12 @@ public partial class CrossoverAnimTest : Node
         {
             Fail($"unknown scenario '{_scenario}'.");
             Finish();
+            return;
+        }
+
+        if (_scenario is "crossover-track-completeness" or "crossover-active-distinct-from-siblings" or "crossover-polarity-content")
+        {
+            RunStaticCheck();
             return;
         }
 
@@ -375,6 +384,215 @@ public partial class CrossoverAnimTest : Node
         node.EndsWith("Left") ? "Left" :
         node.EndsWith("Right") ? "Right" :
         "None";
+
+    // â”€â”€ Static resource checks (#317) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // These checks deliberately read the AnimationLibrary and Player.tscn
+    // resource graph directly. A live state-name observation proves routing,
+    // but it cannot see a complete, correctly-named clip whose tracks bind to
+    // nothing, nor can it distinguish two state nodes with swapped clip names.
+    private void RunStaticCheck()
+    {
+        switch (_scenario)
+        {
+            case "crossover-track-completeness": RunTrackCompleteness(); break;
+            case "crossover-active-distinct-from-siblings": RunActiveDistinctness(); break;
+            case "crossover-polarity-content": RunPolarityContentMapping(); break;
+        }
+    }
+
+    private static readonly string[] CrossoverClips =
+    {
+        "crossoverstartupleft", "crossoveractiveleft", "crossoverrecoveryleft",
+        "crossoverstartupright", "crossoveractiveright", "crossoverrecoveryright",
+    };
+
+    private void RunTrackCompleteness()
+    {
+        AnimationLibrary library = GD.Load<AnimationLibrary>("res://assets/locomotion.res");
+        Skeleton3D skeleton = FindSkeleton(GD.Load<PackedScene>("res://assets/Y Bot.fbx").Instantiate());
+        if (library == null || skeleton == null)
+        {
+            Fail("crossover-track-completeness: could not load locomotion.res or Y Bot's Skeleton3D.");
+            Finish(1);
+            return;
+        }
+
+        var expected = new HashSet<string>();
+        for (int i = 0; i < skeleton.GetBoneCount(); i++) expected.Add(CanonicalBone(skeleton.GetBoneName(i)));
+        bool pass = true;
+        foreach (string clipName in CrossoverClips)
+        {
+            if (!library.HasAnimation(clipName))
+            {
+                Fail($"crossover-track-completeness: locomotion.res has no '{clipName}'.");
+                pass = false;
+                continue;
+            }
+
+            Animation clip = library.GetAnimation(clipName);
+            var tracks = new Dictionary<string, int>();
+            var malformed = new List<string>();
+            for (int i = 0; i < clip.GetTrackCount(); i++)
+            {
+                if (clip.TrackGetType(i) != Animation.TrackType.Rotation3D) continue;
+                NodePath path = clip.TrackGetPath(i);
+                if (path.GetSubNameCount() != 1 || !path.ToString().StartsWith("Skeleton3D:"))
+                {
+                    malformed.Add(path.ToString());
+                    continue;
+                }
+                string bone = CanonicalBone(path.GetSubName(0));
+                if (!tracks.TryAdd(bone, i)) malformed.Add($"duplicate:{bone}");
+                else if (clip.TrackGetKeyCount(i) == 0) malformed.Add($"unkeyed:{bone}");
+            }
+
+            bool exact = tracks.Keys.ToHashSet().SetEquals(expected);
+            GD.Print($"[crossover-anim]   {clipName}: rotation tracks={tracks.Count}, rig bones={expected.Count}, malformed=[{string.Join(",", malformed)}]");
+            if (!exact || malformed.Count != 0)
+            {
+                var missing = expected.Except(tracks.Keys).OrderBy(x => x);
+                var extra = tracks.Keys.Except(expected).OrderBy(x => x);
+                Fail($"crossover-track-completeness: '{clipName}' must carry exactly one keyed, bindable Rotation3D track " +
+                     $"for each of Y Bot's {expected.Count} bones; missing=[{string.Join(",", missing)}], " +
+                     $"extra=[{string.Join(",", extra)}], malformed=[{string.Join(",", malformed)}].");
+                pass = false;
+            }
+        }
+        if (pass) GD.Print("[crossover-anim] PASS crossover-track-completeness â€” all six clips cover every one of Y Bot's 65 bones exactly once with bindable keyed rotation tracks.");
+        Finish(pass ? 0 : 1);
+    }
+
+    private void RunActiveDistinctness()
+    {
+        AnimationLibrary library = GD.Load<AnimationLibrary>("res://assets/locomotion.res");
+        if (library == null)
+        {
+            Fail("crossover-active-distinct-from-siblings: assets/locomotion.res failed to load.");
+            Finish(1);
+            return;
+        }
+
+        // Floor selected after measuring the shipped authored action: 33.011 deg
+        // is its smallest counterpart separation; 20 deg preserves a 13-deg
+        // margin while rejecting a sibling clip substituted wholesale.
+        const float FloorDeg = 20f;
+        bool pass = true;
+        foreach (string side in new[] { "left", "right" })
+        {
+            string crossover = $"crossoveractive{side}";
+            string[] siblings = { $"behindthebackactive{side}", "inandoutactive", $"betweenthelegsactive{side}" };
+            foreach (string sibling in siblings)
+            {
+                if (!library.HasAnimation(crossover) || !library.HasAnimation(sibling))
+                {
+                    Fail($"crossover-active-distinct-from-siblings: required clip missing ({crossover}, {sibling}).");
+                    pass = false;
+                    continue;
+                }
+                float separation = WorstBoneSeparationDeg(library.GetAnimation(crossover), library.GetAnimation(sibling), out int compared);
+                GD.Print($"[crossover-anim]   {crossover} vs {sibling}: max local-pose separation={separation:F3} deg over {compared} shared bones (floor={FloorDeg:F1})");
+                if (!(compared == 65 && separation >= FloorDeg))
+                {
+                    Fail($"crossover-active-distinct-from-siblings: {crossover} vs {sibling} measured {separation:F3} deg " +
+                         $"over {compared} shared bones; require 65 and >= {FloorDeg:F1} deg.");
+                    pass = false;
+                }
+            }
+        }
+        if (pass) GD.Print("[crossover-anim] PASS crossover-active-distinct-from-siblings â€” both crossover polarities differ from behind-the-back, in-and-out, and between-the-legs Active poses.");
+        Finish(pass ? 0 : 1);
+    }
+
+    private void RunPolarityContentMapping()
+    {
+        AnimationNodeStateMachine machine = LoadStateMachine();
+        if (machine == null)
+        {
+            Fail("crossover-polarity-content: could not read scenes/Player.tscn's state machine.");
+            Finish(1);
+            return;
+        }
+        bool pass = true;
+        foreach (string phase in new[] { "Startup", "Active", "Recovery" })
+        {
+            foreach (string side in new[] { "Left", "Right" })
+            {
+                string state = $"Crossover{phase}{side}";
+                string expected = $"locomotion/crossover{phase.ToLowerInvariant()}{side.ToLowerInvariant()}";
+                string actual = ClipOf(machine, state);
+                GD.Print($"[crossover-anim]   {state} -> {actual}");
+                if (actual != expected)
+                {
+                    Fail($"crossover-polarity-content: '{state}' points at '{actual}', expected '{expected}'. " +
+                         "This is the non-vacuous witness for a swapped Left/Right clip pair.");
+                    pass = false;
+                }
+            }
+        }
+        if (pass) GD.Print("[crossover-anim] PASS crossover-polarity-content â€” every handed state maps to its same-origin clip; swapping a pair reddens this check.");
+        Finish(pass ? 0 : 1);
+    }
+
+    private static string CanonicalBone(string name) => name.Replace("mixamorig:", "mixamorig_");
+
+    private static float WorstBoneSeparationDeg(Animation a, Animation b, out int compared)
+    {
+        var left = RotationTracks(a);
+        var right = RotationTracks(b);
+        compared = 0;
+        float worst = 0f;
+        foreach (var (bone, ia) in left)
+        {
+            if (!right.TryGetValue(bone, out int ib)) continue;
+            compared++;
+            Quaternion qa = a.RotationTrackInterpolate(ia, 0f).Normalized();
+            Quaternion qb = b.RotationTrackInterpolate(ib, 0f).Normalized();
+            worst = MathF.Max(worst, Mathf.RadToDeg(qa.AngleTo(qb)));
+        }
+        return compared == 0 ? float.NaN : worst;
+    }
+
+    private static Dictionary<string, int> RotationTracks(Animation animation)
+    {
+        var tracks = new Dictionary<string, int>();
+        for (int i = 0; i < animation.GetTrackCount(); i++)
+        {
+            if (animation.TrackGetType(i) != Animation.TrackType.Rotation3D) continue;
+            NodePath path = animation.TrackGetPath(i);
+            if (path.GetSubNameCount() == 1) tracks[CanonicalBone(path.GetSubName(0))] = i;
+        }
+        return tracks;
+    }
+
+    private static Skeleton3D FindSkeleton(Node root)
+    {
+        if (root is Skeleton3D skeleton) return skeleton;
+        foreach (Node child in root.GetChildren())
+        {
+            Skeleton3D found = FindSkeleton(child);
+            if (found != null) return found;
+        }
+        return null;
+    }
+
+    private static AnimationNodeStateMachine LoadStateMachine()
+    {
+        PackedScene playerScene = GD.Load<PackedScene>("res://scenes/Player.tscn");
+        SceneState state = playerScene.GetState();
+        for (int i = 0; i < state.GetNodeCount(); i++)
+        {
+            if (state.GetNodeType(i) != "AnimationTree") continue;
+            for (int p = 0; p < state.GetNodePropertyCount(i); p++)
+                if (state.GetNodePropertyName(i, p) == "tree_root")
+                    return state.GetNodePropertyValue(i, p).As<AnimationNodeStateMachine>();
+        }
+        return null;
+    }
+
+    private static string ClipOf(AnimationNodeStateMachine machine, string stateName) =>
+        machine != null && machine.HasNode(stateName) && machine.GetNode(stateName) is AnimationNodeAnimation animation
+            ? animation.Animation.ToString()
+            : null;
 
     // ── Scenario: no-unsuffixed-crossover-state (control) ───────────────────
     private void VerdictNoUnsuffixed()

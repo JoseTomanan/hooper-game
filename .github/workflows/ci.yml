@@ -1128,6 +1128,15 @@ jobs:
           godot --headless --path . res://tests/integration/CrossoverAnimTest.tscn -- --harness-scenario=crossover-right-origin
           godot --headless --path . res://tests/integration/CrossoverAnimTest.tscn -- --harness-scenario=crossover-single-polarity
           godot --headless --path . res://tests/integration/CrossoverAnimTest.tscn -- --harness-scenario=no-unsuffixed-crossover-state
+          # #317: static content gates accompany (not replace) the four live
+          # state-routing scenarios above. Completeness catches an authored FBX
+          # whose tracks silently bind nowhere; the pose matrix distinguishes
+          # this move's Active silhouette from its three near-timed siblings;
+          # polarity-content is the direct RED witness when a Left/Right clip
+          # pair is swapped in Player.tscn (state names alone cannot see that).
+          godot --headless --path . res://tests/integration/CrossoverAnimTest.tscn -- --harness-scenario=crossover-track-completeness
+          godot --headless --path . res://tests/integration/CrossoverAnimTest.tscn -- --harness-scenario=crossover-active-distinct-from-siblings
+          godot --headless --path . res://tests/integration/CrossoverAnimTest.tscn -- --harness-scenario=crossover-polarity-content
 
       # Behind-the-back hand-side animation states (issue #281). Same shape as
       # #280's crossover family immediately above — Player.tscn now carries
