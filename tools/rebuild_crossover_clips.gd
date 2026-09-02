@@ -1,4 +1,8 @@
 extends SceneTree
+# #317 re-authoring note: the #280 archaeology below documents the retained
+# Dribble.fbx synthesis route. The default path now slices the authored
+# crossover_authored.fbx action; set USE_AUTHORED_MOVE_CLIP false only to
+# measure or recover that legacy route.
 # Asset build tool (#280) — drafts the crossover clip family into
 # assets/locomotion.res by slicing assets/Dribble.fbx and composing a signed
 # cross-body swing onto each slice.
@@ -112,9 +116,21 @@ extends SceneTree
 const LIB_PATH := "res://assets/locomotion.res"
 const SRC_FBX := "res://assets/Dribble.fbx"
 const SRC_CLIP := "mixamo_com"
+const AUTHORED_MOVE_FBX := "res://assets/crossover_authored.fbx"
+const AUTHORED_MOVE_CLIP := "crossover"
+# #317's default. Keep the signed Dribble.fbx synthesis below reachable for
+# measurement and recovery; an authored action must never be fed through its
+# dribble-landmark finder.
+const USE_AUTHORED_MOVE_CLIP := true
 
 # Physics ticks per second (project.godot physics/common/physics_ticks_per_second).
 const TPS := 60.0
+
+const LEFT_WINDOWS := [[0.0 / TPS, 6.0 / TPS], [6.0 / TPS, 9.0 / TPS], [9.0 / TPS, 21.0 / TPS]]
+const RIGHT_WINDOWS := [[30.0 / TPS, 36.0 / TPS], [36.0 / TPS, 39.0 / TPS], [39.0 / TPS, 51.0 / TPS]]
+const AUTHORED_SOURCE_LENGTH_S := 55.0 / TPS
+const AUTHORED_SOURCE_LENGTH_TOLERANCE_S := 0.02
+const ARMATURE_PREFIX := "Armature/"
 
 # Crossover's frame data (scripts/Input/Crossover.cs DefaultFrameData).
 # Duplicated here because GDScript cannot read the C# constant — so the
@@ -228,6 +244,23 @@ func bone_of(np: NodePath) -> String:
 	return "" if np.get_subname_count() == 0 else String(np.get_subname(0))
 
 
+# Blender wraps its Skeleton3D in an Armature node. Player.tscn does not, so
+# leaving that prefix on an otherwise complete clip creates a silent no-op.
+func _rebase_path(np: NodePath) -> NodePath:
+	var path := String(np)
+	return NodePath(path.substr(len(ARMATURE_PREFIX))) if path.begins_with(ARMATURE_PREFIX) else np
+
+
+func _resolves_on_ybot(name: String) -> bool:
+	if _skel.find_bone(name) >= 0:
+		return true
+	if name.begins_with("mixamorig:"):
+		return _skel.find_bone("mixamorig_" + name.substr(len("mixamorig:"))) >= 0
+	if name.begins_with("mixamorig_"):
+		return _skel.find_bone("mixamorig:" + name.substr(len("mixamorig_"))) >= 0
+	return false
+
+
 func _initialize() -> void:
 	var lib = load(LIB_PATH)
 	if lib == null or not (lib is AnimationLibrary):
@@ -245,28 +278,40 @@ func _initialize() -> void:
 		quit(1)
 		return
 
-	var packed = load(SRC_FBX)
+	var source_fbx: String = AUTHORED_MOVE_FBX if USE_AUTHORED_MOVE_CLIP else SRC_FBX
+	var source_clip: String = AUTHORED_MOVE_CLIP if USE_AUTHORED_MOVE_CLIP else SRC_CLIP
+	var packed = load(source_fbx)
 	if packed == null:
-		push_error("[rebuild-crossover] failed to load %s" % SRC_FBX)
+		push_error("[rebuild-crossover] failed to load %s" % source_fbx)
 		quit(1)
 		return
 	var ap: AnimationPlayer = _find(packed.instantiate(), "AnimationPlayer")
-	if ap == null or not ap.has_animation(SRC_CLIP):
-		push_error("[rebuild-crossover] %s has no AnimationPlayer clip '%s'" % [SRC_FBX, SRC_CLIP])
+	if ap == null or not ap.has_animation(source_clip):
+		push_error("[rebuild-crossover] %s has no AnimationPlayer clip '%s'" % [source_fbx, source_clip])
 		quit(1)
 		return
-	var src: Animation = ap.get_animation(SRC_CLIP)
-	print("[rebuild-crossover] source '%s': len=%.4f tracks=%d" % [SRC_CLIP, src.length, src.get_track_count()])
+	var src: Animation = ap.get_animation(source_clip)
+	print("[rebuild-crossover] source '%s': len=%.4f tracks=%d" % [source_clip, src.length, src.get_track_count()])
 
 	# ── Derive the base window from the dribble cycle ────────────────────────
-	var marks := _derive_landmarks(src)
-	if marks.is_empty():
-		quit(1)
-		return
-	var t_load: float = marks["load"]
-	var t_low: float = marks["low"]
-	var t_rise: float = marks["rise"]
-	print("[rebuild-crossover] landmarks: load=%.4f low=%.4f rise=%.4f" % [t_load, t_low, t_rise])
+	var t_load := 0.0
+	var t_low := 0.0
+	var t_rise := 0.0
+	if USE_AUTHORED_MOVE_CLIP:
+		if absf(src.length - AUTHORED_SOURCE_LENGTH_S) > AUTHORED_SOURCE_LENGTH_TOLERANCE_S:
+			push_error("[rebuild-crossover] authored source length %.4f s is not %.4f s (+/-.%.3f); check its 60-Hz, untrimmed import."
+				% [src.length, AUTHORED_SOURCE_LENGTH_S, AUTHORED_SOURCE_LENGTH_TOLERANCE_S])
+			quit(1)
+			return
+	else:
+		var marks := _derive_landmarks(src)
+		if marks.is_empty():
+			quit(1)
+			return
+		t_load = marks["load"]
+		t_low = marks["low"]
+		t_rise = marks["rise"]
+		print("[rebuild-crossover] legacy landmarks: load=%.4f low=%.4f rise=%.4f" % [t_load, t_low, t_rise])
 
 	# Active is the instant at the bottom of the pump — the ball is at its
 	# lowest and closest to the floor, which is where a real crossover's ball
@@ -278,7 +323,7 @@ func _initialize() -> void:
 	var active_half: float = minf(t_low - t_load, t_rise - t_low) * 0.20
 	var t_active_start := t_low - active_half
 	var t_active_end := t_low + active_half
-	if not (t_load < t_active_start and t_active_start < t_active_end and t_active_end < t_rise):
+	if not USE_AUTHORED_MOVE_CLIP and not (t_load < t_active_start and t_active_start < t_active_end and t_active_end < t_rise):
 		push_error("[rebuild-crossover] landmarks are not strictly ordered "
 			+ "(load=%.4f active=%.4f..%.4f rise=%.4f) -- the source does not contain the "
 			% [t_load, t_active_start, t_active_end, t_rise]
@@ -286,7 +331,8 @@ func _initialize() -> void:
 		quit(1)
 		return
 
-	var src_rot := _rotation_track_count(src)
+	var src_rot := _skeleton_rotation_track_count(src)
+	var src_skeleton_tracks := _skeleton_track_count(src)
 	var built := {}
 	var travel := {}
 
@@ -304,13 +350,15 @@ func _initialize() -> void:
 		var g1 := float(STARTUP_TICKS) / total
 		var g2 := float(STARTUP_TICKS + ACTIVE_TICKS) / total
 
-		var startup := _slice(src, t_load, t_active_start, STARTUP_TICKS)
-		var active := _slice(src, t_active_start, t_active_end, ACTIVE_TICKS)
-		var recovery := _slice(src, t_active_end, t_rise, RECOVERY_TICKS)
+		var windows: Array = LEFT_WINDOWS if polarity == "left" else RIGHT_WINDOWS
+		var startup := _slice(src, windows[0][0], windows[0][1], STARTUP_TICKS) if USE_AUTHORED_MOVE_CLIP else _slice(src, t_load, t_active_start, STARTUP_TICKS)
+		var active := _slice(src, windows[1][0], windows[1][1], ACTIVE_TICKS) if USE_AUTHORED_MOVE_CLIP else _slice(src, t_active_start, t_active_end, ACTIVE_TICKS)
+		var recovery := _slice(src, windows[2][0], windows[2][1], RECOVERY_TICKS) if USE_AUTHORED_MOVE_CLIP else _slice(src, t_active_end, t_rise, RECOVERY_TICKS)
 
-		_apply_cross_swing(startup, cross_sign, g0, g1)
-		_apply_cross_swing(active, cross_sign, g1, g2)
-		_apply_cross_swing(recovery, cross_sign, g2, 1.0)
+		if not USE_AUTHORED_MOVE_CLIP:
+			_apply_cross_swing(startup, cross_sign, g0, g1)
+			_apply_cross_swing(active, cross_sign, g1, g2)
+			_apply_cross_swing(recovery, cross_sign, g2, 1.0)
 
 		built[names[0]] = startup
 		built[names[1]] = active
@@ -332,11 +380,16 @@ func _initialize() -> void:
 		# per-hand threshold would be measuring the artifact rather than the move.
 		#
 		# Hips-relative so the composed hip weight-shift cannot flatter the number.
-		var mid_start := _hand_midpoint_lateral(startup, 0.0)
-		var mid_end := _hand_midpoint_lateral(recovery, recovery.length)
+		# #317 authored clips transfer the carriage from the named origin hand
+		# to the named receiving hand. This remains a non-symmetric direction
+		# proof while preserving the legacy midpoint route behind its flag.
+		var origin_hand := "mixamorig_LeftHand" if polarity == "left" else "mixamorig_RightHand"
+		var destination_hand := "mixamorig_RightHand" if polarity == "left" else "mixamorig_LeftHand"
+		var mid_start := _lateral(startup, 0.0, origin_hand) if USE_AUTHORED_MOVE_CLIP else _hand_midpoint_lateral(startup, 0.0)
+		var mid_end := _lateral(recovery, recovery.length, destination_hand) if USE_AUTHORED_MOVE_CLIP else _hand_midpoint_lateral(recovery, recovery.length)
 		var delta := mid_end - mid_start
 		travel[polarity] = delta
-		print("[rebuild-crossover] %-5s: hand midpoint lateral %+.4f -> %+.4f m (travel %+.4f, want %s and >= %.2f)"
+		print("[rebuild-crossover] %-5s: origin-to-destination hand lateral %+.4f -> %+.4f m (travel %+.4f, want %s and >= %.2f)"
 			% [polarity, mid_start, mid_end, delta,
 			   "positive" if cross_sign > 0.0 else "negative", MIN_CROSS_TRAVEL_M])
 		if signf(delta) != cross_sign:
@@ -374,7 +427,7 @@ func _initialize() -> void:
 
 	# ── Completeness guard ───────────────────────────────────────────────────
 	for name in built:
-		if not _assert_complete(built[name], name, src_rot, src.get_track_count()):
+		if not _assert_complete(built[name], name, src_rot, src_skeleton_tracks):
 			quit(1)
 			return
 
@@ -537,12 +590,13 @@ func _slice(src: Animation, t0: float, t1: float, ticks: int) -> Animation:
 
 	for i in src.get_track_count():
 		var type := src.track_get_type(i)
-		if type != Animation.TYPE_ROTATION_3D \
-			and type != Animation.TYPE_POSITION_3D \
-			and type != Animation.TYPE_SCALE_3D:
+		if type != Animation.TYPE_ROTATION_3D and type != Animation.TYPE_POSITION_3D:
+			continue
+		var path := src.track_get_path(i)
+		if bone_of(path) == "":
 			continue
 		var t := out.add_track(type)
-		out.track_set_path(t, src.track_get_path(i))
+		out.track_set_path(t, _rebase_path(path))
 		for k in ticks + 1:
 			var u := float(k) / float(ticks)
 			var st: float = lerpf(t0, t1, u)
@@ -552,8 +606,6 @@ func _slice(src: Animation, t0: float, t1: float, ticks: int) -> Animation:
 					out.rotation_track_insert_key(t, dt, src.rotation_track_interpolate(i, st))
 				Animation.TYPE_POSITION_3D:
 					out.position_track_insert_key(t, dt, src.position_track_interpolate(i, st))
-				Animation.TYPE_SCALE_3D:
-					out.scale_track_insert_key(t, dt, src.scale_track_interpolate(i, st))
 	return out
 
 
@@ -657,9 +709,19 @@ func _swing_profile(g: float) -> float:
 func _assert_complete(anim: Animation, name: StringName, expected_rot: int, expected_total: int) -> bool:
 	var rot := _rotation_track_count(anim)
 	var unresolved := []
+	var malformed := []
+	var seen_rotation := {}
 	for i in anim.get_track_count():
-		var b := bone_of(anim.track_get_path(i))
-		if b != "" and _skel.find_bone(b) < 0:
+		var path := anim.track_get_path(i)
+		var b := bone_of(path)
+		if b == "" or String(path).begins_with(ARMATURE_PREFIX):
+			malformed.append(String(path))
+			continue
+		if anim.track_get_type(i) == Animation.TYPE_ROTATION_3D:
+			if seen_rotation.has(b):
+				malformed.append("duplicate rotation track for " + b)
+			seen_rotation[b] = true
+		if not _resolves_on_ybot(b):
 			unresolved.append(b)
 	print("[rebuild-crossover]   '%s': len=%.4f tracks=%d rot=%d loop=%d unresolved=%s"
 		% [name, anim.length, anim.get_track_count(), rot, anim.loop_mode, str(unresolved)])
@@ -672,6 +734,9 @@ func _assert_complete(anim: Animation, name: StringName, expected_rot: int, expe
 		push_error("[rebuild-crossover] '%s' has tracks that do not resolve on Y Bot: %s"
 			% [name, str(unresolved)])
 		return false
+	if malformed.size() > 0:
+		push_error("[rebuild-crossover] '%s' has malformed or duplicate skeletal tracks: %s" % [name, str(malformed)])
+		return false
 	return true
 
 
@@ -681,6 +746,23 @@ func _rotation_track_count(anim: Animation) -> int:
 		if anim.track_get_type(i) == Animation.TYPE_ROTATION_3D:
 			n += 1
 	return n
+
+
+func _skeleton_rotation_track_count(anim: Animation) -> int:
+	var count := 0
+	for i in anim.get_track_count():
+		if anim.track_get_type(i) == Animation.TYPE_ROTATION_3D and bone_of(anim.track_get_path(i)) != "":
+			count += 1
+	return count
+
+
+func _skeleton_track_count(anim: Animation) -> int:
+	var count := 0
+	for i in anim.get_track_count():
+		var type := anim.track_get_type(i)
+		if (type == Animation.TYPE_ROTATION_3D or type == Animation.TYPE_POSITION_3D) and bone_of(anim.track_get_path(i)) != "":
+			count += 1
+	return count
 
 
 # Largest per-bone angular difference between two clips at matched phase — the
