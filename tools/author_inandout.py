@@ -37,19 +37,22 @@ in-and-out carries a BurstDirection param and so LOOKS handed, but it is not.
 It commits to ONE fixed ball-hand polarity for the whole clip -- no Left/Right
 suffix, no HandedMoves entry, no OriginHand routing (that formula is only valid
 for a move that flips the ball hand at Active-entry; in-and-out never flips).
-This script authors exactly one polarity, keyed to whichever hand the source
-clip natively dribbles with (measured below, not assumed).
+This script authors exactly one, RIGHT-handed polarity. "Pristine" means the
+named Dribble.fbx whose SHA-256 content contract passes below; its native
+cadence is then measured as a pre-output contract, not selected at runtime. A
+left-handed, tied, renamed, or content-drifted source must fail before output.
 
 ===============================================================================
 WHICH HAND IS "THE BALL HAND" -- MEASURED, NOT ASSUMED
 ===============================================================================
-`_measure_native_ball_side()` samples both wrists' vertical oscillation
-amplitude (relative to the hips) across the WHOLE source timeline and picks the
-side with the larger amplitude -- the same signal `author_dribble_move.py`'s
-own `verify_cadence()` reads off `mixamorig:RightHand` alone (this function is
-what turns that implicit choice into a proven one). Reported as
-`left_hand_vertical_amplitude_m` / `right_hand_vertical_amplitude_m` /
-`measured_ball_side`.
+`_verify_authored_native_ball_side()` samples both wrists' vertical oscillation
+amplitude (relative to the hips) across the WHOLE hash-pinned pristine source
+timeline and requires the authored RIGHT contract: a material right-wrist
+excursion and a material lead over the left. It reports `left_hand_vertical_amplitude_m`,
+`right_hand_vertical_amplitude_m`, and the compatible `measured_ball_side=R`.
+It never silently selects Left: a mirrored or near-degenerate source is a
+source-asset change that must be re-authored with its matching tool/harness
+proof, not adapted accidentally at export time.
 
 ===============================================================================
 WHAT THIS PRODUCES
@@ -133,6 +136,8 @@ regardless of what this clip's hands do.
 import math
 import os
 import sys
+import hashlib
+from pathlib import Path
 
 import bpy
 from mathutils import Matrix, Vector
@@ -158,6 +163,20 @@ STARTUP_END = STARTUP_TICKS               # 4
 ACTIVE_END = STARTUP_TICKS + ACTIVE_TICKS  # 7
 
 ACTION_NAME = "inandout"
+EXPECTED_SOURCE = "Dribble.fbx"
+# Content identity is deliberate: the same basename can carry a different
+# animation, rest pose, or cadence. This digest pins the pristine source whose
+# polarity and geometry thresholds below were measured.
+EXPECTED_SOURCE_SHA256 = "55d12dad3e71d6e588c08739385ef4c2a97d272a0391c130da9effa2ae876ff6"
+
+# Authored-source polarity contract. The recorded pristine Dribble.fbx
+# baseline is R=0.3456 m / L=0.0088 m over the whole source timeline. A 0.05 m
+# floor is over five times the quiet wrist's motion, while leaving almost 7x
+# headroom under the intended right cadence; the same 0.05 m lead rejects a
+# tied/noisy source without baking a barely-evidenced polarity into the FBX.
+AUTHORED_NATIVE_BALL_SIDE = "R"
+NATIVE_RIGHT_WRIST_MIN_AMPLITUDE_M = 0.05
+NATIVE_RIGHT_WRIST_MIN_DOMINANCE_M = 0.05
 
 # ── stance geometry, metre-denominated ────────────────────────────────────────
 # Reused verbatim from author_jabstep.py's measurement on this SAME rig (Y Bot:
@@ -234,14 +253,35 @@ def _keyposes_for_lib():
     return out
 
 
-def _measure_native_ball_side(arm, geom, f0, f1):
-    """Which hand `Dribble.fbx` natively dribbles with -- MEASURED.
+def _verify_expected_source_content(src):
+    """Fail before import/output unless `src` is the hash-pinned source asset."""
+    source_path = Path(src)
+    if not source_path.is_file():
+        raise SystemExit(
+            f"FATAL: expected source file {source_path} for {EXPECTED_SOURCE!r} "
+            "does not exist; no FBX was authored.")
 
-    The dribbling hand is the one bouncing the ball, i.e. the one with the
-    LARGER vertical oscillation amplitude relative to the hips across the
-    whole source clip. This is the same signal `author_dribble_move.py`'s own
-    `verify_cadence()` reads off `mixamorig:RightHand` alone; this function
-    is what turns that implicit choice into a proven one for THIS script.
+    digest = hashlib.sha256()
+    with source_path.open("rb") as source_file:
+        for chunk in iter(lambda: source_file.read(1024 * 1024), b""):
+            digest.update(chunk)
+    actual_sha256 = digest.hexdigest()
+    if actual_sha256 != EXPECTED_SOURCE_SHA256:
+        raise SystemExit(
+            "FATAL: inandout source content contract FAILED before import/output: "
+            f"expected SHA-256 {EXPECTED_SOURCE_SHA256}, got {actual_sha256} "
+            f"for {source_path}. A basename match is insufficient; re-measure "
+            "the source and update this hash plus all dependent proofs together.")
+
+    lib.report("source_sha256", actual_sha256)
+
+
+def _verify_authored_native_ball_side(arm, geom, f0, f1):
+    """Fail closed unless the pristine source proves this author's Right contract.
+
+    The vertical-amplitude signal is measured across the whole source clip
+    before any posing. This is an authored asset contract, not an argmax that
+    can silently flip a fixed-polarity move to Left when its source changes.
     """
     scene = bpy.context.scene
     amps = {}
@@ -254,11 +294,24 @@ def _measure_native_ball_side(arm, geom, f0, f1):
                 vals.append((arm.pose.bones[hand].head
                              - arm.pose.bones[lib.HIPS].head).dot(geom.up))
             amps[side] = max(vals) - min(vals)
-    lib.report("left_hand_vertical_amplitude_m", f"{geom.to_m(amps['L']):.4f}")
-    lib.report("right_hand_vertical_amplitude_m", f"{geom.to_m(amps['R']):.4f}")
-    ball_side = "R" if amps["R"] > amps["L"] else "L"
-    lib.report("measured_ball_side", ball_side)
-    return ball_side
+    left_m = geom.to_m(amps["L"])
+    right_m = geom.to_m(amps["R"])
+    dominance_m = right_m - left_m
+    lib.report("left_hand_vertical_amplitude_m", f"{left_m:.4f}")
+    lib.report("right_hand_vertical_amplitude_m", f"{right_m:.4f}")
+    lib.report("right_hand_vertical_dominance_m", f"{dominance_m:.4f}")
+    if (right_m < NATIVE_RIGHT_WRIST_MIN_AMPLITUDE_M
+            or dominance_m < NATIVE_RIGHT_WRIST_MIN_DOMINANCE_M):
+        raise RuntimeError(
+            "inandout authored-source polarity contract FAILED: expected "
+            f"Right wrist >= {NATIVE_RIGHT_WRIST_MIN_AMPLITUDE_M:.4f} m and "
+            f"Right-Left >= {NATIVE_RIGHT_WRIST_MIN_DOMINANCE_M:.4f} m, got "
+            f"R={right_m:.4f} m L={left_m:.4f} m lead={dominance_m:.4f} m. "
+            "Refuse to author a fixed-right in-and-out from a mirrored, tied, "
+            "or weak source; re-author the polarity contract and matching "
+            "rebuild/harness proof together.")
+    lib.report("measured_ball_side", AUTHORED_NATIVE_BALL_SIDE)
+    return AUTHORED_NATIVE_BALL_SIDE
 
 
 def measure_twist_sign(arm, geom, body_right, up, ball_side, ball_sign):
@@ -297,7 +350,8 @@ def main():
     argv = sys.argv[sys.argv.index("--") + 1:]
     src, dst = argv[0], argv[1]
 
-    arm, f0, f1 = lib.load_source(src, FPS)
+    _verify_expected_source_content(src)
+    arm, f0, f1 = lib.load_source(src, FPS, expected=EXPECTED_SOURCE)
     scene = bpy.context.scene
 
     geom = lib.RigGeometry(arm)
@@ -307,7 +361,7 @@ def main():
     lib.report("body_right", tuple(round(v, 4) for v in body_right))
 
     # ── measure which hand is "the ball hand" -- BEFORE any posing ───────────
-    ball_side = _measure_native_ball_side(arm, geom, f0, f1)
+    ball_side = _verify_authored_native_ball_side(arm, geom, f0, f1)
     off_side = "L" if ball_side == "R" else "R"
     ball_sign = 1.0 if ball_side == "R" else -1.0
     off_sign = -ball_sign
@@ -419,7 +473,7 @@ def main():
     bpy.ops.object.mode_set(mode="OBJECT")
     scene.frame_start, scene.frame_end = F0, F1
 
-    lib.report_ankle_ik("worst_ankle_ik_err_m", geom.to_m(worst_ankle_err))
+    lib.report_ankle_ik("worst_ankle_ik_err_m", geom)
     lib.report("worst_wrist_ik_err_m", f"{geom.to_m(worst_wrist_err):.6f}")
 
     all_frames = list(range(F0, F1 + 1))
