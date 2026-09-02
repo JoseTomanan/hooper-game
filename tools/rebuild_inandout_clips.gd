@@ -149,12 +149,12 @@ const NAMES := ["inandoutstartup", "inandoutactive", "inandoutrecovery"]
 const STARTUP_VS_RECOVERY_MIN_DEG := 15.0
 
 # G4/G5: hand-lateral geometry, re-measured on the SLICED Godot resource.
-# Bone names re-resolved per-run via _resolve_bone (never assumed) since
-# the ball hand's physical side is MEASURED by author_inandout.py, not fixed
-# -- this tool reads the same measurement back out of the exported clip
-# rather than re-deriving it, by checking which wrist moves more between
-# Startup's own start and end (the same amplitude signal the Blender side
-# used, applied here to the sliced Startup clip alone).
+# Bone names re-resolve per-run via _resolve_bone (never assumed). Physical
+# handedness is NOT inferred from this resource: author_inandout.py ENFORCES
+# the pristine Blender-source Right contract (baseline R=0.3456 m/L=0.0088 m)
+# before it can write this FBX, so this family is physically RIGHT-handed. The
+# short, re-keyed slice has near-degenerate wrist-height motion (and can even
+# invert an argmax), so treating it as a second polarity oracle is unsound.
 const HIPS_BONE := "mixamorig_Hips"
 const LEFT_HAND_BONE := "mixamorig_LeftHand"
 const RIGHT_HAND_BONE := "mixamorig_RightHand"
@@ -339,17 +339,13 @@ func _initialize() -> void:
 		quit(1)
 		return
 
-	# ── Which physical hand is the ball hand, re-measured on the SLICED
-	# Startup clip (never assumed) -- the same vertical-amplitude signal
-	# author_inandout.py's own _measure_native_ball_side used on the source,
-	# applied here to the Startup window alone (still 4 ticks of real motion).
-	var right_amp := _wrist_vertical_amplitude(startup, RIGHT_HAND_BONE)
-	var left_amp := _wrist_vertical_amplitude(startup, LEFT_HAND_BONE)
-	print("[rebuild-inandout] wrist vertical amplitude over Startup: L=%.4f R=%.4f (units)"
-		% [left_amp, right_amp])
-	var ball_bone := RIGHT_HAND_BONE if right_amp >= left_amp else LEFT_HAND_BONE
-	var off_bone := LEFT_HAND_BONE if ball_bone == RIGHT_HAND_BONE else RIGHT_HAND_BONE
-	print("[rebuild-inandout] ball hand bone resolved as '%s'" % ball_bone)
+	# ── Physical ball hand is a fixed authored-source contract, not an argmax
+	# over this re-keyed resource. Any re-author that changes source polarity
+	# must update author_inandout.py's enforced contract AND this tool/harness
+	# proof together; it must never silently choose a side from weak slice data.
+	var ball_bone := RIGHT_HAND_BONE
+	var off_bone := LEFT_HAND_BONE
+	print("[rebuild-inandout] native ball hand is author_inandout.py's enforced source contract '%s' (baseline R=0.3456 m, L=0.0088 m)" % ball_bone)
 
 	# ── G4/G5: the eight lateral offsets + the f7 separation gate ────────────
 	var f0_t := 0.0
@@ -461,20 +457,6 @@ func _lateral_offset_at(anim: Animation, t: float, bone: String) -> float:
 	return (_pose_origin(anim, t, bone) - _pose_origin(anim, t, HIPS_BONE)).dot(_right)
 
 
-# Peak-to-peak vertical (world up) excursion of `bone`'s global position,
-# relative to the Hips, sampled at every tick of `anim`. Used to re-derive
-# which wrist is the ball hand on the SLICED Startup clip -- the same signal
-# author_inandout.py's Blender-side measurement used on the full source.
-func _wrist_vertical_amplitude(anim: Animation, bone: String) -> float:
-	var ticks := int(round(anim.length * TPS))
-	var lo := INF
-	var hi := -INF
-	for k in ticks + 1:
-		var t := float(k) / TPS
-		var h: float = (_pose_origin(anim, t, bone) - _pose_origin(anim, t, HIPS_BONE)).dot(_up)
-		lo = minf(lo, h)
-		hi = maxf(hi, h)
-	return hi - lo
 
 
 # ── Slicing (verbatim rebuild_jumpshot_clips.gd / rebuild_jabstep_clips.gd
