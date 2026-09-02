@@ -94,24 +94,24 @@ the human.
 > because #75 is open. Do not read M9's history of having once been closed as
 > clearance to advance.
 >
-> **M9's live workstream — per-move animation clips.** #296 established that a
-> committed move without its own clip falls through `MoveAnimResolver`'s default
-> case onto shared generic Startup/Active/Recovery clips, so the move has no
-> telegraph — a competitive defect, not a cosmetic one, given legibility is a
-> stated requirement (§1). Each fix lands as a Blender-authored clip family
-> sliced into `assets/locomotion.res` and gated by its own harness scenarios.
-> Batches: **#276** (1), **#302** (2 — the moves still on the fallback).
+> **M9's live workstream — per-move animation clips.** #296 remains open for
+> committed moves still without their own clip: they fall through
+> `MoveAnimResolver`'s default case onto shared generic Startup/Active/Recovery
+> clips, so they have no telegraph — a competitive defect, not a cosmetic one,
+> given legibility is a stated requirement (§1). Each fix lands as a
+> Blender-authored clip family sliced into `assets/locomotion.res` and gated by
+> its own harness scenarios. Batch **#276** (1) landed jumpshot #279, crossover
+> #280, behind-the-back #281, steal #282, block #283, rebound-grab #284, and
+> dribble loop #285.
 >
-> - **Landed:** jumpshot #279, crossover #280, behind-the-back #281, steal #282,
->   block #283, rebound-grab #284, dribble loop #285, jab step #304, layup #313,
->   contest #314.
-> - **Open:** retreat dribble #305, step-back #306, hesitation #307, in-and-out
->   #308, between-the-legs #309, spin #310, drive-gather #311, euro-step #312,
->   plus the Blender re-authors of crossover #317 / fadeaway #318.
+> Batch **#302** (2) is complete: its exact eleven clips are JabStep #304,
+> RetreatDribble #305, StepBack #306, Hesitation #307, InAndOut #308,
+> BetweenTheLegs #309, Spin #310, DriveGather #311, EuroStep #312, Layup #313,
+> and Contest #314. The crossover #317 and fadeaway #318 Blender re-authors are
+> also closed. #335 regenerated the six clips stale against #321's leg-IK fix.
 >
 > `tools/blender_anim_lib.py` (#315) is shared by every clip script — a change
-> there is a change to all of them. See **#335** for the six clips currently
-> stale against #321's leg-IK fix.
+> there is a change to all of them.
 >
 > **M8b (#171)** is blocked on human inputs: #153 net/fence visuals (feel pass
 > FAILED 2026-06-30, awaiting an AFK material fix before re-verify) and #170
