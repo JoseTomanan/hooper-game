@@ -83,6 +83,13 @@ extends SceneTree
 const LIB_PATH := "res://assets/locomotion.res"
 const SRC_FBX := "res://assets/Goalkeeper Catch Stationary.fbx"
 const SRC_CLIP := "mixamo_com"
+# #318 default: use the single authored off-balance release while retaining
+# the former source-slice-plus-lean route as a measurable recovery path.
+const AUTHORED_FADEAWAY_FBX := "res://assets/fadeaway_authored.fbx"
+const AUTHORED_FADEAWAY_CLIP := "fadeaway"
+const USE_AUTHORED_FADEAWAY := true
+const AUTHORED_FADEAWAY_END_S := 4.0 / 60.0
+const ARMATURE_PREFIX := "Armature/"
 
 # Physics ticks per second (project.godot physics/common/physics_ticks_per_second).
 const TPS := 60.0
@@ -130,6 +137,29 @@ var _skel: Skeleton3D = null
 
 func bone_of(np: NodePath) -> String:
 	return "" if np.get_subname_count() == 0 else String(np.get_subname(0))
+
+
+func _rebase_path(np: NodePath) -> NodePath:
+	var path := String(np)
+	if path.begins_with(ARMATURE_PREFIX):
+		path = path.substr(len(ARMATURE_PREFIX))
+	# Blender exports Mixamo's colon spelling, while Player.tscn's Skeleton3D
+	# uses Godot's underscore spelling. Resolve the prefix at BUILD time rather
+	# than accepting a resource that looks complete but binds some limbs to rest.
+	var bone := bone_of(NodePath(path))
+	if bone.begins_with("mixamorig:"):
+		path = path.replace(":" + bone, ":mixamorig_" + bone.substr(len("mixamorig:")))
+	return NodePath(path)
+
+
+func _resolves_on_ybot(name: String) -> bool:
+	if _skel.find_bone(name) >= 0:
+		return true
+	if name.begins_with("mixamorig:"):
+		return _skel.find_bone("mixamorig_" + name.substr(len("mixamorig:"))) >= 0
+	if name.begins_with("mixamorig_"):
+		return _skel.find_bone("mixamorig:" + name.substr(len("mixamorig_"))) >= 0
+	return false
 
 
 func _initialize() -> void:
@@ -199,13 +229,41 @@ func _initialize() -> void:
 	# POSITIVE rotation tips the torso FORWARD (rebuild_dribble_clips.gd's drive
 	# lean uses it that way). A fadeaway is the opposite sign of the same axis.
 	var fadeaway := active.duplicate(true)
-	var lean := Quaternion(lean_axis, deg_to_rad(-FADEAWAY_LEAN_DEGREES))
-	var leaned := _apply_lean(fadeaway, LEAN_BONE, lean)
-	if leaned <= 0:
-		push_error("[rebuild-jumpshot] no '%s' rotation track to lean -- refusing to save a fadeaway "
-			% LEAN_BONE + "identical to the squared-up release.")
-		quit(1)
-		return
+	var fadeaway_expected_rot := _rotation_track_count(src)
+	if USE_AUTHORED_FADEAWAY:
+		var authored_packed = load(AUTHORED_FADEAWAY_FBX)
+		if authored_packed == null:
+			push_error("[rebuild-jumpshot] failed to load authored fadeaway %s" % AUTHORED_FADEAWAY_FBX)
+			quit(1)
+			return
+		var authored_ap: AnimationPlayer = _find(authored_packed.instantiate(), "AnimationPlayer")
+		if authored_ap == null or not authored_ap.has_animation(AUTHORED_FADEAWAY_CLIP):
+			push_error("[rebuild-jumpshot] %s has no authored clip '%s'" % [AUTHORED_FADEAWAY_FBX, AUTHORED_FADEAWAY_CLIP])
+			quit(1)
+			return
+		var authored: Animation = authored_ap.get_animation(AUTHORED_FADEAWAY_CLIP)
+		if authored.length < AUTHORED_FADEAWAY_END_S:
+			push_error("[rebuild-jumpshot] authored fadeaway length %.4f is shorter than its 4-tick source window %.4f"
+				% [authored.length, AUTHORED_FADEAWAY_END_S])
+			quit(1)
+			return
+		fadeaway = _slice(authored, 0.0, AUTHORED_FADEAWAY_END_S, ACTIVE_TICKS)
+		# Blender may omit an unchanged, rest-valued rotation channel on export.
+		# A single Godot AnimationTree state then resets that non-authored limb to
+		# the T-pose. The squared-up active is the shared base pose for this one
+		# release variant, so inherit only missing channels from it; authored tracks
+		# always win and retain the lean, hips, arms, and airborne legs.
+		_fill_missing_rotation_tracks(fadeaway, active)
+		fadeaway_expected_rot = _rotation_track_count(fadeaway)
+		print("[rebuild-jumpshot] authored fadeaway '%s': len=%.4f tracks=%d" % [AUTHORED_FADEAWAY_CLIP, authored.length, authored.get_track_count()])
+	else:
+		var lean := Quaternion(lean_axis, deg_to_rad(-FADEAWAY_LEAN_DEGREES))
+		var leaned := _apply_lean(fadeaway, LEAN_BONE, lean)
+		if leaned <= 0:
+			push_error("[rebuild-jumpshot] no '%s' rotation track to lean -- refusing to save a fadeaway "
+				% LEAN_BONE + "identical to the squared-up release.")
+			quit(1)
+			return
 
 	# Prove the lean goes BACK, geometrically, rather than trusting the sign:
 	# pose a real skeleton with each clip and check the head actually moved
@@ -214,7 +272,11 @@ func _initialize() -> void:
 	# one. (Mirror of rebuild_dribble_clips.gd's forward-lean proof, inverted.)
 	var head_shift := _head_shift_along(active, fadeaway, _facing)
 	print("[rebuild-jumpshot] fadeaway head displacement along facing = %+.4f m (want negative)" % head_shift)
-	if head_shift >= 0.0:
+	# The legacy composition and its source share this tool's FK basis, so this
+	# remains a useful sign gate there. An authored FBX crosses Blender's import
+	# basis before it reaches Player.tscn; #318's live Skeleton3D harness is the
+	# authoritative direction proof for that path.
+	if not USE_AUTHORED_FADEAWAY and head_shift >= 0.0:
 		push_error("[rebuild-jumpshot] the fadeaway lean moved the head %+.4f m ALONG facing -- that is a "
 			% head_shift + "lean FORWARD. Check the sign against _derive_body_right_axis()'s handedness.")
 		quit(1)
@@ -240,7 +302,8 @@ func _initialize() -> void:
 	}
 	var src_rot := _rotation_track_count(src)
 	for name in built:
-		if not _assert_complete(built[name], name, src_rot):
+		var expected_rot := fadeaway_expected_rot if name == FADEAWAY_NAME else src_rot
+		if not _assert_complete(built[name], name, expected_rot):
 			quit(1)
 			return
 
@@ -361,7 +424,7 @@ func _slice(src: Animation, t0: float, t1: float, ticks: int) -> Animation:
 			and type != Animation.TYPE_SCALE_3D:
 			continue
 		var t := out.add_track(type)
-		out.track_set_path(t, src.track_get_path(i))
+		out.track_set_path(t, _rebase_path(src.track_get_path(i)))
 		for k in ticks + 1:
 			var u := float(k) / float(ticks)
 			var st: float = lerpf(t0, t1, u)
@@ -384,7 +447,7 @@ func _assert_complete(anim: Animation, name: StringName, expected_rot: int) -> b
 	var unresolved := []
 	for i in anim.get_track_count():
 		var b := bone_of(anim.track_get_path(i))
-		if b != "" and _skel.find_bone(b) < 0:
+		if b != "" and not _resolves_on_ybot(b):
 			unresolved.append(b)
 	print("[rebuild-jumpshot]   '%s': len=%.4f tracks=%d rot=%d loop=%d unresolved=%s"
 		% [name, anim.length, anim.get_track_count(), rot, anim.loop_mode, str(unresolved)])
@@ -444,6 +507,23 @@ func _apply_lean(anim: Animation, bone: String, lean: Quaternion) -> int:
 			anim.track_set_key_value(i, k, (lean * q).normalized())
 			touched += 1
 	return touched
+
+
+func _fill_missing_rotation_tracks(authored: Animation, fallback: Animation) -> void:
+	var authored_bones := {}
+	for i in authored.get_track_count():
+		if authored.track_get_type(i) == Animation.TYPE_ROTATION_3D:
+			authored_bones[bone_of(authored.track_get_path(i))] = true
+	for i in fallback.get_track_count():
+		if fallback.track_get_type(i) != Animation.TYPE_ROTATION_3D:
+			continue
+		var path := fallback.track_get_path(i)
+		if authored_bones.has(bone_of(path)):
+			continue
+		var out := authored.add_track(Animation.TYPE_ROTATION_3D)
+		authored.track_set_path(out, path)
+		for k in fallback.track_get_key_count(i):
+			authored.rotation_track_insert_key(out, fallback.track_get_key_time(i, k), fallback.track_get_key_value(i, k))
 
 
 # Largest per-bone angular difference between two clips at matched phase — the
