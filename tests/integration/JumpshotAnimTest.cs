@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 using Hooper.Ball;
+using Hooper.Moves;
 using Hooper.Player;
 
 namespace HOOPERGAME.Tests.Integration;
@@ -281,14 +282,30 @@ public partial class JumpshotAnimTest : Node
     // claim non-degenerate: a clip cannot satisfy both halves by standing still.
     private const float StartupTakeoffMinToeRise = 0.10f;
 
+    // #318's fadeaway is a single, off-balance release pose. These floors are
+    // intentionally measured from the live Skeleton3D rather than the resource:
+    // an Armature/ track-path regression otherwise leaves the resource looking
+    // correct while the scene silently plays no pose at all.
+    private const float FadeawayBackwardPitchMinDeg = 23f;
+    private const float FadeawayBackwardHipMinM = 0.20f;
+    // Player.tscn's BlendRestAnchor means the live squared-up release reads
+    // ~21 degrees against the standing idle baseline. This is its measured
+    // upright band, not a raw FBX-rest angle; the paired fadeaway must clear it.
+    private const float SquaredUpPitchMaxDeg = 22f;
+
     private static readonly string[] KnownScenarios =
     {
         "jumpshot-phases", "fadeaway-active", "no-fadeaway-when-squared-up", "no-placeholder-leak",
         "jumpshot-airborne-active", "control-jumpshot-grounded-startup", "jumpshot-track-completeness",
+        "fadeaway-leans-back", "control-jumpshot-active-is-upright", "fadeaway-segment-length",
+        "fadeaway-track-completeness",
     };
 
     // Pure resource inspection — needs no live tree, no tipoff, no move.
-    private static readonly string[] StaticScenarios = { "jumpshot-track-completeness" };
+    private static readonly string[] StaticScenarios =
+    {
+        "jumpshot-track-completeness", "fadeaway-segment-length", "fadeaway-track-completeness",
+    };
 
     private string _scenario = "jumpshot-phases";
 
@@ -339,6 +356,19 @@ public partial class JumpshotAnimTest : Node
     private float _maxToeRiseDuringActive = float.NegativeInfinity;
     private int _activeTicksObserved;
 
+    // #318 live-pose readings. The baseline is captured before Begin while the
+    // actor is still in Locomotion, which avoids the state-label/pose one-tick
+    // lead documented above. Hips use skeleton space so the gameplay body's
+    // world movement never masquerades as authored clip displacement.
+    private Vector3? _rigForward;
+    private Vector3? _torsoBeforeMove;
+    private Vector3? _hipsBeforeMove;
+    private float _fadeawayPitchDeg = float.NaN;
+    private float _fadeawayHipBackM = float.NaN;
+    private int _fadeawayTicksObserved;
+    private float _jumpshotPitchDeg = float.NaN;
+    private int _jumpshotPitchTicksObserved;
+
     public override void _Ready()
     {
         string[] args = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).ToArray();
@@ -354,7 +384,12 @@ public partial class JumpshotAnimTest : Node
 
         if (StaticScenarios.Contains(_scenario))
         {
-            VerdictTrackCompleteness();
+            switch (_scenario)
+            {
+                case "jumpshot-track-completeness": VerdictTrackCompleteness(); break;
+                case "fadeaway-segment-length": VerdictFadeawaySegmentLength(); break;
+                case "fadeaway-track-completeness": VerdictFadeawayTrackCompleteness(); break;
+            }
             return;
         }
 
@@ -421,6 +456,7 @@ public partial class JumpshotAnimTest : Node
                 // raw Skeleton3D-space coordinates, which carry the rig's own
                 // offsets and would make the thresholds rig-specific magic.
                 LatchToeBaseline();
+                LatchFadeawayBaseline();
                 // The REAL production entry point for a shot (TripleThreatHarnessSeam's
                 // BeginJumpShotForHarness calls the same BeginCommittedMove
                 // choke point SampleMoveInput's shoot branch does).
@@ -470,7 +506,7 @@ public partial class JumpshotAnimTest : Node
         // other three scenarios are squared-up — "jumpshot-phases" and
         // "no-placeholder-leak" don't care about the fadeaway axis at all, and
         // "no-fadeaway-when-squared-up" specifically needs squared-up.
-        float headingYaw = _scenario == "fadeaway-active"
+        float headingYaw = (_scenario == "fadeaway-active" || _scenario == "fadeaway-leans-back")
             ? squaredUpYaw + Mathf.Pi
             : squaredUpYaw;
         _shooter.SetHeadingForHarness(headingYaw);
@@ -544,6 +580,23 @@ public partial class JumpshotAnimTest : Node
                 _maxToeRiseDuringActive = Math.Max(_maxToeRiseDuringActive, rise);
             }
         }
+
+        if (node == "FadeawayActive")
+        {
+            _fadeawayTicksObserved++;
+            if (_fadeawayTicksObserved > 1)
+            {
+                _fadeawayPitchDeg = MeasureBackwardPitchDegrees();
+                _fadeawayHipBackM = MeasureHipBackwardDisplacement();
+            }
+        }
+
+        if (node == "JumpshotActive")
+        {
+            _jumpshotPitchTicksObserved++;
+            if (_jumpshotPitchTicksObserved > 1)
+                _jumpshotPitchDeg = MeasureBackwardPitchDegrees();
+        }
     }
 
     private void LatchToeBaseline()
@@ -552,6 +605,62 @@ public partial class JumpshotAnimTest : Node
         if (float.IsNaN(toe)) return; // leaves _haveToeBaseline false -> verdicts fail loudly
         _toeBaselineY = toe;
         _haveToeBaseline = true;
+    }
+
+    private void LatchFadeawayBaseline()
+    {
+        _shooterSkel ??= FindSkeleton(_shooter);
+        if (_shooterSkel == null) return;
+        _rigForward = MeasureRigForward(_shooterSkel);
+        _torsoBeforeMove = MeasureTorsoVector(_shooterSkel);
+        _hipsBeforeMove = MeasureHips(_shooterSkel);
+    }
+
+    private float MeasureBackwardPitchDegrees()
+    {
+        if (_shooterSkel == null || _torsoBeforeMove == null || _rigForward == null)
+            return float.NaN;
+        Vector3 now = MeasureTorsoVector(_shooterSkel);
+        if (float.IsNaN(now.X)) return float.NaN;
+
+        // The signed angle itself is only a magnitude; the forward projection
+        // establishes which sign is backward on this imported rig.
+        float angle = Mathf.RadToDeg(_torsoBeforeMove.Value.AngleTo(now));
+        float backward = (now - _torsoBeforeMove.Value).Dot(_rigForward.Value);
+        return backward < 0f ? angle : -angle;
+    }
+
+    private float MeasureHipBackwardDisplacement()
+    {
+        if (_shooterSkel == null || _hipsBeforeMove == null || _rigForward == null)
+            return float.NaN;
+        Vector3 now = MeasureHips(_shooterSkel);
+        return float.IsNaN(now.X) ? float.NaN : (_hipsBeforeMove.Value - now).Dot(_rigForward.Value);
+    }
+
+    private static Vector3 MeasureTorsoVector(Skeleton3D skel)
+    {
+        int spine = skel.FindBone("mixamorig_Spine");
+        int head = skel.FindBone("mixamorig_Head");
+        return spine < 0 || head < 0
+            ? new Vector3(float.NaN, float.NaN, float.NaN)
+            : skel.GetBoneGlobalPose(head).Origin - skel.GetBoneGlobalPose(spine).Origin;
+    }
+
+    private static Vector3 MeasureHips(Skeleton3D skel)
+    {
+        int hips = skel.FindBone("mixamorig_Hips");
+        return hips < 0 ? new Vector3(float.NaN, float.NaN, float.NaN) : skel.GetBoneGlobalPose(hips).Origin;
+    }
+
+    private static Vector3? MeasureRigForward(Skeleton3D skel)
+    {
+        int foot = skel.FindBone("mixamorig_LeftFoot");
+        int toe = skel.FindBone("mixamorig_LeftToeBase");
+        if (foot < 0 || toe < 0) return null;
+        Vector3 forward = skel.GetBoneGlobalPose(toe).Origin - skel.GetBoneGlobalPose(foot).Origin;
+        forward.Y = 0f;
+        return forward.LengthSquared() < 1e-6f ? null : forward.Normalized();
     }
 
     // Lowest of the two toes, in the Skeleton3D's own space. Absolute values are
@@ -593,7 +702,98 @@ public partial class JumpshotAnimTest : Node
             case "no-placeholder-leak":          VerdictNoPlaceholderLeak(); break;
             case "jumpshot-airborne-active":     VerdictAirborneActive(); break;
             case "control-jumpshot-grounded-startup": VerdictGroundedStartup(); break;
+            case "fadeaway-leans-back":         VerdictFadeawayLeansBack(); break;
+            case "control-jumpshot-active-is-upright": VerdictJumpshotActiveIsUpright(); break;
         }
+    }
+
+    private void VerdictFadeawayLeansBack()
+    {
+        GD.Print($"[jumpshot-anim]   fadeaway live pose: pitch={_fadeawayPitchDeg:F2} deg, " +
+                 $"hips-back={_fadeawayHipBackM:F4} m over {_fadeawayTicksObserved} tick(s)");
+        bool pass = _sawFadeawayActive && _fadeawayTicksObserved >= 2 &&
+                    _fadeawayPitchDeg >= FadeawayBackwardPitchMinDeg &&
+                    _fadeawayHipBackM >= FadeawayBackwardHipMinM;
+        if (pass)
+            GD.Print("[jumpshot-anim] PASS fadeaway-leans-back — the live FadeawayActive pose is visibly " +
+                     "off-balance: torso pitched backward and hips displaced behind the base.");
+        else
+            Fail($"fadeaway-leans-back: need a live FadeawayActive pose with pitch >= {FadeawayBackwardPitchMinDeg:F1} " +
+                 $"deg and hips-back >= {FadeawayBackwardHipMinM:F2} m; got pitch={_fadeawayPitchDeg:F2}, " +
+                 $"hips-back={_fadeawayHipBackM:F4}, ticks={_fadeawayTicksObserved}. A resource-side lean " +
+                 "alone is insufficient: this must bind and displace the live rig.");
+        Finish(pass ? 0 : 1);
+    }
+
+    private void VerdictJumpshotActiveIsUpright()
+    {
+        GD.Print($"[jumpshot-anim]   squared-up live release pitch={_jumpshotPitchDeg:F2} deg over " +
+                 $"{_jumpshotPitchTicksObserved} tick(s)");
+        bool pass = _sawJumpshotActive && _jumpshotPitchTicksObserved >= 2 &&
+                    !float.IsNaN(_jumpshotPitchDeg) && Mathf.Abs(_jumpshotPitchDeg) <= SquaredUpPitchMaxDeg;
+        if (pass)
+            GD.Print("[jumpshot-anim] PASS control-jumpshot-active-is-upright — the squared-up release reaches " +
+                     "JumpshotActive and remains vertical, so it cannot converge with FadeawayActive.");
+        else
+            Fail($"control-jumpshot-active-is-upright: premise requires JumpshotActive for >=2 ticks; " +
+                 $"pitch={_jumpshotPitchDeg:F2} deg, need abs <= {SquaredUpPitchMaxDeg:F1}. This control " +
+                 "fails if either the routing premise broke or both release clips lean back.");
+        Finish(pass ? 0 : 1);
+    }
+
+    private void VerdictFadeawaySegmentLength()
+    {
+        var lib = GD.Load<AnimationLibrary>("res://assets/locomotion.res");
+        if (lib == null || !lib.HasAnimation("fadeawayactive"))
+        {
+            Fail("fadeaway-segment-length: assets/locomotion.res has no fadeawayactive clip.");
+            Finish(1);
+            return;
+        }
+        double expected = JumpShot.DefaultFrameData.ActiveFrames / (double)Engine.PhysicsTicksPerSecond;
+        double actual = lib.GetAnimation("fadeawayactive").Length;
+        bool pass = Math.Abs(actual - expected) <= 1e-3;
+        if (pass) GD.Print($"[jumpshot-anim] PASS fadeaway-segment-length — {actual:F6}s is JumpShot's " +
+                           $"{JumpShot.DefaultFrameData.ActiveFrames}-tick Active window.");
+        else Fail($"fadeaway-segment-length: fadeawayactive={actual:F6}s, expected {expected:F6}s from " +
+                  "JumpShot.DefaultFrameData.ActiveFrames; re-run tools/rebuild_jumpshot_clips.gd.");
+        Finish(pass ? 0 : 1);
+    }
+
+    private void VerdictFadeawayTrackCompleteness()
+    {
+        // The existing family gate already proves all four clips. Keep this
+        // named issue-level scenario as a direct check of the one re-authored
+        // asset, rather than letting a future narrowing hide behind the family.
+        var lib = GD.Load<AnimationLibrary>("res://assets/locomotion.res");
+        var rigScene = GD.Load<PackedScene>("res://assets/Y Bot.fbx");
+        var rig = rigScene?.Instantiate<Node3D>();
+        var skel = rig == null ? null : FindSkeleton(rig);
+        if (lib == null || skel == null || !lib.HasAnimation("fadeawayactive"))
+        {
+            rig?.QueueFree();
+            Fail("fadeaway-track-completeness: missing locomotion resource, fadeawayactive, or Y Bot skeleton.");
+            Finish(1);
+            return;
+        }
+        var tracked = new HashSet<string>();
+        Animation clip = lib.GetAnimation("fadeawayactive");
+        for (int i = 0; i < clip.GetTrackCount(); i++)
+        {
+            if (clip.TrackGetType(i) != Animation.TrackType.Rotation3D) continue;
+            NodePath path = clip.TrackGetPath(i);
+            if (path.GetSubNameCount() > 0) tracked.Add(path.GetSubName(0));
+        }
+        var missing = new List<string>();
+        for (int i = 0; i < skel.GetBoneCount(); i++)
+            if (skel.GetBoneChildren(i).Length > 0 && !tracked.Contains(skel.GetBoneName(i)))
+                missing.Add(skel.GetBoneName(i));
+        rig.QueueFree();
+        if (missing.Count == 0)
+            GD.Print("[jumpshot-anim] PASS fadeaway-track-completeness — every non-leaf Y Bot bone is rotation-keyed.");
+        else
+            Fail($"fadeaway-track-completeness: fadeawayactive leaves non-leaf bones at rest: [{string.Join(", ", missing)}].");
+        Finish(missing.Count == 0 ? 0 : 1);
     }
 
     // ── Scenario: jumpshot-airborne-active (positive) ───────────────────────
