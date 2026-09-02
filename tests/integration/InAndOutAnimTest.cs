@@ -94,8 +94,8 @@ namespace HOOPERGAME.Tests.Integration;
 // in the sign, not just the magnitude.
 //
 // ── Reduction discipline (do NOT introduce a Math.Max/Min over the wrists) ──
-// Every motion gate below reads a SINGLE NAMED wrist (the ball wrist or the
-// off wrist, resolved once from the actor's HandSide) — never a reduction
+// Every motion gate below reads a SINGLE NAMED wrist (the physical right ball
+// wrist or physical left off wrist, fixed by the authored-source contract) — never a reduction
 // over both. A later author "tidying" these into a two-wrist min/max would
 // convert a specific-limb claim ("the BALL hand came in") into a both-limbs
 // claim, destroying the asymmetry that is the entire point of this move
@@ -152,6 +152,9 @@ public partial class InAndOutAnimTest : Node
     // between the move and the move it impersonates is ~0.42 m wide.
     private const float SeparationFloorM = 0.08f;
     private const float NearMidlineCeilingM = 0.10f;
+    private const string HipsBoneName = "mixamorig_Hips";
+    private const string RightWristBoneName = "mixamorig_RightHand";
+    private const string LeftWristBoneName = "mixamorig_LeftHand";
 
     private static readonly string[] KnownScenarios =
     {
@@ -196,14 +199,15 @@ public partial class InAndOutAnimTest : Node
     private bool _sawGenericPlaceholder;
 
     // ── Bone indices, resolved ONCE off the actor's Skeleton3D (lazy: the
-    // first tick a Skeleton3D is found). _ballSign is likewise resolved once
-    // — InAndOut never swaps HandSide (see InAndOut.cs's class doc), so the
-    // actor's ball hand is fixed for the whole lifecycle and re-reading it
-    // every tick would add nothing but risk.
+    // first tick a Skeleton3D is found). The authored unsuffixed clip is
+    // physically RIGHT-handed. MoveAnimResolver intentionally reuses that
+    // clip for either gameplay HandSide, so these measured wrists are fixed
+    // clip facts; a Right HandSide fixture premise makes that explicit.
     private int _hipsIdx = -1;
     private int _ballWristIdx = -1;
     private int _offWristIdx = -1;
     private float _ballSign = 1f;
+    private bool _boneIndicesCached;
 
     // Geometry, latched at event time (never recomputed at verdict time — by
     // then the move is over and the rig has returned to Locomotion). Each
@@ -292,6 +296,11 @@ public partial class InAndOutAnimTest : Node
                 _other.GlobalPosition = FarSpot;
                 _actor.SetHeadingForHarness(
                     Mathf.Atan2(RimCenter.X - ActorSpot.X, RimCenter.Z - ActorSpot.Z));
+                // Do not rely on PlayerController's possession default: this
+                // fixture explicitly observes the physically right-handed
+                // unsuffixed clip. The later premise guard detects any drift.
+                _actor.SetHandSideForHarness(HandSide.Right);
+                GD.Print("[inandout-anim] fixture explicitly set actor HandSide=Right after tipoff.");
                 // InAndOutTest.cs's own "dead-dribble-gate" scenario established
                 // that InAndOut is REFUSED from a fresh live Held possession —
                 // it requires a live Dribbling possession specifically (the
@@ -363,10 +372,31 @@ public partial class InAndOutAnimTest : Node
 
         if (node != "InAndOutStartup" && node != "InAndOutActive" && node != "InAndOutRecovery") return;
 
-        if (_hipsIdx < 0) CacheBoneIndices(skel);
+        // This is a fixture premise, not a gameplay claim. The physical clip
+        // is right-handed while MoveAnimResolver deliberately permits either
+        // gameplay HandSide to select its UNSUFFIXED states. Measuring from
+        // HandSide would silently swap the named wrists rather than prove the
+        // authored motion. A mutated/incorrect fixture must exit 1 cleanly.
+        if (_actor.HandSide != HandSide.Right)
+        {
+            Fail($"{_scenario}: harness premise requires actor HandSide.Right before observing the physically " +
+                 $"right-handed in-and-out clip, got {_actor.HandSide}.");
+            Finish(1);
+            return;
+        }
 
-        float ballLateral = MeasureWristLateral(skel, _ballWristIdx);
-        float offLateral = MeasureWristLateral(skel, _offWristIdx);
+        if (!_boneIndicesCached && !CacheBoneIndices(skel))
+        {
+            Finish(1);
+            return;
+        }
+
+        if (!TryMeasureWristLateral(skel, _ballWristIdx, RightWristBoneName, out float ballLateral) ||
+            !TryMeasureWristLateral(skel, _offWristIdx, LeftWristBoneName, out float offLateral))
+        {
+            Finish(1);
+            return;
+        }
         // "outness" — signed, positive when the hand sits out on ITS OWN
         // side, ~0 at the midline, NEGATIVE once it has crossed. See the file
         // header's "signed-vs-unsigned" section for why this form is used
@@ -948,18 +978,52 @@ public partial class InAndOutAnimTest : Node
 
     // ── Geometry helpers ────────────────────────────────────────────────────
 
-    // Resolves the ball/off wrist bone indices and the ball-hand sign ONCE,
-    // off the actor's own authoritative HandSide (M9, #83/ADR-0012) — not a
-    // hardcoded "the ball hand is Right" assumption, even though that is what
-    // this harness's fresh actor happens to start with (InAndOut never swaps,
-    // so it stays true for the whole lifecycle).
-    private void CacheBoneIndices(Skeleton3D skel)
+    // Resolves the physical right-ball/left-off clip facts ONCE. Each required
+    // FindBone result is validated before any GetBoneGlobalPose call, so a
+    // renamed rig bone reports a clean harness failure rather than throwing in
+    // the physics callback and leaving the headless run without an exit code.
+    private bool CacheBoneIndices(Skeleton3D skel)
     {
-        _hipsIdx = skel.FindBone("mixamorig_Hips");
-        bool ballIsRight = _actor.HandSide == HandSide.Right;
-        _ballWristIdx = skel.FindBone(ballIsRight ? "mixamorig_RightHand" : "mixamorig_LeftHand");
-        _offWristIdx = skel.FindBone(ballIsRight ? "mixamorig_LeftHand" : "mixamorig_RightHand");
-        _ballSign = ballIsRight ? 1f : -1f;
+        _hipsIdx = skel.FindBone(HipsBoneName);
+        _ballWristIdx = skel.FindBone(RightWristBoneName);
+        _offWristIdx = skel.FindBone(LeftWristBoneName);
+        if (_hipsIdx < 0 || _ballWristIdx < 0 || _offWristIdx < 0)
+        {
+            Fail($"{_scenario}: required fixed clip bones were not found before pose sampling: " +
+                 $"Hips={_hipsIdx}, RightHand={_ballWristIdx}, LeftHand={_offWristIdx}.");
+            return false;
+        }
+
+        _ballSign = 1f; // RightHand is the authored ball wrist for this fixed physical clip.
+        _boneIndicesCached = true;
+        return true;
+    }
+
+    // Validates the cache immediately before forwarding to the sole global-pose
+    // reader. This repeated gate keeps a future caller from bypassing the
+    // cache flow and handing an invalid index to Godot.
+    private bool TryMeasureWristLateral(
+        Skeleton3D skel, int wristIdx, string expectedWristBoneName, out float lateral)
+    {
+        lateral = float.NaN;
+        int boneCount = skel.GetBoneCount();
+        bool hipsInRange = _hipsIdx >= 0 && _hipsIdx < boneCount;
+        bool wristInRange = wristIdx >= 0 && wristIdx < boneCount;
+        bool cachedNamesMatch = hipsInRange && wristInRange
+                                && skel.GetBoneName(_hipsIdx) == HipsBoneName
+                                && skel.GetBoneName(wristIdx) == expectedWristBoneName;
+        if (!_boneIndicesCached || !cachedNamesMatch)
+        {
+            string hipsName = hipsInRange ? skel.GetBoneName(_hipsIdx) : "<out-of-range>";
+            string wristName = wristInRange ? skel.GetBoneName(wristIdx) : "<out-of-range>";
+            Fail($"{_scenario}: refused GetBoneGlobalPose unless cached indices match this Skeleton3D: " +
+                 $"Hips index/name={_hipsIdx}/{hipsName} expected={HipsBoneName}; wrist index/name=" +
+                 $"{wristIdx}/{wristName} expected={expectedWristBoneName}; boneCount={boneCount}.");
+            return false;
+        }
+
+        lateral = MeasureWristLateral(skel, wristIdx);
+        return true;
     }
 
     // Signed lateral offset of a wrist from the pelvis, along the SAME
