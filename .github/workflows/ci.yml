@@ -874,6 +874,9 @@ jobs:
           godot --headless --path . res://tests/integration/ReboundGrabTest.tscn -- --harness-scenario=grab-fires
           godot --headless --path . res://tests/integration/ReboundGrabTest.tscn -- --harness-scenario=made-basket-no-grab
           godot --headless --path . res://tests/integration/ReboundGrabTest.tscn -- --harness-scenario=consecutive-rebounds
+          godot --headless --path . res://tests/integration/ReboundGrabTest.tscn -- --harness-scenario=rebound-clip-contract
+          godot --headless --path . res://tests/integration/ReboundGrabTest.tscn -- --harness-scenario=rebound-display-duration
+          godot --headless --path . res://tests/integration/ReboundGrabTest.tscn -- --harness-scenario=rebound-latch-mutation-control
 
       # Live-dribble neutral stance (issue #285). Proves the Dribble
       # BlendSpace1D display state is actually REACHED when a holder starts a
