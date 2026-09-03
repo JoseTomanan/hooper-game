@@ -9,7 +9,7 @@
 ## Context
 
 The design identity is *"the duel is the space between two players"*, and
-[CLAUDE.md §1](../../CLAUDE.md) names the spine as **separation creation vs.
+[AGENTS.md §1](../../AGENTS.md) names the spine as **separation creation vs.
 denial**. Nobody had ever designed what happens when the two bodies meet.
 
 ### What is actually there today
@@ -166,7 +166,7 @@ already been burned by — a frame counter compared for equality against a
 is walking into that; it is named here so the rejection survives.
 
 **Binary, not a continuous scalar,** because **legibility is a stated
-competitive requirement** ([CLAUDE.md §1](../../CLAUDE.md)), not a preference. A
+competitive requirement** ([AGENTS.md §1](../../AGENTS.md)), not a preference. A
 continuous "setness" gradient cannot be read across the court in real time; a
 hard edge can be learned. Every other resolution in this game is already
 cliff-shaped — ADR-0018's timing windows are interval overlaps with hard edges.

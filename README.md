@@ -36,7 +36,7 @@ Architecture decisions are documented in full in [`docs/adr/`](docs/adr/).
 ## Current Status & Roadmap
 
 The current milestone and the full milestone status map live in
-[`CLAUDE.md` §2](CLAUDE.md) (the single source of truth), with GitHub Issues
+[`AGENTS.md` §2](AGENTS.md) (the single source of truth), with GitHub Issues
 tracking the live state of each milestone and its sub-issues.
 
 ---
@@ -53,7 +53,7 @@ hooper-game/
 │   └── Systems/      # Cross-cutting systems
 ├── scenes/           # .tscn files (human-authored in the Godot editor)
 ├── assets/           # Models, textures, sounds (placeholder/gray for now)
-├── addons/           # Godot editor plugins — see CLAUDE.md §3 (godot_dotnet_mcp)
+├── addons/           # Godot editor plugins — see AGENTS.md §3 (godot_dotnet_mcp)
 └── docs/
     ├── adr/          # Architecture Decision Records — read before changing engine-facing code
     └── handoffs/     # Cross-session scratch notes (gitignored)

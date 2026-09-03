@@ -7,7 +7,7 @@ description: How changes are classified, gated, and reviewed in the hooper-game 
 
 This is the rulebook for how a change gets from "someone decided to do it" to
 "merged on `main` and the issue is closed" in `hooper-game`. Every rule below
-is binding (CLAUDE.md: "IMPORTANT: These instructions OVERRIDE any default
+is binding (AGENTS.md: "IMPORTANT: These instructions OVERRIDE any default
 behavior"). Where a rule exists because something already went wrong, the
 incident is named — that is not decoration, it is the reason the rule cannot
 be quietly relaxed.
@@ -140,7 +140,7 @@ judgment.
 M9's crossover/hesitation issues (#83, #84, #85, #86) were each tagged with
 **both** `afk` and `hitl`. Their AFK halves merged in PR #88 — the code was
 done, releasable, on `main`. But because each issue also carried a `hitl`
-verify gate, "Done means proven" (CLAUDE.md) held all four open, waiting on
+verify gate, "Done means proven" (AGENTS.md) held all four open, waiting on
 a single editor session the owner could not run yet. That is the deadlock a
 dual-labelled issue creates by construction:
 
@@ -408,17 +408,17 @@ State which one you chose, and why, in your **first response on the issue**
 ## 8. Milestone activation (ADR-0017): DEFERRED → Active has one legal order
 
 Per [ADR-0017](../../../docs/adr/0017-autopilot-activates-deferred-milestones.md),
-the autopilot may flip a milestone from `DEFERRED` to `Active` in CLAUDE.md
+the autopilot may flip a milestone from `DEFERRED` to `Active` in AGENTS.md
 §2 **without** a per-milestone human "go" — but only under two hard
 constraints:
 
-1. **Strictly walk the dependency order already documented in CLAUDE.md §2's
+1. **Strictly walk the dependency order already documented in AGENTS.md §2's
    milestone table.** No skipping ahead, no inventing a different graph.
 2. **Only after the predecessor milestone's epic is genuinely closed** — CI
    green + harness green + `/code-review` clean + its one per-milestone
    human feel pass (§4) — under ADR-0015.
 
-Activation flips `DEFERRED` → `Active` in the CLAUDE.md §2 table and gates
+Activation flips `DEFERRED` → `Active` in the AGENTS.md §2 table and gates
 **pickup**, not **merge**: it decides which milestone's issues the
 autopilot is now allowed to start grabbing, not whether any individual PR
 is safe to land (that is still §4's merge gates, unconditionally, for every
@@ -435,7 +435,7 @@ to a **Sonnet** subagent (`model: "sonnet"`) with high effort. The human steers 
 verifies; the orchestrating model must not burn its own context on volume it has
 already fully specified.
 
-*(`CLAUDE.md` carries the standing rule and the do-NOT-delegate list; this section
+*(`AGENTS.md` carries the standing rule and the do-NOT-delegate list; this section
 is the full taxonomy it points at.)*
 
 ### Delegate — mechanical, high-volume, or long-running work whose shape is decided
@@ -467,7 +467,7 @@ is the full taxonomy it points at.)*
   conclusion, the template file to copy, the traps that apply, and the exact
   commands — then let it execute.
 - **Name the traps explicitly in the prompt.** A subagent has not read the handoff
-  or `CLAUDE.md`'s failure history. Spell out the ones that apply (the #257
+  or `AGENTS.md`'s failure history. Spell out the ones that apply (the #257
   `GetCurrentNode()` rule, the a45bd1d rest-pose trap, "never pipe Godot's output
   to `head`", control scenarios must assert their own premise).
 - **Verify the deliverable yourself.** Re-read the assertions it wrote and confirm

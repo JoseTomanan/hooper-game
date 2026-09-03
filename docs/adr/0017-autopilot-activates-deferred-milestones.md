@@ -9,7 +9,7 @@
 
 ## Context
 
-CLAUDE.md §2 ends with a hard rule:
+AGENTS.md §2 ends with a hard rule:
 
 > "Do not build ahead of the current milestone unless asked. M6b, M7b, and M9 are
 > open for work; M8 and M10 onward are not."
@@ -94,7 +94,7 @@ autopilot does not get to build M13 before M10).
 
 **The autopilot may activate a DEFERRED milestone without a per-milestone human
 "go", provided it activates strictly in the dependency order documented in
-CLAUDE.md §2 and only after every predecessor milestone's epic is genuinely
+AGENTS.md §2 and only after every predecessor milestone's epic is genuinely
 closed under the ADR-0015/0016 bar.**
 
 Concretely:
@@ -119,7 +119,7 @@ Concretely:
 - **The DAG stays editable** (force 5). The human may re-order, insert, split, or
   cut milestones at any time; a discovered constraint during a milestone may force
   the same. The autopilot walks the *current* documented order, and a change to
-  that order is a normal CLAUDE.md/ADR edit, not a fight with the autopilot.
+  that order is a normal AGENTS.md/ADR edit, not a fight with the autopilot.
 
 ## Consequences
 
@@ -133,7 +133,7 @@ Concretely:
 **Harder / accepted tradeoffs:**
 - **A wrong DAG now propagates faster.** If the documented order is subtly wrong,
   the autopilot will march down it without a human pausing to notice (force 5).
-  Mitigated by: order changes are cheap CLAUDE.md edits, and each milestone's
+  Mitigated by: order changes are cheap AGENTS.md edits, and each milestone's
   feel pass is a natural "is this still the right next thing?" checkpoint.
 - **"Genuinely closed" must be enforced, not assumed** (force 4). The tempting
   bug is to treat "all sub-issue PRs merged" as milestone-done and unlock the
@@ -144,7 +144,7 @@ Concretely:
   the live §2 table and the per-milestone feel pass keeping them in the loop at
   milestone granularity.
 - **Documentation updated in the accepting commit** (Decision Discipline):
-  CLAUDE.md §2's "Do not build ahead of the current milestone" rule is amended to
+  AGENTS.md §2's "Do not build ahead of the current milestone" rule is amended to
   reference this ADR's DAG-walk authorisation, and the ADR table gains this row.
 - **Reversible.** Revoking auto-activation returns to human-typed milestone starts
   with no code impact — it is a scheduling policy, not architecture.

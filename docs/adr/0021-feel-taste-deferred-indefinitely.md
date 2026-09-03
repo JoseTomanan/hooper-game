@@ -51,7 +51,7 @@ pass per milestone" as "no feel pass for now."
    would cross from deferral into acceptance, which is out of scope here.
 3. **A consolidated pass already exists as a precedent and a landing spot.**
    Issue #173 ("HITL FEEL PASS FOR M6b + M8 + M9 + M10") is already the running
-   consolidation point for the M9+M10 feel debt referenced in CLAUDE.md §2 (via
+   consolidation point for the M9+M10 feel debt referenced in AGENTS.md §2 (via
    #114 as the per-milestone-pair checklist folded into it). Naming #173 as
    *the* deferred pass — rather than inventing a new tracking mechanism — costs
    nothing and keeps one place where feel debt visibly accrues.

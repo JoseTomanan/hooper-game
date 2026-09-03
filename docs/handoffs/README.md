@@ -22,7 +22,7 @@ state that lives in none of the three durable layers above.
 
 ## What a good handoff contains
 
-Only what is *not* already in CLAUDE.md, the ADRs, the issues, or the code:
+Only what is *not* already in AGENTS.md, the ADRs, the issues, or the code:
 
 - The exact next task, and where you were interrupted.
 - Build/run state ("compiles clean as of `<sha>`", "runs in-editor").

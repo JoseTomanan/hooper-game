@@ -10,7 +10,7 @@
 
 From M1 onward the repo has split work along a fixed line: Claude Code writes the
 C# under `scripts/`, and the **human** does everything inside the Godot editor.
-CLAUDE.md §3 states it plainly —
+AGENTS.md §3 states it plainly —
 
 > "`scenes/` — `.tscn` scene files. Authored in the Godot editor by the human
 > (see EDITOR_TASKS.md). Claude Code writes the C# a scene's nodes reference, but
@@ -61,7 +61,7 @@ narrow HITL to purely checking the *feel* of things and *verifying* behaviour.**
 
 5. **Verification is the human's value, and `Done means proven` is unchanged.**
    The project rule that a `hitl` issue closes only after in-editor confirmation
-   (CLAUDE.md §3) is a *correctness* guarantee, not an authoring step. Narrowing
+   (AGENTS.md §3) is a *correctness* guarantee, not an authoring step. Narrowing
    HITL to verification keeps that guarantee fully intact while removing the
    authoring toil.
 
@@ -193,8 +193,8 @@ exports onto nodes that already exist — moves to **AFK**.
   *correctness* stays the deferred human feel judgment (#178/#173, ADR-0021);
   this lift covers track *binding* only.
 - **Documentation must be updated on acceptance, in the accepting commit**
-  (Decision Discipline): rewrite CLAUDE.md §3's "scenes are authored by the
-  human" paragraph to reflect the new boundary, add this ADR (0011) to CLAUDE.md's
+  (Decision Discipline): rewrite AGENTS.md §3's "scenes are authored by the
+  human" paragraph to reflect the new boundary, add this ADR (0011) to AGENTS.md's
   ADR table, and revise the EDITOR_TASKS.md preamble ("the part AI can't do") to
   describe its new, narrower scope — feel + verification, plus the explicit HITL
   exclusions above. EDITOR_TASKS.md does not disappear; it becomes the

@@ -188,5 +188,5 @@ of #112, #129, #162-sync (filed when their milestones activate, per
 ADR-0017); structural-assertion split of #178; decision briefs on #170 and
 #206; legibility-floor scenarios for the shipped M9/M10 move set.
 
-**Documentation updated in this commit** (Decision Discipline): CLAUDE.md ADR
+**Documentation updated in this commit** (Decision Discipline): AGENTS.md ADR
 table + §3 issue-tracker rules; EDITOR_TASKS.md preamble.

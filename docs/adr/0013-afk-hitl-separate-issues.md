@@ -20,7 +20,7 @@ verification**. Its Consequences section already anticipated this follow-on:
 What ADR-0011 did **not** settle is *where* the verification obligation lives once
 the AFK portion is done. The M9 crossover/hesi issues (#83–#86) were each tagged
 with **both** `afk` and `hitl`. Their AFK halves merged in PR #88, but because
-each issue also carried the `hitl` verify gate, `Done means proven` (CLAUDE.md)
+each issue also carried the `hitl` verify gate, `Done means proven` (AGENTS.md)
 held them all open — the code shipped, yet four issues sat merged-but-open waiting
 on a single editor session the owner could not run yet.
 
@@ -42,7 +42,7 @@ agent doesn't re-derive it (or re-deadlock).
 1. **The two halves have different "done" conditions.** AFK build is done when the
    code merges; HITL verify is done when a human watches it run. Tying them to one
    issue forces the stricter gate onto the looser half.
-2. **`Done means proven` is non-negotiable and unchanged** (CLAUDE.md, ADR-0011).
+2. **`Done means proven` is non-negotiable and unchanged** (AGENTS.md, ADR-0011).
    The verification obligation must survive; it cannot be quietly dropped when the
    build issue closes. A separate issue is what carries it forward.
 3. **Merged-but-open issues are noise.** A board where finished, released work

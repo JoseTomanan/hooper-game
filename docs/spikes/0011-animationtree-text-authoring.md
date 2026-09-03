@@ -113,7 +113,7 @@ judgment" step the issue earmarks as the **HITL tail** (see below).
 
 Lift ADR-0011's AnimationTree-graph-authoring exclusion and move it to AFK, **gated on
 the one-time human visual confirm** below (Done means proven). On confirm, update
-ADR-0011 Consequences + CLAUDE.md §3 to drop AnimationTree graph authoring from the HITL
+ADR-0011 Consequences + AGENTS.md §3 to drop AnimationTree graph authoring from the HITL
 exclusions, keeping the standing scene-edit guardrails (isolated single-concern commit +
 headless load check) and the gotchas above as the authoring checklist.
 
@@ -121,7 +121,7 @@ headless load check) and the gotchas above as the authoring checklist.
 
 The human swapped `loco_text.tres` into `scenes/Player.tscn`'s `AnimationTree.tree_root`,
 ran the game, confirmed idle→run and the committed-move states animate identically to the
-editor-authored baseline, and reverted the swap. With that, the ADR-0011/CLAUDE.md flip
+editor-authored baseline, and reverted the swap. With that, the ADR-0011/AGENTS.md flip
 landed (exclusion lifted) and issue #87 is closed.
 
 ### Bonus finding

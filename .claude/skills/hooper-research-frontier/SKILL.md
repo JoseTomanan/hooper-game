@@ -30,7 +30,7 @@ Jargon used throughout, defined once:
 |---|-----------|------------------------------|
 | 1 | **AI-driven development methodology** | A rare fully-instrumented case study: a solo dev with no game-dev experience driving a nontrivial networked game entirely through AI agents, with harness-proven autonomous merges (ADR-0015/0016/0017/0019), a complete ADR ledger (`docs/adr/`), and a full git (446+ commits as of 2026-07-12) and issue (160 issues, 55 merged PRs as of 2026-07-12) trail. |
 | 2 | **Netcode at indie scale** | Server-authoritative prediction + deterministic mini-physics (ADR-0002/0004) on Godot's thin multiplayer layer, with *discrete committed moves* layered on analog movement (ADR-0003) — a hybrid input model that mainstream rollback/prediction literature (GGPO-style fighting games, Source-style FPS prediction) doesn't cover. |
-| 3 | **Legible competitive design** | "Legibility is a competitive requirement, not an aesthetic" (CLAUDE.md §1, ADR-0003): telegraphed commitment is a design invariant here. Nobody has turned it into a *measured* property; this repo has the frame data and the netcode to compute it. |
+| 3 | **Legible competitive design** | "Legibility is a competitive requirement, not an aesthetic" (AGENTS.md §1, ADR-0003): telegraphed commitment is a design invariant here. Nobody has turned it into a *measured* property; this repo has the frame data and the netcode to compute it. |
 
 Every candidate problem below serves one of these directions. Pick ONE
 problem, work it to its result bar, and write it up — a half-finished tool or

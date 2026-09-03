@@ -20,7 +20,7 @@ make. M5 gave us scoring; it did not give us a *game*.
 M6b (epic #46) turns that single shot into a continuous half-court 1v1. That
 requires a possession ruleset — who gets the ball after a make, how a loose ball
 is recovered, and what makes a basket count. Half-court 1v1 (pickup / streetball)
-has a settled real-world convention, and the design identity (the duel; CLAUDE.md
+has a settled real-world convention, and the design identity (the duel; AGENTS.md
 §1) wants possession changes to *mean* something rather than be free. This ADR
 records the ruleset every other M6b sub-issue (#48 rebound, #49 make-it-take-it,
 #50 clear) implements. It changes no architecture — it sits on top of the locked
@@ -85,7 +85,7 @@ gives score.
   the M6b acceptance test (#52) and, downstream, the dedicated-server full-game
   verification (#32).
 - Possession changes carry weight: the clear rule means a steal or rebound is not
-  an instant put-back, which is what makes the spacing/commitment duel (CLAUDE.md
+  an instant put-back, which is what makes the spacing/commitment duel (AGENTS.md
   §1) matter on defense as well as offense.
 - It rides the existing plumbing. Rebound and make-it-take-it both reuse one
   server-side holder-assignment path (`Catch` + `ReceiveState` broadcast);
@@ -101,7 +101,7 @@ gives score.
 - **The clear rule adds a scoring pre-condition that must be visible.** A make
   that does not count because the possession was not cleared is confusing unless
   the player can see the cleared/uncleared state — hence the possession+clear HUD
-  (#51). Legibility (CLAUDE.md §1) makes the HUD part of the rule, not optional
+  (#51). Legibility (AGENTS.md §1) makes the HUD part of the rule, not optional
   polish.
 - **Proximity rebound is intentionally simple.** "Nearer wins inside a radius" has
   no jostle, no box-out, no tip — those live in the spacing spine and are
@@ -368,7 +368,7 @@ holder must drive inside the line and bring it back out. This is the literal
 reading of "carries … behind the clear line." Human design call (the lenient
 "secured behind the line = cleared" real-ball convention was the considered
 alternative); resolved toward the stricter take-back because the clear rule's whole
-purpose is the defensive barrier against an instant put-back (CLAUDE.md §1; ADR-0014
+purpose is the defensive barrier against an instant put-back (AGENTS.md §1; ADR-0014
 real-ball + *Undisputed 3* authority).
 
 **What did NOT change:**
@@ -490,7 +490,7 @@ possessions + the dead-dribble rule)
 **Status remains Accepted.** This amendment adds two new rules on top of the
 existing possession machinery; nothing above is superseded. It was speced by
 the M9 move-taxonomy triage session (2026-07-04) and grilled with the human
-before landing — recorded here per CLAUDE.md's Decision Discipline (the
+before landing — recorded here per AGENTS.md's Decision Discipline (the
 implementation PR (#204) cited this amendment in eight places before it
 actually existed; this section closes that gap).
 
@@ -535,7 +535,7 @@ dribble again once you've picked it up" rule. The flag:
   shooting motion, not a separate discrete input or `CommittedMove`. The
   consequence is deliberate: **a feinted pump-fake strands the player in dead
   `Held`** for the rest of the possession — a real cost to feinting off the
-  dribble that keeps the read-and-punish mind game legible (CLAUDE.md §1).
+  dribble that keeps the read-and-punish mind game legible (AGENTS.md §1).
 - **Also gates any dribble move**, not just a raw `StartDribble()` attempt
   (code-review finding on #204): `Crossover`/`Hesitation` are dribble moves in
   real ball too, so `BeginCommittedMove` refuses either while the acting

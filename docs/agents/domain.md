@@ -13,11 +13,11 @@ gracefully if it is absent, but it is present on purpose — read it.
 ```
 /
 ├── CONTEXT.md        ← domain glossary (term → definition → ADR pointer)
-├── CLAUDE.md         ← combined PRD + ADR index + repo conventions; read first
+├── AGENTS.md         ← combined PRD + ADR index + repo conventions; read first
 └── docs/adr/         ← locked architectural decisions (see docs/adr/ for the current set + 0000-template)
 ```
 
-`TASKS.md` does not exist in this repo (CLAUDE.md §3 says so explicitly). GitHub
+`TASKS.md` does not exist in this repo (AGENTS.md §3 says so explicitly). GitHub
 Issues is the sole task/state tracker — see `docs/agents/issue-tracker.md`.
 
 There is no `CONTEXT-MAP.md` and no per-context `src/<context>/docs/adr/`. Do not
@@ -26,7 +26,7 @@ look for them; this is not a monorepo.
 ## Consumer rules
 
 1. **Read before working.** Before touching engine-facing code, read all ADRs in
-   `docs/adr/` (per CLAUDE.md). Before naming any domain concept, read
+   `docs/adr/` (per AGENTS.md). Before naming any domain concept, read
    `CONTEXT.md`.
 
 2. **Use the glossary's terms exactly.** When your output names a domain concept
@@ -47,15 +47,15 @@ look for them; this is not a monorepo.
    test design, anything — would
    contradict a locked ADR, **STOP and flag the contradiction to the human before
    writing code.** Do not silently comply, and do not silently resolve it. This
-   is the Decision Discipline rule from CLAUDE.md §3; it binds these skills too.
+   is the Decision Discipline rule from AGENTS.md §3; it binds these skills too.
 
 4. **Decisions are not recorded here, and not in GitHub Issues.** If work produces
    or changes an architectural decision, it goes in a new or updated ADR in
-   `docs/adr/`, in the same commit as the code (CLAUDE.md §3). `CONTEXT.md` holds
+   `docs/adr/`, in the same commit as the code (AGENTS.md §3). `CONTEXT.md` holds
    no reasoning — only term/definition/pointer. GitHub Issues holds state, not
    decisions. Keep these boundaries; do not fold decisions into the wrong file.
 
-5. **Respect milestone scope.** This project is milestone-gated — see CLAUDE.md §2
+5. **Respect milestone scope.** This project is milestone-gated — see AGENTS.md §2
    for the live milestone table (read it live, don't cache statuses here) and
    GitHub Issues for the live tracker. Do not propose, scaffold, or build ahead of
    the current milestone unless the human asks or ADR-0017's autopilot exception

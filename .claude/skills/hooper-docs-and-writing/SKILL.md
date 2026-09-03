@@ -21,7 +21,7 @@ quote the path in commands).
 
 | Doc type | Location | Purpose | Lifecycle |
 |---|---|---|---|
-| `CLAUDE.md` | repo root | PRD + ADR index + repo conventions + **§2 milestone table** | Durable; §2 table is live-edited by the autopilot orchestrator on milestone activation (ADR-0017) |
+| `AGENTS.md` | repo root | PRD + ADR index + repo conventions + **§2 milestone table** | Durable; §2 table is live-edited by the autopilot orchestrator on milestone activation (ADR-0017) |
 | `CONTEXT.md` | repo root | Domain glossary: term → definition → ADR pointer. **No reasoning lives here** | Durable, but see the Staleness Registry (§7) — it lags the ADR ledger |
 | `docs/adr/` | repo root | Locked architectural decisions, one per number | Durable; `Status: Accepted` and effectively permanent (see §2 for amend-vs-new-number) |
 | `docs/spikes/` | repo root | Time-boxed experiments with a **verdict** (PASS/FAIL/GO/NO-GO) | Durable once the verdict lands; numbered like ADRs (one exists as of 2026-07-12: `0011-animationtree-text-authoring.md`, verdict PASS) |
@@ -36,7 +36,7 @@ Rule of thumb for "which doc": **why** an architecture choice was made → ADR.
 durable — nothing that belongs in the other layers goes here). **What a human
 must click in the editor** → EDITOR_TASKS.md.
 
-### CLAUDE.md §2 — the milestone table
+### AGENTS.md §2 — the milestone table
 
 The table is the single at-a-glance map of milestone status
 (`DEFERRED`/`Active`/`Done`) and is edited in exactly two situations:
@@ -146,7 +146,7 @@ unmerged branch before landing. Check `Status:` and check the file is on
 
 ### The same-commit-as-code rule
 
-Per CLAUDE.md's Decision Discipline: any architectural decision made or
+Per AGENTS.md's Decision Discipline: any architectural decision made or
 changed during work must land its ADR — new file or amendment — **in the same
 commit as the code implementing it**. Never defer the ADR to a follow-up. If
 no existing ADR covers the decision's category, create the next numbered file
@@ -246,7 +246,7 @@ lands. Never cite a handoff as a durable source from a tracked doc — if a
 fact lives only in a handoff, promote it (to an ADR, an issue body, or
 CONTEXT.md) before relying on it.
 
-**What belongs** (only what is NOT already in CLAUDE.md, the ADRs, the
+**What belongs** (only what is NOT already in AGENTS.md, the ADRs, the
 issues, or the code):
 - The exact next task and where you were interrupted.
 - Build/run state ("compiles clean as of `<sha>`").
@@ -391,7 +391,7 @@ re-measure anything numeric even if it isn't listed (closing rule below).
 | `CONTEXT.md` "Sources:" line | Scopes its sources to ADR-0001–0008 | 19 numbered ADRs exist (0001–0019, no gaps; 0000 is the template). CONTEXT.md is incomplete, not exhaustive, for anything past the M6b era | `ls docs/adr/` |
 | `CONTEXT.md` "Cosmetic facing" entry | Facing is velocity-derived, client-local, cosmetic | Predates ADR-0010: `Heading` is now server-authoritative state integrated into `Move()`; `FacingResolver` remains in the codebase but is off the authoritative path (ADR-0018 §4 explicitly forbids reading it for defensive resolution) | Read ADR-0010 and ADR-0018 §4; `grep -rn "FacingResolver" scripts/` |
 | `CONTEXT.md` timing-window entries | Aspirational 2K-style "green window" framing | Predate ADR-0018, which landed a **tick-interval-overlap** model (`DefensiveResolution.Succeeds`, half-open integer-tick intervals `[start, end)`) — a real semantic gap, not just missing detail | Read ADR-0018 §1 |
-| `docs/agents/domain.md` | Described `TASKS.md` as the living tracker; listed the locked set as "ADRs 0001–0005" | **Corrected 2026-07-16** — TASKS.md does not exist (CLAUDE.md §3 says so explicitly; GitHub Issues is the sole tracker); the locked set now points at `docs/adr/` directly rather than hardcoding a count | `ls TASKS.md` (absent); `ls docs/adr/` |
+| `docs/agents/domain.md` | Described `TASKS.md` as the living tracker; listed the locked set as "ADRs 0001–0005" | **Corrected 2026-07-16** — TASKS.md does not exist (AGENTS.md §3 says so explicitly; GitHub Issues is the sole tracker); the locked set now points at `docs/adr/` directly rather than hardcoding a count | `ls TASKS.md` (absent); `ls docs/adr/` |
 | ADR-0016's body | Quotes test counts (~250 unit / ~459 total) from its writing date | Live counts are materially higher: **682 unit tests (613 `[Fact]` + 15 `[Theory]` expanding) plus 21 integration scenario files, as of 2026-07-16**. **Any hardcoded test count anywhere — including this row — is unreliable the moment it's written** | `dotnet test tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj --list-tests` for the unit suite; `ls tests/integration/*.cs` for harness scenarios (separate suites — no single command combines them) |
 | Any summary claiming "ADR-0010 says 400°/s" | 400°/s was an early documented default | Shipped value is 900°/s with back-turn factor 0.95 after the #172 retunes — recorded in ADR-0010's later Amendment sections, so the ADR is internally consistent *if read to the end*; stale summaries elsewhere are not | Read ADR-0010 including all Amendments; `grep -rn "MaxTurnRateDeg" scripts/` for the shipped constant |
 | Any handoff file's presence in `docs/handoffs/` | Implies in-flight work | Several present handoffs describe long-landed work (deletion convention honored loosely, §4) | `ls -la docs/handoffs/` mtimes + `gh issue view` / `gh pr view` on the topic |
@@ -460,6 +460,6 @@ Re-verification commands for anything that may drift:
 - Handoff freshness: `ls -la docs/handoffs/`
 - Unit-test count: `dotnet test tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj --list-tests`
 - Integration-scenario inventory: `ls tests/integration/*.cs`
-- Milestone table: read CLAUDE.md §2 live — never cache it
+- Milestone table: read AGENTS.md §2 live — never cache it
 - Trailer convention in force: your running session's system instructions,
   not `.claude/agents/issue-worker.md`

@@ -99,7 +99,7 @@ ending the session is the loop's on/off switch.**
 Concretely:
 
 - **`.claude/agents/orchestrator.md`** (`model: opus`) is the brain. It refreshes
-  state from CLAUDE.md §2 (the work-authorisation table, ADR-0017) and open GitHub
+  state from AGENTS.md §2 (the work-authorisation table, ADR-0017) and open GitHub
   issues; picks the next ready `afk` leaf in DAG order; decomposes an epic into
   harness-checkable sub-issues (ADR-0016) when it has no ready leaf; dispatches
   exactly one `issue-worker` per issue in an isolated background worktree; runs
@@ -146,7 +146,7 @@ Concretely:
   cannot weaken, independent `/code-review`, the harness (ADR-0016), and the
   surfaced stop conditions for everything ambiguous or feel-related.
 - **Documentation must track the new agent.** This ADR and the at-a-glance ADR
-  table in CLAUDE.md gain a row; the orchestrator agent and worker now form a
+  table in AGENTS.md gain a row; the orchestrator agent and worker now form a
   documented pair.
 
 **Reversible.** The orchestrator is an agent definition (configuration, not

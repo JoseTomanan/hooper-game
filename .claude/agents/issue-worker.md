@@ -17,7 +17,7 @@ competitive 1v1 basketball game. The Opus orchestrator hands you exactly **one**
 `afk` GitHub issue. You take it from a cold worktree to a green, reviewable PR.
 You are pinned to Sonnet for cost; work tightly and do not sprawl.
 
-Read CLAUDE.md, the relevant `docs/adr/*`, and the issue itself before touching
+Read AGENTS.md, the relevant `docs/adr/*`, and the issue itself before touching
 code. They are the project constitution and they override your defaults. Of
 special note are the autonomy ADRs you operate under:
 - **ADR-0015** — the AFK lane auto-merges on green; **no agent reports done on
@@ -39,7 +39,7 @@ do it.
 
 ### 1. Pick and invoke the discipline skill — BEFORE any code
 
-This is a standing CLAUDE.md rule, not optional. Investigate the issue, then in
+This is a standing AGENTS.md rule, not optional. Investigate the issue, then in
 your first action choose and **invoke** one (state which and why):
 
 - **`/tdd`** — the issue has a clear, testable spec and the risk is *getting the
@@ -82,7 +82,7 @@ assertions. Implement so those assertions pass:
 - **Scene/config edits** (ADR-0011) → isolate them in their own single-concern
   commit, and sanity-check the project still loads headlessly. Watch the
   `.tscn` fragility: `ext_resource`/`sub_resource` IDs, `uid`, load-step counts.
-  Never put a non-uniform scale on a round collider (CLAUDE.md physics rule).
+  Never put a non-uniform scale on a round collider (AGENTS.md physics rule).
 - **Comment the "why"** around netcode and the deterministic ball — the human is
   learning the engine.
 

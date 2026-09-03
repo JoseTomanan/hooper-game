@@ -9,7 +9,7 @@
 ## Context
 
 ADR-0011 narrowed the human's role to **feel + in-engine verification**, and
-CLAUDE.md's "Done means proven" makes that in-engine verification the gate that
+AGENTS.md's "Done means proven" makes that in-engine verification the gate that
 closes every `hitl` issue. ADR-0015 now wants to remove the human from the
 per-change path entirely — but it can only do that if *something else* can run
 the game and check that it behaves. That something is this ADR.
@@ -180,6 +180,6 @@ the dual-instance server-authoritative network smoke test) build on this surface
 - **Documentation updated in the accepting commit** (Decision Discipline):
   EDITOR_TASKS.md's preamble is revised to note that state-checkable verification
   has moved to the harness and the human checklist is now feel-only +
-  not-yet-automated residue; CLAUDE.md's ADR table gains this row.
+  not-yet-automated residue; AGENTS.md's ADR table gains this row.
 - **Reversible.** The harness is additive — if it proves untrustworthy, delete the
   job and fall back to human verification without touching game code.

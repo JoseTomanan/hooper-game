@@ -67,7 +67,7 @@ it is verified by live re-run and this section is not.
 
 ## Godot .NET MCP — enabling it on a new checkout (optional, per-machine)
 
-`addons/godot_dotnet_mcp/` ships in the repo (see `CLAUDE.md` §3) but plugin
+`addons/godot_dotnet_mcp/` ships in the repo (see `AGENTS.md` §3) but plugin
 *enablement* is an editor click, not something Claude can do headlessly:
 
 1. Open this project in the Godot .NET editor.

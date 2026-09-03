@@ -85,7 +85,7 @@ project, producing `CS0246` on `[Fact]` (documented in the csproj comment).
 ## 3. The golden inventory
 
 Verified live 2026-07-12. Re-run the commands in "Provenance and maintenance"
-before trusting these numbers — CLAUDE.md and ADR-0016 have both gone stale on
+before trusting these numbers — AGENTS.md and ADR-0016 have both gone stale on
 test counts before ("~250", "459" — actual is 669).
 
 ### Unit tests
@@ -552,5 +552,5 @@ ls tests/integration/*.tscn tests/integration/*Seam.cs
 ```
 
 This skill does not restate ADR text or milestone status — those live in
-`docs/adr/` and CLAUDE.md; read them directly rather than trusting a copy
+`docs/adr/` and AGENTS.md; read them directly rather than trusting a copy
 here.

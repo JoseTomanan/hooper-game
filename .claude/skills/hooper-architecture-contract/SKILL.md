@@ -482,7 +482,7 @@ Each one states what breaks if you violate it.
     scale instead of erroring, and the collider stops matching its mesh.
     Author size on the shape resource (`radius`/`height`), keep node scale
     at `1`. `BoxShape3D` is exempt (independent X/Y/Z extents). Project-wide
-    CLAUDE.md convention, not just a ball rule.
+    AGENTS.md convention, not just a ball rule.
 
 14. **The ball is never frozen at game-over.** See the long rationale
     comment at the top of `BallController._PhysicsProcess`: `RegisterBasket`
@@ -605,7 +605,7 @@ by text-edit as ordinary AFK work. The fragile bits:
 | Headless harness as official verification surface | ADR-0016 |
 | Defensive timing-window model (steal/block/contest) | ADR-0018 |
 
-Read all ADRs at session start before writing engine-facing code (CLAUDE.md
+Read all ADRs at session start before writing engine-facing code (AGENTS.md
 standing rule); this table only maps which one governs which system here.
 
 ---

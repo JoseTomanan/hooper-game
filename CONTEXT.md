@@ -2,7 +2,7 @@
 
 Lookup table of project-specific terms. One entry per term: bold name, one-to-two sentence definition, `see:` pointer to the authoritative source. Not prose — not a design doc.
 
-**Sources:** [CLAUDE.md](CLAUDE.md), [ADR-0001](docs/adr/0001-engine-godot-csharp.md) – [ADR-0008](docs/adr/0008-possession-rules.md).
+**Sources:** [AGENTS.md](AGENTS.md), [ADR-0001](docs/adr/0001-engine-godot-csharp.md) – [ADR-0008](docs/adr/0008-possession-rules.md).
 
 Do not add design reasoning here. If a decision belongs somewhere, it belongs in an ADR.
 
@@ -10,17 +10,17 @@ Do not add design reasoning here. If a decision belongs somewhere, it belongs in
 
 ## Core loop
 
-**Duel** — The fundamental unit of play: a 1v1 contest resolved by footwork, spacing, and commitment reads. The game is built around this interaction, not around basketball simulation. see: [CLAUDE.md §1](CLAUDE.md)
+**Duel** — The fundamental unit of play: a 1v1 contest resolved by footwork, spacing, and commitment reads. The game is built around this interaction, not around basketball simulation. see: [AGENTS.md §1](AGENTS.md)
 
-**Spine / spacing spine** — The load-bearing layer of the duel: footwork and spatial positioning. All other systems (committed moves, timing windows, stamina) live inside this layer, not co-equal with it. see: [CLAUDE.md §1](CLAUDE.md)
+**Spine / spacing spine** — The load-bearing layer of the duel: footwork and spatial positioning. All other systems (committed moves, timing windows, stamina) live inside this layer, not co-equal with it. see: [AGENTS.md §1](AGENTS.md)
 
-**Separation creation vs. denial** — The core 1v1 contest. The ball-handler tries to create space between themselves and the defender; the defender tries to deny it. Every movement and committed-move decision exists in service of this contest. see: [CLAUDE.md §1](CLAUDE.md)
+**Separation creation vs. denial** — The core 1v1 contest. The ball-handler tries to create space between themselves and the defender; the defender tries to deny it. Every movement and committed-move decision exists in service of this contest. see: [AGENTS.md §1](AGENTS.md)
 
-**Commitment / mind-game layer** — The layer on top of the spacing spine: both players read the other's intended move and commit to a response; wrong reads are punished. This layer exists because committed moves cannot be flow-cancelled. see: [CLAUDE.md §1](CLAUDE.md), [ADR-0003](docs/adr/0003-input-model-hybrid.md)
+**Commitment / mind-game layer** — The layer on top of the spacing spine: both players read the other's intended move and commit to a response; wrong reads are punished. This layer exists because committed moves cannot be flow-cancelled. see: [AGENTS.md §1](AGENTS.md), [ADR-0003](docs/adr/0003-input-model-hybrid.md)
 
 **Punish window** — The frames during a committed move's recovery phase where the opponent can act before the committing player regains control. Wrong reads are resolved here. see: [ADR-0003](docs/adr/0003-input-model-hybrid.md)
 
-**Timing windows** — A subordinate system: discrete input windows for shot release, steal, and block. They live inside the spacing spine and are not co-equal with it. see: [CLAUDE.md §1](CLAUDE.md)
+**Timing windows** — A subordinate system: discrete input windows for shot release, steal, and block. They live inside the spacing spine and are not co-equal with it. see: [AGENTS.md §1](AGENTS.md)
 
 **Shot release timing window** — *Historical intent; never built.* The original design imagined an NBA 2K–style green window on shot release. What shipped instead is ADR-0009's deterministic distance-based scatter, with no user-timed release input at all. Whether the game wants a user-timed execution axis is an open identity question, not a settled one. see: [ADR-0009](docs/adr/0009-shot-accuracy-scatter.md), issue #347
 
@@ -28,7 +28,7 @@ Do not add design reasoning here. If a decision belongs somewhere, it belongs in
 
 **Block timing window** — During a shot attempt, the interval during which a block attempt contests or rejects the shot. Same interval-overlap resolution as the steal, and likewise punished only by recovery frames. There are no fouls. see: [ADR-0018](docs/adr/0018-defensive-timing-window-model.md)
 
-**Stamina / resource** — A visible resource bar that degrades from executing committed moves and active defense, modeled on UFC Undisputed 3's stamina system. Depleted stamina slows and weakens committed moves. Subordinate to the spacing spine — it constrains options without replacing the commitment/mind-game layer. see: [CLAUDE.md §1](CLAUDE.md)
+**Stamina / resource** — A visible resource bar that degrades from executing committed moves and active defense, modeled on UFC Undisputed 3's stamina system. Depleted stamina slows and weakens committed moves. Subordinate to the spacing spine — it constrains options without replacing the commitment/mind-game layer. see: [AGENTS.md §1](AGENTS.md)
 
 ---
 
@@ -74,7 +74,7 @@ Do not add design reasoning here. If a decision belongs somewhere, it belongs in
 
 **Flow-cancel** — Prohibited. The ability to cancel a committed move mid-execution by redirecting input (the model of modern "smooth" sports games). Explicitly rejected because it eliminates the punish window and therefore the mind game. see: [ADR-0003](docs/adr/0003-input-model-hybrid.md)
 
-**Clunky-but-readable / legibility** — A competitive requirement, not an aesthetic or a bug. Animation is deliberately clunkier than a "polished" title so startup frames are readable in real time — bounded on both sides: never smoothed to the point of hiding commitment frames (anti-goal: polished sports-game feel), never exaggerated into comedy (Undisputed 3, not Goat Simulator). see: [CLAUDE.md §1](CLAUDE.md), [ADR-0003](docs/adr/0003-input-model-hybrid.md)
+**Clunky-but-readable / legibility** — A competitive requirement, not an aesthetic or a bug. Animation is deliberately clunkier than a "polished" title so startup frames are readable in real time — bounded on both sides: never smoothed to the point of hiding commitment frames (anti-goal: polished sports-game feel), never exaggerated into comedy (Undisputed 3, not Goat Simulator). see: [AGENTS.md §1](AGENTS.md), [ADR-0003](docs/adr/0003-input-model-hybrid.md)
 
 ---
 
@@ -140,9 +140,9 @@ Do not add design reasoning here. If a decision belongs somewhere, it belongs in
 
 ## Engineering conventions
 
-**Decision Discipline / engineering-law enforcement** — The rule that any architectural decision must be captured in a new or updated ADR in the same commit as the code that enacts it. Claude Code must flag — never silently resolve — contradictions with locked ADRs before writing code. see: [CLAUDE.md §3](CLAUDE.md)
+**Decision Discipline / engineering-law enforcement** — The rule that any architectural decision must be captured in a new or updated ADR in the same commit as the code that enacts it. Claude Code must flag — never silently resolve — contradictions with locked ADRs before writing code. see: [AGENTS.md §3](AGENTS.md)
 
-**Locked ADR** — An ADR with `Status: Accepted`. Its decision may not be changed without explicitly revisiting it and updating the status and superseded-by fields. see: [CLAUDE.md §3](CLAUDE.md)
+**Locked ADR** — An ADR with `Status: Accepted`. Its decision may not be changed without explicitly revisiting it and updating the status and superseded-by fields. see: [AGENTS.md §3](AGENTS.md)
 
 **partial class** — Every Godot node script is a C# `partial` class extending a Godot node type (e.g. `public partial class PlayerController : CharacterBody3D`). Mandatory; Godot's source-generator tooling requires it. see: [ADR-0001](docs/adr/0001-engine-godot-csharp.md)
 

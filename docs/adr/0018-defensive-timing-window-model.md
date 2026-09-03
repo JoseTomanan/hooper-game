@@ -28,7 +28,7 @@ The forces:
 
 - **A read, not a roll.** The defensive outcome must be decided by *timing a
   commitment against a visible offensive vulnerability*, never by a hidden
-  percentage. A flat steal% kills the mind game (CLAUDE.md §1) and is the
+  percentage. A flat steal% kills the mind game (AGENTS.md §1) and is the
   arcade anti-goal (ADR-0003).
 - **Symmetry with a reaction tilt.** Offense and defense share the same
   commitment grammar (Startup/Active/Recovery), but defense must be *more*
@@ -211,7 +211,7 @@ proximity must hold.
 
 Why: §1's timing-only rule let a defender **anywhere on the court** block a shot
 on a perfect time read alone, deleting the spacing axis from the shot/block duel
-— directly against the design identity (CLAUDE.md §1, "the duel is the space
+— directly against the design identity (AGENTS.md §1, "the duel is the space
 between two players"). §2's block window already gestured at this intent ("an
 exported ceiling so a block cannot connect with a ball already past the
 defender"), but expressed it purely *temporally* via `blockGraceTicks`; #214
@@ -247,7 +247,7 @@ release window collapsed to the single release tick, since shot scatter is
 computed exactly once) and `ContestMoveFactor` (the `1 + ContestMoveScatterK`
 factor itself) — is now recorded in full in **ADR-0009's own 2026-07-16
 amendment**, since it changes that ADR's `accuracyMultiplier` composition
-formula directly (CLAUDE.md Decision Discipline: a change to a locked ADR's
+formula directly (AGENTS.md Decision Discipline: a change to a locked ADR's
 model is recorded on that ADR, in the same PR as the code). This entry is a
 pointer, not a duplicate — see ADR-0009 for the full reasoning, including why
 contest carries no spatial reach gate (contrast this file's #214 amendment
@@ -275,7 +275,7 @@ values against the handler's next shot — the committed `ContestMove` factor
 (this ADR's own §2/2026-07-16 amendment above) AND the passive proximity
 scatter factor. **The suppressed-factor list is recorded here as a pointer;
 the authoritative composition-model text lives in ADR-0009's own 2026-07-16
-amendment**, per CLAUDE.md Decision Discipline (a change to that ADR's locked
+amendment**, per AGENTS.md Decision Discipline (a change to that ADR's locked
 `accuracyMultiplier` formula is recorded on that ADR, in the same PR as the
 code) — this entry is this ADR's record of the mechanism and the reaction-tilt
 rationale; ADR-0009 is the record of exactly which multiplier terms it zeroes.
@@ -341,7 +341,7 @@ telegraph could tap the shoot button, escape the Dribbling-only check before
 the defender's Active window ever opened, then pump-fake the shot away
 (`CommittedMoveMachine.Feint()`) with zero downside. Mashing the pump-fake
 was a free counter to any steal read on reaction — inverting the mind-game
-this ADR's whole timing-window model exists to create (CLAUDE.md §1).
+this ADR's whole timing-window model exists to create (AGENTS.md §1).
 
 ### The decision: Option A, pump-fake-window variant
 
@@ -657,7 +657,7 @@ turnover after N ticks of sustained close-guarding, independent of any
 defensive committed move — was NOT chosen. It amends **ADR-0008**
 (possession rules), not this ADR, since it is a possession-turnover rule
 rather than a defensive-timing-window one; it also carries a legibility
-obligation (a hidden tick count violates CLAUDE.md §1's "legibility is a
+obligation (a hidden tick count violates AGENTS.md §1's "legibility is a
 competitive requirement," so it would need a pressure-count HUD element —
 a UI sub-task and feel surface this issue's scope did not take on). Route B
 remains a candidate for a FUTURE issue if Route A alone proves insufficient

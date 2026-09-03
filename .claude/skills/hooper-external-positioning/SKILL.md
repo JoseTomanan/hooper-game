@@ -23,7 +23,7 @@ The human has designated three frontier directions for this project
    developer.
 3. **Legible competitive design** — fighting-game frame data applied to a
    basketball 1v1 duel, with legibility as a *competitive requirement*
-   (CLAUDE.md §1), not an aesthetic choice.
+   (AGENTS.md §1), not an aesthetic choice.
 
 ## The governing rule: no claim outruns its proof
 
@@ -186,7 +186,7 @@ What's actually demonstrated:
   startup/recovery too, and whiffs are punishable).
 
 Prior art this must be positioned against:
-- **Fighting games themselves** (Tekken is named in CLAUDE.md §1; Street
+- **Fighting games themselves** (Tekken is named in AGENTS.md §1; Street
   Fighter et al.) are where frame-data-as-legibility originates — credit
   them as the source of the vocabulary; do not present frame data as this
   project's invention.
@@ -205,7 +205,7 @@ mere presence of "frame data" or "timing windows," which exist piecemeal
 elsewhere.
 
 Proof bar before claiming this is "done" or plays well: M10 (defense) is an
-**active, mid-build umbrella epic** (CLAUDE.md §2) — steal and block exist
+**active, mid-build umbrella epic** (AGENTS.md §2) — steal and block exist
 and are harness-tested, but block currently has **no reach/proximity term**
 (deferred to #214; a documented placeholder, not a secret gap), and the
 combined M9+M10 **feel pass (#114) is still open** (confirmed `state: OPEN`
@@ -288,10 +288,10 @@ clone plus documented commands.** Concretely:
   oversell; "we built and locally-verified a server-authoritative netcode
   architecture; cross-machine play is an open verification item (#32)" is
   honest.
-- **Design-identity and roadmap statements must match CLAUDE.md §1/§2 in
+- **Design-identity and roadmap statements must match AGENTS.md §1/§2 in
   spirit.** If an external doc describes what the game *is* (spine,
   commitment layer, legibility, anti-goals) or where the roadmap stands
-  (milestone table), cross-check against CLAUDE.md's current wording before
+  (milestone table), cross-check against AGENTS.md's current wording before
   publishing. Calling a DEFERRED milestone "in progress," or describing a
   mechanic §1 lists as an anti-goal as a feature, is a positioning bug, not
   a stylistic choice.
@@ -372,6 +372,6 @@ Re-verify before reuse if any of these may have drifted:
 - `dotnet test "tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj" --configuration Debug`
   — re-run before citing a test count; never reuse a stale number.
 - `ls docs/adr/*.md | wc -l` — confirm the ADR count (20) before repeating it.
-- Re-read CLAUDE.md §1/§2 before publishing anything restating design
+- Re-read AGENTS.md §1/§2 before publishing anything restating design
   identity or milestone status — both change more often than this skill
   will be re-verified.

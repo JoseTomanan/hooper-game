@@ -125,7 +125,7 @@ every in-flight tick) snaps them to the server's arc within ~1 RTT.
 - **Flat random miss chance** (coin flip: either a perfect make or a complete
   miss).  Rejected: it has no notion of distance, so a long shot and a layup are
   equally risky.  That removes shot-selection depth, which the spacing/commitment
-  duel (CLAUDE.md §1) depends on.
+  duel (AGENTS.md §1) depends on.
 - **Proximity / defender pressure scatter** (issue #65).  Not rejected — deferred
   at #62 time; implemented in the amendment below.
 - **Engine randomness (`GD.Randf`, `RandomNumberGenerator`).**  Rejected on
@@ -345,7 +345,7 @@ committed contest whose Active overlaps the shot's release window applies an
 additional, discrete accuracy penalty on top of the passive distance/contest
 scatter... getting that composition right (no double-counting) is the
 contest issue's explicit job." #99 is that job; this amendment records the
-composition it actually implements, per CLAUDE.md Decision Discipline (a
+composition it actually implements, per AGENTS.md Decision Discipline (a
 change to this ADR's locked accuracy model must be recorded here in the same
 PR as the code, not just referenced from ADR-0018).
 
@@ -457,7 +457,7 @@ This is the ADR-0009 half of the #100 pointer pair described in ADR-0018's own
 MECHANISM (the `BeatenWindow` struct, the reusable
 `PlayerController.TriggerBeatenWindow`/`JustWhiffedDefensiveMove` API, and the
 reaction-tilt rationale); this entry records exactly which terms of THIS
-ADR's locked composition formula the mechanism zeroes and why, per CLAUDE.md
+ADR's locked composition formula the mechanism zeroes and why, per AGENTS.md
 Decision Discipline (a change to this ADR's model is recorded here, in the
 same PR as the code, not only referenced from the sibling ADR).
 

@@ -21,7 +21,7 @@ number in a stale checkout.
 ## 1. The design identity (read this first — it is the supreme tier)
 
 One sentence, locked, do not relitigate without being explicitly asked
-(CLAUDE.md §1): **the duel is the space between two players and who breaks
+(AGENTS.md §1): **the duel is the space between two players and who breaks
 first.** Deliberately NOT arcade like NBA 2K. Closer in spirit to a fighting
 game (Tekken) crossed with the competitive legibility of *UFC Undisputed 3*.
 
@@ -162,7 +162,7 @@ feint) is unaffected: no ball-committed-to-the-floor problem exists there.
 
 ### Reaction-tilt, made concrete (ADR-0018 §3)
 
-"Defense gets a deliberate asymmetric tilt toward reaction" (CLAUDE.md §1) is
+"Defense gets a deliberate asymmetric tilt toward reaction" (AGENTS.md §1) is
 implemented purely as `MoveFrameData` shape, not a separate system:
 
 - A defensive move's **Active is no wider than the offensive vulnerable
@@ -179,7 +179,7 @@ implemented purely as `MoveFrameData` shape, not a separate system:
 If you are asked to make a defensive move "feel stronger" by widening its
 Active window without a matching Recovery/vulnerable-window justification,
 that is drifting away from this tilt — flag it, don't silently comply
-(CLAUDE.md Decision Discipline).
+(AGENTS.md Decision Discipline).
 
 ---
 
@@ -306,7 +306,7 @@ roll was explicitly rejected (ADR-0018 "Rejected alternatives" — "a hidden
 RNG outcome is not a read, removes the mind game, and is the arcade
 anti-goal"). This is structural, not incidental: if you are ever asked to
 add a percentage-chance modifier to steal/block success, that is a tier-1
-identity contradiction (CLAUDE.md Decision Discipline STOP), not a balance
+identity contradiction (AGENTS.md Decision Discipline STOP), not a balance
 tweak — flag it before writing code. (Shot ACCURACY, by contrast, IS
 randomized — §5 — because a shot resolves the offense's own execution
 against fixed court geometry, not a defender's timed read against a
@@ -437,7 +437,7 @@ under a new name — flag it, don't implement.
 Strict lexical order — a higher tier ALWAYS wins, no balancing:
 
 1. **Locked design identity + ADRs.** Supreme. A request contradicting a
-   locked ADR is a STOP-and-flag (CLAUDE.md Decision Discipline), never a
+   locked ADR is a STOP-and-flag (AGENTS.md Decision Discipline), never a
    "tier-1 vote" to weigh.
 2. **Real half-court 1v1 basketball.** Physical truth + pickup-rules anchor
    (make-it-take-it, winner's-outs, check-ball, clear-it). Scoped to
@@ -505,8 +505,8 @@ the CONTEXT.md prose.
 
 | Term | Meaning in THIS project | Source |
 |---|---|---|
-| **Duel** | The 1v1 fundamental unit resolved by footwork, spacing, and commitment reads. | CLAUDE.md §1 |
-| **Spine / spacing spine** | Footwork+spacing; load-bearing; everything else lives inside it. | CLAUDE.md §1 |
+| **Duel** | The 1v1 fundamental unit resolved by footwork, spacing, and commitment reads. | AGENTS.md §1 |
+| **Spine / spacing spine** | Footwork+spacing; load-bearing; everything else lives inside it. | AGENTS.md §1 |
 | **Cradle** | The shooting gather — picking the ball up off the dribble into the shot. NOT a separate `CommittedMove` or discrete input; it is a side effect of `JumpShot`'s `Begin()` (`CradleForShotStartup` → `StopDribble()`). Modeling it as its own move was explicitly rejected ("the gather is inherent to the shooting motion" — real ball and 2K agree). | ADR-0008 Amendment 2026-07-05 |
 | **Dead dribble** | Post-cradle state: `HasDribbled=true`; `StartDribble()` and every dribble-family move refused until the next possession change. Real-ball "can't dribble again once you've picked it up" — WITHOUT the accompanying travel/5-second enforcement (explicitly out of scope; see #206). | ADR-0008 Amendment 2026-07-05 |
 | **Exit cone** | The half-angle the left-stick exit vector is clamped within at Active-entry, relative to the player's forward axis: 50° default for BehindTheBack, effectively unclamped (~180°) for Crossover. The SOLE mechanism for "fewer follow-ups" (#194) — a longer Recovery and a 2K-style cooldown were both explicitly rejected. `CrossoverBurstMath.ComposeActiveVelocity`'s `maxExitAngleRadians` parameter. | ADR-0003 #194 amendment |

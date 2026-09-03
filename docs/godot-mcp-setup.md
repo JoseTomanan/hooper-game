@@ -5,7 +5,7 @@ editor process*, so a Claude Code session can read live editor/scene/runtime sta
 (selected node, output, diagnostics) that a filesystem snapshot can't see.
 
 It is only useful while the editor is open, which is why these steps live here
-rather than in `CLAUDE.md` — you need them once per machine, not once per session.
+rather than in `AGENTS.md` — you need them once per machine, not once per session.
 
 ## Steps
 
@@ -33,7 +33,7 @@ rather than in `CLAUDE.md` — you need them once per machine, not once per sess
   `~/.claude.json`, independent of the `$GODOT` your shell uses. If versions look
   wrong, check `mcp__godot__get_godot_version` first; reconnecting is a human
   action.
-- Per `CLAUDE.md` §4: this is a third-party plugin whose author states its code is
+- Per `AGENTS.md` §4: this is a third-party plugin whose author states its code is
   100% AI-generated, and it gets write access to scenes and scripts through the
   live editor. Don't run editor-mutating MCP tool calls with uncommitted work you
   would hate to lose.

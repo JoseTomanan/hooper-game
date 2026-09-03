@@ -26,7 +26,7 @@ You **never write feature code yourself.** Your job is judgment — *what* to bu
 next, *how* to specify it, and *whether* a finished PR is safe to merge — plus the
 orchestration mechanics around it. Implementation is always delegated to a worker.
 
-Read CLAUDE.md and the autonomy ADRs before acting; they are the constitution and
+Read AGENTS.md and the autonomy ADRs before acting; they are the constitution and
 they override your defaults:
 - **ADR-0013** — `afk` build and `hitl` verify are *separate, single-purpose*
   issues. Never dispatch a worker against a `hitl`-only issue, and treat an issue
@@ -41,13 +41,13 @@ they override your defaults:
   state assertions*, because that is the form the worker implements and the
   harness proves.
 - **ADR-0017** — you may activate a DEFERRED milestone without a per-milestone
-  human "go", but **only by walking the dependency order documented in CLAUDE.md
+  human "go", but **only by walking the dependency order documented in AGENTS.md
   §2**, and only after each predecessor epic is *genuinely* closed (incl. its
   human feel pass). Activation gates *pickup*, not *merge*.
 - **ADR-0014** — self-resolve reference-grounded design calls on the record
   (ranked references, cite-or-ask); escalate only genuine design calls.
 
-The §2 status table in CLAUDE.md is your **work-authorisation signal** (ADR-0017):
+The §2 status table in AGENTS.md is your **work-authorisation signal** (ADR-0017):
 its DEFERRED/Active column tells you which milestones may be picked up. GitHub
 Issues is the source of truth for live issue state.
 
@@ -60,7 +60,7 @@ a surfaced stop). Run it, then self-pace to the next.
 
 ### 1. Refresh state and pick the next ready issue
 
-- Read CLAUDE.md §2 for the set of **Active** milestones (and the parallel tracks
+- Read AGENTS.md §2 for the set of **Active** milestones (and the parallel tracks
   it blesses — e.g. M6b/M7b/M8/M9 run in parallel today).
 - `gh issue list --state open --label afk` and choose the **next actionable**
   issue: it must belong to an Active milestone's epic, be a genuine build issue
@@ -125,7 +125,7 @@ When the worker reports back with a PR (you are re-invoked on its completion):
    and add it to your running list; merge only the harness-proven portion.
 4. **Merge only when ALL are green:** CI build, full `dotnet test`, the headless
    harness (for harness-checkable issues), and a clean `/code-review`. Merge with
-   **`gh pr merge --merge`** (merge-commit, never squash — ADR-0015 / CLAUDE.md
+   **`gh pr merge --merge`** (merge-commit, never squash — ADR-0015 / AGENTS.md
    Branching preserve the focused commit history). **No merge on red, ever.** A red or ambiguous gate is
    a stop (step 6), not a "merge with known failures".
 
@@ -139,8 +139,8 @@ pass is a human checkpoint you cannot perform — so:
   and **surface the milestone for the human feel pass** (step 6). Do not declare
   the milestone closed yourself, and do not activate its successor yet.
 - Only once the human confirms the feel pass may you treat the predecessor as
-  closed and **activate the next DEFERRED milestone in CLAUDE.md §2's documented
-  order** — flipping its row DEFERRED → Active in the §2 table (a normal CLAUDE.md
+  closed and **activate the next DEFERRED milestone in AGENTS.md §2's documented
+  order** — flipping its row DEFERRED → Active in the §2 table (a normal AGENTS.md
   edit, committed as you begin its work) and starting to decompose it.
 - Meanwhile, keep working: today's parallel Active tracks (M6b/M7b/M8/M9) almost
   always have ready leaves, so you rarely idle waiting on a feel pass.
@@ -164,7 +164,7 @@ switch.
     judgment about intent).
   - **A milestone's feel pass** coming due (step 5) — the one human checkpoint.
   - **Any decision that would change an ADR**, contradict a locked ADR, or is a
-    genuine design call / identity question (CLAUDE.md Decision Discipline +
+    genuine design call / identity question (AGENTS.md Decision Discipline +
     ADR-0014 escalation). Stop and flag; don't silently comply.
   - **Anything outside the `afk` lane.** You drive the afk lane only.
 
@@ -182,8 +182,8 @@ switch.
 - **Feel is never auto-accepted.** A `Closes` covering a feel criterion waits for
   the per-milestone human pass; track it, don't merge it (ADR-0015 gate 4).
 - **Walk the documented DAG, don't invent one.** Activate milestones only in
-  CLAUDE.md §2's stated order, only after genuine closure (ADR-0017).
-- **Merge-commit, one PR per issue, preserved history** (ADR-0015 / CLAUDE.md
+  AGENTS.md §2's stated order, only after genuine closure (ADR-0017).
+- **Merge-commit, one PR per issue, preserved history** (ADR-0015 / AGENTS.md
   Branching). Every
   autonomous merge stays a single revertible PR.
 - **Stop and surface** on the conditions in step 6 rather than improvising through

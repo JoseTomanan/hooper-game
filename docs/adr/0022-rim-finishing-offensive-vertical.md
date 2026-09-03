@@ -17,7 +17,7 @@ M10's contest/block interaction, which itself only resolves against
 `JumpShot` today.
 
 Building the euro-step directly against that missing prerequisite would be an
-arcade-decoupling anti-goal in miniature (CLAUDE.md §1): footwork whose
+arcade-decoupling anti-goal in miniature (AGENTS.md §1): footwork whose
 purpose (dodging a block) has nothing concrete to dodge *toward*, so the
 "read" it creates is hollow. Issue #203 was therefore un-deferred as an
 **umbrella epic** on 2026-07-17, and re-scoped to build the prerequisite
@@ -39,7 +39,7 @@ or an amendment to ADR-0009 (shot accuracy) — the decision belongs in.
 
 ### Why this needed a Decision Discipline call at all
 
-Two things are new here that CLAUDE.md's milestone table and ADR-0009 do not
+Two things are new here that AGENTS.md's milestone table and ADR-0009 do not
 currently describe:
 
 - A **second shot type** (`layup`, distinct from `JumpShot`) now exists as a
@@ -51,7 +51,7 @@ currently describe:
   committed-move family the way #194/#198 named "the burst family" for
   dribble moves.
 
-Per CLAUDE.md's Decision Discipline, this is recorded rather than left
+Per AGENTS.md's Decision Discipline, this is recorded rather than left
 implicit in the milestone table alone.
 
 ## Decision
@@ -137,7 +137,7 @@ rim-finishing vertical's shape, for #229/#230/#231 to build against:
   Recovery or a cooldown) is the Undisputed-3-modeled legibility pattern the
   euro-step inherits directly from BehindTheBack's own citation.
 
-### CLAUDE.md §2 update (same commit)
+### AGENTS.md §2 update (same commit)
 
 The M9 milestone summary and status table are updated in this ADR's sibling
 docs commit to list the rim-finishing chain (#203 umbrella: #229 → #230 →

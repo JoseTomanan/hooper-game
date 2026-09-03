@@ -2,7 +2,7 @@
 
 Issues and PRDs for this repo live as **GitHub issues** on
 `JoseTomanan/hooper-game`. GitHub Issues is the sole task tracker (TASKS.md no
-longer exists — see CLAUDE.md §3). Use the `gh` CLI for all operations.
+longer exists — see AGENTS.md §3). Use the `gh` CLI for all operations.
 
 ## Conventions
 
@@ -17,7 +17,7 @@ Infer the repo from `git remote -v` — `gh` does this automatically when run in
 
 ## Repo-specific rules that bind these skills
 
-These come from CLAUDE.md §3 and the ADRs; the engineering skills must honour them:
+These come from AGENTS.md §3 and the ADRs; the engineering skills must honour them:
 
 - **`afk` vs `hitl` issues are single-purpose** ([ADR-0013](../adr/0013-afk-hitl-separate-issues.md)).
   An issue is *either* an `afk` build issue (closes on merge) *or* a `hitl`

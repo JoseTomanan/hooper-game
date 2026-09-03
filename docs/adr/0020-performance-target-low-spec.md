@@ -24,7 +24,7 @@ On 2026-07-16 the human, in-session, supplied the missing number as an
 mid-spec devices (think NBA 2K14 old gen)." This is not a design preference
 being made now — it is a pre-existing constraint (whatever hardware the human
 is actually targeting for distribution) being disclosed and recorded so the
-autopilot can stop guessing. Per CLAUDE.md's Decision Discipline, an external
+autopilot can stop guessing. Per AGENTS.md's Decision Discipline, an external
 commitment that amends a locked ADR (here, sharpening ADR-0006's soft "low-spec"
 direction into a hard ceiling) must be written down as its own ADR rather than
 silently absorbed into asset-sourcing choices.
@@ -41,7 +41,7 @@ silently absorbed into asset-sourcing choices.
    tens of thousands of polys, texture atlases in the hundreds-of-KB-to-low-MB
    range, baked lighting, no dynamic global illumination) that an agent can
    target without needing to profile the human's actual hardware.
-3. **Solo AI-driven dev with no dedicated technical artist** (CLAUDE.md §1) means
+3. **Solo AI-driven dev with no dedicated technical artist** (AGENTS.md §1) means
    asset-sourcing decisions (e.g. #170's realistic player rig) get made by an
    agent picking from public asset packs. A fidelity ceiling changes which packs
    are even candidates — e.g. it rules out scan-based photogrammetry rigs
@@ -53,7 +53,7 @@ silently absorbed into asset-sourcing choices.
    off the roadmap. This ADR is a *standing content/perf constraint* on ongoing
    work (M8b asset realism, M9/M10 features), not a reopening of that milestone
    or a resurrection of its acceptance criteria.
-5. **The design identity already prizes legibility over fidelity** (CLAUDE.md
+5. **The design identity already prizes legibility over fidelity** (AGENTS.md
    §1: "Legibility is a competitive requirement, not an aesthetic … committed
    moves must engage the whole body … Bounded — primary anti-goal: arcade
    decoupling"). A low-poly, low-texture-budget target is not in tension with

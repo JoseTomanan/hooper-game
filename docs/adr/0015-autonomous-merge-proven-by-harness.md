@@ -9,7 +9,7 @@
 
 ## Context
 
-CLAUDE.md §3 has two human-gated rules that, together, make a human the
+AGENTS.md §3 has two human-gated rules that, together, make a human the
 throughput bottleneck for *every* unit of work:
 
 > **"The human owns merges**, as they own commits: open the PR with `gh`, but let
@@ -28,7 +28,7 @@ an `afk` issue from dispatch to merged-on-`main` with no human in the critical
 path, and the `hitl`-verification gate should be satisfied by an automated
 *harness* rather than a person watching the editor. This is a deliberate trade of
 human oversight-per-change for throughput, made with eyes open and recorded here
-because it changes two locked rules (Decision Discipline, CLAUDE.md §4).
+because it changes two locked rules (Decision Discipline, AGENTS.md §4).
 
 This ADR is the **governance** half of that change. The **mechanism** that makes
 it safe — an actual headless Godot harness that can assert engine behaviour, not
@@ -109,7 +109,7 @@ Concretely:
   look right" — is collected into **one human feel-acceptance pass per
   milestone**, not per issue. Feel values ship as research-backed defaults with
   cited rationale (source-driven-development) and the autopilot proceeds on them;
-  the human pass is a backstop against arcade-decoupling (CLAUDE.md's primary
+  the human pass is a backstop against arcade-decoupling (AGENTS.md's primary
   anti-goal) creeping in unseen, not a per-change gate.
 
 **Non-bypassable gates (mandatory; autonomy is conditional on them):**
@@ -151,7 +151,7 @@ Concretely:
   veto moves up to (a) the per-milestone feel pass and (b) the always-available
   `git revert`. Recorded plainly so it is a chosen trade, not a drift.
 - **Documentation must be updated in the accepting commit** (Decision Discipline):
-  CLAUDE.md §3's "human owns merges" and "Done means proven" paragraphs are
+  AGENTS.md §3's "human owns merges" and "Done means proven" paragraphs are
   amended to point here, and the at-a-glance ADR table gains this row.
 - **Reversible.** If autonomous merge produces too many bad landings, revert to
   alternative 2 or to full human merge without unwinding any code — the pipeline

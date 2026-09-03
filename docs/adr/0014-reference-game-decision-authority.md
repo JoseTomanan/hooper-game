@@ -18,7 +18,7 @@ question where they wanted an answer.
 
 The project already names its references — scattered, not consolidated:
 
-- CLAUDE.md's design identity: *"deliberately NOT arcade like NBA 2K,"* target
+- AGENTS.md's design identity: *"deliberately NOT arcade like NBA 2K,"* target
   feel *Undisputed 3*, primary anti-goal *arcade decoupling (EA UFC 5)*.
 - [ADR-0003](0003-input-model-hybrid.md) carries a formal **Reference axis**
   (Target: *UFC Undisputed 3*; anti-targets: *EA UFC 5*, *Goat Simulator*) and
@@ -74,7 +74,7 @@ to the human.**
 
 1. **Locked design identity + ADRs.** The spacing/commitment spine, the anti-goals,
    and anything in `docs/adr/`. Supreme — no reference overrides these. (A request
-   that contradicts a locked ADR is still a STOP-and-flag, per CLAUDE.md Decision
+   that contradicts a locked ADR is still a STOP-and-flag, per AGENTS.md Decision
    Discipline; this ADR does not loosen that.)
 2. **Real half-court 1v1 basketball.** The physical-truth and rules anchor — what
    is bodily honest (feet plant; a dribble cannot be recalled off the floor) and

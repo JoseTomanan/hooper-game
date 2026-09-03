@@ -205,7 +205,7 @@ vulnerable interval of a static Held ball *is*. Candidates to grill:
     frames heavily exposed) is also on the menu.
 ADR to amend: **ADR-0018** (new §2 vulnerable window; keep the amendment
 convention — dated `## Amendment`, in the **same commit** as the code, per
-CLAUDE.md's Decision Discipline). Invariants
+AGENTS.md's Decision Discipline). Invariants
 touched: server-only mutation (resolution stays inside the `IsServer` block
 of `_PhysicsProcess`), no hidden RNG on defensive outcomes (window must be
 a pure function of authoritative state: `Heading`, `HandSide`, positions,
@@ -223,7 +223,7 @@ while ball is Held), and a turnover consequence (route through
 `AwardPossession(defenderPeerId, ...)` — the single possession-mutation
 entry point — NOT a bespoke `GoLoose` path). Simplest to build and prove;
 but it adds a **legibility obligation**: a hidden count violates the
-"legibility is a competitive requirement" identity (CLAUDE.md §1), so it
+"legibility is a competitive requirement" identity (AGENTS.md §1), so it
 carries a timer/pressure HUD element — a UI sub-task and a small feel
 surface. Also note it punishes *stalling* but does nothing about the
 *pump-fake race* (problem 1). ADR to amend: **ADR-0008** (possession
@@ -458,7 +458,7 @@ turnover latched at an exact tick.
 ## Provenance and maintenance
 
 Authored 2026-07-15; reviewed and corrected same day (Decision Discipline
-wording tightened from "same PR" to "same commit" to match CLAUDE.md).
+wording tightened from "same PR" to "same commit" to match AGENTS.md).
 Verified
 against: issue #206 body (`gh issue view 206`); ADR-0018 full text incl.
 the 2026-07-01 amendment; live code on main at `3085ee1` —
