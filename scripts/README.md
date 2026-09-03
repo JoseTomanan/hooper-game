@@ -24,7 +24,7 @@ Subfolders, by responsibility:
 - **Systems/** — cross-cutting systems: stamina/resource, scoring/win condition,
   timing windows, and later the server browser / discovery. Built last.
 
-See ../CLAUDE.md for design identity, current milestone, and repo conventions.
+See ../AGENTS.md for design identity, current milestone, and repo conventions.
 Read all ADRs in ../docs/adr/ before writing engine-facing code — they record
 the locked decisions on engine, networking, input, ball physics, and community
 model.

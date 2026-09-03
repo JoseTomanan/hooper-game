@@ -153,7 +153,7 @@ public static class DefensiveResolution
     /// timing-only — it says nothing about WHERE the defender is, which let a
     /// defender anywhere on the court "block" a shot on timing alone (a
     /// spatially unconditioned block deletes the spacing axis from the
-    /// shot/block duel, CLAUDE.md §1). This predicate is the missing spatial
+    /// shot/block duel, AGENTS.md §1). This predicate is the missing spatial
     /// axis; <see cref="BallController"/>.ResolveBlockAttempts (the sole
     /// caller) composes it with <see cref="Succeeds"/> — BOTH must hold for a
     /// block to connect, neither replaces the other.
@@ -240,7 +240,7 @@ public static class DefensiveResolution
     /// ResolveStealAttempts early-returned unless the ball was Dribbling) —
     /// which let a holder mash JumpShot's pump-fake to dodge any steal read
     /// on reaction, inverting the mind-game the timing-window model exists to
-    /// create (CLAUDE.md §1). This predicate composes the SAME shared overlap
+    /// create (AGENTS.md §1). This predicate composes the SAME shared overlap
     /// primitive (<see cref="Succeeds"/>) block already uses: a Held steal
     /// connects iff the defender's StealMove Active window overlaps the
     /// holder's JumpShot Startup-or-feint-Recovery vulnerable window (both

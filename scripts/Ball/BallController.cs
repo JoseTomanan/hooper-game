@@ -638,7 +638,7 @@ public partial class BallController : Node3D
 	///
 	/// Without this gate, a defender anywhere on the court could "block" a
 	/// shot purely on timing, deleting the spacing axis from the shot/block
-	/// duel (CLAUDE.md §1 — "the duel is the space between two players").
+	/// duel (AGENTS.md §1 — "the duel is the space between two players").
 	///
 	/// Default 2.2 m reuses <see cref="ContestRange"/>'s own already-cited
 	/// ADR-0014 real-ball anchor ("roughly an arm's-length closeout", issue
@@ -1344,7 +1344,7 @@ public partial class BallController : Node3D
 
 		// (Doubt cycle 1, finding #6/#9) Players is unassigned → HolderPosition()
 		// would silently fall back to world origin every tick with no diagnostic,
-		// which is exactly the kind of failure CLAUDE.md asks us to surface loudly
+		// which is exactly the kind of failure AGENTS.md asks us to surface loudly
 		// rather than let a non-game-dev human chase a silently teleporting ball.
 		// Must be wired to the SAME spawn-root node as NetworkManager.Players —
 		// the peer-ID-as-name identity contract only holds if both point at it.
@@ -2244,7 +2244,7 @@ public partial class BallController : Node3D
 
 			// Spatial gate (issue #214): timing alone let a defender anywhere
 			// on the court "block" a shot, deleting the spacing axis from the
-			// shot/block duel (CLAUDE.md §1). Composed with — not a
+			// shot/block duel (AGENTS.md §1). Composed with — not a
 			// replacement for — the timing check: BOTH must hold. GlobalPosition
 			// here is the ball's position as of the end of the PREVIOUS
 			// TickInFlight (this method runs before the state switch, see the
@@ -2955,7 +2955,7 @@ public partial class BallController : Node3D
 			// because generalizing the edge selection removed the old "Catch fails
 			// loudly when called in Held/Dribbling" guard: should a future state be
 			// added (or an edge guard tightened) and leave a hole, this surfaces it
-			// loudly per CLAUDE.md's loud-failure rule instead of silently dropping
+			// loudly per AGENTS.md's loud-failure rule instead of silently dropping
 			// the award. Reconciliation is unaffected: ReconcileFromServer runs at
 			// the TOP of _PhysicsProcess, before the state switch, so the
 			// dispatching tick state is authoritative.

@@ -234,7 +234,7 @@ public partial class PlayerController : CharacterBody3D
 	/// Forward speed of the crossover's Active-phase burst (m/s) — the exit
 	/// vector's forward-aligned component (#198). Matches BurstSpeed by
 	/// default for a symmetric feel; both are bare feel defaults deferred to
-	/// the per-milestone human pass (ADR-0015/CLAUDE.md), not signed off here.
+	/// the per-milestone human pass (ADR-0015/AGENTS.md), not signed off here.
 	/// </summary>
 	[Export] public float ForwardBurstScale { get; set; } = 9.0f;
 
@@ -269,7 +269,7 @@ public partial class PlayerController : CharacterBody3D
 	/// Lateral speed of BehindTheBack's Active-phase burst (m/s). Lower than
 	/// Crossover's BurstSpeed (9) — "less explosive" per the spec. Bare feel
 	/// default (33% below Crossover's), deferred to the per-milestone human
-	/// pass like every other burst-family tunable (ADR-0015/CLAUDE.md).
+	/// pass like every other burst-family tunable (ADR-0015/AGENTS.md).
 	/// </summary>
 	[Export] public float BehindTheBackBurstSpeed { get; set; } = 6.0f;
 
@@ -315,7 +315,7 @@ public partial class PlayerController : CharacterBody3D
 	/// Backward speed of the retreat dribble's Active-phase hop (m/s).
 	/// Deliberately modest — "a light, hesi-shaped move" per the spec, not a
 	/// separation burst on the order of Crossover's BurstSpeed. Bare feel
-	/// default, deferred to the per-milestone human pass (ADR-0015/CLAUDE.md).
+	/// default, deferred to the per-milestone human pass (ADR-0015/AGENTS.md).
 	/// </summary>
 	[Export] public float RetreatDribbleBurstSpeed { get; set; } = 4.0f;
 
@@ -353,7 +353,7 @@ public partial class PlayerController : CharacterBody3D
 	/// BehindTheBackBurstSpeed (6) — "between Crossover (highest) and
 	/// behind-the-back (lowest)" per the spec. Bare feel default, deferred to
 	/// the per-milestone human pass like every other burst-family tunable
-	/// (ADR-0015/CLAUDE.md).
+	/// (ADR-0015/AGENTS.md).
 	/// </summary>
 	[Export] public float BetweenTheLegsBurstSpeed { get; set; } = 7.5f;
 
@@ -471,7 +471,7 @@ public partial class PlayerController : CharacterBody3D
 	/// Default sits within that established 40-55 range: a drive-gather's
 	/// plant is a comparably fast commit, not a slower or harder one. Bare
 	/// feel default, deferred to the per-milestone human pass like every
-	/// other burst-family tunable (ADR-0015/CLAUDE.md).
+	/// other burst-family tunable (ADR-0015/AGENTS.md).
 	/// </summary>
 	[Export] public float DriveGatherDecel { get; set; } = 45.0f;
 

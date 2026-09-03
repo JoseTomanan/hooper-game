@@ -323,7 +323,7 @@ jobs:
       # default 2.2m, XZ-only) in addition to the pre-existing timing overlap
       # — a spatially unconditioned block let a defender anywhere on the
       # court "block" a shot, deleting the spacing axis from the shot/block
-      # duel (CLAUDE.md §1). 'out-of-range' reuses 'success''s EXACT
+      # duel (AGENTS.md §1). 'out-of-range' reuses 'success''s EXACT
       # perfect-timing placement (ComputeDefenderBeginFrame's default branch)
       # but positions the defender ~6m from the shooter — outside the default
       # radius — so a whiff here can only be explained by the reach gate,

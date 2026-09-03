@@ -336,7 +336,7 @@ DRIVE_KNEE_LAT_MAX_M = 0.12
 # band above is a static check and would happily pass a knee that crosses the
 # body every other frame. The pre-fix pose snapped 0.256 m between frames 10 and
 # 11 -- a full knee-width in 1/60 s, which reads as a glitch rather than a
-# motion, and legibility is a competitive requirement here (CLAUDE.md section 1),
+# motion, and legibility is a competitive requirement here (AGENTS.md section 1),
 # not a polish item.
 #
 # Measured: 0.0258 m post-fix (frames 7->8, the drive knee's fastest genuine

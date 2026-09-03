@@ -78,7 +78,7 @@ public class MovementMathTests
         // accelerating from 0 toward 6 covers 3 m/s of distance (accel=30);
         // decelerating from 6 toward 0 covers 4.5 m/s of distance (decel=45).
         // Pinning decel's larger distance is what makes a stop read as a
-        // deliberate change of pace rather than drift (CLAUDE.md §1, ADR-0003).
+        // deliberate change of pace rather than drift (AGENTS.md §1, ADR-0003).
         Vector3 accelerating = MovementMath.ComputeVelocity(
             current: Vector3.Zero, wishDir: new Vector3(1, 0, 0), delta: 0.1,
             moveSpeed: 6f, accel: 30f, decel: 45f);
