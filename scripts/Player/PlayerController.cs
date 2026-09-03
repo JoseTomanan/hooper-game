@@ -2921,6 +2921,12 @@ public partial class PlayerController : CharacterBody3D
 	/// </summary>
 	private void TickReboundGrabLatch()
 	{
+		// An edge must consume its first display tick before the latch counts
+		// down. _PhysicsProcess applies this latch immediately before
+		// ApplyAnimation(), so decrementing on the same tick as arming would make
+		// a 30-tick latch visibly last only 29 ticks and cut its fitted one-shot
+		// one physics frame early.
+		bool armedThisTick = false;
 		BallController ball = GetBall();
 		if (ball != null)
 		{
@@ -2928,7 +2934,10 @@ public partial class PlayerController : CharacterBody3D
 			bool becameHolder = curHolder == OwnPeerId && _prevObservedHolderPeerId != OwnPeerId;
 
 			if (becameHolder && _prevObservedBallState == BallState.Loose && !ball.IsCleared)
+			{
 				_reboundGrabTicksRemaining = ReboundGrabDisplayTicks;
+				armedThisTick = true;
+			}
 
 			_prevObservedBallState = ball.State;
 			_prevObservedHolderPeerId = curHolder;
@@ -2943,7 +2952,7 @@ public partial class PlayerController : CharacterBody3D
 		if (DisplayMove().phase != MovePhase.Inactive)
 			_reboundGrabTicksRemaining = 0;
 
-		if (_reboundGrabTicksRemaining > 0)
+		if (!armedThisTick && _reboundGrabTicksRemaining > 0)
 			_reboundGrabTicksRemaining--;
 	}
 
