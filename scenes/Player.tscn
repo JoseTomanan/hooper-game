@@ -30,7 +30,7 @@ shading_mode = 0
 albedo_color = Color(1, 0.15, 0.1, 1)
 
 [sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_mdl7e"]
-animation = &"locomotion/run"
+animation = &"locomotion/genericactive"
 
 [sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_bb281acl"]
 animation = &"locomotion/behindthebackactiveleft"
@@ -225,7 +225,7 @@ animation = &"locomotion/pivot"
 animation = &"locomotion/catch"
 
 [sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_cw2d6"]
-animation = &"locomotion/idle"
+animation = &"locomotion/genericrecovery"
 
 [sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_rd305ac"]
 animation = &"locomotion/retreatdribbleactive"
@@ -246,7 +246,7 @@ animation = &"locomotion/spinrecovery"
 animation = &"locomotion/spinstartup"
 
 [sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_khinc"]
-animation = &"locomotion/idle"
+animation = &"locomotion/genericstartup"
 
 [sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_st282acl"]
 animation = &"locomotion/stealactiveleft"
