@@ -556,11 +556,12 @@ public partial class JumpshotAnimTest : Node
         // read Startup's airborne +0.18. Both phases therefore drop their first
         // observed tick, or the gate measures the phase BEFORE the one it names.
         //
-        // Startup has 18 ticks and Active 4, so dropping one leaves 17 and 3 —
-        // ample in both cases. If a future retune shortens Active to 1 tick this
-        // stops being viable and the scenario should fail loudly rather than
-        // silently measure nothing, which is what _activeTicksObserved > 0 in the
-        // verdict is for.
+        // Current headless measurement sees 17 observed Startup ticks and 4
+        // observed Active ticks. Dropping the pose-lagged sample leaves 16 and 3
+        // geometry samples — ample in both cases. If a future retune shortens
+        // Active to 1 tick this stops being viable and the scenario should fail
+        // loudly rather than silently measure nothing: the verdict requires more
+        // than one observed Active tick.
         if (node == "JumpshotStartup")
         {
             _startupTicksObserved++;
@@ -811,7 +812,7 @@ public partial class JumpshotAnimTest : Node
         // for the mutation that proves max alone is not enough.
         bool pass = _haveToeBaseline
                     && _sawJumpshotActive
-                    && _activeTicksObserved > 0
+                    && _activeTicksObserved > 1
                     && _minToeRiseDuringActive >= AirborneMinToeRise;
         if (pass)
             GD.Print($"[jumpshot-anim] PASS jumpshot-airborne-active — across ALL {_activeTicksObserved} " +
