@@ -630,8 +630,10 @@ public partial class PlayerController : CharacterBody3D
 	/// BallController on a possession change (the new holder has no carried-over
 	/// hand state). Runs on every simulating role — server authoritative, client
 	/// predicted — so all machines agree; the client's remote copy instead adopts
-	/// the broadcast value. Right is simply *a* deterministic default every peer
-	/// agrees on (issue #73); nothing downstream depends on which side it is.
+	/// the broadcast value. Right became the deterministic default in f7d13fd
+	/// when hand side became animation-visible (#280). Hand-side assertions need
+	/// a non-symmetric control: an expected Right result alone is vacuous because
+	/// it can merely match this default rather than prove the behavior under test.
 	/// </summary>
 	public void ResetHandSide() => HandSide = HandSide.Right;
 
