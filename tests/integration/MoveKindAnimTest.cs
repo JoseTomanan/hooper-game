@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using Godot;
 using Hooper.Ball;
@@ -6,12 +7,9 @@ using Hooper.Player;
 
 namespace HOOPERGAME.Tests.Integration;
 
-// Headless integration harness for issue #277: proves the per-move
-// AnimationTree display layer (MoveAnimResolver.ResolveStateName +
-// PlayerController.ApplyAnimation's Travel() call, scenes/Player.tscn's new
-// per-move states) is actually REACHED end-to-end for a clipped move, and
-// that an unclipped move genuinely falls back to the shared generic state
-// rather than either state name being asserted in isolation.
+// Headless integration harness for the AnimationTree display layer. It proves
+// a clipped move reaches its per-move state end-to-end and, for #296, that an
+// unknown move ID reaches the generic fallback states with distinct clips.
 //
 //   godot --headless --path . res://tests/integration/MoveKindAnimTest.tscn -- --harness-scenario=clipped-reaches-permove
 //   godot --headless --path . res://tests/integration/MoveKindAnimTest.tscn -- --harness-scenario=unclipped-stays-generic
@@ -29,8 +27,8 @@ namespace HOOPERGAME.Tests.Integration;
 // never the .tscn wiring. Reading ActiveAnimNodeForHarness —
 // AnimationNodeStateMachinePlayback.GetCurrentNode() via the live
 // AnimationTree — asserts what the state machine ACTUALLY did. That is the
-// only honest proof scenes/Player.tscn's BehindTheBackStartup/Active/
-// Recovery states (and the transitions reaching them) are really wired, not
+// only honest proof scenes/Player.tscn's animation states (and the transitions
+// reaching them) are really wired, not
 // just that ResolveStateName's dictionary lookup is correct in isolation
 // (already covered by MoveAnimResolverTests).
 //
@@ -38,9 +36,10 @@ namespace HOOPERGAME.Tests.Integration;
 // A live AnimationTree only exists on the REAL scenes/Player.tscn (bare
 // `new PlayerController()`, as most non-anim harnesses use, has no mesh/
 // AnimationTree at all — ApplyAnimation's Travel() call would be a no-op
-// against a null tree). But BehindTheBack/EuroStep are DRIBBLE-family committed
-// moves: BeginCommittedMove's Held-holder dead-dribble gate (#193) refuses
-// them outright unless the ball is actually Dribbling — see
+// against a null tree). The clipped control is a DRIBBLE-family move, while
+// the fallback control deliberately begins from the same legal live possession.
+// BeginCommittedMove's Held-holder dead-dribble gate (#193) rejects that
+// production path unless the ball is actually Dribbling — see
 // BehindTheBackTest.cs's "dead-dribble-gate" scenario and its "cannot Begin
 // from Held" comment. So this harness needs BOTH pieces at once: two
 // Player.tscn instances (for a live AnimationTree) under a BallController
@@ -49,7 +48,7 @@ namespace HOOPERGAME.Tests.Integration;
 // isolate pure burst math) would make GetBall() null and the dead-dribble
 // gate a no-op, but that also means BeginCommittedMove's ordinary legality
 // checks never see a real Dribbling state, which is not what a real client
-// ever does for these two moves.
+// ever does for a production dribble move.
 //
 // ── Why BehindTheBack (clipped) / EuroStep (unclipped) specifically ────────
 // Both gate identically (Dribbling-only, #193) and — the reason they make a
@@ -108,6 +107,11 @@ public partial class MoveKindAnimTest : Node
     private bool _latchedTargetAnimState;
     private string _observedPerMoveState = "(none)";
     private int _returnedInactiveFrame = -1;
+
+    // #296's generic-fallback proof records the clip reached by the LIVE
+    // AnimationTree node, rather than re-proving MoveAnimResolver's choice.
+    private readonly Dictionary<string, StringName> _genericClipByLiveState = new();
+    private readonly HashSet<string> _genericStatesObserved = new();
 
     public override void _Ready()
     {
@@ -314,59 +318,13 @@ public partial class MoveKindAnimTest : Node
     }
 
     // ── Scenario: unclipped-stays-generic (the control) ────────────────────
-    // EuroStep is deliberately NOT in ClippedMovePrefixes — the same gate (#193),
-    // the same live-Dribbling setup, but a different move. Asserts the generic
-    // "Active" node is actually reached during MovePhase.Active (proving the
-    // fallback path itself is live, not merely "nothing broke"), AND that the
-    // per-move state name it would have gotten had it wrongly been clipped
-    // ("EuroStepActive" — a node that does not exist in the tree at all) is never
-    // observed, every single frame of the run. This is the control that makes
-    // scenario 1's pass meaningful: it proves the harness COULD have caught a
-    // per-move state wrongly appearing.
+    // Every production move is now clipped, so this deliberately supplies an
+    // unknown moveId. It proves the fallback is real production wiring, then
+    // records the clips bound to each state only while that state is live.
     //
-    // ── This scenario's subject keeps graduating, and #311 moves it for the last time
-    // A control whose whole premise is "this move is UNCLIPPED" has a shelf
-    // life: it expires the moment that move gets its clip. #309 clipped
-    // betweenthelegs, #310 clipped spin, #311 clipped drivegather — each would
-    // have turned this green control red, not because anything regressed but
-    // because its subject graduated. #310's full local sweep caught exactly
-    // that: 232 scenarios passed and this one failed on "SpinActive" at frame
-    // 13, which is the control working as designed rather than a defect in it.
-    //
-    // A successor has to share this scenario's setup EXACTLY, so the only
-    // variable between the two scenarios stays "which move began": dribble-
-    // family (so the live-Dribbling setup is required, not incidental), gated
-    // identically by BeginCommittedMove's #193 dead-dribble list, and still
-    // absent from ClippedMovePrefixes.
-    //
-    // EuroStep is now the ONLY remaining move meeting all three, so it is the
-    // successor by exhaustion rather than by preference. #310 explicitly passed
-    // it over in favour of DriveGather, and that reservation still stands and is
-    // worth carrying forward: EuroStep also carries ADR-0023's rim-range gate on
-    // top of the shared dead-dribble gate, so a future tuning of that range
-    // could stop the move beginning from this harness's spot and redden this
-    // control for a reason that has nothing to do with what it asserts. If that
-    // happens the fix is the synthetic id described below — NOT widening the
-    // range or moving the actor, either of which would be editing the subject to
-    // suit the test.
-    //
-    // Like DriveGather before it, EuroStep DOES end the dribble (its beat 1 IS
-    // the gather). That is fine here and deliberately so: the settle assertion
-    // derives its expected state from live ball state rather than hardcoding
-    // "Dribble", exactly so it keeps its meaning for such a move — see
-    // ExpectedSettledNode's own comment.
-    //
-    // It goes through DefensiveMoveHarnessSeam's generic BeginMoveForHarness
-    // rather than a move-specific seam because no such seam exists and one
-    // move-typed passthrough is not worth a new file; that seam reaches the same
-    // private BeginCommittedMove, so the production gates still run.
-    //
-    // When #312 clips the euro-step the dribble family is EXHAUSTED and this
-    // control can no longer be expressed with a real move. Do NOT delete it at
-    // that point — the fallback branch it guards still exists. Give it a
-    // synthetic unclipped moveId instead. (This reasoning goes stale every time
-    // a clip lands; check MoveAnimResolver.ClippedMovePrefixes, not this
-    // comment.)
+    // The test uses BeginMoveForHarness because no move-specific seam exists
+    // for a deliberately unknown ID; the seam still reaches the production
+    // BeginCommittedMove path.
     private void TickUnclippedStaysGeneric()
     {
         PlayerController holder;
@@ -390,8 +348,8 @@ public partial class MoveKindAnimTest : Node
                 if (_frame < _stepDeadlineFrame) return;
                 if (_ball.State != BallState.Dribbling)
                 {
-                    Fail($"unclipped-stays-generic: expected TryStartDribble to reach Dribbling " +
-                         $"(EuroStep cannot Begin from Held, #193); got state={_ball.State}.");
+                    Fail($"unclipped-stays-generic: expected TryStartDribble to reach Dribbling; " +
+                         $"got state={_ball.State}.");
                     Finish();
                     return;
                 }
@@ -402,14 +360,12 @@ public partial class MoveKindAnimTest : Node
                 bool began = holder.BeginMoveForHarness(new UnclippedMove());
                 if (!began)
                 {
-                    Fail("unclipped-stays-generic: BeginMoveForHarness(new EuroStep(1f)) returned false " +
-                         "— machine was not Inactive, the dead-dribble gate refused it, or ADR-0023's " +
-                         "rim-range gate did. See this scenario's comment: widen nothing, switch to a " +
-                         "synthetic unclipped moveId instead.");
+                    Fail("unclipped-stays-generic: BeginMoveForHarness(new UnclippedMove()) returned false " +
+                         "— machine was not Inactive.");
                     Finish();
                     return;
                 }
-                GD.Print($"[movekind-anim] EuroStep begun on holder={_holderId}.");
+                GD.Print($"[movekind-anim] synthetic fallback move begun on holder={_holderId}.");
                 _step = Step.Observing;
                 return;
 
@@ -422,13 +378,23 @@ public partial class MoveKindAnimTest : Node
                 // appear, at any point in the run — not just during Active.
                 // It does not exist as a node in scenes/Player.tscn at all,
                 // so this also stands as a sanity check on the harness itself.
-                if (animNode == "EuroStepActive")
+                if (animNode == "UnclippedActive")
                 {
                     Fail($"unclipped-stays-generic: ActiveAnimNodeForHarness was " +
-                         $"\"EuroStepActive\" at frame {_frame} — that state does not exist " +
+                         $"\"UnclippedActive\" at frame {_frame} — that state does not exist " +
                          "in scenes/Player.tscn and must never be reachable for an unclipped move.");
                     Finish();
                     return;
+                }
+
+                // #296: capture a clip only after the live AnimationTree says
+                // its state was actually active. Resolver output is not proof
+                // of scene wiring (#257).
+                if (animNode is "Startup" or "Active" or "Recovery")
+                {
+                    _genericStatesObserved.Add(animNode);
+                    if (ClipOfLiveState(holder, animNode, out StringName clip))
+                        _genericClipByLiveState[animNode] = clip;
                 }
 
                 if (phase == MovePhase.Active)
@@ -460,13 +426,26 @@ public partial class MoveKindAnimTest : Node
         string expectedNeutral = ExpectedNeutralAnimNode();
         bool settledNeutral = finalAnimNode == expectedNeutral;
 
-        bool pass = _sawActivePhase && _latchedTargetAnimState && settledNeutral;
+        bool reachedAllGenericStates = _genericStatesObserved.SetEquals(new[] { "Startup", "Active", "Recovery" });
+        bool hasAllClipBindings = _genericClipByLiveState.Count == 3;
+        bool clipResourcesAreDistinct = hasAllClipBindings &&
+            _genericClipByLiveState.Values.Distinct().Count() == 3;
+        bool activeIsNotRun = hasAllClipBindings &&
+            _genericClipByLiveState["Active"] != new StringName("locomotion/run");
+        bool allClipsHoldRatherThanLoop = hasAllClipBindings && GenericFallbackClipsMeetContract();
+
+        // #296's mutation controls: make Recovery share Startup's clip, point
+        // Active back at run, or make any generic clip loop, and this live-tree
+        // proof turns red for the specific broken binding.
+        bool pass = _sawActivePhase && _latchedTargetAnimState && settledNeutral &&
+                    reachedAllGenericStates && clipResourcesAreDistinct &&
+                    activeIsNotRun && allClipsHoldRatherThanLoop;
 
         if (pass)
         {
             GD.Print("[movekind-anim] PASS unclipped-stays-generic — the AnimationTree state " +
                      "machine reached the generic \"Active\" node during MovePhase.Active (never a " +
-                     $"per-move state — \"EuroStepActive\" never appeared), then settled back " +
+                     $"per-move state — \"UnclippedActive\" never appeared), then settled back " +
                      $"onto \"{expectedNeutral}\" once the move's lifecycle finished.");
         }
         else
@@ -476,7 +455,51 @@ public partial class MoveKindAnimTest : Node
                  $"latchedTargetAnimState={_latchedTargetAnimState}, finalAnimNode={finalAnimNode}, " +
                  $"ballState={_ball.State}.");
         }
+        GD.Print($"[movekind-anim]   #296 generic states=[{string.Join(",", _genericStatesObserved)}], " +
+                 $"clips=[{string.Join(",", _genericClipByLiveState.Select(x => $"{x.Key}={x.Value}"))}], " +
+                 $"distinct={clipResourcesAreDistinct}, activeIsNotRun={activeIsNotRun}, " +
+                 $"oneShots={allClipsHoldRatherThanLoop}.");
         Finish(pass ? 0 : 1);
+    }
+
+    private static bool ClipOfLiveState(PlayerController player, string stateName, out StringName clip)
+    {
+        clip = default;
+        var tree = player.GetNode<AnimationTree>("AnimationTree");
+        if (tree.TreeRoot is not AnimationNodeStateMachine machine) return false;
+        if (machine.GetNode(stateName) is not AnimationNodeAnimation node) return false;
+        clip = node.Animation;
+        return !clip.IsEmpty;
+    }
+
+    private bool GenericFallbackClipsMeetContract()
+    {
+        var library = GD.Load<AnimationLibrary>("res://assets/locomotion.res");
+        if (library == null) return false;
+        foreach (StringName clipName in _genericClipByLiveState.Values)
+        {
+            // AnimationNodeAnimation stores the fully-qualified library key
+            // ("locomotion/foo"); AnimationLibrary itself owns just "foo".
+            var localClipName = new StringName(clipName.ToString().Replace("locomotion/", ""));
+            if (!library.HasAnimation(localClipName)) return false;
+            var clip = library.GetAnimation(localClipName);
+            if (clip.LoopMode != Animation.LoopModeEnum.None) return false;
+
+            // A one-shot state drives omitted rotation channels from skeleton
+            // rest, so a clip that keys only the gesturing limb revives the
+            // a45bd1d T-pose failure. The source rig has 52 non-leaf bones;
+            // require every one to be a bindable, keyed Rotation3D channel.
+            var bones = new HashSet<string>();
+            for (int i = 0; i < clip.GetTrackCount(); i++)
+            {
+                if (clip.TrackGetType(i) != Animation.TrackType.Rotation3D) continue;
+                NodePath path = clip.TrackGetPath(i);
+                if (path.GetSubNameCount() != 1 || !path.ToString().StartsWith("Skeleton3D:")) return false;
+                if (clip.TrackGetKeyCount(i) == 0 || !bones.Add(path.GetSubName(0))) return false;
+            }
+            if (bones.Count < 52) return false;
+        }
+        return true;
     }
 
     private PlayerController NodeForPeer(int peerId) => peerId == 1 ? _p1 : _p2;
@@ -489,13 +512,6 @@ public partial class MoveKindAnimTest : Node
     // instead (MoveAnimResolver's Inactive branch). Both scenarios here call
     // TryStartDribble before their move — BehindTheBack and EuroStep cannot Begin
     // from Held (#193).
-    //
-    // They then diverge, which is exactly the case this helper was written for:
-    // BehindTheBack keeps the dribble alive and settles on "Dribble" + the
-    // holder's HandSide (#294), while EuroStep CRADLES at Startup-begin (its
-    // beat 1 is the gather) and so settles on "Locomotion". Deriving the
-    // expectation from live ball state is what lets one assertion cover both
-    // without either scenario hardcoding an answer.
     //
     // Derived from live ball state rather than hardcoded to "Dribble" so the
     // assertion keeps its meaning if a scenario is ever pointed at a move that
