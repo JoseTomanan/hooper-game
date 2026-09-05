@@ -847,12 +847,11 @@ jobs:
       # 'clipped-reaches-permove' begins a BehindTheBack (listed in
       # MoveAnimResolver.ClippedMovePrefixes) and latches that the tree
       # actually entered "BehindTheBackActive" while MovePhase.Active was
-      # live, then settled back onto "Locomotion". 'unclipped-stays-generic'
-      # is the control: the identical setup with a BetweenTheLegs (deliberately
-      # NOT in ClippedMovePrefixes) instead — proves the generic "Active" node
-      # is reached and "BetweenTheLegsActive" (a node that doesn't exist in
-      # the tree) never appears, which is what makes the first scenario's pass
-      # meaningful rather than a harness premise that could never fail.
+      # live. 'unclipped-stays-generic' uses an unknown synthetic moveId (all
+      # production moves are now clipped) and proves its live generic
+      # Startup/Active/Recovery states bind three distinct, non-looping clips;
+      # it is the #296 control that reddens if Recovery shares Startup's clip or
+      # Active returns to locomotion/run.
       # Whether either clip LOOKS right stays #279/#173's deferred human feel
       # judgment (ADR-0021) — only reachability is asserted here.
       - name: Run movekind-anim harness
