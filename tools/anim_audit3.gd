@@ -26,6 +26,9 @@ const PLAYER_PATH := "res://scenes/Player.tscn"
 const SUSPECT := ["mixamorig_Spine1", "mixamorig_Spine2", "mixamorig_Neck",
 	"mixamorig_LeftHand", "mixamorig_RightHand"]
 const CONTROL := ["mixamorig_RightUpLeg", "mixamorig_Spine", "mixamorig_LeftUpLeg"]
+const MATERIAL_SPINE2_FLOOR_DEG := 10.0
+const RIGHT_UP_LEG_CONTROL := [176.46, 23.07, 175.55]
+const RIGHT_UP_LEG_TOLERANCE_DEG := 2.0
 
 var _skel: Skeleton3D
 var _tree: AnimationTree
@@ -113,46 +116,99 @@ func _step() -> void:
 
 
 func _report() -> void:
-	# --- harness validity gate ------------------------------------------------
 	var void_run := false
-	for c in CONTROL:
-		var mx := 0.0
-		for b in BLENDS:
-			mx = maxf(mx, _rows[b][c])
-		if mx < 0.05:
+	for control_bone in CONTROL:
+		var maximum := 0.0
+		for blend in BLENDS:
+			maximum = maxf(maximum, _rows[blend][control_bone])
+		if maximum < 0.05:
 			void_run = true
-	print("  %-24s %10s %10s %10s   %s" % ["bone", "blend=0", "blend=3", "blend=6", "note"])
-	for b in SUSPECT:
-		print("  %-24s %10.2f %10.2f %10.2f   %s" % [b, _rows[0.0][b], _rows[3.0][b], _rows[6.0][b], "SUSPECT"])
-	for b in CONTROL:
-		print("  %-24s %10.2f %10.2f %10.2f   %s" % [b, _rows[0.0][b], _rows[3.0][b], _rows[6.0][b], "control"])
-	print("")
+	var passed := not void_run
 	if void_run:
-		print("  RESULT: VOID — a control bone never left rest, so the harness is not")
-		print("          applying poses. No conclusion can be drawn about the suspects.")
-		quit(1)
-		return
-	print("  controls moved, so the harness is applying poses. Verdicts:")
-	for b in SUSPECT:
-		var d0: float = _rows[0.0][b]
-		var d6: float = _rows[6.0][b]
-		var v := ""
-		if d6 < 0.05 and d0 > 1.0:
-			v = "COLLAPSES TO REST at full run (idle poses it, run does not)"
-		elif d6 < 0.05 and d0 < 0.05:
-			v = "at rest at BOTH ends"
-		else:
-			v = "posed at both ends — OK"
-		print("    %-24s %s" % [b, v])
+		push_error("[locomotion-rest-frame] a control bone never left rest; live-pose results are void.")
 
-	print("")
-	print("=== Per-state pose (deg from rest) ===")
-	print("  %-14s %12s %10s %10s" % ["state", "RightUpLeg", "Spine1", "LeftArm"])
-	for s in _phase_rows:
-		var r: Dictionary = _phase_rows[s]
-		print("  %-14s %12.2f %10.2f %10.2f" % [s, r["RightUpLeg"], r["Spine1"], r["LeftArm"]])
-	print("")
-	quit(0)
+	for i in BLENDS.size():
+		var blend: float = BLENDS[i]
+		var spine2: float = _rows[blend]["mixamorig_Spine2"]
+		var up_leg: float = _rows[blend]["mixamorig_RightUpLeg"]
+		print("[locomotion-rest-frame] blend=%.1f Spine2=%.2f RightUpLeg=%.2f" % [blend, spine2, up_leg])
+		if spine2 < MATERIAL_SPINE2_FLOOR_DEG:
+			push_error("[locomotion-rest-frame] Spine2 at blend %.1f is %.2f deg (< %.1f): the run endpoint collapsed to rest." % [blend, spine2, MATERIAL_SPINE2_FLOOR_DEG])
+			passed = false
+		if absf(up_leg - RIGHT_UP_LEG_CONTROL[i]) > RIGHT_UP_LEG_TOLERANCE_DEG:
+			push_error("[locomotion-rest-frame] RightUpLeg at blend %.1f is %.2f, expected %.2f +/- %.2f." % [blend, up_leg, RIGHT_UP_LEG_CONTROL[i], RIGHT_UP_LEG_TOLERANCE_DEG])
+			passed = false
+
+	if not _assert_resource_contract():
+		passed = false
+	if passed:
+		print("[locomotion-rest-frame] PASS — runtime posture and material endpoint coverage are stable.")
+		quit(0)
+	else:
+		print("[locomotion-rest-frame] FAIL — see structural or live-pose assertion above.")
+		quit(1)
+
+
+func _assert_resource_contract() -> bool:
+	var passed := true
+	var import_text := FileAccess.get_file_as_string("res://assets/run.fbx.import")
+	if not import_text.contains("animation/remove_immutable_tracks=false"):
+		push_error("[locomotion-rest-frame] run.fbx.import must retain immutable tracks for clean imports.")
+		passed = false
+
+	var lib := load(LIB_PATH) as AnimationLibrary
+	if lib == null or not lib.has_animation(&"idle") or not lib.has_animation(&"run"):
+		push_error("[locomotion-rest-frame] locomotion.res must contain idle and run.")
+		return false
+	var required := {}
+	for i in _skel.get_bone_count():
+		if _skel.get_bone_children(i).is_empty():
+			continue
+		var bone := _skel.get_bone_name(i)
+		if is_finger_joint(bone):
+			continue
+		required[bone] = true
+	if required.is_empty() or not required.has("mixamorig_Spine2"):
+		push_error("[locomotion-rest-frame] material requirement is empty or excludes Spine2; the gate is vacuous.")
+		return false
+
+	for clip_name in [&"idle", &"run"]:
+		var clip := lib.get_animation(clip_name)
+		var covered := {}
+		for track in clip.get_track_count():
+			if clip.track_get_type(track) != Animation.TYPE_ROTATION_3D:
+				continue
+			var path := clip.track_get_path(track)
+			if path.get_subname_count() == 0:
+				continue
+			var bone := String(path.get_subname(0))
+			if not required.has(bone):
+				continue
+			if String(path) != "Skeleton3D:%s" % bone:
+				push_error("[locomotion-rest-frame] %s '%s' has non-runtime binding '%s'." % [clip_name, bone, path])
+				passed = false
+			if clip.track_get_key_count(track) == 0 or covered.has(bone):
+				push_error("[locomotion-rest-frame] %s '%s' has an empty or duplicate rotation track." % [clip_name, bone])
+				passed = false
+			covered[bone] = true
+		var missing := []
+		for bone in required:
+			if not covered.has(bone):
+				missing.append(bone)
+		if not missing.is_empty():
+			push_error("[locomotion-rest-frame] %s omits material rotation tracks: %s." % [clip_name, missing])
+			passed = false
+		else:
+			print("[locomotion-rest-frame] %s covers all %d material rotation bones with runtime bindings." % [clip_name, required.size()])
+	return passed
+
+
+func is_finger_joint(bone: String) -> bool:
+	for side in ["mixamorig_LeftHand", "mixamorig_RightHand"]:
+		for digit in ["Thumb", "Index", "Middle", "Ring", "Pinky"]:
+			if bone.begins_with(side + digit):
+				return true
+	return false
 
 
 func _dev(bone: String) -> float:
