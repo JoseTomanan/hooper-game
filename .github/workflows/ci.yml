@@ -995,6 +995,13 @@ jobs:
       - name: Run locomotion-clip retarget harness
         run: godot --headless --path . res://tests/integration/LocomotionClipTest.tscn
 
+      # #297's direct rest-frame guard: a complete track SET alone is not
+      # enough when the importer supplies identity values. Drive the real
+      # Locomotion blend at 0/3/6, pin Spine2's no-collapse floor, preserve
+      # #287's RightUpLeg control signature, and reject non-runtime paths.
+      - name: Run locomotion rest-frame track harness
+        run: godot --headless --path . --script res://tools/anim_audit3.gd
+
       # Jumpshot animation states, the state-machine half of #279 (LocomotionClipTest
       # just above pins the four clips' own PROPERTIES; FadeawayTriggerTest pins the
       # pure classification decision against a code-built tree with no AnimationTree
