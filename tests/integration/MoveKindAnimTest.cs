@@ -50,28 +50,15 @@ namespace HOOPERGAME.Tests.Integration;
 // checks never see a real Dribbling state, which is not what a real client
 // ever does for a production dribble move.
 //
-// ── Why BehindTheBack (clipped) / EuroStep (unclipped) specifically ────────
-// Both gate identically (Dribbling-only, #193) and — the reason they make a
-// meaningful control PAIR here — MoveAnimResolver.ClippedMovePrefixes lists
-// "behindtheback" (mapping to the real per-move BehindTheBack states
-// scenes/Player.tscn has) but does NOT list "eurostep". So scenario 1 proves the
-// per-move path is really wired; scenario 2 proves the SAME harness setup,
-// unchanged except for which move begins, stays on the generic "Active" node
-// and never drifts onto a per-move state that doesn't exist for it (there is
-// no "EuroStepActive" node in the tree at all) — which is what makes scenario 1's
-// pass meaningful rather than a harness premise that could never have failed.
-//
-// Scenario 2's move is load-bearing but NOT permanent: it is whichever
-// dribble-family move is currently unclipped, and it moved from
-// BetweenTheLegs to Spin (#309) to DriveGather (#310) to EuroStep (#311).
-// See that scenario's own comment for the three criteria a successor has to
-// meet — and note that EuroStep is the LAST real move that meets them.
+// Why BehindTheBack (clipped) / an unknown synthetic move ID (fallback)
+// specifically: every production move now has a per-move clip. An unknown ID
+// is the durable way to exercise the resolver's generic branch without making
+// a misleading claim about a real move. The pair proves both production paths.
 //
 // ── Out of scope ────────────────────────────────────────────────────────────
-// Whether BehindTheBackActive{Left,Right}'s clip LOOKS right (correct limbs,
-// no foot-sliding, reads as "behind the back") is #279/#173's deferred human
-// feel judgment (ADR-0021) — this harness only asserts state-machine
-// REACHABILITY, never clip content.
+// Whether the clips look right remains #173's deferred human feel judgment
+// (ADR-0021). This harness asserts reachability and serialized clip contract,
+// not visual taste.
 public partial class MoveKindAnimTest : Node
 {
     // All production moves are now clipped (#312), so the fallback control must
@@ -510,8 +497,8 @@ public partial class MoveKindAnimTest : Node
     // Before #285 this was unconditionally "Locomotion". It is now possession-
     // dependent: a live-dribbling holder settles onto the Dribble stance
     // instead (MoveAnimResolver's Inactive branch). Both scenarios here call
-    // TryStartDribble before their move — BehindTheBack and EuroStep cannot Begin
-    // from Held (#193).
+    // TryStartDribble before their move — the production dribble control cannot
+    // begin from Held (#193).
     //
     // Derived from live ball state rather than hardcoded to "Dribble" so the
     // assertion keeps its meaning if a scenario is ever pointed at a move that
