@@ -35,6 +35,7 @@ locked unless explicitly revisited (see Decision Discipline in §4 below).
 | [ADR-0022](docs/adr/0022-rim-finishing-offensive-vertical.md) | Rim-finishing offensive vertical (un-defer of #203): a new ADR, not an ADR-0009 amendment — the layup reuses the existing shot-accuracy model verbatim, the drive-gather reuses the hybrid-gather momentum model, the euro-step reuses the exit-cone precedent |
 | [ADR-0023](docs/adr/0023-authoritative-gate-prediction-tolerance.md) | Server-authoritative move gates widen their threshold by a bounded network tolerance and reject out-of-tolerance requests — they never begin a move the client did not request (rejects #236's JumpShot-fallback: it breaks the moveId invariant both reconciliation gates depend on) |
 | [ADR-0024](docs/adr/0024-hitl-async-evidence-restructure.md) | HITL restructured to async evidence (Proposed): mandatory harness-first decomposition of `hitl` verifies, rendered-evidence artifact review replaces live editor sessions (spike-gated), default-with-veto unblocks bounded decision gates; feel still never auto-accepted (ADR-0015 gate 4 / ADR-0021 intact) |
+| [ADR-0025](docs/adr/0025-on-ball-body-contact.md) | Accepted contact model: deterministic pre-solver response and depenetration, raw opponent snapshots, binary speed-and-facing set predicate, both movement paths; implementation tracked under #347/#355 |
 
 ---
 
@@ -83,26 +84,20 @@ the human.
 
 ## 2. Current milestone
 
-> **Active: M8b (#171) and M9 (#75)** (as of 2026-08-06). M10 (#89) is closed.
-> M9 closed 2026-07-20 and was **REOPENED 2026-07-30** "to add more controls" —
-> it is where the per-move animation-clip campaign lives.
+> **Status checked against GitHub on 2026-09-05:** M8b (#171) and M9 (#75)
+> are closed (both closed 2026-09-03); M10 (#89) is also closed. Their open
+> verification issues remain separate from those build-epic closures.
 >
 > **The autopilot HOLDS at the M11 boundary** (human ruling 2026-07-20): M11
 > (stamina, #90) is NOT activated and its foundation ADR #105 is NOT to be
-> auto-drafted — both await an explicit human "go". For the ADR-0017 activation
-> walk this is blocked twice over: M11's predecessor gate is also unsatisfied,
-> because #75 is open. Do not read M9's history of having once been closed as
-> clearance to advance.
+> auto-drafted — both await an explicit human "go". M9's closure removes the
+> former open-epic blocker; it does not lift this explicit hold or independently
+> establish every ADR-0015 activation gate. M12/M13 remain downstream.
 >
-> **M9's live workstream — per-move animation clips.** #296 remains open for
-> committed moves still without their own clip: they fall through
-> `MoveAnimResolver`'s default case onto shared generic Startup/Active/Recovery
-> clips, so they have no telegraph — a competitive defect, not a cosmetic one,
-> given legibility is a stated requirement (§1). Each fix lands as a
-> Blender-authored clip family sliced into `assets/locomotion.res` and gated by
-> its own harness scenarios. Batch **#276** (1) landed jumpshot #279, crossover
-> #280, behind-the-back #281, steal #282, block #283, rebound-grab #284, and
-> dribble loop #285.
+> **Animation build campaign:** batches #276/#302 are closed. #296's generic
+> Startup/Active/Recovery clip repair landed in PR #363; #297's locomotion
+> rest-frame repair landed in PR #364. The generic resolver fallback remains
+> intentional; do not mistake its presence for an unfinished clip repair.
 >
 > Batch **#302** (2) is complete: its exact eleven clips are JabStep #304,
 > RetreatDribble #305, StepBack #306, Hesitation #307, InAndOut #308,
@@ -113,10 +108,20 @@ the human.
 > `tools/blender_anim_lib.py` (#315) is shared by every clip script — a change
 > there is a change to all of them.
 >
-> **M8b (#171)** is blocked on human inputs: #153 net/fence visuals (feel pass
-> FAILED 2026-06-30, awaiting an AFK material fix before re-verify) and #170
-> realistic player rig (asset-license pick, sourcing bounded by ADR-0020) plus
-> its verify #178.
+> **Verification debt:** #153's net/fence pass succeeded 2026-07-19, and #170's
+> rig build is closed. #178 remains open for rig verification, with objective
+> proof gaps split into #367. #301 remains a distinct moving-dribble visual
+> verify with its own human-directed reference and explicit #173 exception;
+> its build prerequisite #300 is closed. Capture spike #365 will test evidence
+> capture, not automatic feel acceptance. #366 tracks automation of #32's
+> dedicated-server journey; neither new task is implemented yet.
+>
+> **Next AFK work:** evidence tasks #365–#367, then #356's contact fixture and
+> the accepted ADR-0025 implementation (#368–#370) under #347 / umbrella #355.
+> Follow GitHub's parent and blocked-by links for the contact dependency order.
+> #325 (sprint) precedes #345 (protection); #346 (stance) and #348 (post-up)
+> still need scoped triage. #355 is an existing work umbrella, not a newly
+> activated numbered milestone. This queue does not reopen M9/M10 or lift M11.
 >
 > **Closed-milestone detail is deliberately not repeated here.** What landed
 > under M9's original scope and M10's defensive core lives in GitHub; the rules
@@ -139,13 +144,13 @@ the human.
 | M3 — Hybrid input: committed moves | Done | #13 |
 | M4 — Networked ball + committed moves | Done | #19 |
 | M5 — Win condition + scoring | Done | #23 |
-| M6a — Dedicated server + server browser | Code done; editor verify (#32) trails M6b | #28 |
+| M6a — Dedicated server + server browser | Build epic closed; #32 proof debt has AFK child #366 | #28 |
 | M6b — Possession loop | Done (epic closed 2026-06-24; feel deferred to #173 per ADR-0021) | #46 |
 | M7a — Static readability pass | Done | #53 |
 | M7b — Rigged humanoid animation | Done (epic closed 2026-06-26) | #54 |
-| M8 — Realism & polish pass | Done (epic closed; leftover verify/feel/realism work continues under M8b) | #61 |
-| **M8b — Realism & polish pass, continued** | **Active** (umbrella; M8 leftovers #153 and #170 + #178 — both blocked on human input, see §2) | #171 |
-| **M9 — Basketball-related controls (offense)** | **Active** (closed 2026-07-20, REOPENED 2026-07-30; now carries the per-move animation-clip campaign — see §2) | #75 |
+| M8 — Realism & polish pass | Build epic closed; remaining verification tracked separately | #61 |
+| M8b — Realism & polish pass, continued | Closed 2026-09-03; #178 verification remains open | #171 |
+| M9 — Basketball-related controls (offense) | Closed 2026-09-03 after July reopening; visual/feel debt remains separate | #75 |
 | M10 — Defense & the reactive read | Done (epic closed 2026-07-20; feel deferred to #173 per ADR-0021) | #89 |
 | M11 — Stamina & resource economy | DEFERRED (planning epic) | #90 |
 | M12 — Match flow, HUD & session lifecycle | DEFERRED (planning epic) | #91 |
@@ -165,8 +170,8 @@ umbrella epics) it stops merely accruing sub-issues. **M14 and M15 were closed
 `wontfix` on 2026-07-04** — off the roadmap; their rows remain only so the
 numbering stays legible. Feel never gates activation
 ([ADR-0021](docs/adr/0021-feel-taste-deferred-indefinitely.md) deferred it to
-the consolidated human pass #173). The current state of play — two open
-umbrellas and the M11 hold — is in §2; don't duplicate it here.
+the consolidated human pass #173). The current evidence/contact queue and
+the M11 hold are in §2; don't duplicate them here.
 
 **Autopilot exception ([ADR-0017](docs/adr/0017-autopilot-activates-deferred-milestones.md)):**
 the human has pre-authorised driving the full roadmap (now ending at M13 — M14/M15

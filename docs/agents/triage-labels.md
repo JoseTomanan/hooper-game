@@ -20,10 +20,13 @@ corresponding label string from the right-hand column.
 
 ## Notes
 
-- `afk`, `hitl`, and `wontfix` already exist in the GitHub label set. `needs-triage`
-  and `needs-info` do **not** — create them the first time you need them:
-  `gh label create needs-triage --description "Maintainer needs to evaluate"` and
-  `gh label create needs-info --description "Waiting on reporter"`.
+- As verified on 2026-09-05, all mapped labels already exist. Re-check with
+  `gh label list` before creating any labels.
+- The existing `blocked` label marks specified AFK work with unmet dependencies.
+  Replace `afk` with `blocked` while an open prerequisite prevents pickup, and
+  restore `afk` only after the prerequisites and any remaining scope gates are
+  satisfied. Record the dependency using GitHub's native blocked-by relation
+  as well as in the brief; a label alone does not name the blocker.
 - Because `afk` and `hitl` are single-purpose (ADR-0013), never apply both to the
   same issue. `ready-for-agent` and `ready-for-human` are therefore mutually
   exclusive here too.

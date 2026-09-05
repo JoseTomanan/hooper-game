@@ -42,8 +42,9 @@ look for them; this is not a monorepo.
    instincts.** An ADR with `Status: Accepted` may not be worked around, quietly
    superseded, or treated as a default to optimize past. Do not hardcode the
    locked set's numbers or count here — check `docs/adr/` directly
-   (`ls docs/adr/`); as of 2026-07-16 all numbered ADRs on `main` are
-   `Status: Accepted` and locked. If a proposed change — refactor, deepening,
+   (`ls docs/adr/`); read each current Status field rather than assuming all
+   files are accepted (ADR-0024 still says Proposed; ADR-0025 is Accepted as of
+   2026-09-05). If a proposed change — refactor, deepening,
    test design, anything — would
    contradict a locked ADR, **STOP and flag the contradiction to the human before
    writing code.** Do not silently comply, and do not silently resolve it. This

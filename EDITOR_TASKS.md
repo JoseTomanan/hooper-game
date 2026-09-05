@@ -12,13 +12,22 @@
   These are **deferred indefinitely** to one consolidated, human-scheduled pass
   (**#173**) and do **not** gate milestones
   ([ADR-0021](docs/adr/0021-feel-taste-deferred-indefinitely.md)).
-- **Async evidence review** — CI-captured screenshots/clips attached to an
-  issue, judged from any device on your own schedule; no live editor session,
-  no dual-instance setup
-  ([ADR-0024](docs/adr/0024-hitl-async-evidence-restructure.md), Proposed).
+- **Proposed async evidence review** — screenshots/clips attached to an issue,
+  judged from any device on your own schedule
+  ([ADR-0024](docs/adr/0024-hitl-async-evidence-restructure.md), still Proposed).
+  Capture infrastructure is not yet shipped as of 2026-09-05; AFK spike #365
+  tests local and hosted-CI capture. Do not mistake this proposal for evidence
+  that a capture job already exists, or an agent review for human acceptance.
 - **Optional vetoes** on posted decision briefs (also ADR-0024).
 - **Editor import-dialog settings that have no headless path at all** — the one
   remaining structural exclusion.
+
+**Current proof work (2026-09-05):** #366 is the AFK child of #32 for the full
+dedicated-server/browser journey; #367 maps and fills objective gaps in #178's
+rig verification. #153's net/fence visuals passed 2026-07-19, and #170's rig
+build is closed. #301 remains its own moving-dribble visual verification,
+with its explicit #173 exception and human-directed reference intact; #300,
+its former build blocker, is closed. Follow GitHub for the live issue state.
 
 **What is no longer yours**, despite what the per-milestone sections below may
 imply — each was handed to Claude or the harness by a specific decision:

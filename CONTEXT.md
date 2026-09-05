@@ -2,7 +2,7 @@
 
 Lookup table of project-specific terms. One entry per term: bold name, one-to-two sentence definition, `see:` pointer to the authoritative source. Not prose — not a design doc.
 
-**Sources:** [AGENTS.md](AGENTS.md), [ADR-0001](docs/adr/0001-engine-godot-csharp.md) – [ADR-0008](docs/adr/0008-possession-rules.md).
+**Sources:** [AGENTS.md](AGENTS.md) and the [ADR directory](docs/adr/). Read the applicable ADR through its amendments; this glossary is not an exhaustive design specification.
 
 Do not add design reasoning here. If a decision belongs somewhere, it belongs in an ADR.
 
@@ -149,4 +149,3 @@ Do not add design reasoning here. If a decision belongs somewhere, it belongs in
 **Readability pass** — The presentation track that swaps the placeholder capsule for a humanoid visual and adds cosmetic facing, burst lean, and directional shadows for legibility — without advancing the gameplay milestone spine. Visual changes only; authoritative state and netcode are untouched. see: issues #37–#41
 
 ---
-
