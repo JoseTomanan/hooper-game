@@ -178,15 +178,18 @@ public partial class RenderedEvidenceCapture : Node
         // local gameplay session does.
         if (_frame == SettleFrames)
         {
-            Input.ActionPress("move_backward", 1f);
-            RecordEvent("input-down", "move_backward");
+            // Main/Camera3D faces the court from its baseline. Moving the
+            // host forward exercises the normal dribble path while keeping
+            // its actual production model inside that unchanged camera view.
+            Input.ActionPress("move_forward", 1f);
+            RecordEvent("input-down", "move_forward");
         }
         if (_frame == SettleFrames + 50)
         {
             _velocityBeforeDirectionChange = player.Velocity;
-            Input.ActionRelease("move_backward");
+            Input.ActionRelease("move_forward");
             Input.ActionPress("move_right", 1f);
-            RecordEvent("input-direction-change", "move_backward->move_right");
+            RecordEvent("input-direction-change", "move_forward->move_right");
         }
         if (_frame == SettleFrames + 95)
         {
