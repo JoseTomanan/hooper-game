@@ -184,9 +184,15 @@ public partial class GameManager : Node
 		int peerAScore = _scoreboard.ScoreOf(peerAId);
 		int peerBScore = _scoreboard.ScoreOf(peerBId);
 
-		Rpc(MethodName.ReceiveScoreState,
-			peerAId, peerAScore, peerBId, peerBScore,
-			_scoreboard.WinnerPeerId, _scoreboard.IsGameOver);
+		// #375's mutation suppresses only the wire send, after clients have
+		// already proved a healthy baseline. The internal seam defaults false and
+		// has no gameplay-input or exported-config path.
+		if (!SuppressScoreRpcForHarness)
+		{
+			Rpc(MethodName.ReceiveScoreState,
+				peerAId, peerAScore, peerBId, peerBScore,
+				_scoreboard.WinnerPeerId, _scoreboard.IsGameOver);
+		}
 
 		// Server applies the same values to its own mirror fields so
 		// ScoreOf/IsGameOver read consistently via IsServer ? scoreboard : mirror
