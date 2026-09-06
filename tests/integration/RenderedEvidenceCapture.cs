@@ -51,6 +51,7 @@ public partial class RenderedEvidenceCapture : Node
     private bool _sawRemoteDisplay;
     private bool _shotBegun;
     private bool _pivotStarted;
+    private int _pivotStartFrame = -1;
     private readonly List<CaptureEntry> _captures = new();
     private readonly List<CaptureAttempt> _attempts = new();
     private readonly List<EventEntry> _events = new();
@@ -266,13 +267,21 @@ public partial class RenderedEvidenceCapture : Node
             QueueCaptureOnce("shot-fadeaway", player, "FadeawayActive", false);
         }
 
-        if (!_pivotStarted && _shotBegun && player.PhaseForHarness == Hooper.Moves.MovePhase.Inactive)
+        if (!_pivotStarted && _shotBegun && _sawFadeaway && player.PhaseForHarness == Hooper.Moves.MovePhase.Inactive)
         {
             _pivotStarted = true;
+            _pivotStartFrame = _frame;
             Input.ActionPress("move_forward", 1f);
             RecordEvent("input-down", "move_forward (pivot reversal)");
         }
-        if (_pivotStarted && _frame % 2 == 0) Input.ActionRelease("move_forward");
+        // Match PivotAnimTest's one-tick flick. A global frame-parity release
+        // could release the action in the same tick it was pressed, before
+        // PlayerController samples it and creates the pivot latch.
+        if (_pivotStarted && _frame == _pivotStartFrame + 1)
+        {
+            Input.ActionRelease("move_forward");
+            RecordEvent("input-up", "move_forward (pivot reversal)");
+        }
         if (_pivotStarted && player.IsPivotingInPlace && player.ActiveAnimNodeForHarness == "Pivot")
         {
             _sawPivot = true;
