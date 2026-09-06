@@ -1,0 +1,12 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://tests/integration/RenderedEvidenceCapture.cs" id="1_capture"]
+[ext_resource type="PackedScene" path="res://scenes/Main.tscn" id="2_main"]
+
+[node name="RenderedEvidenceCapture" type="Node"]
+script = ExtResource("1_capture")
+
+; The capture is deliberately a child of the shipped Main scene.  Its court,
+; gameplay camera, NetworkManager, Ball and spawned Player.tscn rigs are the
+; production surface; this runner adds no replacement animation scene.
+[node name="Main" parent="." instance=ExtResource("2_main")]

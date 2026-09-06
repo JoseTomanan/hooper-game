@@ -196,7 +196,7 @@ ShotTarget = Vector3(0, 3.05, 0.3)
 BoardCenter = Vector3(0, 3.205, 0.03)
 
 [node name="MultiplayerSpawner" type="MultiplayerSpawner" parent="." unique_id=603481057]
-_spawnable_scenes = PackedStringArray("uid://damgpdajv4xlf")
+_spawnable_scenes = PackedStringArray("res://scenes/Player.tscn")
 spawn_path = NodePath("../Players")
 spawn_limit = 2
 

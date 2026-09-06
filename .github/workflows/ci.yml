@@ -2471,3 +2471,49 @@ jobs:
         run: |
           chmod +x tests/integration/run-net-exitvector-rpc.sh
           tests/integration/run-net-exitvector-rpc.sh godot steady
+
+  # #365 is deliberately separate from state-only integration: this is a
+  # bounded feasibility experiment for rendered evidence, not a new feel gate.
+  # It boots the production Main/Player scenes under Xvfb + Mesa, captures
+  # local and real-remote frames, repeats the local script, and publishes every
+  # output/log even on failure so the result can honestly be called GO or NO-GO.
+  rendered-evidence-spike:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Set up Godot (.NET)
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.7.1
+          use-dotnet: true
+          include-templates: false
+
+      - name: Generate .NET bindings & import project
+        run: godot --headless --build-solutions --quit || exit 0
+
+      - name: Build game assembly
+        run: dotnet build "HOOPER GAME.csproj" --configuration Debug
+
+      - name: Attempt rendered gameplay evidence capture
+        env:
+          RENDERED_EVIDENCE_ROOT: rendered-evidence
+          HARNESS_PORT: 23461
+        run: |
+          chmod +x tests/integration/run-rendered-evidence.sh
+          tests/integration/run-rendered-evidence.sh godot
+
+      - name: Upload rendered evidence and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rendered-evidence-${{ github.run_id }}
+          path: rendered-evidence
+          if-no-files-found: warn
+          retention-days: 7
