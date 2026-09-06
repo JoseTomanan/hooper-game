@@ -29,6 +29,13 @@ public partial class DiscoveryBroadcaster : Node
 	/// <summary>UDP port discovery beacons are sent to. Distinct from the game port.</summary>
 	[Export] public int DiscoveryPort { get; set; } = 7778;
 
+	/// <summary>
+	/// IPv4 destination for discovery beacons. Production uses the limited
+	/// broadcast address; a same-host harness may explicitly set loopback because
+	/// broadcast delivery is not required to loop back by ADR-0007.
+	/// </summary>
+	internal string DestinationAddress { get; set; } = "255.255.255.255";
+
 	/// <summary>Seconds between beacons. ~1 Hz; the client expires after ~3 missed.</summary>
 	[Export] public float BroadcastInterval { get; set; } = 1.0f;
 
@@ -67,10 +74,7 @@ public partial class DiscoveryBroadcaster : Node
 
 		_udp = new PacketPeerUdp();
 		_udp.SetBroadcastEnabled(true);
-		// Limited broadcast address: reaches the local subnet without needing to
-		// know its mask. Note (ADR-0007): this does not reliably loop back on a
-		// single host, which is why single-machine discovery can't be fully proven.
-		Error err = _udp.SetDestAddress("255.255.255.255", DiscoveryPort);
+		Error err = _udp.SetDestAddress(DestinationAddress, DiscoveryPort);
 		if (err != Error.Ok)
 		{
 			GD.PrintErr($"[DiscoveryBroadcaster] SetDestAddress failed: {err}; discovery disabled.");
@@ -79,7 +83,8 @@ public partial class DiscoveryBroadcaster : Node
 
 		_active = true;
 		_sinceLastBroadcast = BroadcastInterval; // send one immediately
-		GD.Print("[DiscoveryBroadcaster] Advertising game port ", _gamePort, " on discovery port ", DiscoveryPort);
+		GD.Print("[DiscoveryBroadcaster] Advertising game port ", _gamePort,
+			" to ", DestinationAddress, " on discovery port ", DiscoveryPort);
 	}
 
 	public override void _Process(double delta)
