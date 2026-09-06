@@ -5,6 +5,7 @@ It deliberately compares state-linked event timing and camera framing, not PNG
 pixels: identical pixels across GPUs are outside the experiment's contract.
 """
 import json
+import math
 import os
 import sys
 import struct
@@ -82,6 +83,61 @@ def validate_png(path, item):
     if sum(luminance) / len(luminance) < 0.01 or max(luminance) - min(luminance) < 0.02:
         raise AssertionError(f"{path}: persisted image is black or flat")
 
+def expect_finite_vector(value, length, description):
+    if not isinstance(value, list) or len(value) != length:
+        raise AssertionError(f"{description}: expected a {length}-component vector")
+    if not all(isinstance(component, (int, float)) and math.isfinite(component) for component in value):
+        raise AssertionError(f"{description}: vector contains a non-finite component")
+
+def state_matches(expected, observed):
+    if expected == "Dribble":
+        return observed in ("DribbleLeft", "DribbleRight")
+    if expected == "BehindTheBack":
+        return isinstance(observed, str) and observed.startswith("BehindTheBack")
+    return expected == observed
+
+def validate_capture_attempts(data, captures, path):
+    """Bind every persisted PNG to the post-draw observation that admitted it."""
+    attempts = data.get("attempts")
+    if not isinstance(attempts, list):
+        raise AssertionError(f"{path}: manifest has no capture-attempt ledger")
+    used_attempts = set()
+    for capture in captures:
+        index = capture.get("attemptIndex")
+        if not isinstance(index, int) or index < 0 or index >= len(attempts) or index in used_attempts:
+            raise AssertionError(f"{path}: {capture.get('label')}: invalid or reused capture-attempt index")
+        used_attempts.add(index)
+        attempt = attempts[index]
+        if attempt.get("outcome") != "accepted" or attempt.get("label") != capture.get("label"):
+            raise AssertionError(f"{path}: {capture.get('label')}: PNG is not linked to an accepted matching attempt")
+        if attempt.get("file") != capture.get("file"):
+            raise AssertionError(f"{path}: {capture.get('label')}: accepted attempt names a different PNG")
+        if not isinstance(attempt.get("renderFrame"), int) or attempt["renderFrame"] < 1:
+            raise AssertionError(f"{path}: {capture.get('label')}: attempt has no rendered-frame witness")
+        if not isinstance(capture.get("savedAfterRenderFrame"), int) or capture["savedAfterRenderFrame"] < attempt["renderFrame"]:
+            raise AssertionError(f"{path}: {capture.get('label')}: PNG predates its admitting rendered-frame witness")
+        for flag, expected in (("stateMatches", True), ("productionCameraIsActive", True),
+                               ("anchorBehind", False), ("anchorInFrustum", True), ("anchorInViewport", True)):
+            if attempt.get(flag) is not expected:
+                raise AssertionError(f"{path}: {capture.get('label')}: accepted attempt violates {flag}={expected}")
+        if not state_matches(attempt.get("expectedAnimationState"), attempt.get("observedAnimationState")):
+            raise AssertionError(f"{path}: {capture.get('label')}: observed AnimationTree state does not satisfy expected state")
+        if not isinstance(attempt.get("subjectNodePath"), str) or not attempt["subjectNodePath"]:
+            raise AssertionError(f"{path}: {capture.get('label')}: subject node path is missing")
+        if not isinstance(attempt.get("subjectPeerName"), str) or not attempt["subjectPeerName"]:
+            raise AssertionError(f"{path}: {capture.get('label')}: subject peer identity is missing")
+        if not isinstance(attempt.get("subjectAuthority"), int):
+            raise AssertionError(f"{path}: {capture.get('label')}: subject authority is missing")
+        for key, count in (("subjectPosition", 3), ("subjectAnchor", 3), ("subjectScreen", 2),
+                           ("viewport", 4), ("cameraTransform", 12)):
+            expect_finite_vector(attempt.get(key), count, f"{path}: {capture.get('label')}: {key}")
+        if attempt["viewport"][2] <= 0 or attempt["viewport"][3] <= 0:
+            raise AssertionError(f"{path}: {capture.get('label')}: viewport dimensions are invalid")
+        for key in ("expectedAnimationState", "observedAnimationState", "subjectNodePath", "subjectPeerName",
+                    "subjectAnchor", "subjectScreen", "viewport", "cameraTransform"):
+            if capture.get(key) != attempt.get(key):
+                raise AssertionError(f"{path}: {capture.get('label')}: persisted PNG provenance diverges at {key}")
+
 def load(path, local=False):
     with open(path, encoding="utf-8") as handle:
         data = json.load(handle)
@@ -99,6 +155,7 @@ def load(path, local=False):
         raise AssertionError(f"{path}: movie writer did not finalize a nonempty AVI")
     if not data.get("effectiveRenderingMethod") or not data.get("effectiveDisplayDriver") or not data.get("adapterName") or not data.get("adapterApiVersion"):
         raise AssertionError(f"{path}: effective renderer/display driver/adapter is unknown")
+    validate_capture_attempts(data, captures, path)
     for item in captures:
         frame = item.get("physicsFrame")
         if not isinstance(frame, int) or frame < 1:

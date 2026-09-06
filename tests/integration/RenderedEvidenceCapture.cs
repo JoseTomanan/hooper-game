@@ -52,7 +52,9 @@ public partial class RenderedEvidenceCapture : Node
     private bool _shotBegun;
     private bool _pivotStarted;
     private readonly List<CaptureEntry> _captures = new();
+    private readonly List<CaptureAttempt> _attempts = new();
     private readonly List<EventEntry> _events = new();
+    private readonly Dictionary<string, CaptureRequest> _pendingCaptures = new();
 
     private Node3D _main = null!;
     private NetworkManager _network = null!;
@@ -306,60 +308,44 @@ public partial class RenderedEvidenceCapture : Node
 
     private void QueueCaptureOnce(string label, PlayerController subject, string expectedState, bool remote)
     {
-        if (_captures.Any(c => c.Label == label)) return;
+        if (_captures.Any(c => c.Label == label) || _pendingCaptures.ContainsKey(label)) return;
         QueueCapture(label, subject, expectedState, remote);
     }
 
     private void QueueCapture(string label, PlayerController subject, string expectedState, bool remote)
     {
-        string observed = subject.ActiveAnimNodeForHarness;
         string wanted = _brokenScenario && label == "stationary-to-moving-dribble" ? "DefinitelyMissingState" : expectedState;
-        if (!string.Equals(observed, wanted, StringComparison.Ordinal) && !observed.Contains(wanted, StringComparison.Ordinal))
-        {
-            Fail($"{label}: intended live AnimationTree state '{wanted}' was not observed (actual '{observed}').");
-            Finish(1);
-            return;
-        }
-        if (!SubjectIsVisible(subject, out Vector2 screen))
-        {
-            Fail($"{label}: production subject is outside the gameplay camera frame; refusing an image that cannot show its claimed actor.");
-            Finish(1);
-            return;
-        }
-        var entry = new CaptureEntry
-        {
-            Label = label,
-            File = $"{++_captureIndex:D2}-{label}.png",
-            PhysicsFrame = _frame,
-            ExpectedAnimationState = wanted,
-            ObservedAnimationState = observed,
-            DisplayMoveId = subject.DisplayMoveId(),
-            HandSide = subject.HandSide.ToString(),
-            RemoteDisplay = remote,
-            SubjectPosition = Vec(subject.GlobalPosition),
-            BallPosition = Vec(_ball.GlobalPosition),
-            SubjectScreen = new[] { screen.X, screen.Y },
-            DirectionBefore = Vec(_velocityBeforeDirectionChange),
-            DirectionAfter = Vec(_velocityAfterDirectionChange),
-            DirectionChanged = _sawDirectionChange,
-            CameraTransform = Transform(_camera.GlobalTransform),
-            CameraFov = _camera.Fov
-        };
-        _captures.Add(entry);
-        // Viewport docs require post-draw: a _PhysicsProcess read can be black
-        // or stale. Deferred schedules the capture after this frame's render.
-        CallDeferred(nameof(CaptureAfterDraw), entry.File);
+        _pendingCaptures[label] = new CaptureRequest(label, subject, wanted, remote, _frame);
+        // Godot documents frame_post_draw as the point at which a viewport image
+        // is safe to store. Capture-time state and framing must be sampled there
+        // too, so the manifest cannot bind a prior physics-tick state to a later
+        // rendered image. Source: https://docs.godotengine.org/en/4.7/classes/class_viewport.html
+        CallDeferred(nameof(CaptureAfterDraw), label);
     }
 
-    private async void CaptureAfterDraw(string file)
+    private async void CaptureAfterDraw(string label)
     {
         await ToSignal(RenderingServer.Singleton, RenderingServer.SignalName.FramePostDraw);
-        if (_finished && !_captures.Any(c => c.File == file)) return;
-        CaptureEntry entry = _captures.FirstOrDefault(c => c.File == file);
-        if (entry == null) return;
-        Image image = GetViewport().GetTexture().GetImage();
-        if (!ValidateImage(image, entry.Label, out string imageFailure))
+        if (!_pendingCaptures.Remove(label, out CaptureRequest request)) return;
+
+        CaptureAttempt attempt = SnapshotAttempt(request);
+        _attempts.Add(attempt);
+        if (!attempt.StateMatches || !attempt.ProductionCameraIsActive || attempt.AnchorBehind ||
+            !attempt.AnchorInFrustum || !attempt.AnchorInViewport)
         {
+            attempt.Outcome = "rejected";
+            attempt.Reason = DescribeRejection(attempt);
+            Fail($"{label}: {attempt.Reason}");
+            Finish(1);
+            return;
+        }
+
+        string file = $"{++_captureIndex:D2}-{label}.png";
+        Image image = GetViewport().GetTexture().GetImage();
+        if (!ValidateImage(image, label, out string imageFailure))
+        {
+            attempt.Outcome = "rejected";
+            attempt.Reason = imageFailure;
             Fail(imageFailure);
             Finish(1);
             return;
@@ -368,23 +354,78 @@ public partial class RenderedEvidenceCapture : Node
         Error save = image.SavePng(path);
         if (save != Error.Ok || !File.Exists(path) || new FileInfo(path).Length == 0)
         {
-            Fail($"{entry.Label}: SavePng failed ({save}) or wrote no bytes.");
+            attempt.Outcome = "rejected";
+            attempt.Reason = $"SavePng failed ({save}) or wrote no bytes.";
+            Fail($"{label}: {attempt.Reason}");
             Finish(1);
             return;
         }
+        var entry = new CaptureEntry
+        {
+            Label = label, File = file, PhysicsFrame = request.QueuedPhysicsFrame,
+            SavedAfterRenderFrame = Engine.GetProcessFrames(), ExpectedAnimationState = request.ExpectedState,
+            ObservedAnimationState = attempt.ObservedAnimationState, DisplayMoveId = attempt.DisplayMoveId,
+            HandSide = attempt.HandSide, RemoteDisplay = request.Remote, SubjectPosition = attempt.SubjectPosition,
+            SubjectAnchor = attempt.SubjectAnchor, SubjectScreen = attempt.SubjectScreen,
+            SubjectNodePath = attempt.SubjectNodePath, SubjectPeerName = attempt.SubjectPeerName,
+            SubjectAuthority = attempt.SubjectAuthority, BallPosition = Vec(_ball.GlobalPosition),
+            DirectionBefore = Vec(_velocityBeforeDirectionChange),
+            DirectionAfter = Vec(_velocityAfterDirectionChange), DirectionChanged = _sawDirectionChange,
+            CameraTransform = attempt.CameraTransform, CameraFov = _camera.Fov,
+            Viewport = attempt.Viewport, AttemptIndex = _attempts.Count - 1
+        };
         entry.ByteLength = new FileInfo(path).Length;
         entry.Width = image.GetWidth();
         entry.Height = image.GetHeight();
-        entry.SavedAfterRenderFrame = Engine.GetProcessFrames();
+        attempt.Outcome = "accepted";
+        attempt.File = file;
         GD.Print($"[rendered-evidence] captured {entry.File} physics={entry.PhysicsFrame} render={entry.SavedAfterRenderFrame}");
+        _captures.Add(entry);
     }
 
-    private bool SubjectIsVisible(Node3D subject, out Vector2 screen)
+    private CaptureAttempt SnapshotAttempt(CaptureRequest request)
     {
-        screen = _camera.UnprojectPosition(subject.GlobalPosition + Vector3.Up);
+        // These queries intentionally use the SAME head-height anchor. Camera3D
+        // documents that IsPositionBehind only rules out the behind-camera case;
+        // IsPositionInFrustum and the projected visible-rect check are separate
+        // constraints. Source: https://docs.godotengine.org/en/4.7/classes/class_camera3d.html
+        Vector3 anchor = request.Subject.GlobalPosition + Vector3.Up;
+        Vector2 screen = _camera.UnprojectPosition(anchor);
         Rect2 viewport = GetViewport().GetVisibleRect();
-        return !_camera.IsPositionBehind(subject.GlobalPosition) && _camera.IsPositionInFrustum(subject.GlobalPosition)
-            && viewport.HasPoint(screen);
+        Camera3D activeCamera = GetViewport().GetCamera3D();
+        return new CaptureAttempt
+        {
+            Label = request.Label, QueuedPhysicsFrame = request.QueuedPhysicsFrame,
+            RenderFrame = Engine.GetProcessFrames(), ExpectedAnimationState = request.ExpectedState,
+            ObservedAnimationState = request.Subject.ActiveAnimNodeForHarness,
+            DisplayMoveId = request.Subject.DisplayMoveId(), HandSide = request.Subject.HandSide.ToString(),
+            SubjectNodePath = request.Subject.GetPath().ToString(), SubjectPeerName = request.Subject.Name.ToString(),
+            SubjectAuthority = request.Subject.GetMultiplayerAuthority(), SubjectPosition = Vec(request.Subject.GlobalPosition),
+            SubjectAnchor = Vec(anchor), SubjectScreen = new[] { screen.X, screen.Y },
+            Viewport = new[] { viewport.Position.X, viewport.Position.Y, viewport.Size.X, viewport.Size.Y },
+            CameraTransform = Transform(_camera.GetCameraTransform()), ProductionCameraIsActive = activeCamera == _camera,
+            AnchorBehind = _camera.IsPositionBehind(anchor), AnchorInFrustum = _camera.IsPositionInFrustum(anchor),
+            AnchorInViewport = IsFinite(screen) && viewport.Size.X > 0f && viewport.Size.Y > 0f && viewport.HasPoint(screen),
+            StateMatches = StateMatches(request.ExpectedState, request.Subject.ActiveAnimNodeForHarness)
+        };
+    }
+
+    private static bool StateMatches(string expected, string observed) => expected switch
+    {
+        "Dribble" => observed is "DribbleLeft" or "DribbleRight",
+        "BehindTheBack" => observed.StartsWith("BehindTheBack", StringComparison.Ordinal),
+        _ => string.Equals(expected, observed, StringComparison.Ordinal)
+    };
+
+    private static bool IsFinite(Vector2 value) => float.IsFinite(value.X) && float.IsFinite(value.Y);
+
+    private static string DescribeRejection(CaptureAttempt attempt)
+    {
+        if (!attempt.StateMatches) return $"intended live AnimationTree state '{attempt.ExpectedAnimationState}' was not observed at capture (actual '{attempt.ObservedAnimationState}').";
+        if (!attempt.ProductionCameraIsActive) return "Main/Camera3D was not the viewport's active camera at capture.";
+        if (attempt.AnchorBehind) return "the recorded head-height capture anchor was behind Main/Camera3D.";
+        if (!attempt.AnchorInFrustum) return "the recorded head-height capture anchor was outside Main/Camera3D's frustum.";
+        return "the recorded head-height capture anchor projected outside the viewport.";
     }
 
     private static bool ValidateImage(Image image, string label, out string failure)
@@ -455,9 +496,14 @@ public partial class RenderedEvidenceCapture : Node
                 Camera = cameraReady ? Transform(_camera.GlobalTransform) : Array.Empty<float>(),
                 CameraFov = cameraReady ? _camera.Fov : 0f,
                 InputsAndEvents = _events,
+                Attempts = _attempts,
                 Captures = _captures
             };
-            File.WriteAllText(Path.Combine(_outputRoot, "manifest.json"), JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true }));
+            File.WriteAllText(Path.Combine(_outputRoot, "manifest.json"), JsonSerializer.Serialize(manifest, new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            }));
         }
         catch (Exception ex)
         {
@@ -475,13 +521,21 @@ public partial class RenderedEvidenceCapture : Node
         public string Label { get; set; } = ""; public string File { get; set; } = ""; public int PhysicsFrame { get; set; }
         public ulong SavedAfterRenderFrame { get; set; } public string ExpectedAnimationState { get; set; } = ""; public string ObservedAnimationState { get; set; } = "";
         public string DisplayMoveId { get; set; } = ""; public string HandSide { get; set; } = ""; public bool RemoteDisplay { get; set; } public float[] SubjectPosition { get; set; } = Array.Empty<float>();
-        public float[] BallPosition { get; set; } = Array.Empty<float>(); public float[] SubjectScreen { get; set; } = Array.Empty<float>(); public float[] DirectionBefore { get; set; } = Array.Empty<float>(); public float[] DirectionAfter { get; set; } = Array.Empty<float>(); public bool DirectionChanged { get; set; } public float[] CameraTransform { get; set; } = Array.Empty<float>();
-        public float CameraFov { get; set; } public int Width { get; set; } public int Height { get; set; } public long ByteLength { get; set; }
+        public float[] BallPosition { get; set; } = Array.Empty<float>(); public float[] SubjectAnchor { get; set; } = Array.Empty<float>(); public float[] SubjectScreen { get; set; } = Array.Empty<float>(); public string SubjectNodePath { get; set; } = ""; public string SubjectPeerName { get; set; } = ""; public int SubjectAuthority { get; set; } public float[] DirectionBefore { get; set; } = Array.Empty<float>(); public float[] DirectionAfter { get; set; } = Array.Empty<float>(); public bool DirectionChanged { get; set; } public float[] CameraTransform { get; set; } = Array.Empty<float>();
+        public float CameraFov { get; set; } public float[] Viewport { get; set; } = Array.Empty<float>(); public int AttemptIndex { get; set; } public int Width { get; set; } public int Height { get; set; } public long ByteLength { get; set; }
+    }
+    private sealed record CaptureRequest(string Label, PlayerController Subject, string ExpectedState, bool Remote, int QueuedPhysicsFrame);
+    private sealed class CaptureAttempt
+    {
+        public string Label { get; set; } = ""; public string Outcome { get; set; } = "pending"; public string Reason { get; set; } = ""; public string File { get; set; } = "";
+        public int QueuedPhysicsFrame { get; set; } public ulong RenderFrame { get; set; } public string ExpectedAnimationState { get; set; } = ""; public string ObservedAnimationState { get; set; } = ""; public string DisplayMoveId { get; set; } = ""; public string HandSide { get; set; } = "";
+        public string SubjectNodePath { get; set; } = ""; public string SubjectPeerName { get; set; } = ""; public int SubjectAuthority { get; set; } public float[] SubjectPosition { get; set; } = Array.Empty<float>(); public float[] SubjectAnchor { get; set; } = Array.Empty<float>(); public float[] SubjectScreen { get; set; } = Array.Empty<float>(); public float[] Viewport { get; set; } = Array.Empty<float>(); public float[] CameraTransform { get; set; } = Array.Empty<float>();
+        public bool ProductionCameraIsActive { get; set; } public bool AnchorBehind { get; set; } public bool AnchorInFrustum { get; set; } public bool AnchorInViewport { get; set; } public bool StateMatches { get; set; }
     }
     private sealed class Manifest
     {
         public string Schema { get; set; } = ""; public string Result { get; set; } = ""; public string Role { get; set; } = ""; public string Commit { get; set; } = "";
         public string EngineVersion { get; set; } = ""; public int PhysicsTicksPerSecond { get; set; } public string RendererSetting { get; set; } = ""; public string EffectiveRenderingMethod { get; set; } = ""; public string EffectiveDisplayDriver { get; set; } = ""; public string AdapterName { get; set; } = ""; public string AdapterVendor { get; set; } = ""; public string AdapterApiVersion { get; set; } = "";
-        public float[] Camera { get; set; } = Array.Empty<float>(); public float CameraFov { get; set; } public List<EventEntry> InputsAndEvents { get; set; } = new(); public List<CaptureEntry> Captures { get; set; } = new();
+        public float[] Camera { get; set; } = Array.Empty<float>(); public float CameraFov { get; set; } public List<EventEntry> InputsAndEvents { get; set; } = new(); public List<CaptureAttempt> Attempts { get; set; } = new(); public List<CaptureEntry> Captures { get; set; } = new();
     }
 }
