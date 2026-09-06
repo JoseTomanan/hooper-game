@@ -174,7 +174,7 @@ def main(paths):
         raise AssertionError("usage: local-a.json local-b.json remote.json")
     first, second, remote = load(paths[0], True), load(paths[1], True), load(paths[2])
     a, b, r = map(capture_map, (first, second, remote))
-    if sorted(a) != LOCAL_LABELS or sorted(b) != LOCAL_LABELS:
+    if sorted(a) != sorted(LOCAL_LABELS) or sorted(b) != sorted(LOCAL_LABELS):
         raise AssertionError("local manifests do not contain exactly the four required production samples")
     for label in LOCAL_LABELS:
         # Deterministic simulation proves timing/framing replay. Renderer
