@@ -145,7 +145,7 @@ def load(path, local=False):
         raise AssertionError(f"{path}: not a passing v1 manifest")
     captures = data.get("captures", [])
     expected_labels = LOCAL_LABELS if local else ["remote-player-display"]
-    if sorted(item.get("label") for item in captures) != expected_labels:
+    if sorted(item.get("label") for item in captures) != sorted(expected_labels):
         raise AssertionError(f"{path}: capture labels are missing, duplicated, or unexpected")
     expected_files = {"manifest.json", "capture.avi"} | {item.get("file", "") for item in captures}
     actual_files = set(os.listdir(os.path.dirname(path)))
