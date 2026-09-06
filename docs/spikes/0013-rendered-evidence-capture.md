@@ -1,6 +1,6 @@
 # Spike 0013 — rendered gameplay evidence capture (#365)
 
-**Status:** NO-GO — the hosted run produced no capture accepted by its current framing predicate; the rendered-evidence contract remains unproven.
+**Status:** GO — GitHub Actions run 34019789080 produced state-bound local and remote production-gameplay PNGs, rejected both deliberate mutations, and passed the complete build, unit-test, integration-harness, and rendered-evidence gates. This is an evidence-capture result, not a feel verdict.
 
 ## Contract
 
@@ -109,15 +109,48 @@ manifest, non-empty PNG/AVI files, and both expected failing mutation logs.
 Otherwise it remains **NO-GO** with the current blocker recorded here; the local
 command remains useful in either outcome.
 
+**GO, final attempt:** GitHub Actions run
+[34019789080](https://github.com/JoseTomanan/hooper-game/actions/runs/34019789080)
+ran the same command on commit `ffa684af40c5c5626f2b055184d4d8f9f1c8fc25`.
+Its `rendered-evidence-spike` job passed at 2026-09-06T07:43:29Z and uploaded
+`rendered-evidence-34019789080` (artifact ID `9985127522`). The full workflow
+also passed `build-and-test` and the complete headless integration matrix at
+2026-09-06T07:46:11Z.
+
+The artifact contains two repeated passing local manifests (`local-a` and
+`local-b`) with the same four accepted production samples, a separately clean
+post-mutation `local-c` manifest, and a passing remote-client manifest:
+
+- `stationary-to-moving-dribble` — `DribbleRight`
+- `both-hands-direction-change` — `BehindTheBackStartupRight`
+- `shot-fadeaway` — `FadeawayActive`
+- `pivot` — `Pivot`
+- `remote-player-display` — `BehindTheBackStartupRight`, with `remoteDisplay: true`
+
+Each accepted manifest records four (or, for the remote client, one) accepted
+post-draw attempt. The external verifier passed its repeat timing/camera checks
+and remote-display provenance check. `mutation.log` records the expected rejection
+of `DefinitelyMissingState`; `image-mutation` records the expected rejection of a
+truncated persisted PNG. Those controls establish that neither a nonexistent
+AnimationTree state nor a stale/corrupt image can satisfy the artifact verifier.
+
+The successful remote leg also exposed and closed a production scene defect:
+`Main.tscn` had a `MultiplayerSpawner` entry for unresolved
+`uid://damgpdajv4xlf`, which prevented a clean CI checkout from replicating any
+`Player.tscn` nodes. The current explicit `res://scenes/Player.tscn` entry was
+exercised by the successful real server/client capture and by the existing
+dual-instance integration scenarios. This is a resource-reference repair, not a
+change to the server-authoritative networking model.
+
 ## Visual observations
 
-**Artifact inspected 2026-09-06.** There are no persisted PNG frames or capture
-entries to inspect from run `34005837232`, so this spike makes no observation
-about a player animation, court composition, or visual legibility. The presence
-of a Movie Maker AVI alone is not accepted as a rendered-frame sample because the
-runner did not bind a live AnimationTree state and an accepted in-frame subject to
-a saved PNG. The framing failure reports only the current predicate's result, not
-a human visual judgment. “Feels right” remains unproven feel for #173.
+**Artifact inspected 2026-09-06.** The final artifact's four local PNGs visibly
+show the shipped court, gameplay camera, player rig, ball, and HUD in the dribble,
+BehindTheBack, fadeaway, and pivot samples. The remote-client PNG visibly shows
+two spawned player rigs and the remote opponent holding the ball. These are
+consistent with the manifest's state and subject-provenance records; they do not
+judge animation quality, court composition quality, or visual legibility. “Feels
+right” remains unproven feel for #173.
 
 ## Relationship to deferred visual work
 
