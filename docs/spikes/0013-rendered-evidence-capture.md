@@ -1,6 +1,6 @@
 # Spike 0013 — rendered gameplay evidence capture (#365)
 
-**Status:** First hosted attempt NO-GO; remediation pending rerun
+**Status:** NO-GO — the hosted run produced no capture accepted by its current framing predicate; the rendered-evidence contract remains unproven.
 
 ## Contract
 
@@ -73,6 +73,36 @@ only that expected pre-created AVI and manifest creation tolerates
 pre-initialization failure. A rerun is required before the experiment can make
 any claim about Xvfb/Mesa rendered capture.
 
+**NO-GO, second attempt:** GitHub Actions run
+[34005837232](https://github.com/JoseTomanan/hooper-game/actions/runs/34005837232),
+job `rendered-evidence-spike`, ran from 2026-09-06T02:12:25Z to
+2026-09-06T02:12:52Z (27 seconds) and uploaded
+`rendered-evidence-34005837232`. The same command and environment as the first
+attempt were used. The runner reached a real Xvfb/Mesa llvmpipe OpenGL renderer
+and Movie Maker, then rejected its first candidate under its framing predicate:
+
+```
+stationary-to-moving-dribble: production subject is outside the gameplay camera
+frame; refusing an image that cannot show its claimed actor.
+```
+
+The uploaded `local-a/manifest.json` records `Result: fail`, no `Captures`, the
+production camera transform/FOV, Mobile as the project renderer setting, X11 as
+the display driver, and the llvmpipe adapter/API provenance. The artifact contains
+only that failed manifest, `local-a.log`, and the Movie-Maker-owned `capture.avi`
+(5,289,904 bytes); it has no persisted PNG capture from this run and cannot
+satisfy #365's rendered-sample contract.
+
+The artifact does not identify the rejected candidate's peer id, world position,
+screen coordinate, viewport dimensions, or the camera state at that candidate
+frame. It also tests `IsPositionBehind` and `IsPositionInFrustum` at the player
+origin while it projects `origin + Vector3.Up` for the viewport test. Accordingly,
+this result does not establish whether the player mesh was wholly absent from
+frame, whether a camera/spawn configuration caused the rejection, or whether the
+predicate itself is too strict or internally misaligned. The retained local command
+above reproducibly exercises this current gate on a Godot 4.7.1 .NET installation
+with Xvfb; it is not a proof of a broader renderer or gameplay-camera limitation.
+
 A result is **GO** only when the rendered-evidence job exits zero and its
 uploaded artifact contains two passing local manifests, a passing remote-client
 manifest, non-empty PNG/AVI files, and both expected failing mutation logs.
@@ -81,10 +111,13 @@ command remains useful in either outcome.
 
 ## Visual observations
 
-Pending artifact inspection. The future observation table must record frame and
-image filename separately from inferred cause and from any human-only judgment.
-In particular, a visible animation defect is an observation; a claim about why
-it occurred is an inference; “feels right” remains unproven feel for #173.
+**Artifact inspected 2026-09-06.** There are no persisted PNG frames or capture
+entries to inspect from run `34005837232`, so this spike makes no observation
+about a player animation, court composition, or visual legibility. The presence
+of a Movie Maker AVI alone is not accepted as a rendered-frame sample because the
+runner did not bind a live AnimationTree state and an accepted in-frame subject to
+a saved PNG. The framing failure reports only the current predicate's result, not
+a human visual judgment. “Feels right” remains unproven feel for #173.
 
 ## Relationship to deferred visual work
 
