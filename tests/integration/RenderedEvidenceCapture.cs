@@ -226,16 +226,25 @@ public partial class RenderedEvidenceCapture : Node
             if (!began) { Fail("BehindTheBack did not begin from the recorded live dribble."); Finish(1); return; }
         }
 
-        if (player.DisplayMoveId() == "behindtheback" && player.ActiveAnimNodeForHarness.Contains("Behind", StringComparison.Ordinal))
+        // Bind the evidence to the exact production StartupRight state, not to
+        // HandSide: the latter flips at Active entry while the renderer keeps
+        // the origin-hand suffix. Once that one frame is queued, the next
+        // physics tick may legitimately advance to a left-hand Active variant.
+        bool awaitingBehindTheBackCapture = !_captures.Any(c => c.Label == "both-hands-direction-change") &&
+                                         !_pendingCaptures.ContainsKey("both-hands-direction-change");
+        string behindTheBackState = player.ActiveAnimNodeForHarness;
+        if (player.DisplayMoveId() == "behindtheback" && awaitingBehindTheBackCapture &&
+            behindTheBackState == "BehindTheBackStartupLeft")
         {
-            if (player.HandSide != HandSide.Right)
-            {
-                Fail($"BehindTheBack AnimationTree entered without its expected right-hand display state (actual {player.HandSide}).");
-                Finish(1);
-                return;
-            }
-            _sawRightHand = true; // live server-authoritative hand transition, not a resolver prediction.
-            QueueCaptureOnce("both-hands-direction-change", player, "BehindTheBack", false);
+            Fail("BehindTheBack AnimationTree entered the left-hand Startup variant, expected BehindTheBackStartupRight.");
+            Finish(1);
+            return;
+        }
+        if (player.DisplayMoveId() == "behindtheback" && awaitingBehindTheBackCapture &&
+            behindTheBackState == "BehindTheBackStartupRight")
+        {
+            _sawRightHand = true; // records the displayed entry, not the later swapped ball hand.
+            QueueCaptureOnce("both-hands-direction-change", player, "BehindTheBackStartupRight", false);
         }
 
         if (!_shotBegun && _frame > SettleFrames + 190 && player.PhaseForHarness == Hooper.Moves.MovePhase.Inactive)
