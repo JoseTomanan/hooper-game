@@ -2472,6 +2472,47 @@ jobs:
           chmod +x tests/integration/run-net-exitvector-rpc.sh
           tests/integration/run-net-exitvector-rpc.sh godot steady
 
+      # #375 exercises the production dedicated journey rather than another
+      # lightweight Net* fixture. The harness artifact instances shipped
+      # Main.tscn in all three processes; its server receives the real
+      # --dedicated/--port flags, each client discovers the expected beacon and
+      # activates that exact ServerBrowser row, and gameplay uses only real
+      # Input actions. The healthy scenario requires two live production players,
+      # controllability, five ordered flight->score->cleared-reset cycles, final
+      # agreement on all peers, and no possession award after the terminal score.
+      - name: Run dedicated discovery full-game journey
+        run: |
+          chmod +x tests/integration/run-dedicated-game-journey.sh
+          tests/integration/run-dedicated-game-journey.sh godot healthy
+
+      # Negative discovery control. The listener must positively bind its own
+      # isolated UDP port while the broadcaster sends to another; the same exact-
+      # port browser predicate from the healthy journey must remain false.
+      - name: Run dedicated discovery missing-beacon mutation
+        run: |
+          chmod +x tests/integration/run-dedicated-game-journey.sh
+          tests/integration/run-dedicated-game-journey.sh godot discovery-disabled
+
+      # Score-channel mutation. Both clients first confirm a real 0-0 roster
+      # receipt. Only then does an internal/default-off seam suppress
+      # ReceiveScoreState sends. A real input-driven make advances the server;
+      # both clients must remain score-stale while the independent authoritative
+      # Ball.ReceiveState stream proves their connections are still healthy.
+      - name: Run dedicated score replication mutation
+        run: |
+          chmod +x tests/integration/run-dedicated-game-journey.sh
+          tests/integration/run-dedicated-game-journey.sh godot score-rpc-disabled
+
+      - name: Upload dedicated journey failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dedicated-game-journey-failure-${{ github.run_attempt }}
+          path: |
+            .godot/harness-logs/dedicated-game-*
+            .godot/dedicated-game-*
+          if-no-files-found: warn
+
   # #365 is deliberately separate from state-only integration: this is a
   # bounded feasibility experiment for rendered evidence, not a new feel gate.
   # It boots the production Main/Player scenes under Xvfb + Mesa, captures
