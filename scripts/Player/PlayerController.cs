@@ -1480,6 +1480,11 @@ public partial class PlayerController : CharacterBody3D
 
 	public override void _Ready()
 	{
+		// GameManager derives the real 1v1 roster from live PlayerController
+		// instances. Joining the group here (rather than at spawn time) means a
+		// partially constructed scene node can never appear in a score snapshot.
+		AddToGroup("players");
+
 		// Resolve the visual-root node for smooth-correction offset and cosmetic
 		// facing/lean. VisualRoot (set in the Inspector) is preferred — it
 		// survives the humanoid mesh swap (M7a) without a code change. Falls back
