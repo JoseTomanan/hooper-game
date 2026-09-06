@@ -2762,6 +2762,12 @@ public partial class BallController : Node3D
 	/// </summary>
 	private void TickLoose(float dt)
 	{
+		// A winning make still lets the ball finish its deterministic fall, but
+		// ADR-0008 says the terminal possession does not reset. Keep integrating
+		// and broadcasting below while disabling every path that could create a
+		// new holder after game over.
+		bool gameOver = GetGameManager()?.IsGameOver ?? false;
+
 		_arc.Step(dt);
 		Vector3 p = _arc.Position;
 
@@ -2821,7 +2827,7 @@ public partial class BallController : Node3D
 
 			OobResolution.Result oob = OobResolution.Resolve(
 				CourtBounds.IsOutOfBounds(_arc.Position, CourtMin, CourtMax),
-				IsServer,
+				IsServer && !gameOver,
 				resolvedRecipient);
 
 			if (oob.Action == OobResolution.Action.Award)
@@ -2857,6 +2863,7 @@ public partial class BallController : Node3D
 		_arc.Velocity = arcVel;
 
 		GlobalPosition = _arc.Position;
+		if (gameOver) return;
 
 		int recoverer = ResolveLooseBallRecovery();
 		if (recoverer != 0)

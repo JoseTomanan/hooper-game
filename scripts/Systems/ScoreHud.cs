@@ -24,10 +24,9 @@ namespace Hooper.Systems;
 ///
 /// ── Identity for labelling ───────────────────────────────────────────────
 /// "You" is always the local peer (Multiplayer.GetUniqueId()); the opponent
-/// is the only other player in a 1v1. On the host (local id 1) the opponent
-/// is the single remote peer; on a client the opponent is always the host
-/// (peer 1, by NetworkManager's listen-server convention). 0 means "no
-/// opponent connected yet" and renders as a dash.
+/// is the only other player in a 1v1. GameManager supplies that replicated
+/// pairing so the HUD works for both listen-server and dedicated topologies.
+/// 0 means "no opponent connected yet" and renders as a dash.
 ///
 /// Scene wiring is human editor work (issue #27, hitl): add a Label to
 /// Main.tscn's HUD layer and attach this script. See EDITOR_TASKS.md.
@@ -82,15 +81,7 @@ public partial class ScoreHud : Label
 	/// <summary>Resolves the opponent's peer id for a 1v1 (see class doc).</summary>
 	private int OpponentPeerId()
 	{
-		int localId = Multiplayer.GetUniqueId();
-
-		// A client's only opponent is the host (peer 1). The host's opponent
-		// is the single connected remote peer, or 0 if none has joined yet.
-		if (localId != 1)
-			return 1;
-
-		int[] peers = Multiplayer.GetPeers();
-		return peers.Length > 0 ? peers[0] : 0;
+		return _gameManager.OpponentPeerIdFor(Multiplayer.GetUniqueId());
 	}
 
 	/// <summary>Re-renders the running score line. Called on each ScoreChanged.</summary>

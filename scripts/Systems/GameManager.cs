@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using Godot;
+using Hooper.Player;
 
 namespace Hooper.Systems;
 
@@ -94,6 +96,19 @@ public partial class GameManager : Node
 			_scoreboard = new Scoreboard(TargetScore);
 	}
 
+	public override void _PhysicsProcess(double delta)
+	{
+		if (!IsServer) return;
+
+		// Multiplayer.PeerConnected fires before the spawned PlayerController is
+		// necessarily ready. Polling the live player group instead makes a roster
+		// update wait for the actual gameplay node, and also observes a queued
+		// disconnect without relying on signal ordering.
+		if (!TrySnapshotPlayerIds(out int peerAId, out int peerBId)) return;
+		if (peerAId != _peerAId || peerBId != _peerBId)
+			BroadcastAndEmit(peerAId, peerBId);
+	}
+
 	// ── Unified read surface (works regardless of role) ──────────────────
 
 	/// <summary>True once the game has ended, from whichever source is authoritative for this peer (Scoreboard on the server, the broadcast mirror on a client).</summary>
@@ -111,6 +126,18 @@ public partial class GameManager : Node
 		if (peerId == _peerAId) return _peerAScore;
 		if (peerId == _peerBId) return _peerBScore;
 		return 0; // never broadcast for this peer yet — matches Scoreboard.ScoreOf's own "0 if never scored"
+	}
+
+	/// <summary>
+	/// Resolves the other member of the replicated live 1v1 roster. Unlike the
+	/// old peer-1 shortcut this works when a dedicated server owns no player.
+	/// Returns 0 until this peer has no confirmed opponent in the roster.
+	/// </summary>
+	public int OpponentPeerIdFor(int peerId)
+	{
+		if (peerId == _peerAId) return _peerBId;
+		if (peerId == _peerBId) return _peerAId;
+		return 0;
 	}
 
 	// ── Server-only mutation entry point ──────────────────────────────────
@@ -148,11 +175,24 @@ public partial class GameManager : Node
 	/// </summary>
 	private void BroadcastAndEmit()
 	{
-		(int peerAId, int peerAScore, int peerBId, int peerBScore) = SnapshotPeers();
+		if (!TrySnapshotPlayerIds(out int peerAId, out int peerBId)) return;
+		BroadcastAndEmit(peerAId, peerBId);
+	}
 
-		Rpc(MethodName.ReceiveScoreState,
-			peerAId, peerAScore, peerBId, peerBScore,
-			_scoreboard.WinnerPeerId, _scoreboard.IsGameOver);
+	private void BroadcastAndEmit(int peerAId, int peerBId)
+	{
+		int peerAScore = _scoreboard.ScoreOf(peerAId);
+		int peerBScore = _scoreboard.ScoreOf(peerBId);
+
+		// #375's mutation suppresses only the wire send, after clients have
+		// already proved a healthy baseline. The internal seam defaults false and
+		// has no gameplay-input or exported-config path.
+		if (!SuppressScoreRpcForHarness)
+		{
+			Rpc(MethodName.ReceiveScoreState,
+				peerAId, peerAScore, peerBId, peerBScore,
+				_scoreboard.WinnerPeerId, _scoreboard.IsGameOver);
+		}
 
 		// Server applies the same values to its own mirror fields so
 		// ScoreOf/IsGameOver read consistently via IsServer ? scoreboard : mirror
@@ -168,40 +208,42 @@ public partial class GameManager : Node
 	}
 
 	/// <summary>
-	/// Reads both peer ids straight from MultiplayerApi rather than tracking
-	/// join order ourselves: peer 1 is always the server/host (NetworkManager
-	/// convention), and Multiplayer.GetPeers() returns every OTHER connected
-	/// peer id, which for this 1v1 cap is at most one id. If the second slot
-	/// hasn't joined yet (e.g. game-managed in a lobby/solo test), peerBId/
-	/// peerBScore are sent as 0/0 — 0 is never a valid peer id (Scoreboard's
-	/// convention), so the HUD can treat a 0 id as "no second player yet."
+	/// Derives the roster from live PlayerController nodes instead of transport
+	/// peer IDs. A dedicated server has no player at peer 1, while its two remote
+	/// players are both real roster members. A queued-for-deletion node is not a
+	/// live player, so a disconnect cannot remain visible in the next snapshot.
+	/// Returns false rather than truncating if more than two valid players exist:
+	/// silently dropping a third would hide a violated 1v1 invariant.
 	/// </summary>
-	private (int peerAId, int peerAScore, int peerBId, int peerBScore) SnapshotPeers()
+	private bool TrySnapshotPlayerIds(out int peerAId, out int peerBId)
 	{
-		const int hostPeerId = 1;
-		int peerAId = hostPeerId;
-		int peerAScore = _scoreboard.ScoreOf(hostPeerId);
-
-		int peerBId = 0;
-		int peerBScore = 0;
-		int[] others = Multiplayer.GetPeers();
-		if (others.Length > 0)
+		var playerIds = new List<int>();
+		foreach (Node node in GetTree().GetNodesInGroup("players"))
 		{
-			// (#24 doubt cycle 2, finding #1) Cap is 2 total (NetworkManager.
-			// MaxClients = 2, meaning 1 host + 1 remote slot), so others should
-			// never have more than one entry — but if it ever does (e.g. a
-			// future milestone raises the cap before this file is revisited),
-			// silently picking [0] would misattribute a third peer's score to
-			// "peer B" and drop the rest from the broadcast entirely. Surface
-			// it loudly rather than let scores quietly go missing.
-			if (others.Length > 1)
-				GD.PrintErr($"[GameManager] Expected at most 1 remote peer (1v1 cap) but found {others.Length}; only the first is reported. Scoring for the rest will not broadcast correctly.");
+			if (node is not PlayerController || !node.IsInsideTree() || node.IsQueuedForDeletion())
+				continue;
 
-			peerBId = others[0];
-			peerBScore = _scoreboard.ScoreOf(peerBId);
+			if (!int.TryParse(node.Name.ToString(), out int id) || id <= 0)
+			{
+				GD.PrintErr($"[GameManager] Live player node '{node.Name}' has no positive peer-id name.");
+				continue;
+			}
+
+			if (!playerIds.Contains(id))
+				playerIds.Add(id);
 		}
 
-		return (peerAId, peerAScore, peerBId, peerBScore);
+		playerIds.Sort();
+		if (playerIds.Count > 2)
+		{
+			GD.PrintErr($"[GameManager] 1v1 roster invariant violated: found {playerIds.Count} live players; score state was not broadcast.");
+			peerAId = peerBId = 0;
+			return false;
+		}
+
+		peerAId = playerIds.Count > 0 ? playerIds[0] : 0;
+		peerBId = playerIds.Count > 1 ? playerIds[1] : 0;
+		return true;
 	}
 
 	// ── Broadcast RPC ──────────────────────────────────────────────────────

@@ -416,13 +416,23 @@ public partial class NetworkManager : Node
 	}
 
 	/// <summary>
-	/// Maps a peer ID to its spawn point: the host (peer 1, see HostGame) gets
-	/// HostSpawn, every joining client gets ClientSpawn. See those exports'
-	/// docs for the offense/defense rationale (ADR-0008).
+	/// Maps a peer ID to its spawn point. A listen-server host (peer 1) remains
+	/// at HostSpawn. A dedicated server has no local peer 1, so its first remote
+	/// player takes the offensive HostSpawn and its second takes ClientSpawn.
+	/// This preserves the ADR-0008 opening geometry without overlapping two
+	/// dedicated clients at ClientSpawn.
 	/// </summary>
 	private Vector3 SpawnPositionFor(int peerId)
 	{
-		return peerId == 1 ? HostSpawn : ClientSpawn;
+		if (peerId == 1)
+			return HostSpawn;
+
+		// SpawnPlayer sets Position before AddChild, so zero existing children is
+		// exactly the first dedicated remote player; later remotes are defenders.
+		if (_isDedicated && Players != null && Players.GetChildCount() == 0)
+			return HostSpawn;
+
+		return ClientSpawn;
 	}
 
 	/// <summary>
