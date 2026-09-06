@@ -77,7 +77,11 @@ public partial class RenderedEvidenceCapture : Node
             return;
         }
         _outputRoot = ProjectSettings.GlobalizePath(_outputRoot);
-        if (Directory.Exists(_outputRoot) && Directory.EnumerateFileSystemEntries(_outputRoot).Any())
+        // Movie Maker opens its AVI before this scene reaches _Ready. Permit
+        // only that one known writer-owned file; anything else remains stale
+        // evidence and is rejected before a manifest can reuse it.
+        if (Directory.Exists(_outputRoot) && Directory.EnumerateFileSystemEntries(_outputRoot)
+            .Any(path => !string.Equals(Path.GetFileName(path), "capture.avi", StringComparison.Ordinal)))
         {
             Fail($"capture output '{_outputRoot}' is not empty. Each run needs a fresh directory so old frames cannot satisfy a new manifest.");
             Finish(1);
@@ -425,8 +429,11 @@ public partial class RenderedEvidenceCapture : Node
 
     private void WriteManifest(int code)
     {
+        if (string.IsNullOrWhiteSpace(_outputRoot)) return;
         try
         {
+            Directory.CreateDirectory(_outputRoot);
+            bool cameraReady = _camera != null;
             var manifest = new Manifest
             {
                 Schema = "hooper-rendered-evidence/v1",
@@ -445,8 +452,8 @@ public partial class RenderedEvidenceCapture : Node
                 AdapterName = RenderingServer.GetVideoAdapterName(),
                 AdapterVendor = RenderingServer.GetVideoAdapterVendor(),
                 AdapterApiVersion = RenderingServer.GetVideoAdapterApiVersion(),
-                Camera = Transform(_camera.GlobalTransform),
-                CameraFov = _camera.Fov,
+                Camera = cameraReady ? Transform(_camera.GlobalTransform) : Array.Empty<float>(),
+                CameraFov = cameraReady ? _camera.Fov : 0f,
                 InputsAndEvents = _events,
                 Captures = _captures
             };

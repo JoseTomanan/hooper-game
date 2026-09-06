@@ -1,6 +1,6 @@
 # Spike 0013 — rendered gameplay evidence capture (#365)
 
-**Status:** Pending hosted attempt
+**Status:** First hosted attempt NO-GO; remediation pending rerun
 
 ## Contract
 
@@ -57,12 +57,27 @@ timing](https://docs.godotengine.org/en/4.7/classes/class_viewport.html) and
 
 ## Hosted result — GO/NO-GO
 
-Pending the first GitHub Actions run from this PR. A result is **GO** only when
-the rendered-evidence job exits zero and its uploaded artifact contains two
-passing local manifests, a passing remote-client manifest, non-empty PNG/AVI
-files, and the expected failing mutation log. Otherwise it is **NO-GO** and this
-record will be amended with the exact command, log excerpt, runtime, and
-specific blocker; the local command remains available either way.
+**NO-GO, first attempt:** GitHub Actions run
+[34005408933](https://github.com/JoseTomanan/hooper-game/actions/runs/34005408933),
+job `rendered-evidence-spike`, failed after 9 seconds. Its uploaded artifact is
+`rendered-evidence-34005408933`. The exact command was
+`tests/integration/run-rendered-evidence.sh godot` with
+`RENDERED_EVIDENCE_ROOT=rendered-evidence` and `HARNESS_PORT=23461`.
+
+The blocker was the Movie Maker writer creating `capture.avi` before the scene
+entered `_Ready`; the freshness guard then mistook that writer-owned file for
+stale evidence and stopped before any gameplay frame. The initial failure path
+also tried to serialize camera provenance before resolving `Main/Camera3D`.
+Both are runner defects, not a hosted-renderer conclusion: the guard now allows
+only that expected pre-created AVI and manifest creation tolerates
+pre-initialization failure. A rerun is required before the experiment can make
+any claim about Xvfb/Mesa rendered capture.
+
+A result is **GO** only when the rendered-evidence job exits zero and its
+uploaded artifact contains two passing local manifests, a passing remote-client
+manifest, non-empty PNG/AVI files, and both expected failing mutation logs.
+Otherwise it remains **NO-GO** with the current blocker recorded here; the local
+command remains useful in either outcome.
 
 ## Visual observations
 
