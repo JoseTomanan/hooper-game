@@ -44,6 +44,8 @@ public partial class RenderedEvidenceCapture : Node
     private bool _sawLeftHand;
     private bool _sawRightHand;
     private bool _sawDirectionChange;
+    private Vector3 _velocityBeforeDirectionChange;
+    private Vector3 _velocityAfterDirectionChange;
     private bool _sawFadeaway;
     private bool _sawPivot;
     private bool _sawRemoteDisplay;
@@ -175,6 +177,7 @@ public partial class RenderedEvidenceCapture : Node
         }
         if (_frame == SettleFrames + 50)
         {
+            _velocityBeforeDirectionChange = player.Velocity;
             Input.ActionRelease("move_backward");
             Input.ActionPress("move_right", 1f);
             RecordEvent("input-direction-change", "move_backward->move_right");
@@ -191,8 +194,13 @@ public partial class RenderedEvidenceCapture : Node
             if (player.HandSide == HandSide.Left) _sawLeftHand = true;
             if (player.HandSide == HandSide.Right) _sawRightHand = true;
         }
-        if (_frame > SettleFrames + 50 && player.Velocity.LengthSquared() > 0.01f)
-            _sawDirectionChange = true;
+        if (_frame >= SettleFrames + 70 && player.Velocity.LengthSquared() > 0.01f)
+        {
+            _velocityAfterDirectionChange = player.Velocity;
+            if (_velocityBeforeDirectionChange.LengthSquared() > 0.01f &&
+                _velocityBeforeDirectionChange.Normalized().Dot(_velocityAfterDirectionChange.Normalized()) < 0.8f)
+                _sawDirectionChange = true;
+        }
 
         if (_frame == SettleFrames + 75)
             QueueCapture("stationary-to-moving-dribble", player, "Dribble", false);
@@ -327,6 +335,9 @@ public partial class RenderedEvidenceCapture : Node
             SubjectPosition = Vec(subject.GlobalPosition),
             BallPosition = Vec(_ball.GlobalPosition),
             SubjectScreen = new[] { screen.X, screen.Y },
+            DirectionBefore = Vec(_velocityBeforeDirectionChange),
+            DirectionAfter = Vec(_velocityAfterDirectionChange),
+            DirectionChanged = _sawDirectionChange,
             CameraTransform = Transform(_camera.GlobalTransform),
             CameraFov = _camera.Fov
         };
@@ -425,6 +436,15 @@ public partial class RenderedEvidenceCapture : Node
                 EngineVersion = Engine.GetVersionInfo()["string"].AsString(),
                 PhysicsTicksPerSecond = Engine.PhysicsTicksPerSecond,
                 RendererSetting = ProjectSettings.GetSetting("rendering/renderer/rendering_method", "unknown").AsString(),
+                // Godot 4.7 exposes the renderer backend through the command
+                // line, but exposes the *actual active adapter* through
+                // RenderingServer. Record both; an empty adapter/API string is
+                // a capture failure in the external verifier.
+                EffectiveRenderingMethod = HarnessArgs.ReadArg(OS.GetCmdlineArgs(), "--rendering-method", "unknown"),
+                EffectiveDisplayDriver = DisplayServer.GetName(),
+                AdapterName = RenderingServer.GetVideoAdapterName(),
+                AdapterVendor = RenderingServer.GetVideoAdapterVendor(),
+                AdapterApiVersion = RenderingServer.GetVideoAdapterApiVersion(),
                 Camera = Transform(_camera.GlobalTransform),
                 CameraFov = _camera.Fov,
                 InputsAndEvents = _events,
@@ -448,13 +468,13 @@ public partial class RenderedEvidenceCapture : Node
         public string Label { get; set; } = ""; public string File { get; set; } = ""; public int PhysicsFrame { get; set; }
         public ulong SavedAfterRenderFrame { get; set; } public string ExpectedAnimationState { get; set; } = ""; public string ObservedAnimationState { get; set; } = "";
         public string DisplayMoveId { get; set; } = ""; public string HandSide { get; set; } = ""; public bool RemoteDisplay { get; set; } public float[] SubjectPosition { get; set; } = Array.Empty<float>();
-        public float[] BallPosition { get; set; } = Array.Empty<float>(); public float[] SubjectScreen { get; set; } = Array.Empty<float>(); public float[] CameraTransform { get; set; } = Array.Empty<float>();
+        public float[] BallPosition { get; set; } = Array.Empty<float>(); public float[] SubjectScreen { get; set; } = Array.Empty<float>(); public float[] DirectionBefore { get; set; } = Array.Empty<float>(); public float[] DirectionAfter { get; set; } = Array.Empty<float>(); public bool DirectionChanged { get; set; } public float[] CameraTransform { get; set; } = Array.Empty<float>();
         public float CameraFov { get; set; } public int Width { get; set; } public int Height { get; set; } public long ByteLength { get; set; }
     }
     private sealed class Manifest
     {
         public string Schema { get; set; } = ""; public string Result { get; set; } = ""; public string Role { get; set; } = ""; public string Commit { get; set; } = "";
-        public string EngineVersion { get; set; } = ""; public int PhysicsTicksPerSecond { get; set; } public string RendererSetting { get; set; } = "";
+        public string EngineVersion { get; set; } = ""; public int PhysicsTicksPerSecond { get; set; } public string RendererSetting { get; set; } = ""; public string EffectiveRenderingMethod { get; set; } = ""; public string EffectiveDisplayDriver { get; set; } = ""; public string AdapterName { get; set; } = ""; public string AdapterVendor { get; set; } = ""; public string AdapterApiVersion { get; set; } = "";
         public float[] Camera { get; set; } = Array.Empty<float>(); public float CameraFov { get; set; } public List<EventEntry> InputsAndEvents { get; set; } = new(); public List<CaptureEntry> Captures { get; set; } = new();
     }
 }

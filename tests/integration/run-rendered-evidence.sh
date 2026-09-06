@@ -36,6 +36,19 @@ if run_capture local "$ROOT/mutation" "$LOG_DIR/mutation.log" "--capture-mutatio
   exit 1
 fi
 
+# A second, persisted-artifact mutation proves the external verifier is not
+# merely trusting the in-memory C# Image.  Truncate the first PNG only after a
+# successful write, require the verifier to reject it, then run a fresh clean
+# baseline afterwards to prove the mutation did not poison later evidence.
+run_capture local "$ROOT/image-mutation" "$LOG_DIR/image-mutation.log"
+truncate -s 12 "$ROOT/image-mutation/01-stationary-to-moving-dribble.png"
+if python3 tools/verify_rendered_evidence.py --local "$ROOT/image-mutation/manifest.json"; then
+  echo "[rendered-evidence] FAIL: deliberately truncated PNG unexpectedly passed external validation" >&2
+  exit 1
+fi
+run_capture local "$ROOT/local-c" "$LOG_DIR/local-c.log"
+python3 tools/verify_rendered_evidence.py --local "$ROOT/local-c/manifest.json"
+
 run_capture server "$ROOT/remote-server" "$LOG_DIR/remote-server.log" &
 SERVER_PID=$!
 cleanup() {
