@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 
 namespace Hooper.Networking;
@@ -45,11 +46,24 @@ public partial class ServerBrowser : CanvasLayer
 	/// </summary>
 	private readonly List<ServerListEntry> _rows = new();
 	private double _sinceRefresh;
+	private bool _signalsConnected;
 
 	// ── Lifecycle ─────────────────────────────────────────────────────────────
 
 	public override void _Ready()
 	{
+		// Main.tscn is shared by clients and dedicated servers. Reject the
+		// client-only browser path before it can bind the discovery port; doing
+		// this in _Ready is early enough despite the deferred server bootstrap.
+		string[] args = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).ToArray();
+		if (DedicatedServerArgs.IsDedicated(args))
+		{
+			Visible = false;
+			SetProcess(false);
+			GD.Print("[ServerBrowser] Disabled on dedicated server; discovery listening is client-only.");
+			return;
+		}
+
 		if (!ValidateExports()) return;
 
 		// Double-click / Enter on a row joins it.
@@ -57,6 +71,7 @@ public partial class ServerBrowser : CanvasLayer
 
 		NetworkManager.GameReady        += OnGameReady;
 		NetworkManager.ConnectionFailed += OnConnectionFailed;
+		_signalsConnected = true;
 
 		// Begin collecting beacons while the browser is open.
 		Discovery.StartListening();
@@ -64,6 +79,7 @@ public partial class ServerBrowser : CanvasLayer
 
 	public override void _ExitTree()
 	{
+		if (!_signalsConnected) return;
 		if (ServerListUi != null) ServerListUi.ItemActivated -= OnItemActivated;
 		if (NetworkManager != null)
 		{
