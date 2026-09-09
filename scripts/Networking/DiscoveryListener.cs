@@ -38,12 +38,18 @@ public partial class DiscoveryListener : Node
 	private PacketPeerUdp _udp;
 	private bool _listening;
 
+	// Erased from production builds when the harness partial has no
+	// implementation. The hook observes the entire StartListening call surface,
+	// including calls hidden by the idempotence guard, without changing behavior.
+	partial void OnStartListeningForHarness();
+
 	/// <summary>
 	/// Binds the discovery port and begins collecting beacons. Idempotent — a
 	/// second call while already listening is ignored.
 	/// </summary>
 	public void StartListening()
 	{
+		OnStartListeningForHarness();
 		if (_listening) return;
 
 		_udp = new PacketPeerUdp();

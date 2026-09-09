@@ -2399,6 +2399,18 @@ jobs:
           chmod +x tests/integration/run-net-node-replication.sh
           tests/integration/run-net-node-replication.sh godot
 
+      # Production topology proof (#372): first runs Main.tscn as a real
+      # dedicated server with two sequential remote clients, then runs the
+      # listen-server control. Shared peer IDs make each role prove the exact
+      # same roster while same-tick conjunctions cover spawns, opponent mapping,
+      # ScoreHud identity, and the dedicated disconnect shrink. The listen
+      # control also positively binds the production discovery listener so the
+      # dedicated server's listener-off assertion cannot pass vacuously.
+      - name: Run dedicated and listen-server topology harness
+        run: |
+          chmod +x tests/integration/run-dedicated-roster.sh
+          tests/integration/run-dedicated-roster.sh godot
+
       # Dual-instance harness: BehindTheBack broadcast-driven shielded sweep
       # (issue #212). The single-instance BehindTheBackTest cannot reach
       # PlayerController.DisplayMoveId()'s _serverMoveId branch — in one

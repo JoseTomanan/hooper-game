@@ -120,6 +120,15 @@ public partial class NetworkManager : Node
 	private bool _isDedicated;
 
 	/// <summary>
+	/// The remote peer currently occupying the dedicated server's offensive
+	/// HostSpawn seat. Player-node child count cannot represent this role: a
+	/// queued disconnect can leave a child behind for a frame, and the remaining
+	/// defender must not make a replacement overlap at ClientSpawn. Keeping the
+	/// seat identity lets the same opening role be reclaimed after disconnect.
+	/// </summary>
+	private int _dedicatedHostSpawnPeerId;
+
+	/// <summary>
 	/// Which lifecycle-signal pair we actually subscribed, so _ExitTree
 	/// disconnects exactly those and no others. The server entry (StartServer,
 	/// shared by HostGame + StartDedicatedServer) connects PeerConnected +
@@ -416,13 +425,27 @@ public partial class NetworkManager : Node
 	}
 
 	/// <summary>
-	/// Maps a peer ID to its spawn point: the host (peer 1, see HostGame) gets
-	/// HostSpawn, every joining client gets ClientSpawn. See those exports'
-	/// docs for the offense/defense rationale (ADR-0008).
+	/// Maps a peer ID to its spawn point. A listen-server host (peer 1) remains
+	/// at HostSpawn. A dedicated server has no local peer 1, so its first remote
+	/// player takes the offensive HostSpawn and its second takes ClientSpawn.
+	/// This preserves the ADR-0008 opening geometry without overlapping two
+	/// dedicated clients at ClientSpawn.
 	/// </summary>
 	private Vector3 SpawnPositionFor(int peerId)
 	{
-		return peerId == 1 ? HostSpawn : ClientSpawn;
+		if (peerId == 1)
+			return HostSpawn;
+
+		if (_isDedicated && _dedicatedHostSpawnPeerId == 0)
+		{
+			// Persist the role by peer identity rather than inferring it from the
+			// current child list. DespawnPlayer releases this seat before QueueFree,
+			// so a replacement can reclaim offense without overlapping the defender.
+			_dedicatedHostSpawnPeerId = peerId;
+			return HostSpawn;
+		}
+
+		return ClientSpawn;
 	}
 
 	/// <summary>
@@ -431,6 +454,12 @@ public partial class NetworkManager : Node
 	/// </summary>
 	private void DespawnPlayer(int peerId)
 	{
+		// Release the stable dedicated offense seat even if the replicated player
+		// node is already missing. A replacement must be able to reclaim HostSpawn;
+		// node lifetime and role lifetime are deliberately not coupled.
+		if (_isDedicated && _dedicatedHostSpawnPeerId == peerId)
+			_dedicatedHostSpawnPeerId = 0;
+
 		Node player = Players?.GetNodeOrNull(peerId.ToString());
 		if (player == null)
 		{
