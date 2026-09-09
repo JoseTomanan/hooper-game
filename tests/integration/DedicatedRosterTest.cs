@@ -127,7 +127,7 @@ public partial class DedicatedRosterTest : Node
 		}
 
 		if (_phase == 1 && TryReadInitialDedicatedIds(out int fullClientAId, out int clientBId)
-			&& IsFullTopology(fullClientAId, clientBId, localPeerId: 0, expectedHudOpponent: 0))
+			&& IsFullTopology(fullClientAId, clientBId, localPeerId: 0))
 		{
 			Write("server-full", $"a={fullClientAId} b={clientBId}");
 			_phase = 2;
@@ -135,7 +135,7 @@ public partial class DedicatedRosterTest : Node
 
 		if (_phase == 2 && Exists("client-a-full") && Exists("client-b-full")
 			&& TryReadInitialDedicatedIds(out int currentClientAId, out int currentClientBId)
-			&& IsFullTopology(currentClientAId, currentClientBId, localPeerId: 0, expectedHudOpponent: 0))
+			&& IsFullTopology(currentClientAId, currentClientBId, localPeerId: 0))
 			_phase = 3;
 
 		if (_phase == 3 && TryReadInitialDedicatedIds(out int departedClientAId, out int remainingClientBId)
@@ -147,7 +147,7 @@ public partial class DedicatedRosterTest : Node
 
 		if (_phase == 4 && Exists("client-b-shrunk")
 			&& TryReadReplacementDedicatedIds(out int replacementClientCId, out int defenderClientBId)
-			&& IsFullTopology(replacementClientCId, defenderClientBId, localPeerId: 0, expectedHudOpponent: 0))
+			&& IsFullTopology(replacementClientCId, defenderClientBId, localPeerId: 0))
 		{
 			Write("server-replacement-full", $"offense={replacementClientCId} defense={defenderClientBId}");
 			_phase = 5;
@@ -155,8 +155,22 @@ public partial class DedicatedRosterTest : Node
 
 		if (_phase == 5 && Exists("client-b-replacement-full") && Exists("client-c-replacement-full")
 			&& TryReadReplacementDedicatedIds(out int finalClientCId, out int finalClientBId)
-			&& IsFullTopology(finalClientCId, finalClientBId, localPeerId: 0, expectedHudOpponent: 0))
-			Pass("dedicated server observed offense-seat reuse and exact remote roster replacement");
+			&& IsFullTopology(finalClientCId, finalClientBId, localPeerId: 0))
+		{
+			// An asymmetric authoritative score makes the clients' public HUD text
+			// reveal which roster member each side actually resolved as its opponent.
+			_game.RegisterBasket(finalClientCId);
+			Write("replacement-scored", $"scorer={finalClientCId}");
+			_phase = 6;
+		}
+
+		if (_phase == 6 && TryReadReplacementDedicatedIds(out int scoredClientCId, out int scoredClientBId)
+			&& _scoreChangedCount == 1
+			&& _game.ScoreOf(scoredClientCId) == 1
+			&& _game.ScoreOf(scoredClientBId) == 0
+			&& Exists("client-b-hud-scored")
+			&& Exists("client-c-hud-scored"))
+			Pass("dedicated server observed offense-seat reuse, exact remote roster replacement, and the identity-proving score");
 	}
 
 	private void TickDedicatedClientA()
@@ -171,7 +185,7 @@ public partial class DedicatedRosterTest : Node
 
 		if (_phase == 1 && TryReadInitialDedicatedIds(out int clientAId, out int clientBId)
 			&& clientAId == _myPeerId
-			&& IsFullTopology(clientAId, clientBId, _myPeerId, clientBId))
+			&& IsFullTopology(clientAId, clientBId, _myPeerId))
 		{
 			Write("client-a-full", $"a={clientAId} b={clientBId}");
 			_phase = 2;
@@ -182,7 +196,7 @@ public partial class DedicatedRosterTest : Node
 		if (_phase == 2 && Exists("server-full") && Exists("client-b-full")
 			&& TryReadInitialDedicatedIds(out int finalClientAId, out int finalClientBId)
 			&& finalClientAId == _myPeerId
-			&& IsFullTopology(finalClientAId, finalClientBId, _myPeerId, finalClientBId))
+			&& IsFullTopology(finalClientAId, finalClientBId, _myPeerId))
 			Pass("dedicated client A agreed on the exact two-remote production topology before disconnecting");
 	}
 
@@ -191,7 +205,7 @@ public partial class DedicatedRosterTest : Node
 		if (_myPeerId <= 1) return;
 		if (_phase == 0 && TryReadInitialDedicatedIds(out int clientAId, out int clientBId)
 			&& clientBId == _myPeerId
-			&& IsFullTopology(clientAId, clientBId, _myPeerId, clientAId))
+			&& IsFullTopology(clientAId, clientBId, _myPeerId))
 		{
 			Write("client-b-full", $"a={clientAId} b={clientBId}");
 			_phase = 1;
@@ -200,7 +214,7 @@ public partial class DedicatedRosterTest : Node
 		if (_phase == 1 && Exists("server-full") && Exists("client-a-full")
 			&& TryReadInitialDedicatedIds(out int stableClientAId, out int stableClientBId)
 			&& stableClientBId == _myPeerId
-			&& IsFullTopology(stableClientAId, stableClientBId, _myPeerId, stableClientAId))
+			&& IsFullTopology(stableClientAId, stableClientBId, _myPeerId))
 			_phase = 2;
 
 		if (_phase == 2 && TryReadInitialDedicatedIds(out int departedClientAId, out int remainingClientBId)
@@ -213,7 +227,7 @@ public partial class DedicatedRosterTest : Node
 
 		if (_phase == 3 && TryReadReplacementDedicatedIds(out int replacementClientCId, out int defenderClientBId)
 			&& defenderClientBId == _myPeerId
-			&& IsFullTopology(replacementClientCId, defenderClientBId, _myPeerId, replacementClientCId))
+			&& IsFullTopology(replacementClientCId, defenderClientBId, _myPeerId))
 		{
 			Write("client-b-replacement-full", $"offense={replacementClientCId} defense={defenderClientBId}");
 			_phase = 4;
@@ -222,8 +236,23 @@ public partial class DedicatedRosterTest : Node
 		if (_phase == 4 && Exists("server-replacement-full") && Exists("client-c-replacement-full")
 			&& TryReadReplacementDedicatedIds(out int finalClientCId, out int finalClientBId)
 			&& finalClientBId == _myPeerId
-			&& IsFullTopology(finalClientCId, finalClientBId, _myPeerId, finalClientCId))
-			Pass("dedicated client B retained defense and mapped the replacement offense peer");
+			&& IsFullTopology(finalClientCId, finalClientBId, _myPeerId))
+			_phase = 5;
+
+		if (_phase == 5 && Exists("replacement-scored")
+			&& TryReadReplacementDedicatedIds(out int scoredClientCId, out int scoredClientBId)
+			&& scoredClientBId == _myPeerId
+			&& _scoreChangedCount == 1
+			&& _game.ScoreOf(scoredClientCId) == 1
+			&& _game.ScoreOf(scoredClientBId) == 0
+			&& _hud.Text == "You: 0   Opponent: 1")
+		{
+			Write("client-b-hud-scored", _hud.Text);
+			_phase = 6;
+		}
+
+		if (_phase == 6 && Exists("client-c-hud-scored"))
+			Pass("dedicated client B retained defense and its public HUD mapped the scored replacement offense peer");
 	}
 
 	private void TickDedicatedClientC()
@@ -232,7 +261,7 @@ public partial class DedicatedRosterTest : Node
 
 		if (_phase == 0 && TryReadReplacementDedicatedIds(out int clientCId, out int clientBId)
 			&& clientCId == _myPeerId
-			&& IsFullTopology(clientCId, clientBId, _myPeerId, clientBId))
+			&& IsFullTopology(clientCId, clientBId, _myPeerId))
 		{
 			Write("client-c-replacement-full", $"offense={clientCId} defense={clientBId}");
 			_phase = 1;
@@ -241,8 +270,23 @@ public partial class DedicatedRosterTest : Node
 		if (_phase == 1 && Exists("server-replacement-full") && Exists("client-b-replacement-full")
 			&& TryReadReplacementDedicatedIds(out int finalClientCId, out int finalClientBId)
 			&& finalClientCId == _myPeerId
-			&& IsFullTopology(finalClientCId, finalClientBId, _myPeerId, finalClientBId))
-			Pass("dedicated client C reclaimed offense and mapped the existing defender");
+			&& IsFullTopology(finalClientCId, finalClientBId, _myPeerId))
+			_phase = 2;
+
+		if (_phase == 2 && Exists("replacement-scored")
+			&& TryReadReplacementDedicatedIds(out int scoredClientCId, out int scoredClientBId)
+			&& scoredClientCId == _myPeerId
+			&& _scoreChangedCount == 1
+			&& _game.ScoreOf(scoredClientCId) == 1
+			&& _game.ScoreOf(scoredClientBId) == 0
+			&& _hud.Text == "You: 1   Opponent: 0")
+		{
+			Write("client-c-hud-scored", _hud.Text);
+			_phase = 3;
+		}
+
+		if (_phase == 3 && Exists("client-b-hud-scored"))
+			Pass("dedicated client C reclaimed offense and its public HUD mapped the existing defender");
 	}
 
 	private void TickListen()
@@ -277,7 +321,7 @@ public partial class DedicatedRosterTest : Node
 		}
 
 		if (_phase == 2 && TryReadPeerId("client-joined", out int clientId)
-			&& IsFullTopology(1, clientId, 1, clientId))
+			&& IsFullTopology(1, clientId, 1))
 		{
 			Write("host-full", $"host=1 client={clientId}");
 			_phase = 3;
@@ -285,21 +329,21 @@ public partial class DedicatedRosterTest : Node
 
 		if (_phase == 3 && Exists("client-full")
 			&& TryReadPeerId("client-joined", out int finalClientId)
-			&& IsFullTopology(1, finalClientId, 1, finalClientId))
+			&& IsFullTopology(1, finalClientId, 1))
 			Pass("listen-server host retained peer 1 and HUD mapped the replicated remote roster member");
 	}
 
 	private void TickListenClient()
 	{
 		if (_myPeerId <= 1 || !TryReadPeerId("client-joined", out int clientId)) return;
-		if (_phase == 0 && clientId == _myPeerId && IsFullTopology(1, clientId, _myPeerId, 1))
+		if (_phase == 0 && clientId == _myPeerId && IsFullTopology(1, clientId, _myPeerId))
 		{
 			Write("client-full", $"host=1 client={clientId}");
 			_phase = 1;
 		}
 
 		if (_phase == 1 && Exists("host-full")
-			&& IsFullTopology(1, clientId, _myPeerId, 1))
+			&& IsFullTopology(1, clientId, _myPeerId))
 			Pass("listen-server client mapped peer 1 through the same replicated roster and HUD path");
 	}
 
@@ -329,7 +373,7 @@ public partial class DedicatedRosterTest : Node
 			&& DiscoveryListener.StartListeningCallCountForHarness > 0;
 	}
 
-	private bool IsFullTopology(int firstId, int secondId, int localPeerId, int expectedHudOpponent)
+	private bool IsFullTopology(int firstId, int secondId, int localPeerId)
 	{
 		if (firstId <= 0 || secondId <= 0 || firstId == secondId) return false;
 		List<PlayerController> players = LivePlayers();
@@ -351,7 +395,6 @@ public partial class DedicatedRosterTest : Node
 			&& HorizontalDistance(first.Position, second.Position) >= DistinctSpawnDistance
 			&& _game.OpponentPeerIdFor(firstId) == secondId
 			&& _game.OpponentPeerIdFor(secondId) == firstId
-			&& (expectedHudOpponent == 0 || _hud.Text == "You: 0   Opponent: 0")
 			// 0-0 is a topology sanity check only. Existing scoring harnesses prove
 			// authoritative mutation and replication; absence cannot prove delivery.
 			&& _game.ScoreOf(firstId) == 0
