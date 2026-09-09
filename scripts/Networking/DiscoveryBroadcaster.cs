@@ -53,6 +53,11 @@ public partial class DiscoveryBroadcaster : Node
 	private bool _active;
 	private double _sinceLastBroadcast;
 
+	// Erased from production builds when the harness partial has no
+	// implementation. The hook observes the real socket send result without
+	// changing discovery timing or error handling.
+	partial void OnBeaconPutForHarness(Error result);
+
 	public override void _Ready()
 	{
 		if (NetworkManager != null)
@@ -103,6 +108,7 @@ public partial class DiscoveryBroadcaster : Node
 			name: ServerName);
 
 		Error err = _udp.PutPacket(beacon.Encode());
+		OnBeaconPutForHarness(err);
 		if (err != Error.Ok)
 			GD.PrintErr($"[DiscoveryBroadcaster] PutPacket failed: {err}");
 	}

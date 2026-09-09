@@ -2411,6 +2411,15 @@ jobs:
           chmod +x tests/integration/run-dedicated-roster.sh
           tests/integration/run-dedicated-roster.sh godot
 
+      # Production discovery/join proof (#374): a real --dedicated Main sends
+      # loopback beacons through DiscoveryBroadcaster, a mismatched bound
+      # listener stays empty, then two sequential production browsers activate
+      # their exact ItemList row and drive authoritative players apart.
+      - name: Run dedicated discovery and join harness
+        run: |
+          chmod +x tests/integration/run-dedicated-discovery-join.sh
+          tests/integration/run-dedicated-discovery-join.sh godot
+
       # Dual-instance harness: BehindTheBack broadcast-driven shielded sweep
       # (issue #212). The single-instance BehindTheBackTest cannot reach
       # PlayerController.DisplayMoveId()'s _serverMoveId branch — in one

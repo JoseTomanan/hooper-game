@@ -1,7 +1,20 @@
 namespace Hooper.Networking
 {
+	public partial class DiscoveryBroadcaster
+	{
+		internal int SuccessfulBroadcastCountForHarness { get; private set; }
+
+		partial void OnBeaconPutForHarness(Godot.Error result)
+		{
+			if (result == Godot.Error.Ok)
+				SuccessfulBroadcastCountForHarness++;
+		}
+	}
+
 	public partial class ServerBrowser
 	{
+		internal int RowCountForHarness => _rows.Count;
+
 		/// <summary>
 		/// Finds the exact production browser row backing an endpoint. Reading
 		/// _rows, rather than Discovery.DiscoveredServers, proves RefreshRows has
