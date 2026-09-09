@@ -314,8 +314,13 @@ public partial class DedicatedDiscoveryJoinTest : Node
 				return;
 			}
 			Write($"{_role}-final", $"peer={_myPeerId} start={VectorText(_localMovementStart)} final={VectorText(final)} deltaX={signedX:F3} horizontal={horizontal:F3}");
-			Pass("exact browser activation, role-local topology, and production input movement co-occurred");
+			// Remain connected until the server consumes both client proofs and
+			// evaluates the still-live authoritative topology. Exiting here races
+			// peer-disconnect processing against the server's final conjunction.
+			AdvancePhase();
 		}
+		else if (_phase == 6 && Exists("server-final"))
+			Pass("exact browser activation, role-local topology, and production input movement co-occurred");
 	}
 
 	private void AssertServerMovementAndPass(int firstId, int secondId)
