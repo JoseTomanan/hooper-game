@@ -41,8 +41,11 @@ public partial class GameManager : Node
 	/// <summary>Score a player must reach or exceed to win. Server-only meaning (see Scoreboard).</summary>
 	[Export] public int TargetScore { get; set; } = 11;
 
-	/// <summary>Emitted on every peer when score or game-over state changes from a broadcast (or, on the server, immediately after a local mutation).</summary>
+	/// <summary>Emitted on every peer only when the authoritative score changes (or, on the server, immediately after that local mutation).</summary>
 	[Signal] public delegate void ScoreChangedEventHandler();
+
+	/// <summary>Emitted on every peer when the live player roster changes without implying that a basket occurred.</summary>
+	[Signal] public delegate void RosterChangedEventHandler();
 
 	/// <summary>Emitted on every peer the instant game-over state is broadcast/observed. winnerPeerId is never 0 when this fires.</summary>
 	[Signal] public delegate void GameOverEventHandler(int winnerPeerId);
@@ -106,7 +109,7 @@ public partial class GameManager : Node
 		// disconnect without relying on signal ordering.
 		if (!TrySnapshotPlayerIds(out int peerAId, out int peerBId)) return;
 		if (peerAId != _peerAId || peerBId != _peerBId)
-			BroadcastAndEmit(peerAId, peerBId);
+			BroadcastAndEmit(peerAId, peerBId, scoreChanged: false);
 	}
 
 	// ── Unified read surface (works regardless of role) ──────────────────
@@ -163,30 +166,30 @@ public partial class GameManager : Node
 		if (!IsServer) return;
 
 		_scoreboard.RegisterBasket(scorerPeerId);
-		BroadcastAndEmit();
+		BroadcastAndEmit(scoreChanged: true);
 	}
 
 	/// <summary>
 	/// Builds the fixed-arity broadcast payload from the server's Scoreboard
 	/// and both fires the RPC to every other peer AND updates/emits locally
-	/// — the server's own HUD needs ScoreChanged/GameOver too, and the
+	/// — the server's own HUD needs the matching state signal too, and the
 	/// broadcast RPC has CallLocal = false (see ReceiveScoreState doc), so
 	/// the server must apply its own "broadcast" by hand exactly once here.
 	/// </summary>
-	private void BroadcastAndEmit()
+	private void BroadcastAndEmit(bool scoreChanged)
 	{
 		if (!TrySnapshotPlayerIds(out int peerAId, out int peerBId)) return;
-		BroadcastAndEmit(peerAId, peerBId);
+		BroadcastAndEmit(peerAId, peerBId, scoreChanged);
 	}
 
-	private void BroadcastAndEmit(int peerAId, int peerBId)
+	private void BroadcastAndEmit(int peerAId, int peerBId, bool scoreChanged)
 	{
 		int peerAScore = _scoreboard.ScoreOf(peerAId);
 		int peerBScore = _scoreboard.ScoreOf(peerBId);
 
 		Rpc(MethodName.ReceiveScoreState,
 			peerAId, peerAScore, peerBId, peerBScore,
-			_scoreboard.WinnerPeerId, _scoreboard.IsGameOver);
+			_scoreboard.WinnerPeerId, _scoreboard.IsGameOver, scoreChanged);
 
 		// Server applies the same values to its own mirror fields so
 		// ScoreOf/IsGameOver read consistently via IsServer ? scoreboard : mirror
@@ -196,9 +199,7 @@ public partial class GameManager : Node
 		// the mirror.
 		ApplyMirror(peerAId, peerAScore, peerBId, peerBScore, _scoreboard.WinnerPeerId, _scoreboard.IsGameOver);
 
-		EmitSignal(SignalName.ScoreChanged);
-		if (_scoreboard.IsGameOver)
-			EmitSignal(SignalName.GameOver, _scoreboard.WinnerPeerId);
+		EmitStateSignal(scoreChanged, _scoreboard.WinnerPeerId, _scoreboard.IsGameOver);
 	}
 
 	/// <summary>
@@ -243,8 +244,9 @@ public partial class GameManager : Node
 	// ── Broadcast RPC ──────────────────────────────────────────────────────
 
 	/// <summary>
-	/// Called BY THE SERVER on all peers, broadcasting the post-basket score
-	/// state. Mirrors PlayerController.RequestBeginMove's transfer-mode
+	/// Called BY THE SERVER on all peers, broadcasting score plus roster state.
+	/// The final flag distinguishes a genuine score mutation from a roster-only
+	/// snapshot. Mirrors PlayerController.RequestBeginMove's transfer-mode
 	/// reasoning, NOT ReceiveState's:
 	///
 	/// Transfer mode: Reliable, deliberately NOT UnreliableOrdered like
@@ -283,9 +285,26 @@ public partial class GameManager : Node
 		 CallLocal = false,
 		 TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
 	private void ReceiveScoreState(int peerAId, int peerAScore, int peerBId, int peerBScore,
-		int winnerPeerId, bool isGameOver)
+		int winnerPeerId, bool isGameOver, bool scoreChanged)
 	{
 		ApplyMirror(peerAId, peerAScore, peerBId, peerBScore, winnerPeerId, isGameOver);
+
+		EmitStateSignal(scoreChanged, winnerPeerId, isGameOver);
+	}
+
+	/// <summary>
+	/// A reliable state packet carries either a discrete basket mutation or a
+	/// roster-only snapshot. Keeping those notifications exclusive prevents a
+	/// join/disconnect from triggering score-side effects such as the made-shot
+	/// ball flash, while still refreshing identity-dependent UI on every peer.
+	/// </summary>
+	private void EmitStateSignal(bool scoreChanged, int winnerPeerId, bool isGameOver)
+	{
+		if (!scoreChanged)
+		{
+			EmitSignal(SignalName.RosterChanged);
+			return;
+		}
 
 		EmitSignal(SignalName.ScoreChanged);
 		if (isGameOver)

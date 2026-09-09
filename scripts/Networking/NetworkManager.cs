@@ -120,6 +120,15 @@ public partial class NetworkManager : Node
 	private bool _isDedicated;
 
 	/// <summary>
+	/// The remote peer currently occupying the dedicated server's offensive
+	/// HostSpawn seat. Player-node child count cannot represent this role: a
+	/// queued disconnect can leave a child behind for a frame, and the remaining
+	/// defender must not make a replacement overlap at ClientSpawn. Keeping the
+	/// seat identity lets the same opening role be reclaimed after disconnect.
+	/// </summary>
+	private int _dedicatedHostSpawnPeerId;
+
+	/// <summary>
 	/// Which lifecycle-signal pair we actually subscribed, so _ExitTree
 	/// disconnects exactly those and no others. The server entry (StartServer,
 	/// shared by HostGame + StartDedicatedServer) connects PeerConnected +
@@ -427,10 +436,14 @@ public partial class NetworkManager : Node
 		if (peerId == 1)
 			return HostSpawn;
 
-		// SpawnPlayer sets Position before AddChild, so zero existing children is
-		// exactly the first dedicated remote player; later remotes are defenders.
-		if (_isDedicated && Players != null && Players.GetChildCount() == 0)
+		if (_isDedicated && _dedicatedHostSpawnPeerId == 0)
+		{
+			// Persist the role by peer identity rather than inferring it from the
+			// current child list. DespawnPlayer releases this seat before QueueFree,
+			// so a replacement can reclaim offense without overlapping the defender.
+			_dedicatedHostSpawnPeerId = peerId;
 			return HostSpawn;
+		}
 
 		return ClientSpawn;
 	}
@@ -441,6 +454,12 @@ public partial class NetworkManager : Node
 	/// </summary>
 	private void DespawnPlayer(int peerId)
 	{
+		// Release the stable dedicated offense seat even if the replicated player
+		// node is already missing. A replacement must be able to reclaim HostSpawn;
+		// node lifetime and role lifetime are deliberately not coupled.
+		if (_isDedicated && _dedicatedHostSpawnPeerId == peerId)
+			_dedicatedHostSpawnPeerId = 0;
+
 		Node player = Players?.GetNodeOrNull(peerId.ToString());
 		if (player == null)
 		{

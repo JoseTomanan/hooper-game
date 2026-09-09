@@ -18,7 +18,7 @@ namespace HOOPERGAME.Tests.Integration;
 /// </summary>
 public partial class DedicatedRosterTest : Node
 {
-	private const double TimeoutSeconds = 40.0;
+	private const double TimeoutSeconds = 55.0;
 	private const double ListenerBindTimeoutSeconds = 2.0;
 	private const float PositionTolerance = 0.08f;
 	private const float DistinctSpawnDistance = 0.5f;
@@ -33,6 +33,8 @@ public partial class DedicatedRosterTest : Node
 	private bool _finished;
 	private bool _serverStarted;
 	private bool _dedicatedListenerEverActive;
+	private int _scoreChangedCount;
+	private int _rosterChangedCount;
 
 	private Node3D _main;
 	private NetworkManager _network;
@@ -62,6 +64,9 @@ public partial class DedicatedRosterTest : Node
 		_hud = _main.GetNode<ScoreHud>("CanvasLayer/Label");
 		_players = _main.GetNode("Players");
 		_browser.Discovery.DiscoveryPort = _discoveryPort;
+		DiscoveryListener.ResetStartListeningCallCountForHarness();
+		_game.ScoreChanged += () => _scoreChangedCount++;
+		_game.RosterChanged += () => _rosterChangedCount++;
 
 		if (IsServerRole)
 			_network.ServerStarted += OnServerStarted;
@@ -96,7 +101,7 @@ public partial class DedicatedRosterTest : Node
 		else Fail($"unknown scenario '{_scenario}'.");
 
 		if (!_finished && _elapsed > TimeoutSeconds)
-			Fail($"timed out in phase {_phase}; scenario={_scenario}, role={_role}, peer={_myPeerId}, players={PlayerIdText()}.");
+			Fail($"timed out in phase {_phase}; scenario={_scenario}, role={_role}, peer={_myPeerId}, players={PlayerIdText()}, scoreSignals={_scoreChangedCount}, rosterSignals={_rosterChangedCount}, hud='{_hud.Text}', listenerCalls={DiscoveryListener.StartListeningCallCountForHarness}.");
 	}
 
 	private bool IsServerRole => _role is "server" or "host";
@@ -106,6 +111,7 @@ public partial class DedicatedRosterTest : Node
 		if (_role == "server") TickDedicatedServer();
 		else if (_role == "client-a") TickDedicatedClientA();
 		else if (_role == "client-b") TickDedicatedClientB();
+		else if (_role == "client-c") TickDedicatedClientC();
 		else Fail($"unknown dedicated role '{_role}'.");
 	}
 
@@ -120,7 +126,7 @@ public partial class DedicatedRosterTest : Node
 			_phase = 1;
 		}
 
-		if (_phase == 1 && TryReadDedicatedIds(out int fullClientAId, out int clientBId)
+		if (_phase == 1 && TryReadInitialDedicatedIds(out int fullClientAId, out int clientBId)
 			&& IsFullTopology(fullClientAId, clientBId, localPeerId: 0, expectedHudOpponent: 0))
 		{
 			Write("server-full", $"a={fullClientAId} b={clientBId}");
@@ -128,9 +134,29 @@ public partial class DedicatedRosterTest : Node
 		}
 
 		if (_phase == 2 && Exists("client-a-full") && Exists("client-b-full")
-			&& TryReadDedicatedIds(out int remainingId, out int departedId)
-			&& IsDisconnectedTopology(remainingId, departedId))
-			Pass("dedicated server observed the exact remote roster shrink after client B disconnected");
+			&& TryReadInitialDedicatedIds(out int currentClientAId, out int currentClientBId)
+			&& IsFullTopology(currentClientAId, currentClientBId, localPeerId: 0, expectedHudOpponent: 0))
+			_phase = 3;
+
+		if (_phase == 3 && TryReadInitialDedicatedIds(out int departedClientAId, out int remainingClientBId)
+			&& IsDisconnectedTopology(remainingClientBId, departedClientAId))
+		{
+			Write("server-shrunk", $"remaining={remainingClientBId} departed={departedClientAId}");
+			_phase = 4;
+		}
+
+		if (_phase == 4 && Exists("client-b-shrunk")
+			&& TryReadReplacementDedicatedIds(out int replacementClientCId, out int defenderClientBId)
+			&& IsFullTopology(replacementClientCId, defenderClientBId, localPeerId: 0, expectedHudOpponent: 0))
+		{
+			Write("server-replacement-full", $"offense={replacementClientCId} defense={defenderClientBId}");
+			_phase = 5;
+		}
+
+		if (_phase == 5 && Exists("client-b-replacement-full") && Exists("client-c-replacement-full")
+			&& TryReadReplacementDedicatedIds(out int finalClientCId, out int finalClientBId)
+			&& IsFullTopology(finalClientCId, finalClientBId, localPeerId: 0, expectedHudOpponent: 0))
+			Pass("dedicated server observed offense-seat reuse and exact remote roster replacement");
 	}
 
 	private void TickDedicatedClientA()
@@ -143,7 +169,7 @@ public partial class DedicatedRosterTest : Node
 			_phase = 1;
 		}
 
-		if (_phase == 1 && TryReadDedicatedIds(out int clientAId, out int clientBId)
+		if (_phase == 1 && TryReadInitialDedicatedIds(out int clientAId, out int clientBId)
 			&& clientAId == _myPeerId
 			&& IsFullTopology(clientAId, clientBId, _myPeerId, clientBId))
 		{
@@ -151,16 +177,19 @@ public partial class DedicatedRosterTest : Node
 			_phase = 2;
 		}
 
+		// A deliberately exits first, but only while its complete local topology
+		// still co-occurs with both other roles' full-topology barriers.
 		if (_phase == 2 && Exists("server-full") && Exists("client-b-full")
-			&& TryReadDedicatedIds(out int remainingId, out int departedId)
-			&& IsDisconnectedTopology(remainingId, departedId))
-			Pass("dedicated client A observed client B's node and opponent mapping disappear together");
+			&& TryReadInitialDedicatedIds(out int finalClientAId, out int finalClientBId)
+			&& finalClientAId == _myPeerId
+			&& IsFullTopology(finalClientAId, finalClientBId, _myPeerId, finalClientBId))
+			Pass("dedicated client A agreed on the exact two-remote production topology before disconnecting");
 	}
 
 	private void TickDedicatedClientB()
 	{
 		if (_myPeerId <= 1) return;
-		if (_phase == 0 && TryReadDedicatedIds(out int clientAId, out int clientBId)
+		if (_phase == 0 && TryReadInitialDedicatedIds(out int clientAId, out int clientBId)
 			&& clientBId == _myPeerId
 			&& IsFullTopology(clientAId, clientBId, _myPeerId, clientAId))
 		{
@@ -168,10 +197,52 @@ public partial class DedicatedRosterTest : Node
 			_phase = 1;
 		}
 
-		// B deliberately exits first, but only after every role proved the stable
-		// two-player topology. Its real disconnect drives the shrink proof.
-		if (_phase == 1 && Exists("server-full") && Exists("client-a-full"))
-			Pass("dedicated client B agreed on the exact two-remote production topology");
+		if (_phase == 1 && Exists("server-full") && Exists("client-a-full")
+			&& TryReadInitialDedicatedIds(out int stableClientAId, out int stableClientBId)
+			&& stableClientBId == _myPeerId
+			&& IsFullTopology(stableClientAId, stableClientBId, _myPeerId, stableClientAId))
+			_phase = 2;
+
+		if (_phase == 2 && TryReadInitialDedicatedIds(out int departedClientAId, out int remainingClientBId)
+			&& remainingClientBId == _myPeerId
+			&& IsDisconnectedTopology(remainingClientBId, departedClientAId))
+		{
+			Write("client-b-shrunk", $"remaining={remainingClientBId} departed={departedClientAId}");
+			_phase = 3;
+		}
+
+		if (_phase == 3 && TryReadReplacementDedicatedIds(out int replacementClientCId, out int defenderClientBId)
+			&& defenderClientBId == _myPeerId
+			&& IsFullTopology(replacementClientCId, defenderClientBId, _myPeerId, replacementClientCId))
+		{
+			Write("client-b-replacement-full", $"offense={replacementClientCId} defense={defenderClientBId}");
+			_phase = 4;
+		}
+
+		if (_phase == 4 && Exists("server-replacement-full") && Exists("client-c-replacement-full")
+			&& TryReadReplacementDedicatedIds(out int finalClientCId, out int finalClientBId)
+			&& finalClientBId == _myPeerId
+			&& IsFullTopology(finalClientCId, finalClientBId, _myPeerId, finalClientCId))
+			Pass("dedicated client B retained defense and mapped the replacement offense peer");
+	}
+
+	private void TickDedicatedClientC()
+	{
+		if (_myPeerId <= 1) return;
+
+		if (_phase == 0 && TryReadReplacementDedicatedIds(out int clientCId, out int clientBId)
+			&& clientCId == _myPeerId
+			&& IsFullTopology(clientCId, clientBId, _myPeerId, clientBId))
+		{
+			Write("client-c-replacement-full", $"offense={clientCId} defense={clientBId}");
+			_phase = 1;
+		}
+
+		if (_phase == 1 && Exists("server-replacement-full") && Exists("client-b-replacement-full")
+			&& TryReadReplacementDedicatedIds(out int finalClientCId, out int finalClientBId)
+			&& finalClientCId == _myPeerId
+			&& IsFullTopology(finalClientCId, finalClientBId, _myPeerId, finalClientBId))
+			Pass("dedicated client C reclaimed offense and mapped the existing defender");
 	}
 
 	private void TickListen()
@@ -212,7 +283,9 @@ public partial class DedicatedRosterTest : Node
 			_phase = 3;
 		}
 
-		if (_phase == 3 && Exists("client-full"))
+		if (_phase == 3 && Exists("client-full")
+			&& TryReadPeerId("client-joined", out int finalClientId)
+			&& IsFullTopology(1, finalClientId, 1, finalClientId))
 			Pass("listen-server host retained peer 1 and HUD mapped the replicated remote roster member");
 	}
 
@@ -225,7 +298,8 @@ public partial class DedicatedRosterTest : Node
 			_phase = 1;
 		}
 
-		if (_phase == 1 && Exists("host-full"))
+		if (_phase == 1 && Exists("host-full")
+			&& IsFullTopology(1, clientId, _myPeerId, 1))
 			Pass("listen-server client mapped peer 1 through the same replicated roster and HUD path");
 	}
 
@@ -237,7 +311,10 @@ public partial class DedicatedRosterTest : Node
 			&& PlayerId(players[0]) == clientAId
 			&& !_players.HasNode("1")
 			&& NearSpawn(players[0].Position, _network.HostSpawn)
-			&& _game.OpponentPeerIdFor(clientAId) == 0;
+			&& _game.OpponentPeerIdFor(clientAId) == 0
+			&& NoFalseScoreSignal
+			&& HasRosterSignal
+			&& DedicatedDiscoveryStayedOff;
 	}
 
 	private bool IsListenIntermediate()
@@ -246,7 +323,10 @@ public partial class DedicatedRosterTest : Node
 		return players.Count == 1
 			&& PlayerId(players[0]) == 1
 			&& NearSpawn(players[0].Position, _network.HostSpawn)
-			&& _game.OpponentPeerIdFor(1) == 0;
+			&& _game.OpponentPeerIdFor(1) == 0
+			&& NoFalseScoreSignal
+			&& HasRosterSignal
+			&& DiscoveryListener.StartListeningCallCountForHarness > 0;
 	}
 
 	private bool IsFullTopology(int firstId, int secondId, int localPeerId, int expectedHudOpponent)
@@ -271,11 +351,14 @@ public partial class DedicatedRosterTest : Node
 			&& HorizontalDistance(first.Position, second.Position) >= DistinctSpawnDistance
 			&& _game.OpponentPeerIdFor(firstId) == secondId
 			&& _game.OpponentPeerIdFor(secondId) == firstId
-			&& (expectedHudOpponent == 0 || _hud.OpponentPeerIdForHarness() == expectedHudOpponent)
+			&& (expectedHudOpponent == 0 || _hud.Text == "You: 0   Opponent: 0")
 			// 0-0 is a topology sanity check only. Existing scoring harnesses prove
 			// authoritative mutation and replication; absence cannot prove delivery.
 			&& _game.ScoreOf(firstId) == 0
-			&& _game.ScoreOf(secondId) == 0;
+			&& _game.ScoreOf(secondId) == 0
+			&& NoFalseScoreSignal
+			&& HasRosterSignal
+			&& (_scenario != "dedicated" || DedicatedDiscoveryStayedOff);
 	}
 
 	private bool IsDisconnectedTopology(int remainingId, int departedId)
@@ -285,8 +368,19 @@ public partial class DedicatedRosterTest : Node
 			&& players.Count == 1
 			&& PlayerId(players[0]) == remainingId
 			&& !_players.HasNode(departedId.ToString())
-			&& _game.OpponentPeerIdFor(remainingId) == 0;
+			&& _game.OpponentPeerIdFor(remainingId) == 0
+			&& NoFalseScoreSignal
+			&& HasRosterSignal
+			&& DedicatedDiscoveryStayedOff;
 	}
+
+	private bool NoFalseScoreSignal => _scoreChangedCount == 0;
+	private bool HasRosterSignal => _rosterChangedCount > 0;
+	private bool DedicatedDiscoveryStayedOff =>
+		_role != "server"
+		|| (!_browser.Discovery.IsListeningForHarness
+			&& !_dedicatedListenerEverActive
+			&& DiscoveryListener.StartListeningCallCountForHarness == 0);
 
 	private List<PlayerController> LivePlayers() => _players.GetChildren()
 		.OfType<PlayerController>()
@@ -322,7 +416,7 @@ public partial class DedicatedRosterTest : Node
 				Fail("dedicated production server created a phantom local player 1 before accepting clients.");
 				return;
 			}
-			if (_browser.Discovery.IsListeningForHarness || _dedicatedListenerEverActive)
+			if (!DedicatedDiscoveryStayedOff)
 			{
 				Fail($"dedicated production ServerBrowser listened on client-only UDP port {_discoveryPort}.");
 				return;
@@ -343,13 +437,26 @@ public partial class DedicatedRosterTest : Node
 
 	private void OnClientConnectionFailed() => Fail("production NetworkManager.JoinGame failed");
 
-	private bool TryReadDedicatedIds(out int clientAId, out int clientBId)
+	private bool TryReadInitialDedicatedIds(out int clientAId, out int clientBId)
 	{
 		clientAId = 0;
 		clientBId = 0;
 		return TryReadPeerId("client-a-joined", out clientAId)
 			&& TryReadPeerId("client-b-joined", out clientBId)
 			&& clientAId > 1 && clientBId > 1 && clientAId != clientBId;
+	}
+
+	private bool TryReadReplacementDedicatedIds(out int clientCId, out int clientBId)
+	{
+		clientCId = 0;
+		clientBId = 0;
+		if (!TryReadPeerId("client-c-joined", out clientCId)
+			|| !TryReadPeerId("client-b-joined", out clientBId)
+			|| !TryReadPeerId("client-a-joined", out int departedClientAId))
+			return false;
+
+		return clientCId > 1 && clientBId > 1
+			&& clientCId != clientBId && clientCId != departedClientAId;
 	}
 
 	private bool TryReadPeerId(string name, out int peerId)

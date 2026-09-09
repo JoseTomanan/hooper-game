@@ -17,10 +17,10 @@ namespace Hooper.Systems;
 /// on both peers (satisfying #26's "visible in both networked instances").
 ///
 /// ── Push, not poll ────────────────────────────────────────────────────────
-/// The HUD does not check the score every frame. It refreshes only when
-/// GameManager emits ScoreChanged / GameOver — which fire on every peer the
-/// instant a basket's broadcast lands (see GameManager.ReceiveScoreState).
-/// One refresh per basket, not 60 per second.
+/// The HUD does not check the score every frame. GameManager emits distinct
+/// ScoreChanged / RosterChanged / GameOver events: score changes refresh the
+/// numbers, while roster changes refresh identity without pretending a basket
+/// happened. No 60 Hz polling is needed.
 ///
 /// ── Identity for labelling ───────────────────────────────────────────────
 /// "You" is always the local peer (Multiplayer.GetUniqueId()); the opponent
@@ -58,14 +58,14 @@ public partial class ScoreHud : Label
 				return;
 			}
 
-			// Push-driven: refresh only when score state actually changes. Both
-			// signals fire on every peer when a basket broadcast lands (the server
-			// emits them locally too — see GameManager.BroadcastAndEmit).
-			_gameManager.ScoreChanged += RefreshScore;
-			_gameManager.GameOver     += ShowWinner;
+			// Push-driven: scoring and roster changes are distinct authority events.
+			// Both reach every peer, and the server emits its matching event locally.
+			_gameManager.ScoreChanged  += RefreshScore;
+			_gameManager.RosterChanged += RefreshRoster;
+			_gameManager.GameOver      += ShowWinner;
 
 			// Render the opening 0–0 before any basket has happened.
-			RefreshScore();
+			RefreshRoster();
 		}).CallDeferred();
 	}
 
@@ -74,8 +74,9 @@ public partial class ScoreHud : Label
 		// Unsubscribe so Godot doesn't hold a dangling delegate to a freed HUD
 		// (same lifecycle hygiene NetworkManager applies to its signal handlers).
 		if (_gameManager == null) return;
-		_gameManager.ScoreChanged -= RefreshScore;
-		_gameManager.GameOver     -= ShowWinner;
+		_gameManager.ScoreChanged  -= RefreshScore;
+		_gameManager.RosterChanged -= RefreshRoster;
+		_gameManager.GameOver      -= ShowWinner;
 	}
 
 	/// <summary>Resolves the opponent's peer id for a 1v1 (see class doc).</summary>
@@ -96,11 +97,25 @@ public partial class ScoreHud : Label
 		Text = $"You: {you}   Opponent: {them}";
 	}
 
+	/// <summary>Refreshes identity-dependent text without manufacturing a score event.</summary>
+	private void RefreshRoster()
+	{
+		if (_gameManager.IsGameOver)
+			RenderWinner(_gameManager.WinnerPeerId);
+		else
+			RefreshScore();
+	}
+
 	/// <summary>
 	/// Appends the result line when the match ends. winnerPeerId is the
 	/// authoritative winner from the broadcast (never 0 when this fires).
 	/// </summary>
 	private void ShowWinner(int winnerPeerId)
+	{
+		RenderWinner(winnerPeerId);
+	}
+
+	private void RenderWinner(int winnerPeerId)
 	{
 		// Re-render the final score first, then state the outcome from the
 		// local player's point of view.
