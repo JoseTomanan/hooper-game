@@ -342,6 +342,35 @@ jobs:
           godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=control-make
           godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=control-make-default-geometry
 
+      # Terminal no-holder regression (issue #373, ADR-0008/0016). Both
+      # terminal scenarios first score a guaranteed clean, cleared basket via
+      # BeginJumpShotForHarness -> BeginCommittedMove -> ApplyShootLocally ->
+      # TickInFlight -> ResolveServerMake -> GameManager.RegisterBasket; no
+      # score/winner/holder field is staged. 'terminal-rebound' then places a
+      # player inside PickupRadius of the in-bounds live ball: removing only
+      # TickLoose's terminal recovery guard makes it RED by producing a holder
+      # and a successful award. 'terminal-oob' seeds the existing loose-ball
+      # harness seam explicitly outside CourtMax, with both players farther
+      # than PickupRadius from the clamped fallback: removing only the OOB
+      # terminal gate makes it RED through the real OobResolution award.
+      # Both hold holder=0 and an unchanged successful-award counter for 60
+      # post-win ticks, while the exact snapshot RPC-call-site count proves the
+      # authoritative send cadence continues; terminal-rebound additionally
+      # requires changing position/velocity samples to reject a frozen ball.
+      # 'nonwinning-make', 'live-rebound', and 'oob-award' are positive
+      # controls: TargetScore=2 keeps play live and each must produce exactly
+      # one successful AwardPossession with the correct Held/clear result.
+      # A separate freeze mutation (post-game return before TickLoose/send)
+      # makes the terminal cadence/motion assertions RED while these controls
+      # remain meaningful. Each exits 0=PASS/1=FAIL (ADR-0016).
+      - name: Run terminal no-holder harness
+        run: |
+          godot --headless --path . res://tests/integration/TerminalNoHolderTest.tscn -- --harness-scenario=terminal-rebound
+          godot --headless --path . res://tests/integration/TerminalNoHolderTest.tscn -- --harness-scenario=terminal-oob
+          godot --headless --path . res://tests/integration/TerminalNoHolderTest.tscn -- --harness-scenario=nonwinning-make
+          godot --headless --path . res://tests/integration/TerminalNoHolderTest.tscn -- --harness-scenario=live-rebound
+          godot --headless --path . res://tests/integration/TerminalNoHolderTest.tscn -- --harness-scenario=oob-award
+
       # Layup / rim-finish committed move (issue #229, ADR-0022 — M9's
       # rim-finishing vertical, first leaf). LayupTests/LayupRangeResolverTests/
       # JumpShotReleaseResolverTests (xUnit) already pin the pure frame-data
