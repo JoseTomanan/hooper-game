@@ -1095,6 +1095,24 @@ public partial class BallController : Node3D
 	internal int LastToucherPeerIdForHarness => _lastToucherPeerId;
 
 	/// <summary>
+	/// Test-only: number of times this server node has executed the authoritative
+	/// ball-snapshot RPC call site. The terminal-game harness reads this to prove
+	/// the server keeps attempting its normal per-tick snapshots after the winning
+	/// make; delivery/receipt is separately covered by the existing dual-instance
+	/// state-sync proof. Production behavior never reads or branches on this counter.
+	/// </summary>
+	internal int AuthoritativeSnapshotBroadcastCountForHarness { get; private set; }
+
+	/// <summary>
+	/// Test-only: number of successful transitions through
+	/// <see cref="AwardPossession"/>. Incrementing only after the state-machine
+	/// edge succeeds lets the terminal-game harness prove that no later possession
+	/// award occurred, while its non-terminal controls prove the counter is live.
+	/// Production behavior never reads or branches on this observability counter.
+	/// </summary>
+	internal int SuccessfulPossessionAwardCountForHarness { get; private set; }
+
+	/// <summary>
 	/// Test-only: exposes <see cref="_dribble"/>'s current Phase for the
 	/// headless integration harness (ADR-0016, issue #176). Proves the live
 	/// engine — not just the pure DribbleCycle unit tests — actually resets
@@ -1523,6 +1541,7 @@ public partial class BallController : Node3D
 			// peer reconciles against. IsCleared rides the same per-tick snapshot
 			// as the holder it belongs to — continuously resent, so a dropped
 			// packet self-heals on the next tick.
+			AuthoritativeSnapshotBroadcastCountForHarness++;
 			Rpc(MethodName.ReceiveState,
 				(int)StateMachine.Current, GlobalPosition, CurrentVelocity(), StateMachine.HolderPeerId, IsCleared, HasDribbled);
 		}
@@ -2969,6 +2988,8 @@ public partial class BallController : Node3D
 			GD.PrintErr($"[BallController] AwardPossession({peerId}) rejected in state {State}; possession unchanged.");
 			return;
 		}
+
+		SuccessfulPossessionAwardCountForHarness++;
 
 		// Possession changed hands → this player is now the last toucher (#118).
 		// Set on every peer that calls AwardPossession itself (this path runs as
