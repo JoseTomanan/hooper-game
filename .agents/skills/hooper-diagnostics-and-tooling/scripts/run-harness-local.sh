@@ -85,6 +85,19 @@ fi
 
 cd "$REPO_ROOT" || exit 2
 
+# Godot 4.7.1 Mono can crash natively if its default user://logs location is
+# unavailable (for example, under a filesystem-sandboxed agent). Keep harness
+# logs in the writable, ignored project cache instead.
+HARNESS_LOG_DIR=".godot/harness-logs"
+if ! mkdir -p "$HARNESS_LOG_DIR"; then
+  echo "ERROR: cannot create local Godot harness log directory: $HARNESS_LOG_DIR" >&2
+  exit 2
+fi
+case "$(uname -s)" in
+  MINGW*|MSYS*) GODOT_LOG_DIR="$(pwd -W)/$HARNESS_LOG_DIR" ;;
+  *)            GODOT_LOG_DIR="$PWD/$HARNESS_LOG_DIR" ;;
+esac
+
 echo "Godot binary : $GODOT_BIN"
 echo "Repo root    : $REPO_ROOT"
 echo "Scenarios    : ${#INVOCATIONS[@]} (parsed from ci.yml, CI order)"
@@ -103,7 +116,7 @@ for inv in "${INVOCATIONS[@]}"; do
   args="${inv#godot }"
   echo "=== RUN  $label"
   # shellcheck disable=SC2086 — args are a trusted, parsed ci.yml fragment.
-  "$GODOT_BIN" $args
+  "$GODOT_BIN" --log-file "$GODOT_LOG_DIR/${scene}${scenario:+-$scenario}.log" $args
   rc=$?
   LABELS+=("$label"); CODES+=("$rc")
   if [ "$rc" -eq 0 ]; then
