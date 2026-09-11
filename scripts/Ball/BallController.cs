@@ -1095,6 +1095,24 @@ public partial class BallController : Node3D
 	internal int LastToucherPeerIdForHarness => _lastToucherPeerId;
 
 	/// <summary>
+	/// Test-only: number of times this server node has executed the authoritative
+	/// ball-snapshot RPC call site. The terminal-game harness reads this to prove
+	/// the server keeps attempting its normal per-tick snapshots after the winning
+	/// make; delivery/receipt is separately covered by the existing dual-instance
+	/// state-sync proof. Production behavior never reads or branches on this counter.
+	/// </summary>
+	internal int AuthoritativeSnapshotBroadcastCountForHarness { get; private set; }
+
+	/// <summary>
+	/// Test-only: number of successful transitions through
+	/// <see cref="AwardPossession"/>. Incrementing only after the state-machine
+	/// edge succeeds lets the terminal-game harness prove that no later possession
+	/// award occurred, while its non-terminal controls prove the counter is live.
+	/// Production behavior never reads or branches on this observability counter.
+	/// </summary>
+	internal int SuccessfulPossessionAwardCountForHarness { get; private set; }
+
+	/// <summary>
 	/// Test-only: exposes <see cref="_dribble"/>'s current Phase for the
 	/// headless integration harness (ADR-0016, issue #176). Proves the live
 	/// engine — not just the pure DribbleCycle unit tests — actually resets
@@ -1523,6 +1541,7 @@ public partial class BallController : Node3D
 			// peer reconciles against. IsCleared rides the same per-tick snapshot
 			// as the holder it belongs to — continuously resent, so a dropped
 			// packet self-heals on the next tick.
+			AuthoritativeSnapshotBroadcastCountForHarness++;
 			Rpc(MethodName.ReceiveState,
 				(int)StateMachine.Current, GlobalPosition, CurrentVelocity(), StateMachine.HolderPeerId, IsCleared, HasDribbled);
 		}
@@ -2762,6 +2781,12 @@ public partial class BallController : Node3D
 	/// </summary>
 	private void TickLoose(float dt)
 	{
+		// A winning make still lets the ball finish its deterministic fall, but
+		// ADR-0008 says the terminal possession does not reset. Keep integrating
+		// and broadcasting below while disabling every path that could create a
+		// new holder after game over.
+		bool gameOver = GetGameManager()?.IsGameOver ?? false;
+
 		_arc.Step(dt);
 		Vector3 p = _arc.Position;
 
@@ -2821,7 +2846,7 @@ public partial class BallController : Node3D
 
 			OobResolution.Result oob = OobResolution.Resolve(
 				CourtBounds.IsOutOfBounds(_arc.Position, CourtMin, CourtMax),
-				IsServer,
+				IsServer && !gameOver,
 				resolvedRecipient);
 
 			if (oob.Action == OobResolution.Action.Award)
@@ -2857,6 +2882,7 @@ public partial class BallController : Node3D
 		_arc.Velocity = arcVel;
 
 		GlobalPosition = _arc.Position;
+		if (gameOver) return;
 
 		int recoverer = ResolveLooseBallRecovery();
 		if (recoverer != 0)
@@ -2962,6 +2988,8 @@ public partial class BallController : Node3D
 			GD.PrintErr($"[BallController] AwardPossession({peerId}) rejected in state {State}; possession unchanged.");
 			return;
 		}
+
+		SuccessfulPossessionAwardCountForHarness++;
 
 		// Possession changed hands → this player is now the last toucher (#118).
 		// Set on every peer that calls AwardPossession itself (this path runs as

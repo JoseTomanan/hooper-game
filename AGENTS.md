@@ -243,6 +243,14 @@ current milestone unless asked.
   file for concurrent server/client processes. Do not launch the Godot editor
   inside that sandbox: its editor-settings writes still require an unsandboxed
   process.
+  The local full-matrix launchers are mirrored under both `.agents/skills/` and
+  `.claude/skills/`; keep the two copies behaviorally synchronized. A
+  2026-09-10 recurrence came from the `.agents` copies missing the workspace-log
+  fix already present in `.claude` since commit `7437fb5`, so a launcher change
+  is incomplete unless both `run-harness-local.ps1` and `run-harness-local.sh`
+  still inject `--log-file` before every Godot invocation. The same restricted-
+  AppData signature (`0x58` read access violation) is tracked upstream as
+  [godotengine/godot#120468](https://github.com/godotengine/godot/issues/120468).
 - One script = one node responsibility. `partial` class extending the node type.
 - Comment the "why," not the "what," especially around netcode and the
   deterministic ball, because the human is learning the engine.
