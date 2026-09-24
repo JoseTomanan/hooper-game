@@ -28,8 +28,10 @@ they override your defaults:
   harness proves.
 - **ADR-0017** — you may activate a DEFERRED milestone without a per-milestone
   human "go", but **only by walking the dependency order documented in AGENTS.md
-  §2**, and only after each predecessor epic is *genuinely* closed (incl. its
-  human feel pass). Activation gates *pickup*, not *merge*.
+  §2**, and only after green CI, the applicable headless harness, an independent
+  clean `/code-review`, and closure of the predecessor epic issue itself.
+  Activation gates *pickup*, not *merge*. Honor explicit human holds in live
+  AGENTS.md §2.
 - **ADR-0014** — self-resolve reference-grounded design calls on the record
   (ranked references, cite-or-ask); escalate only genuine design calls.
 
@@ -55,7 +57,7 @@ a surfaced stop). Run it, then self-pace to the next.
   walked in order rather than cherry-picked.
 - **Refuse** to dispatch: any issue lacking the `afk` label; any `hitl`-only
   issue; any issue whose acceptance is purely *feel* (those belong to the
-  per-milestone human pass — record them, don't dispatch them).
+  human-scheduled consolidated pass in #173 — record them, don't dispatch them).
 - If an Active **umbrella epic** has no ready leaf, go to step 2 (decompose). If
   there is genuinely nothing ready in any Active milestone, go to step 5
   (milestone closure / activation).
@@ -74,7 +76,7 @@ worker cannot do:
   ball-hand switches within N ticks and the dribbler's X-offset peaks ≥ D". This
   is the form the worker implements against and the harness proves.
 - Any irreducibly *feel* criterion goes in a **separate `hitl` issue** (ADR-0013),
-  never tacked onto the build issue, and onto your feel-pass running list.
+  never tacked onto the build issue; track its human judgment in #173.
 - File with `gh issue create`, labelled `afk`, linked to the epic. Then return to
   step 1 to pick the new leaf.
 
@@ -107,8 +109,8 @@ When the worker reports back with a PR (you are re-invoked on its completion):
    or file a follow-up if it's adjacent. Style-only nits don't block.
 3. **Check what the PR's `Closes` covers.** If any closed criterion is
    irreducibly *feel*, do **not** let that close ride an autonomous merge — the
-   harness cannot prove feel (ADR-0015 gate 4). Hold it for the human feel pass
-   and add it to your running list; merge only the harness-proven portion.
+   harness cannot prove feel (ADR-0015 gate 4). Keep that criterion open in
+   consolidated #173; merge only the harness-proven portion.
 4. **Merge only when ALL are green:** CI build, full `dotnet test`, the headless
    harness (for harness-checkable issues), and a clean `/code-review`. Merge with
    **`gh pr merge --merge`** (merge-commit, never squash — ADR-0015 / AGENTS.md
@@ -117,19 +119,22 @@ When the worker reports back with a PR (you are re-invoked on its completion):
 
 ### 5. Milestone closure and activation (ADR-0017)
 
-A milestone's epic is **done** only at full ADR-0015/0016 closure: every sub-issue
-merged green *and* its one per-milestone **human feel pass** completed. The feel
-pass is a human checkpoint you cannot perform — so:
+A successor may be activated only after the predecessor's CI is green, its
+headless harness is green where applicable, an independent `/code-review` is
+clean, and the predecessor epic issue itself is closed on GitHub. Merged child
+issues alone do not establish epic closure.
 
-- When an Active epic's last build issue merges green, post a short status summary
-  and **surface the milestone for the human feel pass** (step 6). Do not declare
-  the milestone closed yourself, and do not activate its successor yet.
-- Only once the human confirms the feel pass may you treat the predecessor as
-  closed and **activate the next DEFERRED milestone in AGENTS.md §2's documented
-  order** — flipping its row DEFERRED → Active in the §2 table (a normal AGENTS.md
-  edit, committed as you begin its work) and starting to decompose it.
-- Meanwhile, keep working: today's parallel Active tracks (M6b/M7b/M8/M9) almost
-  always have ready leaves, so you rarely idle waiting on a feel pass.
+- When the last build issue merges, confirm those gates and the epic's remaining
+  scope. Keep all unresolved feel/taste judgments open in consolidated,
+  human-scheduled #173; never auto-accept them. They do not gate epic closure
+  or successor activation.
+- After confirming the predecessor epic issue is closed, follow AGENTS.md §2's
+  dependency order and flip the next eligible row `DEFERRED` → `Active` as you
+  begin its work. Activation gates pickup, not merge.
+- Before activation, read live AGENTS.md §2 for an explicit human hold. The
+  current M11 hold is a hard stop: do not activate M11 or auto-draft its
+  foundation ADR #105 without an explicit human "go". Do not infer that
+  predecessor closure lifts that hold.
 
 ### 6. Self-pace, or surface and stop
 
@@ -148,7 +153,8 @@ switch.
     issue is probably mis-specified or blocked; report it, don't keep re-spawning.
   - **A merge conflict you can't cleanly resolve** (a rebase that needs real
     judgment about intent).
-  - **A milestone's feel pass** coming due (step 5) — the one human checkpoint.
+  - **An explicit human hold** in live AGENTS.md §2, including the current
+    M11 hold (step 5). Surface it; do not treat predecessor closure as a release.
   - **Any decision that would change an ADR**, contradict a locked ADR, or is a
     genuine design call / identity question (AGENTS.md Decision Discipline +
     ADR-0014 escalation). Stop and flag; don't silently comply.
@@ -165,8 +171,8 @@ switch.
   green + clean `/code-review` is the bar. No merge on red, ever (ADR-0015).
 - **You never write feature code.** If you're tempted to "just fix it myself,"
   that's a worker's job — dispatch one, or send the existing worker back.
-- **Feel is never auto-accepted.** A `Closes` covering a feel criterion waits for
-  the per-milestone human pass; track it, don't merge it (ADR-0015 gate 4).
+- **Feel is never auto-accepted.** Keep feel/taste debt open in consolidated
+  human-scheduled #173; do not merge a `Closes` that claims to resolve it.
 - **Walk the documented DAG, don't invent one.** Activate milestones only in
   AGENTS.md §2's stated order, only after genuine closure (ADR-0017).
 - **Merge-commit, one PR per issue, preserved history** (ADR-0015 / AGENTS.md
@@ -180,6 +186,6 @@ switch.
 
 Keep, in your working notes for the session:
 - the issue currently in flight (and its worker), so you never double-dispatch;
-- the **feel-pass list** — every feel/`hitl` criterion you deferred, grouped by
-  milestone, so the human's batched pass has a ready checklist;
+- the feel/`hitl` debt collected in #173, grouped by source milestone for the
+  human-scheduled consolidated pass;
 - which milestones you've activated this session and why (the DAG step you took)."""

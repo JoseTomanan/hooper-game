@@ -44,14 +44,18 @@ The table is the single at-a-glance map of milestone status
 1. **Autopilot activation** (ADR-0017): the orchestrator may flip a row
    `DEFERRED → Active` itself, without a per-milestone human "go" — but only
    by walking the table's own listed dependency order, and only after the
-   predecessor milestone's epic is genuinely closed (CI + harness +
-   code-review + its one human feel pass, per ADR-0015). Activation gates
-   *pickup*, not *merge*.
-2. **Milestone closure**: a row moves to `Done` only after the human's
-   per-milestone feel pass (ADR-0015 — feel is never auto-accepted).
+   predecessor epic issue itself is closed on GitHub after green CI, the
+   applicable headless harness, and an independent clean `/code-review`
+   (ADR-0015/0016). Activation gates *pickup*, not *merge*. Explicit human
+   holds in live AGENTS.md §2 still stop activation: the current M11 hold
+   cannot be lifted by predecessor closure or used to auto-draft ADR #105.
+2. **Milestone closure**: a row moves to `Done` when the epic issue itself
+   has closed under those gates. Keep all feel/taste debt open in
+   human-scheduled consolidated #173; feel is never auto-accepted, and the
+   deferred pass does not gate epic closure or successor activation.
 
-If you are not the orchestrator and you are not recording a human-confirmed
-milestone close, do not touch §2.
+If you are not the orchestrator recording a verified activation or closure,
+do not touch §2. No agent may lift an explicit human hold there.
 
 ### CONTEXT.md — use its terms exactly
 

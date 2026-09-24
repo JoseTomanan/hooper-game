@@ -223,15 +223,11 @@ phase matches") closes when those assertions pass in CI, riding the PR's
 **Feel is never auto-accepted as feel.** The harness may assert the *state*
 a feel value produces (e.g. "lean is non-zero only during the Active phase")
 but must never claim a value *feels* right. That judgment is reserved for
-one **human feel-acceptance pass per milestone** — issue #114 (the combined
-M9+M10 offense/defense feel pass) is the live example: its M9 section is
-concrete because that engineering already shipped, its M10 section is
-explicitly a placeholder that "gets populated as M10's sub-issues land — do
-not treat its checkboxes as verifiable until the corresponding code is
-merged." Feel-tuned magnitudes (frame counts, turn-rate caps, scatter
-radius) still ship as researched, cited starting defaults (see §6) with a
-single HITL verify issue filed — never an up-front ask to the human before
-coding.
+the human-scheduled consolidated pass in #173. Keep feel/taste debt open
+there; it does not gate epic closure or successor activation. Feel-tuned
+magnitudes (frame counts, turn-rate caps, scatter radius) still ship as
+researched, cited starting defaults (see §6), with their human judgment
+tracked in #173 rather than requested before coding.
 
 ### The Stop-hook green gate is a WEAKER local mirror — do not trust it alone
 
@@ -409,14 +405,19 @@ State which one you chose, and why, in your **first response on the issue**
 
 Per [ADR-0017](../../../docs/adr/0017-autopilot-activates-deferred-milestones.md),
 the autopilot may flip a milestone from `DEFERRED` to `Active` in AGENTS.md
-§2 **without** a per-milestone human "go" — but only under two hard
+§2 **without** a per-milestone human "go" — but only under three hard
 constraints:
 
 1. **Strictly walk the dependency order already documented in AGENTS.md §2's
    milestone table.** No skipping ahead, no inventing a different graph.
-2. **Only after the predecessor milestone's epic is genuinely closed** — CI
-   green + harness green + `/code-review` clean + its one per-milestone
-   human feel pass (§4) — under ADR-0015.
+2. **Only after the predecessor epic issue itself is closed on GitHub.**
+   Confirm green CI, the applicable headless harness, and a clean independent
+   `/code-review` under ADR-0015/0016. Merged children alone do not establish
+   epic closure. Keep unresolved feel/taste debt open in consolidated,
+   human-scheduled #173; it never auto-passes and does not gate closure.
+3. **Honor explicit human holds in live AGENTS.md §2.** The current M11 hold
+   remains a hard stop: do not activate M11 or auto-draft foundation ADR #105
+   without an explicit human "go". Predecessor closure does not lift the hold.
 
 Activation flips `DEFERRED` → `Active` in the AGENTS.md §2 table and gates
 **pickup**, not **merge**: it decides which milestone's issues the
@@ -491,8 +492,8 @@ is the full taxonomy it points at.)*
   human call, not an oversight — do not second-guess it by reopening.
 - **Never self-resolve a feel call.** Feel-tuned magnitudes get a cited
   starting value plus a `hitl` issue (§6) — the value is not "approved"
-  until the per-milestone human feel pass says so, regardless of how
-  confident the citation is.
+  until the human-scheduled consolidated pass in #173 says so, regardless
+  of how confident the citation is.
 - **Never self-resolve an ADR-changing call.** Any change to a locked ADR's
   Decision (not an in-place dated Amendment that extends it) is, by
   definition, the "ADR contradiction" escalation trigger (§6.3) — stop and
