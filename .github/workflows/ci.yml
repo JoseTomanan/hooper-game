@@ -26,6 +26,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The milestone activation contract is operational behavior: keep both
+      # orchestrators and their mirrored runbooks aligned with ADR-0021.
+      - name: Verify milestone activation contract
+        run: python3 -m unittest discover -s tests/repository -p test_milestone_activation_contract.py -v
+
       - name: Set up .NET SDK
         uses: actions/setup-dotnet@v4
         with:
