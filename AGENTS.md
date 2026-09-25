@@ -248,7 +248,9 @@ current milestone unless asked.
   2026-09-10 recurrence came from the `.agents` copies missing the workspace-log
   fix already present in `.claude` since commit `7437fb5`, so a launcher change
   is incomplete unless both `run-harness-local.ps1` and `run-harness-local.sh`
-  still inject `--log-file` before every Godot invocation. The same restricted-
+  remain synchronized thin adapters and `tools/harness_catalog.py` still injects
+  a unique workspace-local `--log-file` before every direct Godot invocation.
+  The same restricted-
   AppData signature (`0x58` read access violation) is tracked upstream as
   [godotengine/godot#120468](https://github.com/godotengine/godot/issues/120468).
 - One script = one node responsibility. `partial` class extending the node type.

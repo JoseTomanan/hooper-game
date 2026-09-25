@@ -274,20 +274,19 @@ One workflow, triggers on push to `main` + all PRs, two jobs:
    `godot --headless --build-solutions --quit || exit 0` (the deliberately
    swallowed spurious-failure step described above) → an explicit
    `dotnet build "HOOPER GAME.csproj"` (so a genuine C# error surfaces here
-   rather than as a confusing "script not found" at scene-load time) → the
-   **single-instance harness scenario matrix**, each invocation of the form
-   `godot --headless --path . res://tests/integration/<Scene>.tscn -- --harness-scenario=<name>`
-   — then the **dual-instance shell-script harnesses** (`run-net-*.sh`, each
-   `chmod +x`'d first, localhost ports 23456+). Exit-code contract (ADR-0016):
-   scene calls `GetTree().Quit(0)` = PASS, `Quit(1)` = FAIL, any other code =
-   harness crash, which also fails the job.
+   rather than as a confusing "script not found" at scene-load time) → one
+   exhaustive `python3 tools/harness_catalog.py run --all --godot godot` call.
+   The validated catalog owns both direct single-process invocations and the
+   existing multiprocess shell adapters; CI no longer carries a second literal
+   inventory. Exit-code contract (ADR-0016): scene calls `GetTree().Quit(0)` =
+   PASS, `Quit(1)` = FAIL, timeout/crash also fails, and catalog/setup errors
+   fail distinctly.
 
-   **Do not hand-maintain the matrix here — it grows every milestone.** As of
-   2026-08-06 it is **178 invocations across 42 scenes** plus **6** `run-net-*.sh`
-   scripts (it was 30 / 10 / 4 on 2026-07-15; an enumeration in this file was
-   stale within three weeks). Get the live list with
-   `powershell -File .Codex/skills/hooper-diagnostics-and-tooling/scripts/run-harness-local.ps1 -List`,
-   which parses `ci.yml` directly and so cannot drift.
+   **Do not hand-maintain the matrix here — it grows every milestone.** Get the
+   live ordered list with
+   `powershell -File .agents/skills/hooper-diagnostics-and-tooling/scripts/run-harness-local.ps1 list`.
+   The same command supports `--id`, `--scene`, and `--tag` filters; use
+   `run --all --godot <path>` for the exhaustive local equivalent.
 
    This job is the project's third verification surface — it boots a real
    Godot .NET engine and exercises the live simulation, which unit tests

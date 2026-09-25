@@ -130,16 +130,16 @@ This table is transcribed from `.github/workflows/ci.yml`'s actual run steps
 
 **The table above is a curated subset, not the matrix.** It documents the
 pre-M9 core — what each of those scenarios *asserts and why*, which is the part
-you cannot recover by reading `ci.yml`. The matrix itself is far larger and
-grows every milestone: **178 single-instance invocations across 42 scenes** as
-of 2026-08-06 (it was 30 across 10 on 2026-07-15), plus **6** `run-net-*.sh`
-dual-instance scripts.
+you cannot recover from execution metadata alone. The matrix itself is far
+larger and grows every milestone. At the #381 migration baseline it contains
+**273 cases: 260 single-process and 13 multiprocess**.
 
 Deliberately not enumerated here — an inline list of 42 scenes would be stale
 within weeks and would bury the semantics this table exists to carry. For the
 live list run
-`powershell -File .claude/skills/hooper-diagnostics-and-tooling/scripts/run-harness-local.ps1 -List`
-(or the `.sh` twin with `--list`), which parses `ci.yml` and cannot drift. The
+`powershell -File .claude/skills/hooper-diagnostics-and-tooling/scripts/run-harness-local.ps1 list`
+(or the `.sh` twin with `list`). Both delegate to the validated executable
+catalog that CI runs, so there is no second CI inventory to drift. The
 M9 animation-clip scenes (`*AnimTest`) dominate the growth; their semantics
 live in the per-move issues, not here.
 
@@ -323,33 +323,27 @@ identical setup WITHOUT the intervention and asserting the event DOES happen
 — otherwise "stayed 0-0" is equally consistent with "the shot setup never
 worked in the first place."
 
-### Step 3 — wire it into CI
+### Step 3 — register it in the executable catalog
 
-Add a step to `.github/workflows/ci.yml`'s `integration-test` job, after the
-existing single-instance steps:
+Add exactly one `HarnessCase` through `tools/harness_catalog.py`: a row in
+`_ADDITIONAL_SINGLE_ROWS` for a direct scene invocation, or
+`_ADDITIONAL_MULTIPROCESS_ROWS` for an
+existing shell adapter. Supply stable ID/topology, scene metadata, exact argv,
+tags, timeout, concrete log/artifact policy, and every explicitly paired
+control. Do **not** add a literal invocation to `.github/workflows/ci.yml`; CI
+runs the catalog exhaustively. Do **not** rewrite the frozen `6e66aa9` fixture;
+it is immutable migration evidence and the repository contract proves its 273
+baseline invocations remain an ordered subsequence of the live catalog.
 
-```yaml
-      # <Dense doc-comment block: what production code path this exercises,
-      # what each scenario's setup/placement is chosen to DISCRIMINATE (the
-      # RED-on-old-code / GREEN-on-fixed-code story per scenario), and which
-      # existing unit test — if any — already pins the pure math this
-      # harness proves the LIVE GLUE for. Exit-code contract note (ADR-0016).>
-      - name: Run <name> harness
-        run: |
-          godot --headless --path . res://tests/integration/<Name>Test.tscn -- --harness-scenario=<scenario-1>
-          godot --headless --path . res://tests/integration/<Name>Test.tscn -- --harness-scenario=<scenario-2>
-```
+Keep the dense proof explanation in the harness source and issue. The catalog
+describes how to execute the proof; it must not become a second home for
+gameplay assertions or frame-math rationale.
 
-Every existing step follows this justify-each-scenario comment convention —
-match that density. The comment is the only way a reviewer can tell a real
-discriminating proof from a vacuous one without re-deriving the frame math.
-
-For a **dual-instance** scenario, additionally write
+For a **multiprocess** scenario, additionally write
 `tests/integration/run-net-<name>.sh` by copying `run-net-state-sync.sh` (the
 template: server backgrounded, `SERVER_BIND_WAIT` sleep, client foreground,
-client exit code = verdict, `trap cleanup EXIT`) and bump the port past
-23459 (ports 23456–23459 are taken). Reference the script from ci.yml with a
-preceding `chmod +x`, matching the existing four steps.
+client exit code = verdict, `trap cleanup EXIT`). Register that adapter and its
+artifact globs in `_ADDITIONAL_MULTIPROCESS_ROWS`; the catalog invokes it through Bash.
 
 ### Step 4 — run it locally before pushing
 

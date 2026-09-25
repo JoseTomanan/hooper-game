@@ -154,13 +154,13 @@ Conventions (grep-verified in `tests/integration/*.cs`):
 
 ## Surface 3 — Running the scenario matrix locally (shipped scripts)
 
-Two equivalent scripts live in this skill's `scripts/` directory. Both parse
-the live scenario matrix out of `.github/workflows/ci.yml` (every
-`godot --headless --path . res://tests/integration/*.tscn` invocation, in CI
-order), so they cannot drift from CI. As of 2026-08-06 that is **178 scenario
-invocations across 42 scenes**, ~10 minutes serial (it was 30 across 10 on
-2026-07-15 — run `-List`/`--list` for the live count rather than trusting this
-one). Both need a local Godot **4.7.1 .NET** binary
+Two equivalent thin scripts live in this skill's `scripts/` directory. Both
+delegate to `tools/harness_catalog.py`, the validated source of truth CI also
+runs. The catalog includes every single-process scene invocation and every
+multiprocess shell adapter in deterministic order. At the #381 migration
+baseline it contains **273 cases: 260 single-process and 13 multiprocess**;
+use `list` for the live count rather than trusting that historical snapshot.
+Running cases needs a local Godot **4.7.1 .NET** binary
 (not on PATH by default; CI gets one via `chickensoft-games/setup-godot@v2`,
 version 4.7.1, `use-dotnet: true`). On Windows use the `*_console.exe`
 variant so `[harness]` output reaches your terminal.
@@ -174,35 +174,29 @@ dotnet build "HOOPER GAME.csproj" --configuration Debug
 Git Bash:
 
 ```
-GODOT="/c/path/to/Godot_v4.7.1-stable_mono_win64_console.exe" bash .Codex/skills/hooper-diagnostics-and-tooling/scripts/run-harness-local.sh
-bash .Codex/skills/hooper-diagnostics-and-tooling/scripts/run-harness-local.sh --list           # print matrix only, no binary needed
-bash .Codex/skills/hooper-diagnostics-and-tooling/scripts/run-harness-local.sh "$GODOT" --stop-on-fail
+GODOT="/c/path/to/Godot_v4.7.1-stable_mono_win64_console.exe"
+bash .agents/skills/hooper-diagnostics-and-tooling/scripts/run-harness-local.sh list
+bash .agents/skills/hooper-diagnostics-and-tooling/scripts/run-harness-local.sh list --tag multiprocess
+bash .agents/skills/hooper-diagnostics-and-tooling/scripts/run-harness-local.sh run --all --godot "$GODOT"
+bash .agents/skills/hooper-diagnostics-and-tooling/scripts/run-harness-local.sh run --scene BlockTurnoverTest.tscn --godot "$GODOT"
 ```
 
 PowerShell 5.1:
 
 ```
-powershell -File .Codex\skills\hooper-diagnostics-and-tooling\scripts\run-harness-local.ps1 -Godot "C:\path\to\Godot_v4.7.1-stable_mono_win64_console.exe"
-powershell -File .Codex\skills\hooper-diagnostics-and-tooling\scripts\run-harness-local.ps1 -List
+powershell -File .agents\skills\hooper-diagnostics-and-tooling\scripts\run-harness-local.ps1 list
+powershell -File .agents\skills\hooper-diagnostics-and-tooling\scripts\run-harness-local.ps1 run --all --godot "C:\path\to\Godot_v4.7.1-stable_mono_win64_console.exe"
+powershell -File .agents\skills\hooper-diagnostics-and-tooling\scripts\run-harness-local.ps1 run --id smoke-test --godot "C:\path\to\Godot_v4.7.1-stable_mono_win64_console.exe"
 ```
 
-Default behaviour: run everything, print a PASS/FAIL summary table, exit 1 if
-anything failed. `--stop-on-fail` / `-StopOnFail` aborts at the first red.
-Exit 2 = usage/environment error (no binary, ci.yml missing/unparseable).
-
-The **dual-instance** scenarios are NOT in the matrix — run them individually
-via Git Bash (they are bash orchestrators; ports 23456–23459 hardcoded,
-`SERVER_BIND_WAIT` default 6 s, env-overridable):
-
-```
-bash tests/integration/run-net-handshake.sh "$GODOT"
-bash tests/integration/run-net-state-sync.sh "$GODOT"
-bash tests/integration/run-net-node-replication.sh "$GODOT"
-bash tests/integration/run-net-behindtheback-sweep.sh "$GODOT"
-```
-
-Each launches a server in the background, waits, runs the client in the
-foreground, and uses the **client's** exit code as the verdict.
+`list` needs no engine binary. `run` requires exactly `--all` or one-or-more
+`--id`/`--scene`/`--tag` filters; repeated values are ORed within a category
+and categories intersect. Selecting a case also selects its paired control
+component. Runs keep going so one red does not hide later failures, then print
+one aggregate summary. Exit 0 = all pass, 1 = scenario failure/timeout/crash,
+2 = catalog/usage/environment error, and 130 = interrupted. Direct scene runs
+receive unique workspace-local logs under `.godot/harness-runs/`; multiprocess
+adapters retain their existing logs, artifacts, ports, cleanup, and verdicts.
 
 ---
 
@@ -215,9 +209,9 @@ foreground, and uses the **client's** exit code as the verdict.
    the expected one. If instead the run died with a stack trace and an exit
    code that is neither 0 nor 1, the harness itself crashed — treat as a
    harness bug or a compile/scene-load problem, not an assertion verdict.
-2. Match the failing assertion back to the scenario's intent: every ci.yml
-   step carries a dense comment block explaining what each scenario proves
-   and what a RED means. Read that comment before touching code.
+2. Match the failing assertion back to the scenario's intent in its harness
+   source and issue. The catalog owns execution metadata, not gameplay proof
+   semantics. Read the harness's dense proof comments before touching code.
 3. Ask "is the control scenario green?" — every "X didn't happen" assertion
    in this repo has a counterfactual scenario (e.g. `BlockTurnoverTest`
    `control-make` proves the unblocked shot scores, so `success`'s "still
@@ -369,19 +363,18 @@ against `hooper-proof-and-analysis-toolkit`. Verified against:
   attributes, constants, grid loop, cross-check theory) — read directly.
 - The `--filter` behaviour (matches 1 test, stays `[SKIP]`) — executed live.
 - The five `*ForHarness` properties and their line numbers — grepped live.
-- `.github/workflows/ci.yml` scenario matrix — grepped live: 178
-  single-instance invocations, 42 scenes, 6 dual-instance scripts
-  (2026-08-06; was 30 / 10 / 4 on 2026-07-15).
+- `tools/harness_catalog.py` and its frozen `6e66aa9` parity fixture — 273
+  baseline invocations (260 single-process, 13 multiprocess) on 2026-09-25.
 - `[harness]`/`[net-harness]` print conventions — grepped live.
-- Both shipped scripts' `--list` output and no-binary error paths — executed
-  live (full matrix run additionally requires a local Godot 4.7.1 .NET
-  binary; the parse/summary logic does not).
+- Both shipped scripts' `list` output and no-binary error paths — executed
+  live (running cases additionally requires a local Godot 4.7.1 .NET binary;
+  catalog validation and listing do not).
 - `docs/analysis/0079-shot-scatter-curve.md` — read directly.
 
 Re-verification commands for facts that drift:
 
 - Unit-test counts (664/5/669): `dotnet test "tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj" --configuration Debug`
-- Scenario matrix size/content: `bash .Codex/skills/hooper-diagnostics-and-tooling/scripts/run-harness-local.sh --list`
+- Scenario matrix size/content: `bash .agents/skills/hooper-diagnostics-and-tooling/scripts/run-harness-local.sh list`
 - `*ForHarness` inventory: `grep -n "ForHarness" scripts/Ball/BallController.cs`
 - Skipped-theory inventory: `grep -n "Skip =" tests/Hooper.Ball.Tests/ShotScatterCurveCharacterizationTests.cs`
 - Characterization constants vs live defaults: CI's `DefaultsMatchShotMakeCurveBands` (unskipped) fails on drift.
