@@ -382,7 +382,11 @@ def _multiprocess_cases(rows: Iterable[tuple[str, str, str, tuple[str, ...]]]) -
 
 
 _CONTROL_COMPONENTS = (
-    ("held-steal-test-held-vulnerable", "held-steal-test-held-immune-outside-window"),
+    (
+        "held-steal-test-held-vulnerable",
+        "held-steal-test-held-immune-outside-window",
+        "held-steal-test-pumpfake-now-exposed",
+    ),
     (
         "held-steal-test-held-static-vulnerable",
         "held-steal-test-held-static-immune-out-of-reach",
@@ -400,6 +404,8 @@ _CONTROL_COMPONENTS = (
         "transit-steal-test-transit-steal-spin",
         "transit-steal-test-out-of-reach-recovery-spin",
     ),
+    ("steal-turnover-test-success", "steal-turnover-test-whiff"),
+    ("steal-facing-mapping-test-face-to-face", "steal-facing-mapping-test-side-by-side"),
     ("contest-scatter-test-contest-active", "contest-scatter-test-no-contest"),
     ("fadeaway-trigger-test-mid-pivot", "fadeaway-trigger-test-squared-up"),
     ("cradle-race-test-out-of-order", "cradle-race-test-in-order", "cradle-race-test-later-legit-drive"),
@@ -407,13 +413,25 @@ _CONTROL_COMPONENTS = (
     ("layup-test-block-success", "layup-test-block-whiff"),
     ("layup-test-range-gate-inside", "layup-test-range-gate-tolerated", "layup-test-range-gate-rejected"),
     ("euro-step-test-euro-step-beats-committed-defender", "euro-step-test-euro-step-read-still-contests"),
-    ("dribble-loop-test-dribble-entered", "dribble-loop-test-held-no-dribble"),
+    (
+        "dribble-loop-test-dribble-entered",
+        "dribble-loop-test-no-ball-locomotion",
+        "dribble-loop-test-held-no-dribble",
+    ),
     ("jumpshot-anim-test-fadeaway-active", "jumpshot-anim-test-no-fadeaway-when-squared-up"),
     ("step-back-test-step-back-gathers", "step-back-test-retreat-dribble-no-gather"),
     ("move-kind-anim-test-clipped-reaches-permove", "move-kind-anim-test-unclipped-stays-generic"),
     (
+        "terminal-no-holder-test-terminal-rebound",
+        "terminal-no-holder-test-terminal-oob",
+        "terminal-no-holder-test-nonwinning-make",
+        "terminal-no-holder-test-live-rebound",
+        "terminal-no-holder-test-oob-award",
+    ),
+    (
         "block-turnover-test-success",
         "block-turnover-test-success-lastactive",
+        "block-turnover-test-whiff",
         "block-turnover-test-out-of-range",
         "block-turnover-test-control-make",
         "block-turnover-test-control-make-default-geometry",

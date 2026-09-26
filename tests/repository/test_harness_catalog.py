@@ -84,9 +84,12 @@ class HarnessCatalogCliTests(unittest.TestCase):
     def test_source_declared_cross_invocation_controls_are_connected(self):
         catalog = load_catalog_module()
         components = (
-            ('held-steal-test-held-vulnerable', 'held-steal-test-held-immune-outside-window'),
+            ('held-steal-test-held-vulnerable', 'held-steal-test-held-immune-outside-window', 'held-steal-test-pumpfake-now-exposed'),
             ('held-steal-test-held-static-vulnerable', 'held-steal-test-held-static-immune-out-of-reach', 'held-steal-test-held-static-immune-shielded', 'held-steal-test-held-static-immune-wrong-side'),
             ('transit-steal-test-transit-steal', 'transit-steal-test-out-of-reach-recovery', 'transit-steal-test-normal-window-unchanged', 'transit-steal-test-transit-steal-behind-the-back', 'transit-steal-test-out-of-reach-recovery-behind-the-back', 'transit-steal-test-transit-steal-between-the-legs', 'transit-steal-test-out-of-reach-recovery-between-the-legs', 'transit-steal-test-transit-steal-spin', 'transit-steal-test-out-of-reach-recovery-spin'),
+            ('steal-turnover-test-success', 'steal-turnover-test-whiff'),
+            ('steal-facing-mapping-test-face-to-face', 'steal-facing-mapping-test-side-by-side'),
+            ('block-turnover-test-success', 'block-turnover-test-success-lastactive', 'block-turnover-test-whiff', 'block-turnover-test-out-of-range', 'block-turnover-test-control-make', 'block-turnover-test-control-make-default-geometry'),
             ('contest-scatter-test-contest-active', 'contest-scatter-test-no-contest'),
             ('fadeaway-trigger-test-mid-pivot', 'fadeaway-trigger-test-squared-up'),
             ('cradle-race-test-out-of-order', 'cradle-race-test-in-order', 'cradle-race-test-later-legit-drive'),
@@ -94,10 +97,11 @@ class HarnessCatalogCliTests(unittest.TestCase):
             ('layup-test-block-success', 'layup-test-block-whiff'),
             ('layup-test-range-gate-inside', 'layup-test-range-gate-tolerated', 'layup-test-range-gate-rejected'),
             ('euro-step-test-euro-step-beats-committed-defender', 'euro-step-test-euro-step-read-still-contests'),
-            ('dribble-loop-test-dribble-entered', 'dribble-loop-test-held-no-dribble'),
+            ('dribble-loop-test-dribble-entered', 'dribble-loop-test-no-ball-locomotion', 'dribble-loop-test-held-no-dribble'),
             ('jumpshot-anim-test-fadeaway-active', 'jumpshot-anim-test-no-fadeaway-when-squared-up'),
             ('step-back-test-step-back-gathers', 'step-back-test-retreat-dribble-no-gather'),
             ('move-kind-anim-test-clipped-reaches-permove', 'move-kind-anim-test-unclipped-stays-generic'),
+            ('terminal-no-holder-test-terminal-rebound', 'terminal-no-holder-test-terminal-oob', 'terminal-no-holder-test-nonwinning-make', 'terminal-no-holder-test-live-rebound', 'terminal-no-holder-test-oob-award'),
         )
         for component in components:
             expected = set(component)
