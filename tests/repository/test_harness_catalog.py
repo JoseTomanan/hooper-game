@@ -116,7 +116,20 @@ class HarnessCatalogCliTests(unittest.TestCase):
         with contextlib.redirect_stderr(stderr):
             result = catalog.main(['list', '--id', 'does-not-exist'], repo_root=ROOT)
         self.assertEqual(2, result)
-        self.assertIn('empty', stderr.getvalue())
+        self.assertIn('does-not-exist', stderr.getvalue())
+
+    def test_any_unknown_selector_is_usage_error_even_when_another_matches(self):
+        catalog = load_catalog_module()
+        selections = (
+            (['--id', 'smoke-test', '--id', 'does-not-exist'], 'does-not-exist'),
+            (['--scene', 'SmokeTest.tscn', '--scene', 'Missing.tscn'], 'Missing.tscn'),
+            (['--tag', 'single', '--tag', 'missing-tag'], 'missing-tag'),
+        )
+        for selection, unknown in selections:
+            with self.subTest(selection=selection), contextlib.redirect_stderr(io.StringIO()) as stderr:
+                result = catalog.main(['list', *selection], repo_root=ROOT)
+            self.assertEqual(2, result)
+            self.assertIn(unknown, stderr.getvalue())
 
     def test_run_requires_all_or_a_filter_and_all_rejects_filters(self):
         catalog = load_catalog_module()

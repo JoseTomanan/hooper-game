@@ -584,6 +584,32 @@ def select_cases(cases: Sequence[HarnessCase], ids: Sequence[str] = (), scenes: 
     return tuple(case for case in cases if case.id in selected_ids)
 
 
+def _unknown_selectors(
+    cases: Sequence[HarnessCase],
+    ids: Sequence[str],
+    scenes: Sequence[str],
+    tags: Sequence[str],
+) -> tuple[tuple[str, str], ...]:
+    known_ids = {case.id.casefold() for case in cases}
+    known_scenes = {
+        alias.casefold()
+        for case in cases
+        for scene in case.scenes
+        for alias in (scene.resource, Path(scene.path).name, Path(scene.path).stem)
+    }
+    known_tags = {tag.casefold() for case in cases for tag in case.tags}
+    return tuple(
+        (kind, value)
+        for kind, values, known in (
+            ("id", ids, known_ids),
+            ("scene", scenes, known_scenes),
+            ("tag", tags, known_tags),
+        )
+        for value in values
+        if value.casefold() not in known
+    )
+
+
 @dataclass(frozen=True)
 class RunResult:
     case_id: str
@@ -735,6 +761,11 @@ def main(
         except SystemExit as error:
             return int(error.code)
         validate_catalog(cases, repo_root)
+        unknown = _unknown_selectors(cases, args.id, args.scene, args.tag)
+        if unknown:
+            formatted = ", ".join(f"--{kind}={value}" for kind, value in unknown)
+            print(f"unrecognized catalog selector(s): {formatted}", file=sys.stderr)
+            return 2
         selected = select_cases(cases, args.id, args.scene, args.tag)
         if (args.id or args.scene or args.tag) and not selected:
             print("catalog selection is empty", file=sys.stderr)
