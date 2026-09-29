@@ -133,7 +133,14 @@ class HarnessCatalogCliTests(unittest.TestCase):
 
     def test_run_requires_all_or_a_filter_and_all_rejects_filters(self):
         catalog = load_catalog_module()
-        for argv in (['run'], ['run', '--all', '--tag', 'single']):
+        for argv in (
+            ['run'],
+            ['run', '--all', '--tag', 'single'],
+            ['run', '--all', '--shard', '1'],
+            ['run', '--shard', '1', '--id', 'smoke-test'],
+            ['run', '--shard', '1', '--run-id', '../escape'],
+            ['list', '--shard', '0'],
+        ):
             with self.subTest(argv=argv), contextlib.redirect_stderr(io.StringIO()):
                 self.assertEqual(2, catalog.main(argv, repo_root=ROOT))
 
@@ -175,6 +182,76 @@ class HarnessCatalogValidationTests(unittest.TestCase):
         for label, cases in mutations.items():
             with self.subTest(label=label), self.assertRaises(self.catalog.CatalogError):
                 self.catalog.validate_catalog(cases, ROOT)
+
+
+class HarnessCatalogShardTests(unittest.TestCase):
+    def test_weighted_shards_are_deterministic_exhaustive_and_keep_controls_atomic(self):
+        catalog = load_catalog_module()
+        base = catalog.CATALOG[0]
+        cases = (
+            replace(base, id='a', paired_control_ids=('b',)),
+            replace(base, id='b', argv=base.argv + ('b',), paired_control_ids=('a',)),
+            replace(base, id='c', argv=base.argv + ('c',)),
+            replace(base, id='d', argv=base.argv + ('d',), paired_control_ids=('e',)),
+            replace(base, id='e', argv=base.argv + ('e',), paired_control_ids=('d',)),
+            replace(base, id='f', argv=base.argv + ('f',)),
+        )
+        weights = {'a': 5.0, 'b': 4.0, 'c': 7.0, 'd': 3.0, 'e': 2.0, 'f': 1.0}
+
+        first = catalog.shard_cases(cases, 3, weights)
+        second = catalog.shard_cases(cases, 3, weights)
+
+        self.assertEqual(first, second)
+        self.assertEqual(['a', 'b', 'c', 'd', 'e', 'f'], sorted(case.id for shard in first for case in shard))
+        self.assertEqual([['a', 'b'], ['c'], ['d', 'e', 'f']], [[case.id for case in shard] for shard in first])
+
+    def test_weights_are_auditable_baseline_measurements_with_explicit_fallbacks(self):
+        catalog = load_catalog_module()
+        weights = catalog.case_weights(catalog.CATALOG)
+
+        self.assertEqual(35862510668, catalog.SHARD_WEIGHT_BASELINE_RUN_ID)
+        self.assertEqual(set(case.id for case in catalog.CATALOG), set(weights))
+        self.assertAlmostEqual(8.0 / 9.0, weights['transit-steal-test-transit-steal'])
+        self.assertAlmostEqual(6.0 / 4.0, weights['euro-step-test-euro-step-beats-committed-defender'])
+        self.assertAlmostEqual(6.0 / 4.0, weights['euro-step-anim-test'])
+        self.assertEqual(1.0, weights['input-map-defensive-actions-test'])
+        self.assertEqual(13.0, weights['dedicated-game-journey-healthy'])
+        self.assertAlmostEqual(347.0, sum(weights.values()))
+
+        base = catalog.CATALOG[0]
+        new_single = replace(base, id='new-single', scenes=(catalog.SceneMetadata('res://tests/integration/Unknown.tscn'),))
+        new_multi = replace(base, id='new-multi', topology='multiprocess', scenes=(catalog.SceneMetadata('res://tests/integration/Unknown.tscn'),))
+        fallback = catalog.case_weights((new_single, new_multi))
+        self.assertEqual(catalog.DEFAULT_SINGLE_WEIGHT_SECONDS, fallback['new-single'])
+        self.assertEqual(catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS, fallback['new-multi'])
+
+    def test_list_one_shard_is_locally_auditable_and_partitions_the_live_catalog(self):
+        catalog = load_catalog_module()
+        weights = catalog.case_weights(catalog.CATALOG)
+        expected_shards = catalog.shard_cases(catalog.CATALOG, catalog.SHARD_COUNT, weights)
+        observed = []
+
+        for shard_number, expected in enumerate(expected_shards, start=1):
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                result = catalog.main(['list', '--shard', str(shard_number)], repo_root=ROOT)
+            self.assertEqual(0, result)
+            ids = [line.split('\t', 1)[0] for line in stdout.getvalue().splitlines()]
+            self.assertEqual([case.id for case in expected], ids)
+            observed.extend(ids)
+
+        self.assertEqual([case.id for case in catalog.CATALOG], sorted(observed, key=[case.id for case in catalog.CATALOG].index))
+        self.assertEqual(len(observed), len(set(observed)))
+        shard_by_id = {
+            case.id: shard_number
+            for shard_number, shard in enumerate(expected_shards, start=1)
+            for case in shard
+        }
+        for case in catalog.CATALOG:
+            for control_id in case.paired_control_ids:
+                self.assertEqual(shard_by_id[case.id], shard_by_id[control_id])
+        loads = [sum(weights[case.id] for case in shard) for shard in expected_shards]
+        self.assertLess(max(loads) - min(loads), 1.0, loads)
 
 
 class FakeProcess:
@@ -336,6 +413,29 @@ class HarnessCatalogRunnerTests(unittest.TestCase):
         self.assertEqual(len(self.catalog.CATALOG), len(popen.calls))
         self.assertIn('SmokeTest.tscn', ' '.join(popen.calls[0][0]))
         self.assertEqual('score-rpc-disabled', popen.calls[-1][0][-1])
+
+    def test_run_one_shard_executes_only_that_shard_with_a_stable_run_id(self):
+        shard_number = 2
+        run_id = 'ci-123-1-shard-2'
+        weights = self.catalog.case_weights(self.catalog.CATALOG)
+        selected = self.catalog.shard_cases(self.catalog.CATALOG, self.catalog.SHARD_COUNT, weights)[shard_number - 1]
+        popen = PopenScript([FakeProcess(0) for _ in selected])
+
+        with contextlib.redirect_stdout(io.StringIO()):
+            code = self.catalog.main(
+                ['run', '--shard', str(shard_number), '--run-id', run_id, '--godot', 'godot-bin', '--bash', 'bash-bin'],
+                repo_root=ROOT,
+                cases=self.catalog.CATALOG,
+                popen_factory=popen,
+                which=lambda value: value,
+                run_id_factory=lambda: self.fail('explicit run id should bypass the random factory'),
+            )
+
+        self.assertEqual(0, code)
+        self.assertEqual(
+            [self.catalog.build_command(case, ROOT, 'godot-bin', 'bash-bin', run_id) for case in selected],
+            [command for command, _ in popen.calls],
+        )
 
     def test_main_resolves_bare_executables_before_launch(self):
         case = next(c for c in self.catalog.CATALOG if c.id == 'net-handshake')

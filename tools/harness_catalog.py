@@ -16,11 +16,12 @@ import sys
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Iterable, Mapping, Sequence
 
 
 ROOT = Path(__file__).resolve().parents[1]
 _ID_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+_RUN_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 
 @dataclass(frozen=True)
@@ -485,6 +486,117 @@ CATALOG = _attach_controls(tuple((
 )))
 
 
+# Whole-second GitHub step durations from the successful serial baseline.
+# https://github.com/JoseTomanan/hooper-game/actions/runs/35862510668
+SHARD_WEIGHT_BASELINE_RUN_ID = 35862510668
+SHARD_COUNT = 4
+# The Actions step timestamps have one-second resolution, so a measured zero
+# means "under one second", not free. Unknown future families use topology-
+# specific fallbacks until a newer successful baseline deliberately replaces it.
+MIN_MEASURED_FAMILY_SECONDS = 1.0
+DEFAULT_SINGLE_WEIGHT_SECONDS = 1.0
+DEFAULT_MULTIPROCESS_WEIGHT_SECONDS = 8.0
+_SINGLE_FAMILY_MEASUREMENTS: tuple[tuple[float, tuple[str, ...]], ...] = (
+    (1, ("SmokeTest.tscn",)),
+    (0, ("InputMapDefensiveActionsTest.tscn",)),
+    (3, ("StealTurnoverTest.tscn",)),
+    (6, ("HeldStealTest.tscn",)),
+    (8, ("TransitStealTest.tscn",)),
+    (1, ("StealFacingMappingTest.tscn",)),
+    (8, ("BlockTurnoverTest.tscn",)),
+    (9, ("TerminalNoHolderTest.tscn",)),
+    (6, ("LayupTest.tscn",)),
+    (6, ("EuroStepTest.tscn", "EuroStepAnimTest.tscn")),
+    (1, ("JabStepTest.tscn",)),
+    (6, ("InAndOutTest.tscn",)),
+    (7, ("SpinTest.tscn",)),
+    (1, ("ContestScatterTest.tscn",)),
+    (1, ("FadeawayTriggerTest.tscn",)),
+    (3, ("BlowByWindowTest.tscn",)),
+    (4, ("OobTurnoverTest.tscn",)),
+    (1, ("TripleThreatTest.tscn",)),
+    (1, ("AwardFreshnessTest.tscn",)),
+    (2, ("CradleRaceTest.tscn",)),
+    (2, ("StepBackCradleRaceTest.tscn",)),
+    (2, ("CrossoverSweepTest.tscn",)),
+    (3, ("PivotPlantTest.tscn",)),
+    (2, ("PivotAnimTest.tscn",)),
+    (1, ("MoveKindAnimTest.tscn",)),
+    (7, ("ReboundGrabTest.tscn",)),
+    (3, ("DribbleLoopTest.tscn",)),
+    (5, ("DribbleHandAlignmentTest.tscn",)),
+    (1, ("RigScaleHarnessTest.tscn",)),
+    (1, ("LocomotionClipTest.tscn",)),
+    (15, ("JumpshotAnimTest.tscn",)),
+    (5, ("CrossoverAnimTest.tscn",)),
+    (7, ("BehindTheBackAnimTest.tscn",)),
+    (10, ("StealAnimTest.tscn",)),
+    (10, ("LayupAnimTest.tscn",)),
+    (11, ("ContestAnimTest.tscn",)),
+    (7, ("JabStepAnimTest.tscn",)),
+    (7, ("RetreatDribbleAnimTest.tscn",)),
+    (7, ("StepBackAnimTest.tscn",)),
+    (6, ("BlockAnimTest.tscn",)),
+    (7, ("InAndOutAnimTest.tscn",)),
+    (9, ("BetweenTheLegsAnimTest.tscn",)),
+    (9, ("HesitationAnimTest.tscn",)),
+    (10, ("SpinAnimTest.tscn",)),
+    (13, ("DriveGatherAnimTest.tscn",)),
+    (3, ("MovingCrossoverTest.tscn",)),
+    (2, ("BehindTheBackTest.tscn",)),
+    (2, ("BetweenTheLegsTest.tscn",)),
+    (1, ("StepBackTest.tscn",)),
+    (3, ("DriveGatherTest.tscn",)),
+)
+_MULTIPROCESS_CASE_SECONDS = {
+    "net-handshake": 6.0,
+    "net-state-sync": 7.0,
+    "net-node-replication": 6.0,
+    "dedicated-roster": 10.0,
+    "dedicated-discovery-join": 6.0,
+    "net-behindtheback-sweep": 7.0,
+    "net-defensive-telegraph-telegraph": 8.0,
+    "net-defensive-telegraph-control": 8.0,
+    "net-exitvector-rpc-poisoned": 9.0,
+    "net-exitvector-rpc-steady": 8.0,
+    "dedicated-game-journey-healthy": 13.0,
+    "dedicated-game-journey-discovery-disabled": 5.0,
+    "dedicated-game-journey-score-rpc-disabled": 7.0,
+}
+
+
+def case_weights(cases: Sequence[HarnessCase]) -> dict[str, float]:
+    """Split measured family seconds per baseline case, with stable fallbacks."""
+    family_by_scene = {
+        scene_name: (duration, scene_names)
+        for duration, scene_names in _SINGLE_FAMILY_MEASUREMENTS
+        for scene_name in scene_names
+    }
+    baseline_family_counts: dict[tuple[str, ...], int] = {}
+    for baseline_case in MIGRATION_BASELINE_CATALOG:
+        if baseline_case.topology != "single":
+            continue
+        scene_name = Path(baseline_case.scenes[0].path).name
+        measurement = family_by_scene.get(scene_name)
+        if measurement is not None:
+            _, family = measurement
+            baseline_family_counts[family] = baseline_family_counts.get(family, 0) + 1
+
+    weights: dict[str, float] = {}
+    for case in cases:
+        if case.topology == "multiprocess":
+            weights[case.id] = _MULTIPROCESS_CASE_SECONDS.get(case.id, DEFAULT_MULTIPROCESS_WEIGHT_SECONDS)
+            continue
+        scene_name = Path(case.scenes[0].path).name
+        measurement = family_by_scene.get(scene_name)
+        if measurement is None:
+            weights[case.id] = DEFAULT_SINGLE_WEIGHT_SECONDS
+            continue
+        duration, family = measurement
+        weights[case.id] = max(duration, MIN_MEASURED_FAMILY_SECONDS) / baseline_family_counts[family]
+    return weights
+
+
 class CatalogError(ValueError):
     pass
 
@@ -582,6 +694,50 @@ def select_cases(cases: Sequence[HarnessCase], ids: Sequence[str] = (), scenes: 
                 selected_ids.add(control_id)
                 pending.append(control_id)
     return tuple(case for case in cases if case.id in selected_ids)
+
+
+def shard_cases(
+    cases: Sequence[HarnessCase],
+    shard_count: int,
+    weights: Mapping[str, float],
+) -> tuple[tuple[HarnessCase, ...], ...]:
+    """Balance connected control components with deterministic LPT scheduling."""
+    if shard_count <= 0:
+        raise CatalogError("shard count must be positive")
+    by_id = {case.id: case for case in cases}
+    order = {case.id: index for index, case in enumerate(cases)}
+    unseen = set(by_id)
+    components: list[tuple[HarnessCase, ...]] = []
+    for case in cases:
+        if case.id not in unseen:
+            continue
+        component_ids: set[str] = set()
+        pending = [case.id]
+        while pending:
+            case_id = pending.pop()
+            if case_id in component_ids:
+                continue
+            component_ids.add(case_id)
+            unseen.discard(case_id)
+            pending.extend(by_id[case_id].paired_control_ids)
+        components.append(tuple(item for item in cases if item.id in component_ids))
+
+    components.sort(
+        key=lambda component: (
+            -sum(weights[case.id] for case in component),
+            tuple(case.id for case in component),
+        )
+    )
+    shards: list[list[HarnessCase]] = [[] for _ in range(shard_count)]
+    loads = [0.0] * shard_count
+    for component in components:
+        shard_index = min(range(shard_count), key=lambda index: (loads[index], index))
+        shards[shard_index].extend(component)
+        loads[shard_index] += sum(weights[case.id] for case in component)
+    return tuple(
+        tuple(sorted(shard, key=lambda case: order[case.id]))
+        for shard in shards
+    )
 
 
 def _unknown_selectors(
@@ -721,10 +877,13 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
     list_parser = subparsers.add_parser("list")
+    list_parser.add_argument("--shard", type=int, choices=range(1, SHARD_COUNT + 1))
     for flag in ("id", "scene", "tag"):
         list_parser.add_argument(f"--{flag}", action="append", default=[])
     run_parser = subparsers.add_parser("run")
     run_parser.add_argument("--all", action="store_true")
+    run_parser.add_argument("--shard", type=int, choices=range(1, SHARD_COUNT + 1))
+    run_parser.add_argument("--run-id")
     run_parser.add_argument("--godot", default=os.environ.get("GODOT", "godot"))
     run_parser.add_argument("--bash", default=os.environ.get("BASH", "bash"))
     for flag in ("id", "scene", "tag"):
@@ -766,18 +925,27 @@ def main(
             formatted = ", ".join(f"--{kind}={value}" for kind, value in unknown)
             print(f"unrecognized catalog selector(s): {formatted}", file=sys.stderr)
             return 2
+        filters_present = bool(args.id or args.scene or args.tag)
+        if args.shard is not None and filters_present:
+            print("--shard cannot be combined with --id, --scene, or --tag", file=sys.stderr)
+            return 2
         selected = select_cases(cases, args.id, args.scene, args.tag)
         if (args.id or args.scene or args.tag) and not selected:
             print("catalog selection is empty", file=sys.stderr)
             return 2
+        if args.shard is not None:
+            selected = shard_cases(cases, SHARD_COUNT, case_weights(cases))[args.shard - 1]
         if args.command == "list":
             for case in selected:
                 scenes = ",".join(scene.resource for scene in case.scenes)
                 print(f"{case.id}\t{case.topology}\t{scenes}\t{','.join(case.tags)}")
             return 0
-        filters_present = bool(args.id or args.scene or args.tag)
-        if args.all == filters_present:
-            print("run requires either --all or one-or-more filters (never both)", file=sys.stderr)
+        selection_modes = int(args.all) + int(filters_present) + int(args.shard is not None)
+        if selection_modes != 1:
+            print("run requires exactly one of --all, --shard, or one-or-more filters", file=sys.stderr)
+            return 2
+        if args.run_id is not None and not _RUN_ID_RE.fullmatch(args.run_id):
+            print(f"invalid run id: {args.run_id}", file=sys.stderr)
             return 2
         godot = _resolve_executable(args.godot, repo_root, which)
         if godot is None:
@@ -787,7 +955,8 @@ def main(
         if any(case.topology == "multiprocess" for case in selected) and bash is None:
             print(f"missing bash executable: {args.bash}", file=sys.stderr)
             return 2
-        code, results = run_cases(selected, repo_root, godot, bash or args.bash, popen_factory=popen_factory, run_id=run_id_factory())
+        run_id = args.run_id or run_id_factory()
+        code, results = run_cases(selected, repo_root, godot, bash or args.bash, popen_factory=popen_factory, run_id=run_id)
         print("==================== SUMMARY ====================")
         for result in results:
             print(f"{result.status:9} {result.case_id} log={result.log_policy.kind}:{result.log_policy.value} artifacts={','.join(result.artifacts)}")
