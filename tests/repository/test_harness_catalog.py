@@ -493,10 +493,22 @@ class HarnessCatalogWrapperTests(unittest.TestCase):
 
 
 class HarnessCatalogWorkflowTests(unittest.TestCase):
-    def test_ci_uses_only_the_exhaustive_catalog_runner_and_uploads_broad_failures(self):
+    def test_ci_runs_four_catalog_shards_and_aggregates_every_non_success_as_failure(self):
         workflow = (ROOT / '.github/workflows/ci.yml').read_text(encoding='utf-8')
         self.assertIn('timeout-minutes: 15', workflow)
-        self.assertEqual(1, workflow.count('python3 tools/harness_catalog.py run --all --godot godot'))
+        self.assertIn('integration-shard:', workflow)
+        self.assertIn('fail-fast: false', workflow)
+        self.assertIn('shard: [1, 2, 3, 4]', workflow)
+        self.assertEqual(1, workflow.count('python3 tools/harness_catalog.py run'))
+        self.assertEqual(1, workflow.count('--shard ${{ matrix.shard }}'))
+        self.assertNotIn('python3 tools/harness_catalog.py run --all', workflow)
+        self.assertIn('--run-id "ci-${{ github.run_id }}-${{ github.run_attempt }}-shard-${{ matrix.shard }}"', workflow)
+        self.assertIn('name: headless-harness-failure-${{ github.run_id }}-${{ github.run_attempt }}-shard-${{ matrix.shard }}', workflow)
+        self.assertIn('integration-test:', workflow)
+        self.assertIn('needs: integration-shard', workflow)
+        self.assertIn('if: ${{ always() }}', workflow)
+        self.assertIn('SHARD_RESULT: ${{ needs.integration-shard.result }}', workflow)
+        self.assertIn('if [ "$SHARD_RESULT" != "success" ]; then', workflow)
         self.assertNotIn('res://tests/integration/', workflow)
         for obsolete in ('run-net-handshake.sh', 'run-dedicated-game-journey.sh', '--harness-scenario='):
             self.assertNotIn(obsolete, workflow)
