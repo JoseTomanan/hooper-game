@@ -56,9 +56,17 @@ jobs:
   # headless on hosted CI, we fall back to a human feel gate + afk-only
   # auto-merge (ADR-0015 alternative 2). Kept a SEPARATE job so its slower,
   # flakier engine-boot profile doesn't contaminate the fast unit gate above.
-  integration-test:
+  integration-shard:
+    name: integration-shard-${{ matrix.shard }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # Keep all four verdicts observable after one shard fails. GitHub otherwise
+    # defaults matrix fail-fast to true:
+    # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstrategyfail-fast
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v4
 
@@ -88,23 +96,49 @@ jobs:
       - name: Build game assembly
         run: dotnet build "HOOPER GAME.csproj" --configuration Debug
 
-      # The executable catalog is the sole scenario inventory. --all rejects
-      # filters, keeps going after ordinary failures, and aggregates every
-      # single- and multiprocess verdict without weakening the merge gate.
-      - name: Run complete headless harness catalog
-        run: python3 tools/harness_catalog.py run --all --godot godot
+      # The executable catalog remains the sole scenario inventory. Each shard
+      # is a deterministic, exhaustive partition with paired controls kept on
+      # the same runner; the aggregate job below is the required merge signal.
+      - name: Run headless harness catalog shard ${{ matrix.shard }}
+        run: >-
+          python3 tools/harness_catalog.py run
+          --shard ${{ matrix.shard }}
+          --run-id "ci-${{ github.run_id }}-${{ github.run_attempt }}-shard-${{ matrix.shard }}"
+          --godot godot
 
       - name: Upload harness failure artifacts
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: headless-harness-failure-${{ github.run_attempt }}
+          name: headless-harness-failure-${{ github.run_id }}-${{ github.run_attempt }}-shard-${{ matrix.shard }}
           path: |
             .godot/harness-runs/**
             .godot/harness-logs/**
             .godot/harness-coordination/**
             .godot/dedicated-game-*/**
           if-no-files-found: warn
+
+  # Preserve the original branch-protection-facing check name while failing
+  # closed on every documented needs result. `always()` makes this job run
+  # after failed/cancelled/skipped dependencies, and needs.*.result exposes
+  # success, failure, cancelled, or skipped:
+  # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idneeds
+  # https://docs.github.com/en/actions/reference/workflows-and-actions/contexts#needs-context
+  integration-test:
+    name: integration-test
+    needs: integration-shard
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every integration shard to succeed
+        env:
+          SHARD_RESULT: ${{ needs.integration-shard.result }}
+        run: |
+          if [ "$SHARD_RESULT" != "success" ]; then
+            echo "Integration shards finished with result: $SHARD_RESULT" >&2
+            exit 1
+          fi
+          echo "All integration shards succeeded."
 
   # #365 is deliberately separate from state-only integration: this is a
   # bounded feasibility experiment for rendered evidence, not a new feel gate.
