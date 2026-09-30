@@ -504,6 +504,7 @@ class HarnessCatalogWorkflowTests(unittest.TestCase):
         self.assertNotIn('python3 tools/harness_catalog.py run --all', workflow)
         self.assertIn('--run-id "ci-${{ github.run_id }}-${{ github.run_attempt }}-shard-${{ matrix.shard }}"', workflow)
         self.assertIn('name: headless-harness-failure-${{ github.run_id }}-${{ github.run_attempt }}-shard-${{ matrix.shard }}', workflow)
+        self.assertIn('include-hidden-files: true', workflow)
         self.assertIn('integration-test:', workflow)
         self.assertIn('needs: integration-shard', workflow)
         self.assertIn('if: ${{ always() }}', workflow)

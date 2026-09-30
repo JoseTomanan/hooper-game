@@ -116,6 +116,7 @@ jobs:
             .godot/harness-logs/**
             .godot/harness-coordination/**
             .godot/dedicated-game-*/**
+          include-hidden-files: true
           if-no-files-found: warn
 
   # Preserve the original branch-protection-facing check name while failing
