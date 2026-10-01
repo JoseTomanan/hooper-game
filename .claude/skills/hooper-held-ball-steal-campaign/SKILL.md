@@ -103,9 +103,8 @@ dotnet build "HOOPER GAME.csproj" --configuration Debug
 dotnet test tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj --configuration Debug
 ```
 
-Expected: build success; **664 passed, 5 skipped, 669 total** (count as of
-2026-07-12 — a higher count is fine, a *lower* count or any failure means
-your baseline is broken; fix that first, it is not part of this campaign).
+Expected: build success and zero test failures. Totals are live; inspect any
+skip-inventory change instead of comparing with a cached count.
 
 **Step 0.3 — Control: prove the steal DOES work against a Dribbling ball.**
 
@@ -399,8 +398,8 @@ All gates, in order, before merge (ADR-0015 — no merge on red, ever):
    including the rejected menu options and the ADR-0014 tier citation.
 7. Feel residue — window sizes, knock speeds, guard radius, count
    threshold, HUD look — is NOT yours to sign off. File/point it at the
-   tuning issue **#104** and the batched milestone feel pass **#114**
-   (the #104/#114 pattern); values ship as provisional exports.
+   tuning issue **#238** and consolidated human feel pass **#173**; values ship
+   as provisional exports.
 8. Branch `feat/206-held-ball-steal`; single-concern commits, conventional
    subjects, `Refs #206` in commit bodies; **`Closes #206` in the PR body
    only** — never in a commit subject/body, and only if the PR fully
@@ -424,7 +423,7 @@ turnover latched at an exact tick.
 | Bypass `BeginCommittedMove` (call `_machine.Begin()` directly, in code OR harness seams) | Burned twice (steal and block sagas independently): skips the pivot-latch clear, dead-dribble gate, and JumpShot cradle. All Begin call sites route through the choke point. |
 | Force-match a frame counter in any new reconcile field | Broadcast counters are ~1 RTT stale; the NETCODE LAW in `PlayerController.ReconcileFromServer` forbids comparing them. Force discrete identity only. |
 | Hardcode tick counts as seconds (or vice versa) | Durations are tick counts derived from `Engine.PhysicsTicksPerSecond`; wall-clock timers break determinism (fixed-dt invariant). |
-| Tune feel numbers solo (window widths, radii, thresholds, HUD) | Feel is never auto-accepted (ADR-0015). Provisional exports + #104/#114. |
+| Tune feel numbers solo (window widths, radii, thresholds, HUD) | Feel is never auto-accepted (ADR-0015/0021). Provisional exports + #238/#173. |
 | Skip control scenarios | Both prior defensive harnesses self-falsified without controls (vacuous "score unchanged"; #217 code-defaults trap). Every "X didn't happen" needs its counterfactual. |
 | Rely on code-built-tree defaults for geometry | Code-built harness trees get raw C# export defaults, not `Main.tscn` overrides — `BoardCenter`/`RimCenter` defaults are internally inconsistent (#217). Force-set what matters. |
 

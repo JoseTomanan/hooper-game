@@ -184,9 +184,9 @@ bash .claude/skills/hooper-diagnostics-and-tooling/scripts/run-harness-local.sh 
 PowerShell 5.1:
 
 ```
-powershell -File .claude\skills\hooper-diagnostics-and-tooling\scripts\run-harness-local.ps1 list
-powershell -File .claude\skills\hooper-diagnostics-and-tooling\scripts\run-harness-local.ps1 run --all --godot "C:\path\to\Godot_v4.7.1-stable_mono_win64_console.exe"
-powershell -File .claude\skills\hooper-diagnostics-and-tooling\scripts\run-harness-local.ps1 run --id smoke-test --godot "C:\path\to\Godot_v4.7.1-stable_mono_win64_console.exe"
+powershell -File .claude/skills/hooper-diagnostics-and-tooling/scripts/run-harness-local.ps1 list
+powershell -File .claude/skills/hooper-diagnostics-and-tooling/scripts/run-harness-local.ps1 run --all --godot "C:\path\to\Godot_v4.7.1-stable_mono_win64_console.exe"
+powershell -File .claude/skills/hooper-diagnostics-and-tooling/scripts/run-harness-local.ps1 run --id smoke-test --godot "C:\path\to\Godot_v4.7.1-stable_mono_win64_console.exe"
 ```
 
 `list` needs no engine binary. `run` requires exactly `--all` or one-or-more
@@ -222,11 +222,10 @@ adapters retain their existing logs, artifacts, ports, cleanup, and verdicts.
 
 ### Reading `dotnet test` output
 
-A green run reads: **Passed: 664, Failed: 0, Skipped: 5, Total: 669**
-(counts as of 2026-07-15 — re-verify, they grow). **The 5 skips are expected
-permanently**: they are the characterization theories above, skipped by
-design. Do not "fix" them, and do not mistake `Skipped: 5` for a regression.
-Conversely, `Skipped: 6+` means someone skipped a real test — investigate.
+A green run has zero failures. The pass total is intentionally live rather
+than frozen here. The known skips are the characterization theories above,
+skipped by design. Do not "fix" them; if the skip inventory changes, inspect
+the test attributes rather than trusting an old number.
 
 Also remember the two-compile-surface asymmetry: the test project enables
 ImplicitUsings, the game project does not, so `dotnet test` can be green while
@@ -373,7 +372,7 @@ against `hooper-proof-and-analysis-toolkit`. Verified against:
 
 Re-verification commands for facts that drift:
 
-- Unit-test counts (664/5/669): `dotnet test "tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj" --configuration Debug`
+- Unit-test totals and skip inventory: `dotnet test "tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj" --configuration Debug`
 - Scenario matrix size/content: `bash .claude/skills/hooper-diagnostics-and-tooling/scripts/run-harness-local.sh list`
 - `*ForHarness` inventory: `grep -n "ForHarness" scripts/Ball/BallController.cs`
 - Skipped-theory inventory: `grep -n "Skip =" tests/Hooper.Ball.Tests/ShotScatterCurveCharacterizationTests.cs`

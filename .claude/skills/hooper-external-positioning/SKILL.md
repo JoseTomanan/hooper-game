@@ -57,21 +57,20 @@ What's actually demonstrated:
   deadlock; the #134 code-before-ADR drift) — it is not aspirational process
   theater, it visibly survived contact with real failures. See
   `hooper-change-control` for the incident details.
-- Autonomous merge is real and gated: `.claude/agents/orchestrator.md` +
-  `.claude/agents/issue-worker.md` implement dispatch→review→merge with
+- Autonomous merge is real and gated: the orchestrator/issue-worker definitions
+  under `.codex/agents/` and `.claude/agents/` implement dispatch→review→merge with
   hard gates (CI build, full `dotnet test`, headless harness for
   harness-checkable issues, clean `/code-review`) per ADR-0015, and "no merge
   on red, ever" is enforced by the orchestrator's independent `gh pr checks`
   confirmation (the local Stop-hook gate is deliberately weaker and is not
   the real gate — see `hooper-change-control` §4).
 - `dotnet test tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj
-  --configuration Debug` — 664 passed / 5 skipped (verified live
-  2026-07-12) — is a real, substantial, engine-free unit suite, and
-  `tests/integration/` is a real headless-Godot harness (~20 scenario test
-  files driving real scenes, plus 4 dual-process network scripts).
+  --configuration Debug` is a real, substantial, engine-free unit suite, and
+  `python tools/harness_catalog.py list` exposes the live headless-Godot
+  integration inventory. Cite the command outputs, not a cached count.
 
 Prior art this must be positioned against:
-- **Agentic coding tools generally** (Claude Code, Devin, Cursor agents,
+- **Agentic coding tools generally** (Codex, Claude Code, Devin, Cursor agents,
   GitHub Copilot Workspace, etc.) — "an AI wrote the code" is not novel by
   itself in 2026.
 - **CI-gated automerge** (Mergify, GitHub auto-merge on required checks,
@@ -93,8 +92,9 @@ specific combination*, not "AI wrote a game."
 Proof bar before claiming this without a hedge:
 - The claim currently rests on **single-machine / single-network**
   verification. Cross-machine dedicated-server play is explicitly **not**
-  human-verified — issue #32 is open (confirmed `state: OPEN` 2026-07-12).
-  Do not claim "shipped a networked game" without naming that gap.
+  human-verified — issue #32 remains open, with automation tracked in #366
+  (both re-verified 2026-10-01). Do not claim "shipped a networked game"
+  without naming that gap.
 - "Shipped" is not yet true in the release sense at all — no public release
   exists (see §2). Say "built," not "shipped," until a release is real.
 - If claiming "fully autonomous," cite the specific PRs/issues that went
@@ -104,8 +104,8 @@ Proof bar before claiming this without a hedge:
 - ADR-0019 explicitly rejected unattended cron / stored-credential
   orchestration — the loop only runs inside a live, human-started session.
   Any claim implying a background/always-on agent is false; say
-  "session-driven," and remember human feel passes still gate milestone
-  closure (ADR-0015/0017).
+  "session-driven." Feel remains human-owned in #173, but ADR-0021 explicitly
+  says it does not gate milestone closure or successor activation.
 
 ### 1.2 "Deterministic mini-physics + client prediction/reconciliation, implemented in Godot 4 C#."
 
@@ -204,14 +204,11 @@ transparent window overlap rather than a hidden percentage roll — not the
 mere presence of "frame data" or "timing windows," which exist piecemeal
 elsewhere.
 
-Proof bar before claiming this is "done" or plays well: M10 (defense) is an
-**active, mid-build umbrella epic** (AGENTS.md §2) — steal and block exist
-and are harness-tested, but block currently has **no reach/proximity term**
-(deferred to #214; a documented placeholder, not a secret gap), and the
-combined M9+M10 **feel pass (#114) is still open** (confirmed `state: OPEN`
-2026-07-12). Structural claims (frame data exists, commitment is enforced,
-resolution is transparent) are fine today; feel claims ("the reads are
-satisfying," "steals feel fair") are off-limits until #114 closes.
+Proof bar before claiming this is "done" or plays well: M10's build epic is
+closed and its structural behavior is harness-tested. That supports claims
+about frame data, commitment, and transparent resolution. It does not support
+feel claims ("the reads are satisfying," "steals feel fair"); consolidated
+#173 remains the human-owned feel decision.
 
 ---
 
@@ -220,13 +217,13 @@ satisfying," "steals feel fair") are off-limits until #114 closes.
 These may **never** be implied as done, live, or verified in outward-facing
 text, regardless of how confident the underlying engineering feels:
 
-| Claim | Status (2026-07-12) | What would prove it |
+| Claim | Status / latest verification | What would prove it |
 |---|---|---|
 | Cross-machine dedicated-server play works | **Not human-verified.** Issue #32 (`hitl`) open. Everything proven so far is dual-process-on-one-machine (localhost harness scripts) — cross-machine is untested in confirmed practice. | #32 closed on a logged in-editor cross-machine session, or a documented cross-machine harness run. |
 | A public release exists | **None.** No git tags, no GitHub releases (`git tag` and `gh release list` both empty, checked 2026-07-12). | A tagged, published build reproducible per §3 (note the export-preset gap there). |
-| Performance / mobile numbers | **None exist.** M15 (mobile, performance & release readiness) is a DEFERRED planning epic, not started. | M15 activated (ADR-0017 order) plus a characterization doc (0079 pattern, §3) measuring real frame time / device targets. |
-| Feel quality ("the game feels good") | **Not signed off.** The combined M9+M10 feel pass (#114) is open; its M10 section is explicitly a placeholder until that code merges. | #114 closed by the human feel pass. |
-| "Fully autonomous, no human in the loop" | **False as stated.** ADR-0019 requires a live human-started session (no unattended cron); humans own feel passes and milestone-closure sign-off. | Not provable as stated — reframe as "session-driven autonomous merge with human feel gates." |
+| Performance / mobile numbers | **No measured release claim exists.** ADR-0020 sets a low-to-mid-spec target, while M15 was closed `wontfix`; neither is a benchmark result. | A dated characterization measuring real frame time on named target devices. |
+| Feel quality ("the game feels good") | **Not signed off.** Consolidated human issue #173 is open. | #173 closed by the human feel pass. |
+| "Fully autonomous, no human in the loop" | **False as stated.** ADR-0019 requires a live human-started session (no unattended cron), and humans retain feel judgments. | Not provable as stated — reframe as "session-driven autonomous merge with human-owned feel." |
 | Cross-platform deterministic ball behavior | **Not verified.** No seeded byte-identity comparison across OS/CPU exists. | A documented run of the same seeded scenario on two OS/CPU combinations with byte-identical output logged. |
 
 If a draft contains language that implies any row above without its
@@ -339,21 +336,18 @@ clone plus documented commands.** Concretely:
 
 ## Provenance and maintenance
 
-Verified against the live repo and `gh` on **2026-07-12**; reviewed and
-corrected 2026-07-15 (process-ADR count seven → six: ADR-0018 in the
-13–19 range is a game-design ADR, not an agent-authority one):
+Originally verified 2026-07-12; volatile issue/release claims re-verified on
+**2026-10-01**:
 - Issue #32 (`hitl`, "Editor: test headless server + connect via browser")
   — state `OPEN`.
-- Issue #114 (`hitl`, combined M9+M10 feel & dual-instance verify) — state
-  `OPEN`.
+- Issue #173 (`hitl`, consolidated feel pass) — state `OPEN`.
+- Issue #366 (`afk`, automated dedicated-server journey) — state `OPEN`.
 - `git tag` and `gh release list` — both empty (no public release).
 - `.gitignore` lines 13–14 — `export.cfg` and `export_presets.cfg`
   gitignored.
-- Unit-test count 664 passed / 5 skipped — from the live
-  `dotnet test tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj` run in this
-  skill library's discovery pass (2026-07-12).
-- ADR ledger: 20 files (`0000` template + `0001`–`0019`), all
-  `Status: Accepted`, no gaps — cross-checked against `docs/adr/`.
+- Unit-test totals: re-run
+  `dotnet test tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj --configuration Debug`.
+- ADR ledger: inspect `docs/adr/` live rather than caching the count.
 - `docs/analysis/0079-shot-scatter-curve.md` exists and matches the method
   cited in §3.
 - README.md's existing public framing read in full — nothing above

@@ -34,8 +34,8 @@ close) did not move.
   a green integration-harness assertion covers it in CI. `Closes #X` may ride
   the same PR as the code.
 - A criterion that is **irreducibly feel** (does this read right, does this
-  *feel* fair) closes only at the batched per-milestone human feel pass (the
-  #114 pattern) — never auto-accepted, never inferred from harness green.
+  *feel* fair) closes only through the consolidated, human-scheduled pass in
+  #173 (ADR-0021) — never auto-accepted, never inferred from harness green.
 - **Never close on code/compile alone.** A passing build or a green
   `dotnet test` run is necessary, not sufficient — see the asymmetry below.
 - **Unit-test green alone is insufficient for engine-facing work.** The game
@@ -82,16 +82,16 @@ being a `Godot.NET.Sdk` project on purpose: the SDK approach was tried and
 rejected because Godot's SDK resolved xUnit attributes against the wrong
 project, producing `CS0246` on `[Fact]` (documented in the csproj comment).
 
-## 3. The golden inventory
+## 3. The live inventory
 
-Verified live 2026-07-12. Re-run the commands in "Provenance and maintenance"
-before trusting these numbers — AGENTS.md and ADR-0016 have both gone stale on
-test counts before ("~250", "459" — actual is 669).
+Counts are intentionally not cached here. Re-run the commands in "Provenance
+and maintenance" whenever a total matters; AGENTS.md and ADR-0016 have both
+gone stale on test counts before.
 
 ### Unit tests
 
-`dotnet test "tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj" --configuration Debug`
-→ **669 total: 664 passed, 5 skipped, 0 failed.**
+Run `dotnet test "tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj"
+--configuration Debug` and require zero failures.
 
 The 5 skips are all `[Theory(Skip = "characterization: run manually; not a CI
 gate")]` in `ShotScatterCurveCharacterizationTests.cs` (distance curve,
@@ -105,8 +105,9 @@ cross-check asserting the constants duplicated at the top of the
 characterization file (`Spm`, `MaxScatter`) still mirror `BallController`'s
 real `[Export]` defaults — it exists to catch silent drift between the
 doc-file copy and the production defaults, not to validate the curve itself.
-A green run reads "664 passed / 5 skipped"; do not mistake the skips for a
-regression, and do not un-skip them in CI.
+Do not mistake the explicitly characterized skips for a regression, and do not
+un-skip them in CI. Inspect the live `[Theory(Skip = ...)]` inventory if the
+runner's skip count changes.
 
 ### Integration harness — single-instance scenarios (`tests/integration/`)
 
@@ -472,7 +473,7 @@ Quote everything — the repo path AND the csproj name contain spaces
 (`C:\Users\...\hooper-game`, `HOOPER GAME.csproj`). Run from the repo root.
 
 ```powershell
-# Unit tests (expect 664 passed / 5 skipped / 669 total)
+# Unit tests (require zero failures; totals are live)
 dotnet test "tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj" --configuration Debug
 
 # Game-project build (the guard dotnet test alone cannot provide)
@@ -509,7 +510,7 @@ Concretely, reject (or expect rejection of) a PR that:
   the compile-surface asymmetry (§1).
 - Closes a `hitl` issue whose criteria mix state-checkable and
   irreducibly-feel parts without splitting them — the feel half still goes
-  to the batched per-milestone human pass (ADR-0013/0015).
+  to consolidated, human-scheduled #173 (ADR-0013/0021).
 
 ---
 
@@ -519,7 +520,8 @@ Authored from a verification pass dated 2026-07-12 (written to disk
 2026-07-14), verified against the repo's live `main`; reviewed and corrected
 2026-07-15 (CI invocation count 22 → 30 — the scenario sum was 28 all along):
 
-- Unit-test run: `dotnet test "tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj" --configuration Debug` → 664 passed, 5 skipped, 669 total.
+- Historical unit-test result on 2026-07-12: 664 passed, 5 skipped, 669 total.
+  Re-verify current totals with `dotnet test "tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj" --configuration Debug`.
 - `.github/workflows/ci.yml` read in full (357 lines); the §3 scenario matrix
   is transcribed from its actual `run:` steps and doc comments.
 - `ls tests/integration/*.tscn` → 16 scenes (the 10 CI-invoked single-instance

@@ -1,6 +1,6 @@
 ---
 name: hooper-build-and-env
-description: Recreate the hooper-game build environment from scratch and know its traps — use when setting up a fresh clone/machine, when `dotnet build`/`dotnet test` fails or behaves unexpectedly, when you need the exact quoted build/test/harness commands, when reconciling a "dotnet test is green but CI is red" (or vice versa) confusion, when you need the Godot version pin or how to obtain a local Godot binary, when you need to obtain or invoke headless Blender for `bpy`-scripted animation tooling, when touching `HOOPER GAME.csproj`/`tests/Hooper.Ball.Tests.csproj`/`.github/workflows/ci.yml`/`.Codex/hooks/verify-green.sh`, or when you hit gitignore/worktree/path-with-spaces surprises.
+description: Recreate the hooper-game build environment from scratch and know its traps — use when setting up a fresh clone/machine, when `dotnet build`/`dotnet test` fails or behaves unexpectedly, when you need the exact quoted build/test/harness commands, when reconciling a "dotnet test is green but CI is red" (or vice versa) confusion, when you need the Godot version pin or how to obtain a local Godot binary, when you need to obtain or invoke headless Blender for `bpy`-scripted animation tooling, when touching `HOOPER GAME.csproj`/`tests/Hooper.Ball.Tests.csproj`/`.github/workflows/ci.yml`/`.codex/hooks/verify-green.sh`, or when you hit gitignore/worktree/path-with-spaces surprises.
 ---
 
 # hooper-build-and-env
@@ -94,23 +94,22 @@ before debugging the test.** That symptom is almost always this.
   scenarios on 2026-08-06 left the pin and `project.godot` untouched.)
 
 **The version pin exists in a third place: the MCP server config.** The `godot`
-MCP server (`@coding-solo/godot-mcp`) is configured in `~/.Codex.json` under
-`projects.<repo path>.mcpServers.godot.env.GODOT_PATH` — an absolute binary
-path baked into the server's environment, resolved once when the server
-process spawns. A correct `$GODOT` does **not** fix it, and it was found still
-pointing at 4.6.3 on 2026-08-06 after the shell env had been corrected. Every
+MCP server (`@coding-solo/godot-mcp`) stores its environment in
+`~/.codex/config.toml` or the runtime's repo-local configuration. `GODOT_PATH` is an
+absolute binary path resolved when the server process spawns. A correct
+`$GODOT` does **not** fix it, and it was found still pointing at 4.6.3 on
+2026-08-06 after the shell env had been corrected. Every
 `mcp__godot__run_project` / `launch_editor` call then runs on the stale engine
 with no warning.
 
 - Check it with `mcp__godot__get_godot_version` **before** trusting any MCP
   run — it prints the binary the server actually resolved.
-- Fix it with
-  `Codex mcp remove godot -s local` then
-  `Codex mcp add godot --scope local --env "GODOT_PATH=<4.7.1 _console.exe>" -- npx @coding-solo/godot-mcp`.
+- Fix it with `codex mcp remove godot` then
+  `codex mcp add godot --env GODOT_PATH="<4.7.1 _console.exe>" -- npx @coding-solo/godot-mcp`.
 - The edit does **not** take effect in the current session — the already-spawned
-  server holds the old env. A `/mcp` reconnect (or session restart) is required,
-  and that is a **human action an agent cannot perform**. Ask for it rather
-  than assuming the new value is live.
+  server holds the old env. Reconnect the MCP server using the runtime's UI or
+  restart the session; that is a **human action an agent cannot perform**. Ask
+  for it rather than assuming the new value is live.
 
 ### Headless Blender (animation tooling — optional, not a build dependency)
 
@@ -161,18 +160,14 @@ Output DLL lands at `.godot/mono/temp/bin/Debug/HOOPER GAME.dll`.
 ```
 dotnet test "tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj" --configuration Debug
 ```
-Expected: **`Passed! - Failed: 0, Passed: 1143, Skipped: 5, Total: 1148`**, ~1-4s.
-(The golden test inventory that owns this baseline count lives in
-`hooper-verification-and-qa` — if the numbers drift, reconcile there first.)
-The 5 skips are all `Hooper.Ball.Tests.ShotScatterCurveCharacterizationTests`
-theories (deliberately `Skip`'d characterization captures, tied to the #154
-shot-scatter feel sign-off) — **the skips are NOT a regression.** If the pass
-count changes but the skip count stays 5, something real changed; if the skip
-count drops or new skips appear, that is also a real change worth
-investigating, not routine noise.
+Expected: zero failures, ~1-4s. Test totals are deliberately not frozen here;
+the command is the source of truth. The intentionally skipped tests are the
+`Hooper.Ball.Tests.ShotScatterCurveCharacterizationTests` theories (manual
+characterization captures tied to the #154 shot-scatter feel sign-off). A
+change to that skip inventory is worth investigating, not routine noise.
 
 Both commands were re-run live during this skill's authoring and reproduced
-exactly the numbers above — re-run them yourself if you suspect drift; see
+the stated outcomes — re-run them yourself if you suspect drift; see
 "Provenance and maintenance."
 
 ### First-time headless Godot run
@@ -294,9 +289,9 @@ One workflow, triggers on push to `main` + all PRs, two jobs:
    and how to add a new one is `hooper-verification-and-qa` territory; this
    skill only owns *that the plumbing runs*.
 
-## The local green-gate hook (`.Codex/hooks/verify-green.sh`)
+## The local green-gate hook (`.codex/hooks/verify-green.sh`)
 
-`.Codex/settings.json` (tracked) wires this one 84-line script to **both**
+`.codex/hooks.json` (tracked) wires this script to **both**
 the `Stop` and `SubagentStop` hook events with `timeout: 300`. Every time an
 agent session on this repo tries to finish, the hook runs.
 
@@ -308,7 +303,7 @@ What it does, in order:
 2. **Gate 1:** `dotnet build "HOOPER GAME.csproj" --configuration Debug -nologo -v quiet`.
 3. **Gate 2:** `dotnet test tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj --configuration Debug -nologo -v quiet`.
 4. On failure of either gate: increments a counter file at
-   `.Codex/.greengate-attempts`, tails 25 log lines
+   `.claude/.greengate-attempts`, tails 25 log lines
    (`$TMPDIR/hooper-greengate-{build,test}.log`) back on stderr, and
    **exits 2** — which blocks the agent from finishing (Codex treats a
    Stop-hook exit 2 as "not done yet; the stderr is fed back to you").
@@ -331,7 +326,7 @@ authoritative gate; never accept "the hook let me stop" as proof of green.
 | Trap | What happens | What to do |
 |---|---|---|
 | **Paths with spaces** | Repo path (`...\The King\...`) and `HOOPER GAME.csproj` both contain spaces. Unquoted commands copied from elsewhere silently fail or mistarget. | Always double-quote both the repo path and the csproj filename in every command. |
-| **Stale agent worktrees** | `.Codex/worktrees/` holds ~9 leftover full repo copies from past autonomous agent runs (each branch already merged into `main`, 0 commits ahead — verified 2026-07-12 with `git merge-base --is-ancestor`). Each carries its own `.godot/` build artifacts and a full copy of `.Codex/`. | Scope `Glob`/`Grep` patterns away from `.Codex/` or you'll get duplicated hits from these copies. They are all merged residue, but check `hooper-failure-archaeology` before deleting anything — don't assume "merged" means "safe to remove" without checking the settled record. |
+| **Stale agent worktrees** | `.worktrees/` may hold leftover full repo copies from past autonomous agent runs. Each carries its own `.godot/` build artifacts. | Scope searches away from `.worktrees/` or duplicate hits can masquerade as live code. Check `hooper-failure-archaeology` before deleting any worktree; never infer safety from age alone. |
 | **`export_presets.cfg` and `build/` are gitignored** | The Windows dedicated-server export (`build/server/PROJECT.exe` etc.) and the export preset that produces it exist on the original machine but are **not reproducible from a fresh clone** — `git check-ignore export_presets.cfg build` confirms both are ignored. | Don't expect `build/server/` or `export_presets.cfg` after cloning; there is currently no documented procedure to regenerate the preset (open item, see below). |
 | **`*.uid` sidecars gitignored, one exception** | `.gitignore` line 26 ignores `*.uid` broadly, but line 32 explicitly un-ignores `!assets/locomotion.res.uid`. That single tracked sidecar is the **only backing** for the uid by which `Player.tscn` references the hand-saved AnimationLibrary (issue #140) — no importer regenerates it. | Never delete or regenerate `assets/locomotion.res.uid` — doing so breaks the humanoid rig on every machine except the one it was authored on. |
 | **`.godot/` is gitignored** | Running Godot headless (even just the bindings bootstrap) only touches ignored paths — `git status --porcelain` is clean before and after a headless run. | Don't interpret a clean git status as "the headless run did nothing"; that's the expected shape. |
@@ -353,9 +348,8 @@ during this skill's authoring.
    Godot to be installed — the Godot.NET.Sdk NuGet package alone compiles the
    C#.
 4. `dotnet test "tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj" --configuration Debug`.
-   Expect: `Passed: 1143, Failed: 0, Skipped: 5, Total: 1148` (as of
-   2026-08-06; the 5 skips are the ShotScatterCurveCharacterizationTests and
-   are intentional).
+   Require zero failures. The live command owns the changing pass total; compare
+   any skip-inventory change with `ShotScatterCurveCharacterizationTests`.
 5. Only if you need to run the headless harness or the game locally (not
    required for pure C# work): obtain a **Godot 4.7.1 stable MONO** binary
    (the `_console.exe` variant on Windows), point `$GODOT` at it, verify
@@ -398,7 +392,7 @@ harness invocations 30 → 178 across 42 scenes; `run-net-*.sh` 4 → 6; ci.yml
 - `dotnet --list-sdks` → 8.0.421 (the only SDK installed).
 - `HOOPER GAME.csproj`, `tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj`,
   `.github/workflows/ci.yml` (1698 lines as of 2026-08-06),
-  `.Codex/hooks/verify-green.sh` (84 lines), and `.Codex/settings.json`
+  `.codex/hooks/verify-green.sh` and `.codex/hooks.json`
   read in full.
 - `.gitignore` uid lines (26: `*.uid`; 32: `!assets/locomotion.res.uid`) read
   directly; `git check-ignore export_presets.cfg build` → both ignored

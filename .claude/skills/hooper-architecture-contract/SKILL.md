@@ -554,7 +554,7 @@ do not "clean them up" without reading the owning issue/comment first:
 
 ## Scene conventions (the parts that bite when hand-editing `.tscn`)
 
-Per ADR-0011, Claude authors `.tscn`/`.tres`/`.res`/`project.godot` directly
+Per ADR-0011, coding agents author `.tscn`/`.tres`/`.res`/`project.godot` directly
 by text-edit as ordinary AFK work. The fragile bits:
 
 - Every scene file uses `format=3` plus a scene-level `uid=` (e.g.
@@ -600,7 +600,7 @@ by text-edit as ordinary AFK work. The fragile bits:
 | Possession rules (make-it-take-it, live rebound, clear) | ADR-0008 |
 | Shot accuracy / distance-based scatter + penalty factors | ADR-0009 |
 | Player heading, non-linear turn rate, pivot latch | ADR-0010 |
-| Claude authors scenes/config by text-edit | ADR-0011 |
+| Coding agents author scenes/config by text-edit | ADR-0011 |
 | Ball hand-side is server-authoritative | ADR-0012 |
 | Headless harness as official verification surface | ADR-0016 |
 | Defensive timing-window model (steal/block/contest) | ADR-0018 |

@@ -333,7 +333,7 @@ test-only commit.
 
 Refs #98
 
-Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
+Co-Authored-By: <identity supplied by the running session>
 ```
 
 Note the shape: symptom → mechanism with concrete numbers → verification →
@@ -354,16 +354,13 @@ commits and PR body — `Refs` only.
 
 ### Co-Authored-By trailer — known drift; follow the running session
 
-Agent-authored commits end with a `Co-Authored-By:` trailer. **There is live
-drift on the string** (as of 2026-07-12): `.claude/agents/issue-worker.md`
-hardcodes `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`, while
-the current harness/system-prompt convention — confirmed in recent real
-commits like `8051e28` above — is
-`Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`.
+Agent-authored commits may end with a `Co-Authored-By:` trailer. Agent
+definitions under `.codex/agents/` and `.claude/agents/` have historically
+carried stale identity strings.
 **Rule: use the identity string your own running session's system
 instructions specify, not what an older agent-definition file hardcodes.**
-Don't "fix" `issue-worker.md` as a side effect of a docs task — reconciling
-that drift is its own change, owned by whoever owns `.claude/agents/`.
+Don't "fix" an agent definition as a side effect of a docs task — reconciling
+that drift is its own change, owned by whoever owns the agent definitions.
 
 ## 6. Doubt-cycle comment labeling
 
@@ -466,4 +463,4 @@ Re-verification commands for anything that may drift:
 - Integration-scenario inventory: `ls tests/integration/*.cs`
 - Milestone table: read AGENTS.md §2 live — never cache it
 - Trailer convention in force: your running session's system instructions,
-  not `.claude/agents/issue-worker.md`
+  not an older agent-definition file

@@ -395,7 +395,7 @@ divergence. Full toolchain story: `hooper-build-and-env`.
 
 `EDITOR_TASKS.md` (repo root) is the catalogue of steps only a human in the
 Godot editor can do. Its scope has narrowed twice:
-- **ADR-0011**: Claude authors `.tscn`/`.res`/`project.godot` by text-edit;
+- **ADR-0011**: coding agents author `.tscn`/`.res`/`project.godot` by text-edit;
   the human keeps feel/tuning judgments and in-engine verification. One hard
   structural exclusion remains: **editor import-dialog settings** not already
   scriptable headlessly. (AnimationTree graph authoring, once excluded, went
