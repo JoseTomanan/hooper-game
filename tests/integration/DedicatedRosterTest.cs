@@ -153,7 +153,12 @@ public partial class DedicatedRosterTest : Node
 			_phase = 5;
 		}
 
-		if (_phase == 5 && Exists("client-b-replacement-full") && Exists("client-c-replacement-full")
+		// The replacement-full markers are written before each client observes the
+		// other roles' final topology barrier. Waiting for explicit score-ready
+		// markers prevents the reliable score RPC from racing that last check: the
+		// check intentionally requires zero score signals, so scoring first would
+		// make it permanently impossible for the slower client to advance.
+		if (_phase == 5 && Exists("client-b-score-ready") && Exists("client-c-score-ready")
 			&& TryReadReplacementDedicatedIds(out int finalClientCId, out int finalClientBId)
 			&& IsFullTopology(finalClientCId, finalClientBId, localPeerId: 0))
 		{
@@ -237,7 +242,10 @@ public partial class DedicatedRosterTest : Node
 			&& TryReadReplacementDedicatedIds(out int finalClientCId, out int finalClientBId)
 			&& finalClientBId == _myPeerId
 			&& IsFullTopology(finalClientCId, finalClientBId, _myPeerId))
+		{
+			Write("client-b-score-ready", $"offense={finalClientCId} defense={finalClientBId}");
 			_phase = 5;
+		}
 
 		if (_phase == 5 && Exists("replacement-scored")
 			&& TryReadReplacementDedicatedIds(out int scoredClientCId, out int scoredClientBId)
@@ -271,7 +279,10 @@ public partial class DedicatedRosterTest : Node
 			&& TryReadReplacementDedicatedIds(out int finalClientCId, out int finalClientBId)
 			&& finalClientCId == _myPeerId
 			&& IsFullTopology(finalClientCId, finalClientBId, _myPeerId))
+		{
+			Write("client-c-score-ready", $"offense={finalClientCId} defense={finalClientBId}");
 			_phase = 2;
+		}
 
 		if (_phase == 2 && Exists("replacement-scored")
 			&& TryReadReplacementDedicatedIds(out int scoredClientCId, out int scoredClientBId)
