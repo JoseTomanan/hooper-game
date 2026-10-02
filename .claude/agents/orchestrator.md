@@ -88,6 +88,7 @@ a surfaced stop). Run it, then self-pace to the next.
   with a fresh GitHub GraphQL request. Fetch `number`, `title`, `state`, `body`,
   `comments`, `labels`, `milestone`, `updatedAt`, `parent`, `subIssues`, `blockedBy`, and
   `closedByPullRequestsReferences`, with `pageInfo` on every connection.
+- Exhaust every Stage 2 connection until hasNextPage is false; if any connection cannot be exhausted, stop safely.
 - Re-check live state, explicit holds, `afk`/`hitl` separation, dependencies,
   parentage, milestone authorization, and linked or in-flight pull requests.
 - Missing, ambiguous, or truncated discovery metadata requires a full fetch or
