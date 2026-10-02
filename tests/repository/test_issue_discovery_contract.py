@@ -70,6 +70,11 @@ class IssueDiscoveryContractTests(unittest.TestCase):
             r"(?:missing|ambiguous|truncated).{0,180}(?:full fetch|hydrate|stop)",
             f"{path}: incomplete metadata must fail open to hydration or a safe stop",
         )
+        self.assertIn(
+            "exhaust every stage 2 connection",
+            normalized,
+            f"{path}: full hydration must consume every candidate connection page",
+        )
         self.assertRegex(
             normalized,
             r"afk.{0,120}hitl|hitl.{0,120}afk",
