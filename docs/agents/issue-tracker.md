@@ -50,6 +50,8 @@ connection. Re-check the candidate's live state, explicit holds, `afk`/`hitl`
 separation, open dependencies, parentage, milestone authorization, and linked
 or in-flight pull requests from this response.
 
+Exhaust every Stage 2 connection until hasNextPage is false; if any connection cannot be exhausted, stop safely.
+
 Missing, ambiguous, or truncated Stage 1 metadata requires a full fetch or
 candidate hydration; if completeness still cannot be established, stop safely.
 This includes a failed query, an inaccessible relationship, and any nested
