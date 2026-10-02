@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "platforms": {
+    "codex": {
+      "output_root": ".agents/skills",
+      "adapter": ".agent-skills/adapters/codex.json"
+    },
+    "claude": {
+      "output_root": ".claude/skills",
+      "adapter": ".agent-skills/adapters/claude.json"
+    }
+  },
+  "files": [
+    { "path": "diagnose/scripts/hitl-loop.template.sh", "classification": "shared", "source": ".agent-skills/canonical/diagnose/scripts/hitl-loop.template.sh" },
+    { "path": "diagnose/SKILL.md", "classification": "shared", "source": ".agent-skills/canonical/diagnose/SKILL.md" },
+    { "path": "doubt-driven-development/SKILL.md", "classification": "generated", "source": ".agent-skills/canonical/doubt-driven-development/SKILL.md", "difference_reason": "runtime name and nested-subagent capability wording" },
+    { "path": "hooper-architecture-contract/SKILL.md", "classification": "shared", "source": ".agent-skills/canonical/hooper-architecture-contract/SKILL.md" },
+    { "path": "hooper-build-and-env/SKILL.md", "classification": "generated", "source": ".agent-skills/canonical/hooper-build-and-env/SKILL.md", "difference_reason": "runtime config, hook, worktree, MCP, and skill-root paths" },
+    { "path": "hooper-change-control/SKILL.md", "classification": "generated", "source": ".agent-skills/canonical/hooper-change-control/SKILL.md", "difference_reason": "runtime agent-definition and hook paths" },
+    { "path": "hooper-config-and-flags/SKILL.md", "classification": "shared", "source": ".agent-skills/canonical/hooper-config-and-flags/SKILL.md" },
+    { "path": "hooper-debugging-playbook/SKILL.md", "classification": "shared", "source": ".agent-skills/canonical/hooper-debugging-playbook/SKILL.md" },
+    { "path": "hooper-diagnostics-and-tooling/scripts/run-harness-local.ps1", "classification": "shared", "source": ".agent-skills/canonical/hooper-diagnostics-and-tooling/scripts/run-harness-local.ps1" },
+    { "path": "hooper-diagnostics-and-tooling/scripts/run-harness-local.sh", "classification": "shared", "source": ".agent-skills/canonical/hooper-diagnostics-and-tooling/scripts/run-harness-local.sh" },
+    { "path": "hooper-diagnostics-and-tooling/SKILL.md", "classification": "generated", "source": ".agent-skills/canonical/hooper-diagnostics-and-tooling/SKILL.md", "difference_reason": "runtime skill-root command paths" },
+    { "path": "hooper-docs-and-writing/SKILL.md", "classification": "shared", "source": ".agent-skills/canonical/hooper-docs-and-writing/SKILL.md" },
+    { "path": "hooper-duel-design-reference/SKILL.md", "classification": "shared", "source": ".agent-skills/canonical/hooper-duel-design-reference/SKILL.md" },
+    { "path": "hooper-external-positioning/SKILL.md", "classification": "shared", "source": ".agent-skills/canonical/hooper-external-positioning/SKILL.md" },
+    { "path": "hooper-failure-archaeology/SKILL.md", "classification": "shared", "source": ".agent-skills/canonical/hooper-failure-archaeology/SKILL.md" },
+    { "path": "hooper-held-ball-steal-campaign/SKILL.md", "classification": "shared", "source": ".agent-skills/canonical/hooper-held-ball-steal-campaign/SKILL.md" },
+    { "path": "hooper-netcode-reference/SKILL.md", "classification": "shared", "source": ".agent-skills/canonical/hooper-netcode-reference/SKILL.md" },
+    { "path": "hooper-proof-and-analysis-toolkit/SKILL.md", "classification": "shared", "source": ".agent-skills/canonical/hooper-proof-and-analysis-toolkit/SKILL.md" },
+    { "path": "hooper-research-frontier/SKILL.md", "classification": "shared", "source": ".agent-skills/canonical/hooper-research-frontier/SKILL.md" },
+    { "path": "hooper-run-and-operate/SKILL.md", "classification": "shared", "source": ".agent-skills/canonical/hooper-run-and-operate/SKILL.md" },
+    { "path": "hooper-verification-and-qa/SKILL.md", "classification": "generated", "source": ".agent-skills/canonical/hooper-verification-and-qa/SKILL.md", "difference_reason": "runtime skill-root command path" },
+    { "path": "improve-codebase-architecture/DEEPENING.md", "classification": "shared", "source": ".agent-skills/canonical/improve-codebase-architecture/DEEPENING.md" },
+    { "path": "improve-codebase-architecture/INTERFACE-DESIGN.md", "classification": "shared", "source": ".agent-skills/canonical/improve-codebase-architecture/INTERFACE-DESIGN.md" },
+    { "path": "improve-codebase-architecture/LANGUAGE.md", "classification": "shared", "source": ".agent-skills/canonical/improve-codebase-architecture/LANGUAGE.md" },
+    { "path": "improve-codebase-architecture/SKILL.md", "classification": "shared", "source": ".agent-skills/canonical/improve-codebase-architecture/SKILL.md" },
+    { "path": "source-driven-development/SKILL.md", "classification": "shared", "source": ".agent-skills/canonical/source-driven-development/SKILL.md" },
+    { "path": "tdd/deep-modules.md", "classification": "shared", "source": ".agent-skills/canonical/tdd/deep-modules.md" },
+    { "path": "tdd/interface-design.md", "classification": "shared", "source": ".agent-skills/canonical/tdd/interface-design.md" },
+    { "path": "tdd/mocking.md", "classification": "shared", "source": ".agent-skills/canonical/tdd/mocking.md" },
+    { "path": "tdd/refactoring.md", "classification": "shared", "source": ".agent-skills/canonical/tdd/refactoring.md" },
+    { "path": "tdd/SKILL.md", "classification": "shared", "source": ".agent-skills/canonical/tdd/SKILL.md" },
+    { "path": "tdd/tests.md", "classification": "shared", "source": ".agent-skills/canonical/tdd/tests.md" }
+  ],
+  "staleness_checks": [
+    { "pattern": "\\.Codex(?:[/\\\\]|\\.json)", "message": "uppercase .Codex paths do not exist; use the platform adapter" },
+    { "pattern": "(?:expect|green run reads|baseline is|expected:).*(?:664|669|1143|1148)", "ignore_case": true, "message": "operational test totals are volatile; use the live test command" },
+    { "pattern": "(?:per-milestone feel pass|#114.*feel pass|feel pass.*#114)", "ignore_case": true, "message": "feel ownership moved to consolidated #173 under ADR-0021" },
+    { "pattern": "human feel pass.*gate.*(?:milestone|activation)", "ignore_case": true, "message": "ADR-0021 says feel does not gate milestone activation" }
+  ]
+}

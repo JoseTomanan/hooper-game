@@ -243,13 +243,16 @@ current milestone unless asked.
   file for concurrent server/client processes. Do not launch the Godot editor
   inside that sandbox: its editor-settings writes still require an unsandboxed
   process.
-  The local full-matrix launchers are mirrored under both `.agents/skills/` and
-  `.claude/skills/`; keep the two copies behaviorally synchronized. A
-  2026-09-10 recurrence came from the `.agents` copies missing the workspace-log
-  fix already present in `.claude` since commit `7437fb5`, so a launcher change
-  is incomplete unless both `run-harness-local.ps1` and `run-harness-local.sh`
-  remain synchronized thin adapters and `tools/harness_catalog.py` still injects
-  a unique workspace-local `--log-file` before every direct Godot invocation.
+  The local full-matrix launchers appear under both `.agents/skills/` and
+  `.claude/skills/`, but both are generated from
+  `.agent-skills/canonical/hooper-diagnostics-and-tooling/scripts/`. Edit the
+  canonical files once, then run `python tools/sync_agent_skills.py generate`;
+  CI's repository contract rejects drift. A 2026-09-10 recurrence came from the
+  `.agents` copies missing the workspace-log fix already present in `.claude`
+  since commit `7437fb5`, so a launcher change is incomplete unless the generated
+  `run-harness-local.ps1` and `run-harness-local.sh` outputs remain synchronized
+  thin adapters and `tools/harness_catalog.py` still injects a unique
+  workspace-local `--log-file` before every direct Godot invocation.
   The same restricted-
   AppData signature (`0x58` read access violation) is tracked upstream as
   [godotengine/godot#120468](https://github.com/godotengine/godot/issues/120468).

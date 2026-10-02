@@ -48,7 +48,7 @@ before changing any code.
 | Godot logs "Failed to correctly scale shape ... not supported by Jolt Physics" at load | A `CylinderShape3D`, `CapsuleShape3D`, or `SphereShape3D` has a non-uniform (mismatched X/Z) node `Scale`. Their cross-section is a single radius; Jolt silently clamps a non-uniform scale instead of honoring it, so the collider stops matching its mesh. `BoxShape3D` is exempt (independent X/Y/Z extents). | Find the offending node in the `.tscn` and check its `Scale` next to a round `*Shape3D` sub-resource. Fix by moving the size onto the SHAPE RESOURCE (`radius`/`height` properties) and setting the node's `Scale` back to `1` — never scale a round collider node itself. The visual `MeshInstance3D` sibling may still be freely scaled. |
 | A new committed move behaves subtly wrong (pivot latch stays stale, ball cradle missing, dead-dribble gate not enforced) | The new move's `Begin` call site bypassed `PlayerController.BeginCommittedMove` — the single required choke point — and called `_machine.Begin()` (or equivalent) directly. `BeginCommittedMove` is what clears the pivot latch, enforces the dead-dribble rule, and cradles the ball for `JumpShot` startup; skipping it silently drops all three. This has happened TWICE in unrelated PRs weeks apart (a real committed-move feature, and a test harness seam file) — it is not obvious from reading the code in isolation. | Grep every call site of `_machine.Begin(` across `scripts/` AND `tests/integration/*HarnessSeam.cs`. Every one must route through `PlayerController.BeginCommittedMove`, not call `_machine.Begin()` directly. If you find a direct call, that's the bug — route it through the choke point instead of patching the specific symptom (pivot latch, cradle, dead-dribble) piecemeal. |
 | Harness timing looks off by exactly one frame | Two independent, well-documented +1 sources, don't assume it's a new bug: (A) `Input.ActionPress`-driven scenarios — the just-pressed edge doesn't take effect until the NEXT physics frame after the call. (B) Parent/child tick order — a parent node (e.g. `BallController`) observes a child's (e.g. a `PlayerController`'s committed-move machine) state ONE FRAME LATER than the child itself advances, because `Main.tscn` ticks `Players` before `Ball` each frame and the child's own `_PhysicsProcess` already ran when the parent reads it. | If using `Input.ActionPress`, budget the assertion window to be frame-band tolerant (±1 tick) rather than exact-frame, or advance one extra idle tick after the press before asserting. If observing a child's state from a parent-ticking harness, add the documented "+1" adjustment (see `StealTurnoverTest`'s `ComputeBeginFrame` for the shipped pattern) instead of guessing at a new off-by-one. |
-| Grep/Glob returns duplicate hits across the repo | `.claude/worktrees/` contains 10+ stale full worktree copies of the repo (leftover from past parallel-agent sessions) that are NOT excluded by default from a repo-root search. | Scope the `path`/`glob` argument away from `.claude/worktrees/` (e.g. search under `scripts/`, `tests/`, `scenes/` explicitly rather than the repo root) instead of trying to dedupe results after the fact. |
+| Grep/Glob returns duplicate hits across the repo | Agent worktree roots such as `.worktrees/` or a runtime-specific `worktrees/` directory can contain full repo copies that are not excluded by every search tool. | Search `scripts/`, `tests/`, or `scenes/` explicitly instead of the repo root, and inspect the runtime's configured worktree root before treating duplicates as live files. |
 | Godot exits nonzero on the very first headless run in CI | Expected, not a real failure: the FIRST `godot --headless --build-solutions --quit` on a fresh checkout is doing .NET bindings bootstrap and can spuriously return non-zero even though it succeeded. `ci.yml` deliberately appends `\|\| exit 0` to that one bootstrap step — the REAL pass/fail gate is the scene-run steps that follow it. | Confirm the failure is specifically the bootstrap step (`--build-solutions --quit`), not one of the numbered scenario invocations that follow. If it's the bootstrap step, it is a known no-op swallow, not a regression — look at the actual scenario steps' exit codes instead. |
 
 ## Discriminating experiments
@@ -95,8 +95,8 @@ Authored 2026-07-12. Verified against the live repo at commit `3085ee1`
 (`WasRecoveryEnteredEarly`/`ShouldForceRecovery`, lines ~554-1541),
 `scripts/Input/FeintGateResolver.cs`, `tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj`
 (CS0246/`ImplicitUsings` comment, lines ~5/18-24), and a live count of
-`.claude/worktrees/` (11 entries at verification time — table says "10+", re-run
-`ls .claude/worktrees | wc -l` if this drifts). Cross-referenced against sibling
+the worktree inventory (11 entries at verification time; use `git worktree list`
+for the live set). Cross-referenced against sibling
 discovery reports on git archaeology (steal #96/#174-182, block #98/#215,
 OOB/feint #188) and the architecture/test-harness digests produced in the same
 research pass.
@@ -110,8 +110,8 @@ Re-verification commands:
   — confirm the csproj asymmetry story is still accurate (game build and test
   build should both be green today; if `ImplicitUsings` gets added to the game
   csproj, that row of the table goes stale).
-- `ls "C:/Users/The King/Documents/GitHub/hooper-game/.claude/worktrees" | wc -l`
-  — re-check the stale-worktree count.
+- `git worktree list` — re-check the live worktree inventory without assuming a
+  runtime-specific storage path.
 - If a NEW recurring trap gets hit twice, add it as a new row here rather than
   filing it only in `hooper-failure-archaeology` — this skill is specifically
   for the fast-lookup triage table, archaeology is the deep story.

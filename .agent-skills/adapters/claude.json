@@ -1,0 +1,15 @@
+{
+  "platform_name": "Claude Code",
+  "platform_cli": "claude",
+  "skills_root": ".claude/skills",
+  "agent_definitions_root": ".claude/agents",
+  "hook_script": ".claude/hooks/verify-green.sh",
+  "hook_settings": ".claude/settings.json",
+  "hook_attempt_file": ".claude/.greengate-attempts",
+  "worktrees_root": ".claude/worktrees",
+  "user_config": "~/.claude.json",
+  "orchestrator_model": "opus",
+  "worker_model": "sonnet",
+  "mcp_remove_command": "claude mcp remove godot -s local",
+  "mcp_add_command": "claude mcp add godot --scope local --env \"GODOT_PATH=<4.7.1 _console.exe>\" -- npx @coding-solo/godot-mcp"
+}

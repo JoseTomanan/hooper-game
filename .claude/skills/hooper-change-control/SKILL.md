@@ -47,8 +47,8 @@ does today.
 
 ### Scene edits ship in their own single-concern commit with a headless load check
 
-Per [ADR-0011](../../../docs/adr/0011-claude-authors-scenes.md), Claude
-authors `.tscn`/`.tres`/`.res`/`project.godot` by direct text-edit as
+Per [ADR-0011](../../../docs/adr/0011-claude-authors-scenes.md), coding agents
+author `.tscn`/`.tres`/`.res`/`project.godot` by direct text-edit as
 ordinary AFK work. Scene files are fragile — `ext_resource`/`sub_resource`
 IDs, `uid`, load-step counts all have to stay internally consistent, and a
 mis-count silently corrupts the scene without a compile error to catch it.
@@ -161,9 +161,8 @@ one-off:
   dual-instance verifies formerly tracked on #83, #84, #85, #86."*
 - **One `hitl` issue may consolidate several AFK features** proven in the
   same editor/harness session — this is preferred over one-verify-per-feature
-  when the features are naturally checked together (#114 later also became
-  the combined M9+M10 feel-pass gate, batching two milestones' feel
-  judgments into one session per ADR-0015's "feel batched per milestone").
+  when the features are naturally checked together. Irreducible feel residue
+  now belongs to consolidated, human-scheduled #173 under ADR-0021.
 
 If you find a legacy issue still carrying both labels, that is a smell to
 split immediately, not a pattern to imitate.
@@ -537,14 +536,14 @@ statuses, and amendment dates (ADR-0000–0019, 20 files, all `Status:
 Accepted`, no gaps); issue numbers and states for #83, #86, #98, #114, #119,
 #134, #168, #169, #215; PR #215's body text ("Supersedes closed PR #169");
 `.claude/hooks/verify-green.sh` behavior (build scope, skip-on-missing-dotnet,
-3-attempt bail); `.claude/agents/orchestrator.md`'s "weaker mirror" /
+3-attempt bail); the orchestrator definition under `.claude/agents/`
+and its "weaker mirror" /
 independent `gh pr checks` language.
 
 Re-verify if any of these drift:
 
-- `gh issue view 114 --json state,body` — confirm #114 is still the live
-  M9+M10 feel-pass gate and whether its M10 section has moved past
-  placeholder.
+- `gh issue view 173 --json state,body` — confirm #173 remains the consolidated,
+  human-scheduled feel issue named by ADR-0021.
 - `git log --oneline docs/adr/ | wc -l` and `ls docs/adr/*.md | wc -l` —
   confirm the ADR count/gap-free numbering hasn't changed.
 - `gh pr view 169 --json state,closedAt,mergedAt` and

@@ -54,8 +54,8 @@ class.
 - **settled** — shipped value, safe to rely on, not up for ad-hoc retuning.
 - **pending-design** — an open design fork tracked by an issue; do not "fix" it,
   it's owned.
-- **feel-only** — provisional value explicitly deferred to a milestone human
-  feel pass (#104, #114) under ADR-0014/0015. Agents must NOT retune these solo.
+- **feel-only** — provisional value explicitly deferred to consolidated,
+  human-scheduled #173 under ADR-0014/0021. Agents must NOT retune these solo.
 
 ### BallController (`scripts/Ball/BallController.cs`) — the biggest export surface
 
@@ -342,7 +342,7 @@ It must hardcode them because it is a plain xUnit test — no scene, no
 test assembly) — yet it needs the same numbers to reproduce the make-% curve.
 
 **Why this is a tripwire:** retune `ShotScatterPerMeter` or `MaxShotScatter` on
-`BallController` (a plausible #104/#114 feel-pass outcome) and forget this file,
+`BallController` (a plausible #173 feel-pass outcome) and forget this file,
 and the characterization suite silently keeps characterizing the OLD curve. No
 compile error, no obvious failure.
 
@@ -355,10 +355,9 @@ mirrored consts drifted — update `Spm`/`MaxScatter` (and `RimCenter`/
 `BoardCenter` if those moved) in the characterization file to match the new
 BallController defaults, in the same commit as the retune.**
 
-Reading test results: 5 tests in this same file are permanently skipped — the
-green baseline is 664 passed / 5 skipped / 669 total as of 2026-07-12. The skips
-are normal; `DefaultsMatchShotMakeCurveBands` itself runs. Confirm with the §7
-grep if in doubt.
+Reading test results: the characterization theories in this same file are
+intentionally skipped, while `DefaultsMatchShotMakeCurveBands` itself runs.
+Use the §7 commands to inspect the live totals and skip inventory.
 
 ### Other manual-sync pairs (no automated cross-check — hand-verify)
 
@@ -380,15 +379,14 @@ grep if in doubt.
 |---|---|---|---|---|
 | Movement-penalty shape | `MovementScatterK` | **#64 — RESOLVED** | 0.8, continuous speed-ratio | Settled 2026-06-27 (ADR-0009 amendment): continuous speed-ratio penalty chosen over a discrete planted/not-planted threshold. The code comment "Default continuous pending human review" is STALE. Do not relitigate. |
 | Contest facing | `ContestScatterK`, `ContestRange` | **#65 — RESOLVED** | 1.0 / 2.2 m, proximity-only | Settled 2026-06-27 (ADR-0009 amendment): proximity-alone chosen over facing-required. The "pending human review" code comment is STALE. Deliberately-minimal slice; the code comment still validly forbids growing it into block/steal logic. |
-| Block reach | (none yet — timing-only) | **#214 — OPEN** | N/A — `DefensiveResolution.Succeeds` has no proximity term | Whether/how to add a reach/proximity term. Today a defender across the court can technically "block"; this is a KNOWN placeholder, not a bug to hot-fix. |
+| Block reach | `BlockReachRadius` | **#214 — RESOLVED** | 2.2 m, XZ proximity composed with timing overlap | Settled 2026-07-16: a block requires both `DefensiveResolution.Succeeds` and `WithinBlockReach`. |
 
 If your task touches one of these, cite the issue and leave the default alone —
 unless your task *is* that issue, and even then follow ADR-0014 (cite-or-ask)
 and ADR-0015; see `hooper-change-control`.
 
 Separately, **every `feel-only` row in §1** (steal window bounds, knock/swat
-speeds, `BlockGraceTicks`) is provisional pending the milestone feel pass (#104,
-and the combined M9+M10 pass #114). If a value "feels wrong" while you're
+speeds, `BlockGraceTicks`) is provisional pending consolidated #173. If a value "feels wrong" while you're
 testing, file it against the feel-pass issue — do not retune solo
 (ADR-0014/0015).
 
@@ -430,9 +428,8 @@ testing, file it against the feel-pass issue — do not retune solo
 7. **Feel values get filed, not tuned.** If the axis is a "does this feel right"
    knob (speed, window width, knock force) rather than a correctness constant,
    land a clearly-labelled provisional default, note the deferral in the doc
-   comment (the "#104 + per-milestone feel pass (ADR-0015)" phrasing used by
-   `BlockSwatSpeed` is the template), and file/annotate it for the milestone
-   feel pass. Never iterate on feel without the human.
+   comment, and file/annotate it for consolidated #173. Never iterate on feel
+   without the human.
 
 ---
 
@@ -508,12 +505,12 @@ Most-likely-to-drift facts and their checks (commands in §7):
 - `Main.tscn: TargetScore = 5` and `Ball.tscn: HandOffset = 0.4` are the only
   two numeric scene overrides today; any editor save could add more — re-run
   the override greps after ANY `.tscn` change.
-- The `feel-only` rows flip to settled when the #104/#114 feel pass lands —
-  check those issues with `gh issue view`.
-- #64 and #65 are CLOSED (settled 2026-06-27 via ADR-0009 amendments); only
-  #214 (block reach) remains open — its row closes when the issue does.
+- The `feel-only` rows flip to settled only when consolidated #173 lands —
+  check it with `gh issue view 173`.
+- #64 and #65 are CLOSED (settled 2026-06-27 via ADR-0009 amendments), and
+  #214's block-reach gate shipped on 2026-07-16.
 - The mirrored constants in `ShotScatterCurveCharacterizationTests` must move in
   lockstep with any `ShotScatterPerMeter`/`MaxShotScatter`/`RimCenter`/
   `BoardCenter` retune — `DefaultsMatchShotMakeCurveBands` is the tripwire.
-- 664 passed / 5 skipped / 669 total is the green `dotnet test` baseline as of
-  2026-07-12; a changed skip count means the characterization file changed.
+- Current test totals and skip inventory come from
+  `dotnet test "tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj" --configuration Debug`.

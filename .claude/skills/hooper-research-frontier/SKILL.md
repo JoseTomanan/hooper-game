@@ -146,7 +146,7 @@ seams are an allowlist or additional targets.
 2. Reconstruct the RED case:
    ```
    git show 7616a63 -- scripts/Player/PlayerController.cs
-   git show 7616a63^:scripts/Player/PlayerController.cs > "C:/Users/THEKIN~1/AppData/Local/Temp/claude/before-7616a63.cs"
+   git show 7616a63^:scripts/Player/PlayerController.cs > "$TMPDIR/before-7616a63.cs"
    ```
    (Write the extracted file to your scratchpad, NOT into the repo.) The
    analyzer's acceptance test is: fires on the `7616a63^` version, silent on
