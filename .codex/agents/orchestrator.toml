@@ -48,19 +48,47 @@ a surfaced stop). Run it, then self-pace to the next.
 
 ### 1. Refresh state and pick the next ready issue
 
-- Read AGENTS.md §2 for the set of **Active** milestones (and the parallel tracks
-  it blesses — e.g. M6b/M7b/M8/M9 run in parallel today).
-- `gh issue list --state open --label afk` and choose the **next actionable**
-  issue: it must belong to an Active milestone's epic, be a genuine build issue
-  (not `hitl`-only), and have no open dependency among its siblings. Prefer the
-  lowest-numbered ready leaf within the earliest Active milestone, so the DAG is
-  walked in order rather than cherry-picked.
-- **Refuse** to dispatch: any issue lacking the `afk` label; any `hitl`-only
-  issue; any issue whose acceptance is purely *feel* (those belong to the
-  human-scheduled consolidated pass in #173 — record them, don't dispatch them).
-- If an Active **umbrella epic** has no ready leaf, go to step 2 (decompose). If
-  there is genuinely nothing ready in any Active milestone, go to step 5
-  (milestone closure / activation).
+#### Stage 1 — lightweight discovery
+
+- Read live AGENTS.md §2 for Active milestones, dependency order, and explicit
+  holds. Do not reuse discovery data across sessions.
+- Run a paginated GitHub GraphQL query over every open issue with
+  `gh api graphql --paginate --slurp`. Fetch only `number`, `title`, `state`,
+  `labels`, `milestone`, `updatedAt`, `parent`, `subIssues`, and `blockedBy`.
+  Select `pageInfo { hasNextPage endCursor }` on the outer `issues` connection
+  and every nested `labels`, `subIssues`, and `blockedBy` connection.
+- Rank only from that metadata: honor `afk`/`hitl` separation, live blocker
+  state, parentage, milestone order, explicit holds, and current issue state.
+  Prefer the lowest-numbered ready leaf within the earliest authorized
+  milestone; never infer that parentage itself is a blocking dependency.
+- GitHub caps connection pages at 100 and requires cursor traversal:
+  https://docs.github.com/en/graphql/guides/using-pagination-in-the-graphql-api.
+  The CLI's GraphQL pagination contract requires `$endCursor` and
+  `pageInfo { hasNextPage endCursor }`, while `--slurp` wraps all pages:
+  https://cli.github.com/manual/gh_api. Issue `parent`/`subIssues` fields are
+  documented at https://docs.github.com/en/graphql/reference/issues.
+
+#### Stage 2 — full candidate hydration
+
+- Immediately before final selection, fully hydrate each shortlisted candidate
+  with a fresh GitHub GraphQL request. Fetch `number`, `title`, `state`, `body`,
+  `comments`, `labels`, `milestone`, `updatedAt`, `parent`, `subIssues`, `blockedBy`, and
+  `closedByPullRequestsReferences`, with `pageInfo` on every connection.
+- Exhaust every Stage 2 connection until hasNextPage is false; if any connection cannot be exhausted, stop safely.
+- Re-check live state, explicit holds, `afk`/`hitl` separation, dependencies,
+  parentage, milestone authorization, and linked or in-flight pull requests.
+- Missing, ambiguous, or truncated discovery metadata requires a full fetch or
+  candidate hydration; stop safely if completeness still cannot be established.
+  A failed query, inaccessible relationship, or nested `hasNextPage: true` is
+  incomplete. Never promote such a candidate optimistically.
+
+#### Final selection
+
+- Choose only from candidates proven ready by the fresh Stage 2 response.
+  **Refuse** candidates without `afk`, with `hitl`, with unresolved blockers,
+  outside authorized milestone scope, or whose acceptance is purely *feel*.
+- Dispatch only a freshly hydrated candidate. If an Active umbrella epic has no
+  ready leaf, go to step 2. If no Active milestone has ready work, go to step 5.
 
 ### 2. Decompose an epic into harness-checkable leaves (when needed)
 

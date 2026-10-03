@@ -16,6 +16,48 @@ longer exists — see AGENTS.md §3). Use the `gh` CLI for all operations.
 
 Infer the repo from `git remote -v` — `gh` does this automatically when run inside a clone.
 
+#### Stage 1 — lightweight discovery
+
+Discover the complete open-issue set with a paginated GitHub GraphQL query run
+through `gh api graphql --paginate --slurp`. Fetch only `number`, `title`,
+`state`, `labels`, `milestone`, `updatedAt`, `parent`, `subIssues`, and
+`blockedBy`. Every connection — the outer `issues` connection and the nested
+`labels`, `subIssues`, and `blockedBy` connections — must select
+`pageInfo { hasNextPage endCursor }`. Rank the resulting metadata by the live
+`afk`/`hitl` separation, blocker state, parentage, milestone dependency order,
+explicit holds, and issue state. Do not reuse discovery data across sessions.
+
+GitHub caps `first`/`last` page sizes at 100, so cursor traversal is mandatory:
+https://docs.github.com/en/graphql/guides/using-pagination-in-the-graphql-api.
+The `gh api` pagination contract requires `$endCursor` plus
+`pageInfo { hasNextPage endCursor }`; `--slurp` wraps the returned pages:
+https://cli.github.com/manual/gh_api. GitHub's Issue reference documents the
+native `parent` and `subIssues` fields:
+https://docs.github.com/en/graphql/reference/issues.
+
+Run `python tools/measure_issue_discovery_payload.py` from the repository root
+to compare this live payload with the equal-scope legacy payload. The command
+validates that both queries saw the same issue-number set before printing issue
+count, lightweight bytes, legacy bytes, and reduction percent.
+
+#### Stage 2 — full candidate hydration
+
+Immediately before final readiness, fully hydrate every shortlisted candidate
+with a fresh GitHub GraphQL request. Fetch `number`, `title`, `state`, `body`,
+`comments`, `labels`, `milestone`, `updatedAt`, `parent`, `subIssues`,
+`blockedBy`, and `closedByPullRequestsReferences`, with `pageInfo` on every
+connection. Re-check the candidate's live state, explicit holds, `afk`/`hitl`
+separation, open dependencies, parentage, milestone authorization, and linked
+or in-flight pull requests from this response.
+
+Exhaust every Stage 2 connection until hasNextPage is false; if any connection cannot be exhausted, stop safely.
+
+Missing, ambiguous, or truncated Stage 1 metadata requires a full fetch or
+candidate hydration; if completeness still cannot be established, stop safely.
+This includes a failed query, an inaccessible relationship, and any nested
+`hasNextPage: true`. Never infer readiness from incomplete metadata. Only a
+freshly hydrated candidate may proceed to final selection or dispatch.
+
 ## Repo-specific rules that bind these skills
 
 These come from AGENTS.md §3 and the ADRs; the engineering skills must honour them:
