@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Godot;
 using Hooper.Ball;
@@ -5,6 +6,15 @@ using Hooper.Player;
 using Hooper.Moves;
 
 namespace HOOPERGAME.Tests.Integration;
+
+internal readonly record struct StealFacingProbeResult(
+    int ExitCode,
+    string Scenario,
+    bool EverLoose,
+    BallState FinalState,
+    int HolderPeerId,
+    int ToucherAtSteal,
+    int VerdictFrame);
 
 // Headless integration harness for issue #254: the steal aim→hand mapping
 // must be TRANSFORMED by the relative heading between the defender and the
@@ -79,11 +89,26 @@ public partial class StealFacingMappingTest : Node
     private int _toucherAtSteal = -1;
     private double _elapsed;
     private bool _finished;
+    private Action<StealFacingProbeResult> _probeCompletion;
+
+    internal void ConfigureForReuseProbe(string scenario, Action<StealFacingProbeResult> completion)
+    {
+        if (IsInsideTree())
+            throw new InvalidOperationException("Reuse-probe configuration must happen before AddChild.");
+        if (scenario is not ("face-to-face" or "side-by-side"))
+            throw new ArgumentOutOfRangeException(nameof(scenario), scenario, "Unknown steal-facing scenario.");
+
+        _scenario = scenario;
+        _probeCompletion = completion ?? throw new ArgumentNullException(nameof(completion));
+    }
 
     public override void _Ready()
     {
-        string[] args = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).ToArray();
-        _scenario = HarnessArgs.ReadArg(args, "--harness-scenario", "face-to-face");
+        if (_probeCompletion is null)
+        {
+            string[] args = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).ToArray();
+            _scenario = HarnessArgs.ReadArg(args, "--harness-scenario", "face-to-face");
+        }
         GD.Print($"[steal-facing] scenario={_scenario} booting headless…");
 
         // Same code-built tree shape as StealTurnoverTest (Players before Ball,
@@ -227,6 +252,19 @@ public partial class StealFacingMappingTest : Node
     {
         _finished = true;
         GD.Print($"[steal-facing] RESULT: {(code == 0 ? "PASS" : "FAIL")} (exit {code})");
+        if (_probeCompletion is not null)
+        {
+            _probeCompletion(new StealFacingProbeResult(
+                code,
+                _scenario,
+                _everLoose,
+                _ball.State,
+                _ball.StateMachine.HolderPeerId,
+                _toucherAtSteal,
+                _verdictFrame));
+            QueueFree();
+            return;
+        }
         GetTree().Quit(code);
     }
 }

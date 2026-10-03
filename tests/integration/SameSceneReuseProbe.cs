@@ -24,6 +24,8 @@ public partial class SameSceneReuseProbe : Node
     private const string ResourcePath = "res://tests/integration/SameSceneReuseProbeResource.tres";
     private const string InputAction = "move_left";
     private const string LeakMeta = "same_scene_probe_leak";
+    private const string FaceToFaceId = "steal-facing-mapping-test-face-to-face";
+    private const string SideBySideId = "steal-facing-mapping-test-side-by-side";
 
     private static string[] _caseIds = [];
     private static string _eventPath = "";
@@ -38,6 +40,8 @@ public partial class SameSceneReuseProbe : Node
     private static bool _initialized;
     private static bool _leakInjected;
     private static bool _anyFailure;
+
+    private List<string> _currentResidues = [];
 
     public override async void _Ready()
     {
@@ -61,7 +65,7 @@ public partial class SameSceneReuseProbe : Node
             return;
 
         string[] args = OS.GetCmdlineUserArgs();
-        _caseIds = HarnessArgs.ReadArg(args, "--probe-sequence", "probe-a-first,probe-b,probe-a-second")
+        _caseIds = HarnessArgs.ReadArg(args, "--probe-sequence", $"{FaceToFaceId},{SideBySideId},{FaceToFaceId}")
             .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         _eventPath = ProjectSettings.GlobalizePath(HarnessArgs.ReadArg(args, "--probe-events", "res://.godot/same-scene-probe.jsonl"));
         _intentionalLeak = HarnessArgs.ReadArg(args, "--probe-leak", "none");
@@ -94,19 +98,55 @@ public partial class SameSceneReuseProbe : Node
         await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
         await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 
-        List<string> residues = InspectResidues();
-        bool passed = residues.Count == 0 && !(_failureMode == "assert" && _caseIndex == 0);
-        string message = passed ? "" : residues.Count > 0
-            ? string.Join("; ", residues)
-            : "intentional assertion failure";
+        _currentResidues = InspectResidues();
+        var harness = new StealFacingMappingTest { Name = "CharacterizedHarnessCase" };
+        harness.ConfigureForReuseProbe(ScenarioFor(caseId), OnHarnessFinished);
+        AddChild(harness);
+    }
 
-        if (!(_failureMode == "missing" && _caseIndex == 0))
+    private void OnHarnessFinished(StealFacingProbeResult result)
+    {
+        try
         {
-            WriteEvent("result", caseId, passed ? "pass" : "fail", message);
-            if (_failureMode == "duplicate" && _caseIndex == 0)
-                WriteEvent("result", caseId, passed ? "pass" : "fail", message);
+            string caseId = CurrentCaseId();
+            bool forcedAssertion = _failureMode == "assert" && _caseIndex == 0;
+            bool passed = result.ExitCode == 0 && _currentResidues.Count == 0 && !forcedAssertion;
+            List<string> failures = [.. _currentResidues];
+            if (result.ExitCode != 0)
+                failures.Add($"embedded harness exited {result.ExitCode}");
+            if (forcedAssertion)
+                failures.Add("intentional assertion failure");
+            string message = string.Join("; ", failures);
+            Dictionary<string, object> observations = new()
+            {
+                ["scenario"] = result.Scenario,
+                ["ever_loose"] = result.EverLoose,
+                ["final_state"] = result.FinalState.ToString(),
+                ["holder_peer_id"] = result.HolderPeerId,
+                ["toucher_at_steal"] = result.ToucherAtSteal,
+                ["verdict_frame"] = result.VerdictFrame,
+            };
+
+            if (!(_failureMode == "missing" && _caseIndex == 0))
+            {
+                WriteEvent("result", caseId, passed ? "pass" : "fail", message, observations);
+                if (_failureMode == "duplicate" && _caseIndex == 0)
+                    WriteEvent("result", caseId, passed ? "pass" : "fail", message, observations);
+            }
+            _anyFailure |= !passed;
+
+            FinishOrAdvance();
         }
-        _anyFailure |= !passed;
+        catch (Exception exception)
+        {
+            WriteEvent("result", CurrentCaseId(), "fail", $"probe callback exception: {exception.Message}");
+            ClearAllLeakSurfaces();
+            GetTree().Quit(1);
+        }
+    }
+
+    private void FinishOrAdvance()
+    {
 
         // Recover even after an intentional leak so A->B->A proves the third
         // scene does not inherit the detected residue.
@@ -126,6 +166,13 @@ public partial class SameSceneReuseProbe : Node
         if (changeError != Error.Ok)
             throw new InvalidOperationException($"ChangeSceneToFile failed: {changeError}");
     }
+
+    private static string ScenarioFor(string caseId) => caseId switch
+    {
+        FaceToFaceId => "face-to-face",
+        SideBySideId => "side-by-side",
+        _ => throw new InvalidOperationException($"Uncharacterized catalog case ID: {caseId}"),
+    };
 
     private List<string> InspectResidues()
     {
@@ -210,14 +257,21 @@ public partial class SameSceneReuseProbe : Node
     private static string CurrentCaseId() =>
         _caseIndex < _caseIds.Length ? _caseIds[_caseIndex] : "probe-bootstrap";
 
-    private static void WriteEvent(string eventKind, string caseId, string status = null, string message = null)
+    private static void WriteEvent(
+        string eventKind,
+        string caseId,
+        string status = null,
+        string message = null,
+        Dictionary<string, object> observations = null)
     {
         Dictionary<string, object> payload = new()
         {
             ["event"] = eventKind,
             ["case_id"] = caseId,
+            ["invocation"] = _caseIndex + 1,
             ["status"] = status,
             ["message"] = message,
+            ["observations"] = observations,
             ["unix_ms"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
         };
         File.AppendAllText(_eventPath, JsonSerializer.Serialize(payload) + System.Environment.NewLine);
