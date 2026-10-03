@@ -14,16 +14,21 @@ runner remains the only authoritative harness surface (ADR-0015/ADR-0016).
 
 The retained probe is deliberately separate:
 
-- `tests/integration/SameSceneReuseProbe.tscn` replaces itself through
-  `SceneTree.ChangeSceneToFile` and emits JSONL events with stable synthetic IDs.
+- `tests/integration/SameSceneReuseProbe.tscn` embeds the unmodified assertion
+  path from `StealFacingMappingTest`, replaces itself through
+  `SceneTree.ChangeSceneToFile`, and emits JSONL events under that family's
+  stable catalog IDs. Its opt-in completion seam does not change the
+  authoritative scene's normal `GetTree().Quit` path.
 - `tools/same_scene_batch_probe.py` launches either three isolated processes or
   one reused process, always gives Godot an explicit workspace-local log, and
   fails closed on malformed, unknown, duplicate, missing, timed-out, abrupt-exit,
   or assertion-failure outcomes.
 - `tests/repository/test_same_scene_batch_probe.py` pins that result accounting.
 
-The synthetic case set is exactly `probe-a-first`, `probe-b`, and
-`probe-a-second`. It is intentionally not present in `CATALOG`.
+The characterized family is exactly
+`steal-facing-mapping-test-face-to-face` (A) and
+`steal-facing-mapping-test-side-by-side` (B). Both are live catalog IDs for
+`StealFacingMappingTest.tscn`; the timing sequence is A→B→A.
 
 ## Why scene replacement is not reset
 
@@ -43,19 +48,27 @@ Sources (all version-matched to the project's Godot 4.7.1 line):
 
 ## Reset-boundary canaries
 
-The clean A→B→A run passed: each scene root had a different instance ID, every
-case emitted exactly one result, and all explicit cleanup completed before the
-next case observed state.
+Authoritative isolated A and B both passed. The prototype then ran A→B, B→A,
+and A→A in isolated and reused modes. All six runs agreed, per invocation, on
+these gameplay observations—not only the verdict string:
 
-Then the probe omitted one cleanup operation at the first boundary. Every
-mutation made `probe-b` fail, and cleanup after that failure let
-`probe-a-second` pass. This proves both sensitivity and recovery rather than a
-vacuous all-green path.
+| Catalog case | `ever_loose` | final state | holder | toucher at steal | verdict frame |
+|---|---:|---|---:|---:|---:|
+| A, face-to-face | true | Held | 1 | 2 | 25 |
+| B, side-by-side | true | Held | 1 | 2 | 25 |
 
-| Omitted cleanup | B observation | B exit | Final A |
+Every reused invocation also received a fresh scene-root instance. Repeated A
+uses an invocation ordinal alongside the unchanged catalog ID, so exactly-once
+accounting can distinguish A(1) from A(2) without inventing a fake case ID.
+
+The probe then injected one cross-boundary mutation after the first real case.
+Every mutation made B fail, and cleanup after detection let the final A pass.
+This proves sensitivity and recovery rather than a vacuous all-green path.
+
+| Injected boundary mutation | B observation | B exit | Final A |
 |---|---|---:|---|
 | static C# sentinel | `static C# state leaked` | fail | pass |
-| `Input.ActionRelease` | `Input singleton state leaked` | fail | pass |
+| unreleased input action | `Input singleton state leaked`; gameplay ends Dribbling instead of Held | fail | pass |
 | cached resource metadata | `ResourceLoader cache mutation leaked` | fail | pass |
 | autoload metadata | `autoload state leaked` | fail | pass |
 | tree timer callback | `SceneTreeTimer callback leaked` | fail | pass |
@@ -67,19 +80,30 @@ does not remove the stale managed reference from a static field. A validity
 check can detect that one fixture, but it cannot discover every cache held by
 arbitrary harness or production code.
 
+Timers and deferred calls are characterization-only exclusions, not claimed
+reset successes. The clean protocol schedules neither. Their mutation runs
+prove that already-pending tree-owned work crosses scene replacement; the probe
+has no general cancellation handle for arbitrary harness work. Any case that
+can leave either pending is therefore excluded rather than "cleaned" by
+zeroing the probe's observation counter.
+
 ## Result and failure semantics
 
-The parent accounts by selected stable ID, not by process exit alone. A case is
-green only after one explicit `result` event with `status=pass`.
+The parent accounts by ordered `(stable catalog ID, invocation)` pairs, not by
+process exit alone. A case is green only after its matching `start` followed by
+exactly one explicit `result` with `status=pass`. Overlapping or reordered
+starts, results without an active matching start, and stale prior event files
+all fail closed; the parent removes both deterministic event and log paths
+before launch.
 
 | Injected outcome | Observed parent verdict |
 |---|---|
-| pass | all three IDs present exactly once; success |
-| assertion failure | `probe-a-first: intentional assertion failure`; B and final A still recorded |
-| timeout | last `start` names `probe-a-first`; all missing IDs and the retained log are reported |
-| abrupt exit (23) | active `probe-a-first` named; all missing IDs and retained log reported |
-| missing result | `missing result for probe-a-first` |
-| duplicate result | `duplicate result for probe-a-first` |
+| pass | A(1), B(2), and A(3) each start and pass once |
+| assertion failure | A invocation 1 names `intentional assertion failure`; B and final A still record |
+| timeout | active A invocation 1 and all missing invocations are named; log retained |
+| abrupt exit (23) | active A invocation 1 and all missing invocations are named; log retained |
+| missing result | A(1) remains active; later starts/results are quarantined and every missing invocation is named |
+| duplicate result | `duplicate result for ...face-to-face invocation 1` |
 
 Repository tests separately cover an unknown result ID and malformed/non-object
 JSONL. All paths fail closed. Each process record retains its unique `.log` and
@@ -91,7 +115,7 @@ Baseline revision: `7df6107c0cf163c54946073d0b87e8f0037f56ab`.
 
 Environment: Godot `4.7.1.stable.mono.official.a13da4feb`; Windows
 `10.0.19045`; Intel64 Family 6 Model 165 Stepping 3; Python 3.14.0. The exact
-case set was the three synthetic IDs above. Isolated mode booted once per ID;
+case sequence was A→B→A from the real family above. Isolated mode booted once per invocation;
 batch mode booted once for the full A→B→A sequence. Both modes used the same
 scene, checks, runner, machine, and 15-second per-process timeout. Compilation
 and the mutation-control runs preceded this recorded series, so both modes saw
@@ -101,25 +125,25 @@ a harness shard.
 Command shape (run once per mode):
 
 ```powershell
-python tools/same_scene_batch_probe.py run --godot $godotExe --mode isolated --repeat 7 --output-dir .godot/issue388-measure-final
-python tools/same_scene_batch_probe.py run --godot $godotExe --mode batch --repeat 7 --output-dir .godot/issue388-measure-final
+python tools/same_scene_batch_probe.py run --godot $godotExe --mode isolated --repeat 7 --output-dir .godot/issue388-facing-measure
+python tools/same_scene_batch_probe.py run --godot $godotExe --mode batch --repeat 7 --output-dir .godot/issue388-facing-measure
 ```
 
 | Repeat | isolated, 3 boots (s) | batch, 1 boot (s) | saved (s) |
 |---:|---:|---:|---:|
-| 1 | 1.702035 | 0.564403 | 1.137632 |
-| 2 | 1.701667 | 0.567507 | 1.134161 |
-| 3 | 1.699876 | 0.567116 | 1.132760 |
-| 4 | 1.704180 | 0.566167 | 1.138013 |
-| 5 | 1.706436 | 0.567974 | 1.138462 |
-| 6 | 1.699266 | 0.567163 | 1.132103 |
-| 7 | 1.700760 | 0.567531 | 1.133229 |
-| **mean** | **1.702031** | **0.566837** | **1.135194 (66.7%)** |
-| **median** | **1.701667** | **0.567163** | **1.134504** |
+| 1 | 3.530499 | 1.783066 | 1.747434 |
+| 2 | 4.142204 | 1.785558 | 2.356646 |
+| 3 | 3.235944 | 1.873110 | 1.362834 |
+| 4 | 3.033233 | 1.872064 | 1.161170 |
+| 5 | 3.130011 | 1.873330 | 1.256681 |
+| 6 | 3.157690 | 1.871022 | 1.286668 |
+| 7 | 3.123392 | 1.782278 | 1.341114 |
+| **mean** | **3.336139** | **1.834347** | **1.501792 (45.0%)** |
+| **median** | **3.157690** | **1.871022** | **1.286668** |
 
 Total boots were 21 isolated and 7 batched. The measurement characterizes
-startup removal for this bounded synthetic workload; it is not a claim that
-real harness cases have equivalent run time or reset safety.
+startup removal for this bounded real harness family; it is not a claim that
+uncharacterized harness cases have equivalent run time or reset safety.
 
 ## Post-sharding materiality
 
@@ -131,22 +155,31 @@ The rendered-evidence job completed about 118 seconds after start, so integratio
 was again the critical path in that run.
 
 The catalog contains 260 single-process cases across 51 scenes. At the local
-probe's roughly 0.568 seconds per avoided warm boot, grouping every case by scene has
+probe's roughly 0.751 seconds per avoided warm boot, grouping every case by scene has
 a large theoretical ceiling. That extrapolation is intentionally not promoted
 to a forecast: CI startup differs, controls and shards constrain grouping, and
-none of those 260 cases currently has a proven reusable-process contract. With
-the eligible set below, the realizable saving is exactly zero.
+none of those 260 cases currently declares an authoritative reusable-process
+contract. With the eligible set below, the realizable saving is exactly zero.
 
 ## Eligibility decision (fail closed)
 
-**Eligible real catalog IDs: none.**
+**Characterized as reuse-safe inside the bounded probe:** the A/B
+`StealFacingMappingTest` family above. Their isolated and reused observations
+match in every required order, and every injected leak is discriminated.
+
+**Proposed production-eligible IDs: none.** Moving only this two-case family to
+production would avoid one boot—about 0.75 seconds locally—which is not material
+against a 139-second post-sharding integration gate. Generalizing beyond it
+would require per-family completion/reset refactors and proof not supplied here.
 
 **Excluded sets:**
 
-- All 260 `topology=single` catalog IDs: every current harness owns its terminal
-  `GetTree().Quit` behavior, no ID declares and proves a reset surface, and the
-  probe demonstrates seven independent state classes that scene replacement
-  does not clear. Sharing a `.tscn` is not evidence of safety.
+- The two characterized IDs: excluded from production on immaterial benefit;
+  their probe-only completion seam is not an authoritative batching contract.
+- The other 258 `topology=single` catalog IDs: no ID declares and proves a reset
+  surface, and the probe demonstrates seven independent state classes that
+  scene replacement does not clear. Cases with pending tree timers or deferred
+  work are categorically excluded. Sharing a `.tscn` is not evidence of safety.
 - All 13 `topology=multiprocess` catalog IDs: their server/client topology and
   per-role crash/timeout isolation are incompatible with this single-process,
   same-scene prototype.
