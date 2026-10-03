@@ -21,6 +21,9 @@ from typing import Iterable, Mapping, Sequence
 
 
 _STABLE_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+FACE_TO_FACE_ID = "steal-facing-mapping-test-face-to-face"
+SIDE_BY_SIDE_ID = "steal-facing-mapping-test-side-by-side"
+CHARACTERIZED_CATALOG_IDS = frozenset((FACE_TO_FACE_ID, SIDE_BY_SIDE_ID))
 
 
 @dataclass(frozen=True)
@@ -28,6 +31,7 @@ class AccountingReport:
     passed_ids: tuple[str, ...]
     errors: tuple[str, ...]
     active_case_id: str | None
+    active_invocation: int | None
     log_path: Path | None
 
     @property
@@ -46,11 +50,12 @@ def _validate_selected_ids(selected_ids: Sequence[str]) -> tuple[str, ...]:
     selected = tuple(selected_ids)
     if not selected:
         raise ValueError("at least one stable case ID is required")
-    if len(set(selected)) != len(selected):
-        raise ValueError("selected stable case IDs must be unique")
     invalid = [case_id for case_id in selected if not _STABLE_ID.fullmatch(case_id)]
     if invalid:
         raise ValueError(f"invalid stable case ID(s): {', '.join(invalid)}")
+    unsupported = [case_id for case_id in selected if case_id not in CHARACTERIZED_CATALOG_IDS]
+    if unsupported:
+        raise ValueError(f"uncharacterized catalog case ID(s): {', '.join(unsupported)}")
     return selected
 
 
@@ -71,61 +76,97 @@ def account_events(
     """
 
     selected = _validate_selected_ids(selected_ids)
-    selected_set = set(selected)
-    results: dict[str, str] = {}
+    expected = {(index, case_id) for index, case_id in enumerate(selected, start=1)}
+    results: dict[tuple[int, str], str] = {}
     errors: list[str] = []
-    active_case_id: str | None = None
+    active: tuple[int, str] | None = None
+    next_start_index = 1
 
     for event in events:
         event_kind = event.get("event")
         case_id = event.get("case_id")
+        invocation = event.get("invocation")
         if not isinstance(case_id, str):
             errors.append("event missing string case_id")
             continue
+        if not isinstance(invocation, int) or isinstance(invocation, bool):
+            errors.append(f"event for {case_id} missing integer invocation")
+            continue
+        key = (invocation, case_id)
+        label = f"{case_id} invocation {invocation}"
 
         if event_kind == "start":
-            if case_id not in selected_set:
-                errors.append(f"unknown start for {case_id}")
+            if key not in expected:
+                errors.append(f"unknown start for {label}")
                 continue
-            active_case_id = case_id
+            if active is not None:
+                errors.append(
+                    f"overlapping start for {label}; "
+                    f"{active[1]} invocation {active[0]} is still active"
+                )
+                continue
+            expected_start = (
+                (next_start_index, selected[next_start_index - 1])
+                if next_start_index <= len(selected)
+                else None
+            )
+            if key != expected_start:
+                expected_label = (
+                    f"{expected_start[1]} invocation {expected_start[0]}"
+                    if expected_start is not None
+                    else "no further invocation"
+                )
+                errors.append(f"out-of-order start for {label}; expected {expected_label}")
+                continue
+            active = key
+            next_start_index += 1
             continue
 
         if event_kind != "result":
             errors.append(f"unknown event {event_kind!r} for {case_id}")
             continue
-        if case_id not in selected_set:
-            errors.append(f"unknown result for {case_id}")
+        if key not in expected:
+            errors.append(f"unknown result for {label}")
             continue
-        if case_id in results:
-            errors.append(f"duplicate result for {case_id}")
+        if key in results:
+            errors.append(f"duplicate result for {label}")
+            continue
+        if active != key:
+            errors.append(f"result for {label} has no matching active start")
             continue
 
         status = event.get("status")
         if status not in ("pass", "fail"):
-            errors.append(f"invalid result status for {case_id}: {status!r}")
+            errors.append(f"invalid result status for {label}: {status!r}")
             continue
-        results[case_id] = status
+        results[key] = status
         if status == "fail":
             message = event.get("message")
             detail = message if isinstance(message, str) and message else "assertion failed"
-            errors.append(f"{case_id}: {detail}")
-        if active_case_id == case_id:
-            active_case_id = None
+            errors.append(f"{label}: {detail}")
+        if active == key:
+            active = None
 
-    for case_id in selected:
-        if case_id not in results:
-            errors.append(f"missing result for {case_id}")
+    for invocation, case_id in enumerate(selected, start=1):
+        if (invocation, case_id) not in results:
+            errors.append(f"missing result for {case_id} invocation {invocation}")
 
     if timed_out:
-        target = active_case_id or "no reported case"
+        target = f"{active[1]} invocation {active[0]}" if active is not None else "no reported case"
         errors.append(f"timeout while {target} was active")
-    elif returncode not in (0, None) and active_case_id is not None:
-        errors.append(f"process exited {returncode} while {active_case_id} was active")
+    elif returncode not in (0, None) and active is not None:
+        errors.append(f"process exited {returncode} while {active[1]} invocation {active[0]} was active")
     elif returncode not in (0, None) and not any(status == "fail" for status in results.values()):
         errors.append(f"process exited {returncode} without an attributed assertion failure")
 
-    passed = tuple(case_id for case_id in selected if results.get(case_id) == "pass")
-    return AccountingReport(passed, tuple(errors), active_case_id, log_path)
+    passed = tuple(
+        case_id
+        for invocation, case_id in enumerate(selected, start=1)
+        if results.get((invocation, case_id)) == "pass"
+    )
+    active_case_id = active[1] if active is not None else None
+    active_invocation = active[0] if active is not None else None
+    return AccountingReport(passed, tuple(errors), active_case_id, active_invocation, log_path)
 
 
 def parse_event_lines(lines: Iterable[str]) -> tuple[Mapping[str, object], ...]:
@@ -188,6 +229,16 @@ def resolve_output_dir(repo_root: Path, output_dir: Path) -> Path:
     return resolved
 
 
+def prepare_event_path(repo_root: Path, path: Path) -> Path:
+    root = repo_root.resolve()
+    resolved = (root / path).resolve() if not path.is_absolute() else path.resolve()
+    if not resolved.is_relative_to(root):
+        raise ValueError("probe artifact path must stay inside the workspace")
+    resolved.parent.mkdir(parents=True, exist_ok=True)
+    resolved.unlink(missing_ok=True)
+    return resolved
+
+
 def _run_process(
     command: Sequence[str],
     repo_root: Path,
@@ -196,6 +247,8 @@ def _run_process(
     log_path: Path,
     timeout_seconds: float,
 ) -> tuple[AccountingReport, float]:
+    resolved_event_path = prepare_event_path(repo_root, event_path)
+    prepare_event_path(repo_root, log_path)
     started = time.perf_counter()
     returncode: int | None = None
     timed_out = False
@@ -214,7 +267,7 @@ def _run_process(
     elapsed = time.perf_counter() - started
 
     try:
-        events = read_events(repo_root / event_path)
+        events = read_events(resolved_event_path)
     except ValueError as error:
         events = ()
         malformed = account_events(
@@ -228,6 +281,7 @@ def _run_process(
             malformed.passed_ids,
             (str(error), *malformed.errors),
             malformed.active_case_id,
+            malformed.active_invocation,
             malformed.log_path,
         ), elapsed
 
@@ -331,7 +385,7 @@ def _parser() -> argparse.ArgumentParser:
     run = subparsers.add_parser("run", help="run the non-authoritative Godot reuse probe")
     run.add_argument("--godot", required=True)
     run.add_argument("--mode", choices=("isolated", "batch"), required=True)
-    run.add_argument("--sequence", default="probe-a-first,probe-b,probe-a-second")
+    run.add_argument("--sequence", default=f"{FACE_TO_FACE_ID},{SIDE_BY_SIDE_ID},{FACE_TO_FACE_ID}")
     run.add_argument("--repeat", type=int, default=5)
     run.add_argument("--timeout", type=float, default=15.0)
     run.add_argument("--leak", choices=("none", "static", "input", "resource", "autoload", "timer", "deferred", "cached-node"), default="none")
