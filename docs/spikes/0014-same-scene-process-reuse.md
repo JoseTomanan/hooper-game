@@ -94,14 +94,17 @@ process exit alone. A case is green only after its matching `start` followed by
 exactly one explicit `result` with `status=pass`. Overlapping or reordered
 starts, results without an active matching start, and stale prior event files
 all fail closed; the parent removes both deterministic event and log paths
-before launch.
+before launch. A malformed or crash-truncated JSONL tail retains every complete
+preceding event for attribution, so a valid `start` still names the active case.
+Any abnormal exit other than the ordinary assertion-failure code `1` is reported
+explicitly even when an earlier case already recorded an assertion failure.
 
 | Injected outcome | Observed parent verdict |
 |---|---|
 | pass | A(1), B(2), and A(3) each start and pass once |
 | assertion failure | A invocation 1 names `intentional assertion failure`; B and final A still record |
 | timeout | active A invocation 1 and all missing invocations are named; log retained |
-| abrupt exit (23) | active A invocation 1 and all missing invocations are named; log retained |
+| hard process exit (23) | active A invocation 1 and all missing invocations are named; log retained |
 | missing result | A(1) remains active; later starts/results are quarantined and every missing invocation is named |
 | duplicate result | `duplicate result for ...face-to-face invocation 1` |
 
