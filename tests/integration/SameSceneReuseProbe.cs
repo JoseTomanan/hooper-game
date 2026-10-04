@@ -88,7 +88,11 @@ public partial class SameSceneReuseProbe : Node
             return; // The parent must time out, retain the log, and name this active ID.
         if (_failureMode == "crash" && _caseIndex == 0)
         {
-            GetTree().Quit(23); // Abrupt exit before a result simulates crash accounting portably.
+            // Environment.Exit terminates immediately rather than waiting for
+            // Godot's end-of-iteration shutdown, which makes this a real hard
+            // process boundary for the parent's crash accounting probe.
+            // Source: https://learn.microsoft.com/dotnet/api/system.environment.exit?view=net-8.0
+            System.Environment.Exit(23);
             return;
         }
 

@@ -157,6 +157,47 @@ class SameSceneBatchAccountingTests(unittest.TestCase):
             with self.subTest(content=content), self.assertRaises(ValueError):
                 self.probe.parse_event_lines((content,))
 
+    def test_truncated_result_retains_valid_prefix_and_active_case_attribution(self):
+        start = json.dumps({'event': 'start', 'case_id': A, 'invocation': 1})
+        report = self.probe.account_event_lines(
+            (A, B),
+            (start, '{"event":"result"'),
+            returncode=23,
+            log_path=Path('.godot/truncated-crash.log'),
+        )
+
+        self.assertFalse(report.ok)
+        joined = '\n'.join(report.errors)
+        self.assertIn('malformed JSONL event at line 2', joined)
+        self.assertIn(f'process exited 23 while {A} invocation 1 was active', joined)
+        self.assertIn(f'missing result for {A} invocation 1', joined)
+        self.assertIn(f'missing result for {B} invocation 2', joined)
+        self.assertEqual(Path('.godot/truncated-crash.log'), report.log_path)
+
+    def test_abnormal_exit_after_assertion_failure_is_still_explicit(self):
+        report = self.probe.account_events(
+            (A, B),
+            (
+                {'event': 'start', 'case_id': A, 'invocation': 1},
+                {
+                    'event': 'result',
+                    'case_id': A,
+                    'invocation': 1,
+                    'status': 'fail',
+                    'message': 'assertion failed',
+                },
+            ),
+            returncode=23,
+        )
+
+        self.assertFalse(report.ok)
+        joined = '\n'.join(report.errors)
+        self.assertIn(f'{A} invocation 1: assertion failed', joined)
+        self.assertIn(
+            f'process exited 23 after {A} invocation 1 completed and before {B} invocation 2 started',
+            joined,
+        )
+
     def test_command_builder_keeps_log_and_event_paths_explicit(self):
         command = self.probe.build_godot_command(
             Path('godot'),

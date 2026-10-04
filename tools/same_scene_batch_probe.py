@@ -46,6 +46,14 @@ class AccountingReport:
         return "\n".join(lines)
 
 
+class EventParseError(ValueError):
+    """A JSONL parse failure that retains every complete preceding event."""
+
+    def __init__(self, message: str, parsed_events: Sequence[Mapping[str, object]]):
+        super().__init__(message)
+        self.parsed_events = tuple(parsed_events)
+
+
 def _validate_selected_ids(selected_ids: Sequence[str]) -> tuple[str, ...]:
     selected = tuple(selected_ids)
     if not selected:
@@ -80,6 +88,7 @@ def account_events(
     results: dict[tuple[int, str], str] = {}
     errors: list[str] = []
     active: tuple[int, str] | None = None
+    last_completed: tuple[int, str] | None = None
     next_start_index = 1
 
     for event in events:
@@ -140,6 +149,7 @@ def account_events(
             errors.append(f"invalid result status for {label}: {status!r}")
             continue
         results[key] = status
+        last_completed = key
         if status == "fail":
             message = event.get("message")
             detail = message if isinstance(message, str) and message else "assertion failed"
@@ -156,8 +166,32 @@ def account_events(
         errors.append(f"timeout while {target} was active")
     elif returncode not in (0, None) and active is not None:
         errors.append(f"process exited {returncode} while {active[1]} invocation {active[0]} was active")
-    elif returncode not in (0, None) and not any(status == "fail" for status in results.values()):
-        errors.append(f"process exited {returncode} without an attributed assertion failure")
+    elif returncode not in (0, None) and not (
+        returncode == 1 and any(status == "fail" for status in results.values())
+    ):
+        next_expected = (
+            (next_start_index, selected[next_start_index - 1])
+            if next_start_index <= len(selected)
+            else None
+        )
+        if last_completed is not None and next_expected is not None:
+            errors.append(
+                f"process exited {returncode} after {last_completed[1]} invocation "
+                f"{last_completed[0]} completed and before {next_expected[1]} "
+                f"invocation {next_expected[0]} started"
+            )
+        elif last_completed is not None:
+            errors.append(
+                f"process exited {returncode} after final case {last_completed[1]} "
+                f"invocation {last_completed[0]} completed"
+            )
+        elif next_expected is not None:
+            errors.append(
+                f"process exited {returncode} before {next_expected[1]} "
+                f"invocation {next_expected[0]} started"
+            )
+        else:
+            errors.append(f"process exited {returncode} without an attributed case")
 
     passed = tuple(
         case_id
@@ -177,17 +211,52 @@ def parse_event_lines(lines: Iterable[str]) -> tuple[Mapping[str, object], ...]:
         try:
             event = json.loads(line)
         except json.JSONDecodeError as error:
-            raise ValueError(f"malformed JSONL event at line {line_number}: {error.msg}") from error
+            raise EventParseError(
+                f"malformed JSONL event at line {line_number}: {error.msg}",
+                events,
+            ) from error
         if not isinstance(event, dict):
-            raise ValueError(f"JSONL event at line {line_number} is not an object")
+            raise EventParseError(
+                f"JSONL event at line {line_number} is not an object",
+                events,
+            )
         events.append(event)
     return tuple(events)
 
 
-def read_events(path: Path) -> tuple[Mapping[str, object], ...]:
-    if not path.exists():
-        return ()
-    return parse_event_lines(path.read_text(encoding="utf-8").splitlines())
+def account_event_lines(
+    selected_ids: Sequence[str],
+    lines: Iterable[str],
+    *,
+    returncode: int | None,
+    timed_out: bool = False,
+    log_path: Path | None = None,
+) -> AccountingReport:
+    """Parse and account JSONL without discarding a valid prefix on truncation."""
+
+    parse_error: EventParseError | None = None
+    try:
+        events = parse_event_lines(lines)
+    except EventParseError as error:
+        events = error.parsed_events
+        parse_error = error
+
+    report = account_events(
+        selected_ids,
+        events,
+        returncode=returncode,
+        timed_out=timed_out,
+        log_path=log_path,
+    )
+    if parse_error is None:
+        return report
+    return AccountingReport(
+        report.passed_ids,
+        (str(parse_error), *report.errors),
+        report.active_case_id,
+        report.active_invocation,
+        report.log_path,
+    )
 
 
 def build_godot_command(
@@ -266,28 +335,14 @@ def _run_process(
         timed_out = True
     elapsed = time.perf_counter() - started
 
-    try:
-        events = read_events(resolved_event_path)
-    except ValueError as error:
-        events = ()
-        malformed = account_events(
-            selected_ids,
-            events,
-            returncode=returncode,
-            timed_out=timed_out,
-            log_path=log_path,
-        )
-        return AccountingReport(
-            malformed.passed_ids,
-            (str(error), *malformed.errors),
-            malformed.active_case_id,
-            malformed.active_invocation,
-            malformed.log_path,
-        ), elapsed
-
-    return account_events(
+    event_lines = (
+        resolved_event_path.read_text(encoding="utf-8").splitlines()
+        if resolved_event_path.exists()
+        else ()
+    )
+    return account_event_lines(
         selected_ids,
-        events,
+        event_lines,
         returncode=returncode,
         timed_out=timed_out,
         log_path=log_path,
