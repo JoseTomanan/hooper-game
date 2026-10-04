@@ -4,6 +4,13 @@
     <TargetFramework Condition=" '$(GodotTargetPlatform)' == 'android' ">net9.0</TargetFramework>
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <RootNamespace>HOOPERGAME</RootNamespace>
+    <!--
+      Keep the compatibility default because Godot's editor and headless build
+      entry points do not pass custom MSBuild properties.  Agents can request
+      the smaller game-only compile set explicitly with
+      -p:IncludeIntegrationHarness=false.
+    -->
+    <IncludeIntegrationHarness Condition="'$(IncludeIntegrationHarness)' == ''">true</IncludeIntegrationHarness>
   </PropertyGroup>
   <!--
     The Godot.NET.Sdk globs **/*.cs from this directory (the repo root), which
@@ -16,7 +23,7 @@
   -->
   <ItemGroup>
     <Compile Remove="tests/**/*.cs" />
-    <Compile Include="tests/integration/**/*.cs" />
+    <Compile Include="tests/integration/**/*.cs" Condition="'$(IncludeIntegrationHarness)' == 'true'" />
   </ItemGroup>
   <!--
     Addons are third-party editor tooling with their own .csproj files (e.g.
@@ -27,4 +34,10 @@
   <ItemGroup>
     <Compile Remove="addons/**/*.cs" />
   </ItemGroup>
+
+  <Target Name="ValidateIntegrationHarnessMode" BeforeTargets="PrepareForBuild">
+    <Error
+      Condition="'$(IncludeIntegrationHarness)' != 'true' and '$(IncludeIntegrationHarness)' != 'false'"
+      Text="IncludeIntegrationHarness must be exactly true or false (received '$(IncludeIntegrationHarness)')." />
+  </Target>
 </Project>
