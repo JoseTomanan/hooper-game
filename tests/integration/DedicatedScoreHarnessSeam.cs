@@ -8,5 +8,10 @@ namespace Hooper.Systems
 		/// journey arms it only after both clients prove a healthy score baseline.
 		/// </summary>
 		internal bool SuppressScoreRpcForHarness { get; set; }
+
+		partial void ReadScoreRpcSuppressionForHarness(ref bool suppress)
+		{
+			suppress = SuppressScoreRpcForHarness;
+		}
 	}
 }

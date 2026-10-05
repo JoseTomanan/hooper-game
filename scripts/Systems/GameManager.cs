@@ -79,6 +79,11 @@ public partial class GameManager : Node
 
 	private bool IsServer => Multiplayer.IsServer();
 
+	// When the harness partial is excluded, the compiler erases this declaration
+	// and its call. The ordinary game therefore has neither mutation state nor a
+	// test-only configuration surface.
+	partial void ReadScoreRpcSuppressionForHarness(ref bool suppress);
+
 	// ── Lifecycle ──────────────────────────────────────────────────────────
 
 	public override void _Ready()
@@ -188,9 +193,11 @@ public partial class GameManager : Node
 		int peerBScore = _scoreboard.ScoreOf(peerBId);
 
 		// #375's mutation suppresses only the wire send, after clients have
-		// already proved a healthy baseline. The internal seam defaults false and
-		// has no gameplay-input or exported-config path.
-		if (!SuppressScoreRpcForHarness)
+		// already proved a healthy baseline. The optional partial hook disappears
+		// entirely from an ordinary build that excludes the integration harness.
+		bool suppressScoreRpc = false;
+		ReadScoreRpcSuppressionForHarness(ref suppressScoreRpc);
+		if (!suppressScoreRpc)
 		{
 			Rpc(MethodName.ReceiveScoreState,
 				peerAId, peerAScore, peerBId, peerBScore,

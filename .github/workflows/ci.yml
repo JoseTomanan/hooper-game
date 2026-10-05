@@ -26,20 +26,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Repository-level contracts cover orchestration policy and the executable
-      # headless-harness catalog, including exact migration parity and adapter drift.
-      - name: Verify repository contracts
-        run: python3 -m unittest discover -s tests/repository -p 'test_*.py' -v
-
       - name: Set up .NET SDK
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
 
-      # Build the GAME project on its own compile surface. This is the step that
-      # catches game-only compile errors the test project would mask.
-      - name: Build game project
-        run: dotnet build "HOOPER GAME.csproj" --configuration Debug
+      # Repository-level contracts cover orchestration policy and the executable
+      # headless-harness catalog, including exact migration parity, MSBuild item
+      # evaluation, and adapter drift.
+      - name: Verify repository contracts
+        run: python3 -m unittest discover -s tests/repository -p 'test_*.py' -v
+
+      # Build the ordinary GAME project without the engine-hosted integration
+      # sources. This catches both game-only compile errors that unit tests mask
+      # and accidental production dependencies on a harness partial/seam.
+      - name: Build ordinary game project
+        run: dotnet build "HOOPER GAME.csproj" --configuration Debug -p:IncludeIntegrationHarness=false
 
       # Build + run the deterministic ball / physics test suite.
       - name: Run tests
@@ -94,7 +96,7 @@ jobs:
       # Explicitly build the game assembly so a genuine C# error surfaces here
       # rather than as a confusing "script not found" at scene-load time.
       - name: Build game assembly
-        run: dotnet build "HOOPER GAME.csproj" --configuration Debug
+        run: dotnet build "HOOPER GAME.csproj" --configuration Debug -p:IncludeIntegrationHarness=true
 
       # The executable catalog remains the sole scenario inventory. Each shard
       # is a deterministic, exhaustive partition with paired controls kept on
@@ -168,7 +170,7 @@ jobs:
         run: godot --headless --build-solutions --quit || exit 0
 
       - name: Build game assembly
-        run: dotnet build "HOOPER GAME.csproj" --configuration Debug
+        run: dotnet build "HOOPER GAME.csproj" --configuration Debug -p:IncludeIntegrationHarness=true
 
       - name: Attempt rendered gameplay evidence capture
         env:
