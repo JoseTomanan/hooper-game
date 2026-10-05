@@ -506,7 +506,7 @@ public partial class StepBackAnimTest : Node
     // ── Scenario: stepback-segment-lengths ────────────────────────────────
     private void RunSegmentLengthsCheck()
     {
-        var lib = GD.Load<AnimationLibrary>("res://assets/locomotion.res");
+        AnimationHarnessResources.TryLoadLibrary("res://assets/locomotion.res", out var lib, out _);
         if (lib == null)
         {
             Fail("assets/locomotion.res failed to load — cannot evaluate stepback-segment-lengths.");
@@ -528,16 +528,16 @@ public partial class StepBackAnimTest : Node
         bool pass = true;
         foreach (var (clipName, ticks) in windows)
         {
-            if (!lib.HasAnimation(clipName))
+            if (!AnimationHarnessResources.TryGetAnimation(lib, clipName, out var clip, out _))
             {
                 Fail($"AnimationLibrary has no clip '{clipName}' — run tools/rebuild_stepback_clips.gd.");
                 pass = false;
                 continue;
             }
 
-            double expectedSeconds = ticks / tps;
-            double actualSeconds = lib.GetAnimation(clipName).Get("length").AsDouble();
-            double deviationSeconds = Math.Abs(actualSeconds - expectedSeconds);
+            double expectedSeconds = ClipDuration.SecondsForTicks(ticks, tps);
+            double actualSeconds = AnimationHarnessResources.ObserveDurationSeconds(clip);
+            double deviationSeconds = ClipDuration.DeviationSeconds(actualSeconds, ticks, tps);
             GD.Print($"[stepback-anim]   '{clipName}': length={actualSeconds:F6}s expected={expectedSeconds:F6}s " +
                      $"({ticks} ticks @ {tps} tps), deviation={deviationSeconds:F6}s");
 
@@ -580,16 +580,24 @@ public partial class StepBackAnimTest : Node
         };
         string[] placeholderClips = { "locomotion/idle", "locomotion/run" };
 
+        AnimationHarnessResources.TryLoadLibrary("res://assets/locomotion.res", out var library, out _);
+        var clips = new System.Collections.Generic.Dictionary<string, AnimationHarnessResources.ClipSource>();
+        if (library != null)
+            foreach (string name in library.GetAnimationList())
+                clips.Add($"locomotion/{name}", new(library, name));
+
         bool pass = true;
         foreach (var (stateName, expectedClip) in states)
         {
-            if (!stateMachine.HasNode(stateName))
+            var inspection = AnimationHarnessResources.InspectStateClip(
+                stateMachine, stateName, expectedClip, placeholderClips, clips);
+            if (inspection.Status == AnimationHarnessResources.StateClipStatus.MissingState)
             {
                 Fail($"scenes/Player.tscn's state machine has no state '{stateName}'.");
                 pass = false;
                 continue;
             }
-            if (stateMachine.GetNode(stateName) is not AnimationNodeAnimation animNode)
+            if (inspection.Status == AnimationHarnessResources.StateClipStatus.NonAnimationState)
             {
                 Fail($"state '{stateName}' is not an AnimationNodeAnimation — a per-move state must be a " +
                      "single-clip node.");
@@ -597,12 +605,18 @@ public partial class StepBackAnimTest : Node
                 continue;
             }
 
-            string actualClip = animNode.Animation.ToString();
+            string actualClip = inspection.ActualClip;
             GD.Print($"[stepback-anim]   {stateName} -> {actualClip}");
 
+            if (inspection.Status == AnimationHarnessResources.StateClipStatus.MissingClip)
+            {
+                Fail(inspection.Diagnostic);
+                pass = false;
+                continue;
+            }
             if (actualClip != expectedClip)
             {
-                string extra = placeholderClips.Contains(actualClip)
+                string extra = inspection.Status == AnimationHarnessResources.StateClipStatus.Placeholder
                     ? " — this is the #296 GENERIC PLACEHOLDER; the state was never repointed at its own clip."
                     : " — a real clip, but the wrong one (copy-paste from a neighbouring move's sub-resource).";
                 Fail($"state '{stateName}' points at '{actualClip}', expected '{expectedClip}'{extra}");
@@ -687,8 +701,10 @@ public partial class StepBackAnimTest : Node
     // re-implemented in C# rather than sharing code with the .gd tool.
     private void RunHandoffCheck()
     {
-        var lib = GD.Load<AnimationLibrary>("res://assets/locomotion.res");
-        if (lib == null || !lib.HasAnimation("stepbackrecovery") || !lib.HasAnimation("jumpshotstartup"))
+        AnimationHarnessResources.TryLoadLibrary("res://assets/locomotion.res", out var lib, out _);
+        bool hasRecovery = AnimationHarnessResources.TryGetAnimation(lib, "stepbackrecovery", out var recovery, out _);
+        bool hasStartup = AnimationHarnessResources.TryGetAnimation(lib, "jumpshotstartup", out var jumpshotStartup, out _);
+        if (!hasRecovery || !hasStartup)
         {
             Fail("assets/locomotion.res missing 'stepbackrecovery' or 'jumpshotstartup' — cannot evaluate the hand-off.");
             Finish(1);
@@ -705,9 +721,6 @@ public partial class StepBackAnimTest : Node
             Finish(1);
             return;
         }
-
-        Animation recovery = lib.GetAnimation("stepbackrecovery");
-        Animation jumpshotStartup = lib.GetAnimation("jumpshotstartup");
 
         Vector3 hipsRecovery = PoseOrigin(skel, recovery, (float)recovery.Length, "mixamorig_Hips");
         Vector3 hipsJumpshot = PoseOrigin(skel, jumpshotStartup, 0f, "mixamorig_Hips");
@@ -822,18 +835,8 @@ public partial class StepBackAnimTest : Node
 
     private static AnimationNodeStateMachine LoadStateMachine()
     {
-        var playerScene = GD.Load<PackedScene>("res://scenes/Player.tscn");
-        var sceneState = playerScene.GetState();
-        for (int i = 0; i < sceneState.GetNodeCount(); i++)
-        {
-            if (sceneState.GetNodeType(i) != "AnimationTree") continue;
-            for (int p = 0; p < sceneState.GetNodePropertyCount(i); p++)
-            {
-                if (sceneState.GetNodePropertyName(i, p) != "tree_root") continue;
-                return sceneState.GetNodePropertyValue(i, p).As<AnimationNodeStateMachine>();
-            }
-        }
-        return null;
+        AnimationHarnessResources.TryLoadStateMachine("res://scenes/Player.tscn", out var machine, out _);
+        return machine;
     }
 
     // ── Geometry helpers ────────────────────────────────────────────────────
@@ -901,21 +904,16 @@ public partial class StepBackAnimTest : Node
 
     private static Skeleton3D FindSkeleton(Node root)
     {
-        if (root is Skeleton3D s) return s;
-        foreach (Node child in root.GetChildren())
-        {
-            Skeleton3D found = FindSkeleton(child);
-            if (found != null) return found;
-        }
-        return null;
+        AnimationHarnessResources.TryFindSkeleton(root, out var skeleton, out _);
+        return skeleton;
     }
 
-    private void Fail(string message) => GD.PrintErr($"[stepback-anim] FAIL: {message}");
+    private void Fail(string message) => GD.PrintErr(new HarnessReport("stepback-anim", _scenario).Failure(message));
 
     private void Finish(int code = 1)
     {
         _finished = true;
-        GD.Print($"[stepback-anim] RESULT: {(code == 0 ? "PASS" : "FAIL")} (exit {code})");
+        GD.Print(new HarnessReport("stepback-anim", _scenario).Result(code));
         GetTree().Quit(code);
     }
 }
