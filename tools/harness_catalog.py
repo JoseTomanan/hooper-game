@@ -335,7 +335,10 @@ def _slug(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
 
 
-_ADDITIONAL_SINGLE_ROWS = ""
+_ADDITIONAL_SINGLE_ROWS = """AnimationHarnessPrimitivesTest.tscn|primitives-discovery
+AnimationHarnessPrimitivesTest.tscn|primitives-resources
+AnimationHarnessPrimitivesTest.tscn|primitives-state-clips
+"""
 _ADDITIONAL_MULTIPROCESS_ROWS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = ()
 
 
