@@ -42,7 +42,14 @@ class HarnessCatalogCliTests(unittest.TestCase):
         self.assertEqual(0, result)
         self.assertEqual(len(catalog.CATALOG), len(lines))
         self.assertTrue(lines[0].startswith('smoke-test\t'))
-        self.assertTrue(lines[-1].startswith('dedicated-game-journey-score-rpc-disabled\t'))
+        baseline_tail = len(catalog.MIGRATION_BASELINE_CATALOG) - 1
+        self.assertTrue(lines[baseline_tail].startswith('dedicated-game-journey-score-rpc-disabled\t'))
+        self.assertEqual(
+            ['animation-harness-primitives-test-primitives-discovery',
+             'animation-harness-primitives-test-primitives-resources',
+             'animation-harness-primitives-test-primitives-state-clips'],
+            [line.split('\t')[0] for line in lines[-3:]],
+        )
 
     def test_catalog_exactly_preserves_the_frozen_migration_fixture(self):
         catalog = load_catalog_module()
@@ -216,7 +223,13 @@ class HarnessCatalogShardTests(unittest.TestCase):
         self.assertAlmostEqual(6.0 / 4.0, weights['euro-step-anim-test'])
         self.assertEqual(1.0, weights['input-map-defensive-actions-test'])
         self.assertEqual(13.0, weights['dedicated-game-journey-healthy'])
-        self.assertAlmostEqual(347.0, sum(weights.values()))
+        self.assertAlmostEqual(347.0, sum(weights[case.id] for case in catalog.MIGRATION_BASELINE_CATALOG))
+        for case_id in ('animation-harness-primitives-test-primitives-discovery',
+                        'animation-harness-primitives-test-primitives-resources',
+                        'animation-harness-primitives-test-primitives-state-clips'):
+            self.assertEqual(catalog.DEFAULT_SINGLE_WEIGHT_SECONDS, weights[case_id])
+        self.assertEqual(1.0, catalog.DEFAULT_SINGLE_WEIGHT_SECONDS)
+        self.assertAlmostEqual(350.0, sum(weights.values()))
 
         base = catalog.CATALOG[0]
         new_single = replace(base, id='new-single', scenes=(catalog.SceneMetadata('res://tests/integration/Unknown.tscn'),))
@@ -412,7 +425,9 @@ class HarnessCatalogRunnerTests(unittest.TestCase):
         self.assertEqual(0, code)
         self.assertEqual(len(self.catalog.CATALOG), len(popen.calls))
         self.assertIn('SmokeTest.tscn', ' '.join(popen.calls[0][0]))
-        self.assertEqual('score-rpc-disabled', popen.calls[-1][0][-1])
+        baseline_tail = len(self.catalog.MIGRATION_BASELINE_CATALOG) - 1
+        self.assertEqual('score-rpc-disabled', popen.calls[baseline_tail][0][-1])
+        self.assertEqual('--harness-scenario=primitives-state-clips', popen.calls[-1][0][-1])
 
     def test_run_one_shard_executes_only_that_shard_with_a_stable_run_id(self):
         shard_number = 2
