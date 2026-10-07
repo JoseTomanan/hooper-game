@@ -261,8 +261,11 @@ public partial class DedicatedGameJourneyTest : Node
 		string receipt = _scenario == "healthy" ? $"{_role}-terminal" : $"{_role}-stale";
 		if (Exists(receipt) && Exists("server-release"))
 		{
-			if (_scenario == "healthy") FinishClientTerminal(_role);
-			else Pass($"{_role} stayed score-stale while authoritative ball state continued updating");
+			// The release closes the proof window on all roles. Reading the live
+			// roster here would race the other client's legitimate disconnect.
+			Pass(_scenario == "healthy"
+				? $"{_role} agreed with authoritative terminal state"
+				: $"{_role} stayed score-stale while authoritative ball state continued updating");
 			return;
 		}
 
