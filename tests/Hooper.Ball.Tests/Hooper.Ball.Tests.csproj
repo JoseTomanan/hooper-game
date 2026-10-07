@@ -168,6 +168,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\..\tests\integration\HarnessReport.cs" />
+    <Compile Include="..\..\tests\integration\ClipDuration.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
 
