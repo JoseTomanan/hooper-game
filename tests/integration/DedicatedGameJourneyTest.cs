@@ -79,6 +79,7 @@ public partial class DedicatedGameJourneyTest : Node
 	private int _possessionCountAtWinningScore = -1;
 	private bool _terminalProofComplete;
 	private double _terminalScoreAt;
+	private ulong? _terminalReceiptBaseline;
 
 	public override void _Ready()
 	{
@@ -260,9 +261,8 @@ public partial class DedicatedGameJourneyTest : Node
 		string receipt = _scenario == "healthy" ? $"{_role}-terminal" : $"{_role}-stale";
 		if (Exists(receipt) && Exists("server-release"))
 		{
-			Pass(_scenario == "healthy"
-				? $"{_role} agreed with authoritative terminal state"
-				: $"{_role} stayed score-stale while authoritative ball state continued updating");
+			if (_scenario == "healthy") FinishClientTerminal(_role);
+			else Pass($"{_role} stayed score-stale while authoritative ball state continued updating");
 			return;
 		}
 
@@ -598,14 +598,21 @@ public partial class DedicatedGameJourneyTest : Node
 	private void FinishClientTerminal(string name)
 	{
 		if (!_game.IsGameOver || _game.WinnerPeerId != _shooterPeerId
-			|| _game.ScoreOf(_shooterPeerId) != 5 || _game.ScoreOf(_defenderPeerId) != 0
-			|| _ball.StateMachine.HolderPeerId != 0)
+			|| _game.ScoreOf(_shooterPeerId) != 5 || _game.ScoreOf(_defenderPeerId) != 0)
 		{
 			Fail($"{name} terminal mirror disagreed: gameOver={_game.IsGameOver}, winner={_game.WinnerPeerId}, score={_game.ScoreOf(_shooterPeerId)}-{_game.ScoreOf(_defenderPeerId)}, holder={_ball.StateMachine.HolderPeerId}.");
 			return;
 		}
+		// Reliable score and unreliable ball RPCs have no shared arrival order.
+		// Wait within the journey timeout for a NEW authoritative holder-0 packet;
+		// local shot prediction alone cannot establish terminal agreement.
+		// https://docs.godotengine.org/en/4.7/tutorials/networking/high_level_multiplayer.html#channels
+		_terminalReceiptBaseline ??= _ball.SnapshotReceiptCountForHarness;
+		if (_ball.SnapshotReceiptCountForHarness <= _terminalReceiptBaseline.Value
+			|| _ball.AuthoritativeHolderForHarness != 0
+			|| _ball.StateMachine.HolderPeerId != 0) return;
 		if (!Exists($"{name}-terminal"))
-			Write($"{name}-terminal", $"winner={_game.WinnerPeerId} score={_game.ScoreOf(_shooterPeerId)}");
+			Write($"{name}-terminal", $"winner={_game.WinnerPeerId} score=5-0 rawHolder=0 newSnapshotReceipts={_ball.SnapshotReceiptCountForHarness - _terminalReceiptBaseline.Value}");
 		if (Exists("server-release"))
 			Pass($"{name} agreed with authoritative terminal state");
 	}
