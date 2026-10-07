@@ -16,6 +16,7 @@ namespace HOOPERGAME.Tests.Integration;
 /// by activating the exact expected row in the production ServerBrowser.
 /// Harness-only socket configuration is applied while Main is detached, before
 /// child _Ready callbacks bind discovery sockets (Godot Node lifecycle).
+/// https://docs.godotengine.org/en/4.7/classes/class_node.html#class-node-method-ready
 /// </summary>
 public partial class DedicatedGameJourneyTest : Node
 {
@@ -59,6 +60,13 @@ public partial class DedicatedGameJourneyTest : Node
 	private ulong _shootReleaseFrame;
 	private int _shotsRequested;
 	private bool _sawMutationInFlight;
+	private ulong _mutationReceiptBaseline;
+	private ulong? _mutationReceiptCountAtWindowEnd;
+	private int _clientScore;
+	private int _dribbleRequested;
+	private double _dribbleStoppedAt = -1.0;
+	private bool _serverWasInFlight;
+	private int _serverFlightCount;
 	private double _scoreMutationObservedAt = -1.0;
 	private bool _discoveryListeningWritten;
 	private int _discoveryBroadcastCountAtListenerReady = -1;
@@ -108,6 +116,7 @@ public partial class DedicatedGameJourneyTest : Node
 		{
 			_network.GameReady += OnClientGameReady;
 			_network.ConnectionFailed += OnClientConnectionFailed;
+			_game.ScoreChanged += OnClientScoreChanged;
 		}
 
 		AddChild(_main);
@@ -146,8 +155,21 @@ public partial class DedicatedGameJourneyTest : Node
 			return;
 		}
 
-		if (_ball.State == BallState.InFlight)
+		bool inFlight = _ball.State == BallState.InFlight;
+		if (inFlight && !_serverWasInFlight)
+		{
+			int trip = _serverScore + 1;
+			if (!Exists($"shot-request-{trip}") || !Exists($"shot-release-{trip}")
+				|| !Exists($"dribble-{trip}-ready") || Exists($"flight-{trip}"))
+			{
+				Fail($"authoritative flight {trip} lacked ordered input/dribble receipts or duplicated a trip.");
+				return;
+			}
+			_serverFlightCount++;
 			_sawFlightSinceScore = true;
+			Write($"flight-{trip}", $"trip={trip} flights={_serverFlightCount}");
+		}
+		_serverWasInFlight = inFlight;
 
 		if (!_playReadyWritten && Exists("client-a-baseline") && Exists("client-b-baseline"))
 		{
@@ -172,7 +194,10 @@ public partial class DedicatedGameJourneyTest : Node
 			Write("play-ready", $"shooter={_shooterPeerId} defender={_defenderPeerId}");
 		}
 		if (_playReadyWritten)
+		{
 			ObserveAuthoritativeControls();
+			ObserveAuthoritativeDribble();
+		}
 
 		if (_scenario == "score-rpc-disabled")
 		{
@@ -189,9 +214,19 @@ public partial class DedicatedGameJourneyTest : Node
 
 		if (_possessionCountAtWinningScore < 0) return;
 		if (!Enumerable.Range(1, 5).All(score => Exists($"shot-request-{score}"))
-			|| !Enumerable.Range(1, 4).All(score => Exists($"cycle-{score}-ready")))
+			|| !Enumerable.Range(1, 4).All(score => Exists($"cycle-{score}-ready"))
+			|| !Enumerable.Range(1, 5).All(score => Exists($"dribble-{score}-ready")
+				&& Exists($"shot-release-{score}") && Exists($"flight-{score}"))
+			|| _serverFlightCount != 5)
 		{
-			Fail("terminal state lacked all five real-input requests or four nonterminal cleared-reset receipts.");
+			Fail("terminal state lacked five ordered dribble/input/flight/peer-score receipts or four nonterminal cleared resets.");
+			return;
+		}
+		if (!_terminalProofComplete && (!_game.IsGameOver || _game.WinnerPeerId != _shooterPeerId
+			|| _game.ScoreOf(_shooterPeerId) != 5 || _game.ScoreOf(_defenderPeerId) != 0
+			|| _ball.StateMachine.HolderPeerId != 0))
+		{
+			Fail($"authoritative terminal state changed during proof window: {ScoreText()}, winner={_game.WinnerPeerId}, holder={_ball.StateMachine.HolderPeerId}.");
 			return;
 		}
 		if (_serverPossessionChanges != _possessionCountAtWinningScore)
@@ -200,7 +235,8 @@ public partial class DedicatedGameJourneyTest : Node
 			return;
 		}
 		if (_elapsed - _terminalScoreAt < MutationObservationSeconds) return;
-		if (!Exists("client-a-terminal") || !Exists("client-b-terminal")) return;
+		if (!Exists("client-a-terminal") || !Exists("client-b-terminal")
+			|| !Enumerable.Range(1, 5).All(score => Exists($"client-a-score-{score}") && Exists($"client-b-score-{score}"))) return;
 
 		// Client disconnect cleanup can legitimately change possession after the
 		// proof interval. Close the observation window before releasing clients.
@@ -252,7 +288,7 @@ public partial class DedicatedGameJourneyTest : Node
 
 		_shooterPeerId = ReadPeerId("client-a-joined");
 		_defenderPeerId = ReadPeerId("client-b-joined");
-		if (_scenario == "score-rpc-disabled" && _ball.State == BallState.InFlight)
+		if (_scenario == "score-rpc-disabled" && _ball.SawAuthoritativeFlightForHarness)
 			_sawMutationInFlight = true;
 		if (_scenario == "score-rpc-disabled" && Exists("server-scored"))
 		{
@@ -371,43 +407,74 @@ public partial class DedicatedGameJourneyTest : Node
 		int nextScore = _shotsRequested + 1;
 		bool priorCycleReady = nextScore == 1 || Exists($"cycle-{nextScore - 1}-ready");
 		if (_phase == 3 && Exists("server-controls-ready") && priorCycleReady && !_game.IsGameOver
-			&& _ball.State != BallState.InFlight
-			&& _ball.StateMachine.HolderPeerId == _myPeerId
-			&& _ball.IsCleared && own.DisplayMove().phase == MovePhase.Inactive
-			&& !_shootPressed)
+			&& _game.ScoreOf(_myPeerId) == nextScore - 1
+			&& own.DisplayMove().phase == MovePhase.Inactive && !_shootPressed)
 		{
-			_shotsRequested = nextScore;
-			Write($"shot-request-{nextScore}", $"peer={_myPeerId} scoreBefore={_game.ScoreOf(_myPeerId)}");
-			Input.ActionPress("ball_shoot");
-			_shootPressed = true;
-			_shootReleaseFrame = Engine.GetPhysicsFrames() + 1;
+			if (_dribbleRequested != nextScore)
+			{
+				_dribbleRequested = nextScore;
+				_dribbleStoppedAt = -1.0;
+				Write($"dribble-request-{nextScore}", $"peer={_myPeerId} scoreBefore={nextScore - 1}");
+				// ActionPress updates Input polling; it does not generate _Input events.
+				// https://docs.godotengine.org/en/4.7/classes/class_input.html#class-input-method-action-press
+				// Keep the request above the shipped 0.2 Input.GetVector deadzone.
+				Input.ActionPress("move_forward", 0.3f);
+			}
+			if (Exists($"dribble-{nextScore}-ready"))
+			{
+				if (_dribbleStoppedAt < 0.0)
+				{
+					Input.ActionRelease("move_forward");
+					_dribbleStoppedAt = _elapsed;
+				}
+				if (_elapsed - _dribbleStoppedAt >= 0.3)
+				{
+					_shotsRequested = nextScore;
+					Write($"shot-request-{nextScore}", $"peer={_myPeerId} scoreBefore={_game.ScoreOf(_myPeerId)}");
+					Input.ActionPress("ball_shoot");
+					_shootPressed = true;
+					_shootReleaseFrame = Engine.GetPhysicsFrames() + 1;
+				}
+			}
 		}
 		if (_shootPressed && Engine.GetPhysicsFrames() >= _shootReleaseFrame)
 		{
 			Input.ActionRelease("ball_shoot");
+			Write($"shot-release-{_shotsRequested}", $"peer={_myPeerId} frame={Engine.GetPhysicsFrames()}");
 			_shootPressed = false;
 		}
 	}
 
 	private void TickScoreMutationClient()
 	{
-		if (_game.ScoreOf(_shooterPeerId) != 0)
+		if (_scoreMutationObservedAt < 0.0)
 		{
-			Fail($"score RPC mutation leaked authoritative score {_game.ScoreOf(_shooterPeerId)} to {_role}.");
+			_scoreMutationObservedAt = _elapsed;
+			_mutationReceiptBaseline = _ball.SnapshotReceiptCountForHarness;
+		}
+		if (_game.ScoreOf(_shooterPeerId) != 0 || _game.ScoreOf(_defenderPeerId) != 0
+			|| _game.IsGameOver || _game.WinnerPeerId != 0)
+		{
+			Fail($"score RPC mutation leaked score or terminal state to {_role}: {ScoreText()}, winner={_game.WinnerPeerId}.");
 			return;
 		}
 
-		// Make-it-take-it is server-only. Seeing its cleared holder while the
-		// score stays stale proves the unrelated Ball.ReceiveState stream is alive;
-		// a disconnected client cannot satisfy this mutation control.
-		if (!_sawMutationInFlight || _ball.StateMachine.HolderPeerId != _shooterPeerId || !_ball.IsCleared) return;
-		if (_scoreMutationObservedAt < 0) _scoreMutationObservedAt = _elapsed;
+		// Observe actual RPC payload receipt after server-scored, independently of
+		// predicted/reconciled local state. A stalled stream cannot pass this control.
+		// https://docs.godotengine.org/en/4.7/tutorials/networking/high_level_multiplayer.html#remote-procedure-calls
 		if (_elapsed - _scoreMutationObservedAt < MutationObservationSeconds) return;
+		if (!_mutationReceiptCountAtWindowEnd.HasValue)
+		{
+			_mutationReceiptCountAtWindowEnd = _ball.SnapshotReceiptCountForHarness;
+			return;
+		}
+		ulong newReceipts = _ball.SnapshotReceiptCountForHarness - _mutationReceiptBaseline;
+		if (!_sawMutationInFlight || newReceipts < 2
+			|| _ball.AuthoritativeHolderForHarness != _shooterPeerId || !_ball.AuthoritativeClearedForHarness
+			|| _ball.SnapshotReceiptCountForHarness <= _mutationReceiptCountAtWindowEnd.Value) return;
 
 		if (!Exists($"{_role}-stale"))
-			Write($"{_role}-stale", $"score=0 ballHolder={_ball.StateMachine.HolderPeerId} cleared={_ball.IsCleared}");
-		if (Exists("server-release"))
-			Pass($"{_role} stayed score-stale while authoritative ball state continued updating");
+			Write($"{_role}-stale", $"score=0-0 gameOver=false winner=0 newSnapshotReceipts={newReceipts} rawBallHolder={_ball.AuthoritativeHolderForHarness} rawCleared={_ball.AuthoritativeClearedForHarness}");
 	}
 
 	private void OnServerStarted(int actualPort)
@@ -435,6 +502,32 @@ public partial class DedicatedGameJourneyTest : Node
 			Write("server-controls-ready", $"shooter={shooter.GlobalPosition} defender={defender.GlobalPosition}");
 	}
 
+	private void ObserveAuthoritativeDribble()
+	{
+		int nextScore = _serverScore + 1;
+		if (_game.IsGameOver || !Exists($"dribble-request-{nextScore}") || Exists($"dribble-{nextScore}-ready")) return;
+		if (nextScore > 1 && (!Exists($"cycle-{nextScore - 1}-ready")
+			|| !Exists($"client-a-score-{nextScore - 1}") || !Exists($"client-b-score-{nextScore - 1}"))) return;
+		if (_game.ScoreOf(_shooterPeerId) == nextScore - 1
+			&& _ball.State == BallState.Dribbling && _ball.StateMachine.HolderPeerId == _shooterPeerId
+			&& _ball.IsCleared && !_ball.HasDribbled)
+			Write($"dribble-{nextScore}-ready", $"scoreBefore={nextScore - 1} state=Dribbling holder={_shooterPeerId} cleared=true hasDribbled=false");
+	}
+
+	private void OnClientScoreChanged()
+	{
+		if (_scenario != "healthy" || !_baselineWritten || _shooterPeerId == 0) return;
+		int score = _game.ScoreOf(_shooterPeerId);
+		if (score == _clientScore) return;
+		if (score != _clientScore + 1 || _game.ScoreOf(_defenderPeerId) != 0)
+		{
+			Fail($"{_role} score mirror skipped a trip: {_clientScore} -> {score}, defender={_game.ScoreOf(_defenderPeerId)}.");
+			return;
+		}
+		_clientScore = score;
+		Write($"{_role}-score-{score}", $"score={score}-0");
+	}
+
 	private void OnServerScoreChanged()
 	{
 		if (_shooterPeerId == 0) return; // roster-only 0-0 broadcasts
@@ -445,7 +538,7 @@ public partial class DedicatedGameJourneyTest : Node
 			Fail($"authoritative score jumped {_serverScore} -> {score}; expected exactly one point per input cycle.");
 			return;
 		}
-		if (!Exists($"shot-request-{score}") || !_sawFlightSinceScore)
+		if (!Exists($"shot-request-{score}") || !Exists($"flight-{score}") || !_sawFlightSinceScore)
 		{
 			Fail($"score {score} lacked its matching real-input request and observed InFlight transition.");
 			return;

@@ -3468,6 +3468,10 @@ public partial class BallController : Node3D
 
 	// ── Client RPC: receive server state ────────────────────────────────────
 
+	// Optional harness observer: C# erases the call in game-only builds,
+	// where the integration partial implementation and its state are excluded.
+	partial void ObserveSnapshotReceiptForHarness();
+
 	/// <summary>
 	/// Called BY THE SERVER on all peers, broadcasting the authoritative ball
 	/// state. Mirrors PlayerController.ReceiveState's reasoning exactly:
@@ -3512,6 +3516,7 @@ public partial class BallController : Node3D
 		_serverHolderPeerId  = holderPeerId;
 		_serverCleared       = cleared;
 		_serverHasDribbled   = hasDribbled;
+		ObserveSnapshotReceiptForHarness();
 		_hasNewState         = true;
 	}
 
