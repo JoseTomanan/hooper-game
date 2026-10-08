@@ -100,6 +100,22 @@ and the selected pre-existing rig/locomotion/phase proofs passed 15/15.
 
 The shared catalog currently contains 279 scenarios; the command below runs
 the exhaustive local equivalent of CI's four integration shards.
+[CI run 37786859166](https://github.com/JoseTomanan/hooper-game/actions/runs/37786859166)
+passed every gate. Its integration shards passed 64/64, 63/63, 85/85, and 67/67
+cases: 279/279, including all four new/strengthened rig cases.
+
+A local sweep recorded one process-exit discrepancy in the existing
+`transit-steal-test-normal-window-unchanged`: its native log printed PASS and
+Quit(0), but the process returned 1. Three isolated repeats returned 0 and
+the same case passed CI with exit 0. No source was changed for the repeats,
+and the discrepancy was not reproduced; its cause remains unidentified.
+Evidence is in `.godot/harness-runs/issue367-full/` and
+`.godot/issue367-transit-recheck-output.log`. A direct single-case reproducer,
+avoiding the catalog selector's paired-control expansion, is:
+
+```powershell
+& $issue367Godot --headless --path . --log-file .godot/issue367-transit-single.log res://tests/integration/TransitStealTest.tscn -- --harness-scenario=normal-window-unchanged
+```
 
 All 18 temporary deliberate breaks below compiled/loaded successfully and
 produced catalog exit 1. These are assertion or bounded scenario-timeout
@@ -178,7 +194,8 @@ These remain separate from the numerical verdict for #367:
   independence criterion. Changing the hierarchy/scaling policy needs its
   own production decision and implementation.
 - **Collider-to-mesh fitting:** run `rig-scale-harness-test-capsule-contract`.
-  At height 2.0 and wingspan 2.0, its measured capsule stays radius 0.5 m and
+  In separate height-only 2.0 and wingspan-only 2.0 observations, its measured
+  capsule stays radius 0.5 m and
   height 2 m, as #170 requires. The parent wording “collider still matches the
   mesh” cannot establish a fitting tolerance or a collision-customization
   policy. Such a policy remains undecided; this test does not infer one.
