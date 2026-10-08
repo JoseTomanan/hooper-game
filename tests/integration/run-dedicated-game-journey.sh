@@ -43,14 +43,37 @@ esac
 log() { echo "[dedicated-game:$SCENARIO] $*"; }
 
 pids=()
+is_running() {
+  local state
+  kill -0 "$1" 2>/dev/null || return 1
+  state="$(ps -o stat= -p "$1" 2>/dev/null || true)"
+  [[ "$state" != Z* ]]
+}
+
 cleanup() {
-  local pid
+  local pid any_running deadline=$((SECONDS + 3))
+  # TERM gives Godot a short chance to close its sockets. KILL then guarantees
+  # that a stuck role cannot turn a bounded watchdog into an unbounded wait.
+  # Bash wait/signal semantics: https://www.gnu.org/software/bash/manual/bash.html#Signals
   for pid in "${pids[@]}"; do
-    if kill -0 "$pid" 2>/dev/null; then kill "$pid" 2>/dev/null || true; fi
+    if is_running "$pid"; then kill -TERM "$pid" 2>/dev/null || true; fi
+  done
+  while [ "$SECONDS" -lt "$deadline" ]; do
+    any_running=false
+    for pid in "${pids[@]}"; do
+      if is_running "$pid"; then any_running=true; fi
+    done
+    [ "$any_running" = false ] && break
+    sleep 0.1
+  done
+  for pid in "${pids[@]}"; do
+    if is_running "$pid"; then kill -KILL "$pid" 2>/dev/null || true; fi
   done
   for pid in "${pids[@]}"; do wait "$pid" 2>/dev/null || true; done
 }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 dump_failure() {
   log "failure artifacts preserved: logs=$LOG_ROOT coordination=$COORD_ROOT"
@@ -76,14 +99,10 @@ wait_for_file() {
 }
 
 wait_for_pid() {
-  local pid="$1" role="$2" timeout="$3" started=$SECONDS state
-  while kill -0 "$pid" 2>/dev/null; do
-    state="$(ps -o stat= -p "$pid" 2>/dev/null || true)"
-    [[ "$state" == Z* ]] && break
+  local pid="$1" role="$2" timeout="$3" started=$SECONDS
+  while is_running "$pid"; do
     if [ $((SECONDS - started)) -ge "$timeout" ]; then
       log "FAIL: $role process exceeded ${timeout}s shell watchdog"
-      kill "$pid" 2>/dev/null || true
-      wait "$pid" 2>/dev/null || true
       dump_failure
       return 124
     fi
