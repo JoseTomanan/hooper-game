@@ -124,6 +124,26 @@ public partial class RigScaleHarnessTest : Node
             pass &= CheckAllPoseScales(1f, 1f, $"wingspan {factor} identity restored");
         }
 
+        // A setter must preserve the other nonidentity factor as well. Testing
+        // each axis only against identity would miss accidental cross-resets.
+        _scaler.SetHeight(0.8f);
+        pass &= CheckAllPoseScales(0.8f, 1f, "height-first initial");
+        _scaler.SetWingspan(1.2f);
+        pass &= CheckAllPoseScales(0.8f, 1.2f, "height-first mixed setters");
+        _scaler.SetHeight(1f);
+        pass &= CheckAllPoseScales(1f, 1.2f, "height restored while wingspan retained");
+        _scaler.SetWingspan(1f);
+        pass &= CheckAllPoseScales(1f, 1f, "height-first identity restored");
+
+        _scaler.SetWingspan(1.2f);
+        pass &= CheckAllPoseScales(1f, 1.2f, "wingspan-first initial");
+        _scaler.SetHeight(0.8f);
+        pass &= CheckAllPoseScales(0.8f, 1.2f, "wingspan-first mixed setters");
+        _scaler.SetWingspan(1f);
+        pass &= CheckAllPoseScales(0.8f, 1f, "wingspan restored while height retained");
+        _scaler.SetHeight(1f);
+        pass &= CheckAllPoseScales(1f, 1f, "wingspan-first identity restored");
+
         _scaler.SetBuild(0.8f, 1.2f);
         pass &= CheckAllPoseScales(0.8f, 1.2f, "combined build");
         _scaler.SetBuild(0.8f, 1.2f);
