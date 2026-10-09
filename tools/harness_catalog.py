@@ -338,8 +338,12 @@ def _slug(value: str) -> str:
 _ADDITIONAL_SINGLE_ROWS = """AnimationHarnessPrimitivesTest.tscn|primitives-discovery
 AnimationHarnessPrimitivesTest.tscn|primitives-resources
 AnimationHarnessPrimitivesTest.tscn|primitives-state-clips
+RigScaleHarnessTest.tscn|capsule-contract
 """
-_ADDITIONAL_MULTIPROCESS_ROWS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = ()
+_ADDITIONAL_MULTIPROCESS_ROWS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
+    ("net-rig-presentation-left", "tests/integration/run-net-rig-presentation.sh godot left", "NetRigPresentationTest.tscn", (".godot/harness-logs/net-rig-presentation-left-*.log",)),
+    ("net-rig-presentation-right", "tests/integration/run-net-rig-presentation.sh godot right", "NetRigPresentationTest.tscn", (".godot/harness-logs/net-rig-presentation-right-*.log",)),
+)
 
 
 def _single_cases(rows: str) -> Iterable[HarnessCase]:
