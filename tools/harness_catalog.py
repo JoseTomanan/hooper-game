@@ -339,6 +339,8 @@ _ADDITIONAL_SINGLE_ROWS = """AnimationHarnessPrimitivesTest.tscn|primitives-disc
 AnimationHarnessPrimitivesTest.tscn|primitives-resources
 AnimationHarnessPrimitivesTest.tscn|primitives-state-clips
 RigScaleHarnessTest.tscn|capsule-contract
+ContactFixtureTest.tscn|contact
+ContactFixtureTest.tscn|no-contact
 """
 _ADDITIONAL_MULTIPROCESS_ROWS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
     ("net-rig-presentation-left", "tests/integration/run-net-rig-presentation.sh godot left", "NetRigPresentationTest.tscn", (".godot/harness-logs/net-rig-presentation-left-*.log",)),
@@ -390,6 +392,7 @@ def _multiprocess_cases(rows: Iterable[tuple[str, str, str, tuple[str, ...]]]) -
 
 
 _CONTROL_COMPONENTS = (
+    ("contact-fixture-test-contact", "contact-fixture-test-no-contact"),
     (
         "held-steal-test-held-vulnerable",
         "held-steal-test-held-immune-outside-window",

@@ -49,6 +49,8 @@ class HarnessCatalogCliTests(unittest.TestCase):
              'animation-harness-primitives-test-primitives-resources',
              'animation-harness-primitives-test-primitives-state-clips',
              'rig-scale-harness-test-capsule-contract',
+             'contact-fixture-test-contact',
+             'contact-fixture-test-no-contact',
              'net-rig-presentation-left',
              'net-rig-presentation-right'],
             [line.split('\t')[0] for line in lines[baseline_tail + 1:]],
@@ -94,6 +96,7 @@ class HarnessCatalogCliTests(unittest.TestCase):
     def test_source_declared_cross_invocation_controls_are_connected(self):
         catalog = load_catalog_module()
         components = (
+            ('contact-fixture-test-contact', 'contact-fixture-test-no-contact'),
             ('held-steal-test-held-vulnerable', 'held-steal-test-held-immune-outside-window', 'held-steal-test-pumpfake-now-exposed'),
             ('held-steal-test-held-static-vulnerable', 'held-steal-test-held-static-immune-out-of-reach', 'held-steal-test-held-static-immune-shielded', 'held-steal-test-held-static-immune-wrong-side'),
             ('transit-steal-test-transit-steal', 'transit-steal-test-out-of-reach-recovery', 'transit-steal-test-normal-window-unchanged', 'transit-steal-test-transit-steal-behind-the-back', 'transit-steal-test-out-of-reach-recovery-behind-the-back', 'transit-steal-test-transit-steal-between-the-legs', 'transit-steal-test-out-of-reach-recovery-between-the-legs', 'transit-steal-test-transit-steal-spin', 'transit-steal-test-out-of-reach-recovery-spin'),
@@ -230,12 +233,14 @@ class HarnessCatalogShardTests(unittest.TestCase):
         for case_id in ('animation-harness-primitives-test-primitives-discovery',
                         'animation-harness-primitives-test-primitives-resources',
                         'animation-harness-primitives-test-primitives-state-clips',
-                        'rig-scale-harness-test-capsule-contract'):
+                        'rig-scale-harness-test-capsule-contract',
+                        'contact-fixture-test-contact',
+                        'contact-fixture-test-no-contact'):
             self.assertEqual(catalog.DEFAULT_SINGLE_WEIGHT_SECONDS, weights[case_id])
         for case_id in ('net-rig-presentation-left', 'net-rig-presentation-right'):
             self.assertEqual(catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS, weights[case_id])
         self.assertEqual(1.0, catalog.DEFAULT_SINGLE_WEIGHT_SECONDS)
-        self.assertAlmostEqual(367.0, sum(weights.values()))
+        self.assertAlmostEqual(369.0, sum(weights.values()))
 
         base = catalog.CATALOG[0]
         new_single = replace(base, id='new-single', scenes=(catalog.SceneMetadata('res://tests/integration/Unknown.tscn'),))
@@ -435,8 +440,10 @@ class HarnessCatalogRunnerTests(unittest.TestCase):
         self.assertEqual('score-rpc-disabled', popen.calls[baseline_tail][0][-1])
         self.assertEqual('--harness-scenario=primitives-state-clips', popen.calls[baseline_tail + 3][0][-1])
         self.assertEqual('--harness-scenario=capsule-contract', popen.calls[baseline_tail + 4][0][-1])
-        self.assertEqual('left', popen.calls[baseline_tail + 5][0][-1])
-        self.assertEqual('right', popen.calls[baseline_tail + 6][0][-1])
+        self.assertEqual('--harness-scenario=contact', popen.calls[baseline_tail + 5][0][-1])
+        self.assertEqual('--harness-scenario=no-contact', popen.calls[baseline_tail + 6][0][-1])
+        self.assertEqual('left', popen.calls[baseline_tail + 7][0][-1])
+        self.assertEqual('right', popen.calls[baseline_tail + 8][0][-1])
 
     def test_run_one_shard_executes_only_that_shard_with_a_stable_run_id(self):
         shard_number = 2
