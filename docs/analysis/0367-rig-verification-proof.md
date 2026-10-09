@@ -4,7 +4,7 @@
 - Verification parent: [#178](https://github.com/JoseTomanan/hooper-game/issues/178)
 - Build contract: [#170](https://github.com/JoseTomanan/hooper-game/issues/170)
 - Related decisions: ADR-0011, ADR-0012, ADR-0015, ADR-0016, ADR-0021
-- Date: 2026-10-08
+- Date: 2026-10-09
 - Baseline: `fa5dd48`
 
 This maps the parent checklist and its later UID comments to numerical evidence
@@ -74,7 +74,7 @@ executes exhaustively. Existing animation proofs are reused rather than copied.
 | 3. Startup/Active/Recovery still map visibly on the new mesh | Existing per-move scenarios drive real player AnimationTrees; for example `jumpshot-anim-test-jumpshot-phases`, `crossover-anim-test-crossover-left-origin` / `crossover-anim-test-crossover-right-origin`, `behind-the-back-anim-test-btb-left-origin` / `behind-the-back-anim-test-btb-right-origin`, and `steal-anim-test-steal-left-reach` / `steal-anim-test-steal-right-reach`. `move-kind-anim-test-clipped-reaches-permove` and `move-kind-anim-test-unclipped-stays-generic` cover the intentional resolver fallback. New remote scenarios observe same-tick broadcast phase/move ID and actual tree node in order for both steal reach sides, followed by Locomotion. | State/clip entry does not prove fair telegraphs, readable arcs, or animation taste. Other moves retain their existing local proofs; the new remote test does not claim every move was replayed over the network. |
 | 4a. Independent height/wingspan and unrelated chains | Strengthened `rig-scale-harness-test-independent-scaling` checks all 65 real bones at default, height-only and wingspan-only sample factors, repeated setters, sequential mixed setters in both orders, combined build, and identity restoration. Existing xUnit `RigScaleTests` retains the independent classifier-name cases. | This is immediate local write-set independence. Spine-to-arm world-space inheritance and animation overwrite remain explicit limitations. |
 | 4b. Collider still matches / no unsupported round-collider scale | New `rig-scale-harness-test-capsule-contract` checks the documented fixed capsule across height, wingspan, and combined setters, including ancestor scale. | The fixed capsule intentionally does not follow changed cosmetic proportions. A numerical mesh-fitting rule or gameplay collision customization has not been decided. |
-| 5. Dual-instance remote proportions/animation state | New `net-rig-presentation-left` / `net-rig-presentation-right` use production `HostGame` / `JoinGame` and the real spawned Player scene. Both default factors, named rest/pose scales, and authored visual ancestor scales must agree. Client phase/tree observations require a true remote role with its local move machine Inactive. Existing `net-defensive-telegraph-telegraph`, `net-defensive-telegraph-control`, and `net-behindtheback-sweep` remain transport/display proofs with minimal player fixtures. | The new proof is authored default parity. `PlayerRigScaler` has no production runtime factor replication: server-only `SetBuild` is not networked customization. These tests add no such feature. |
+| 5. Dual-instance remote proportions/animation state | New `net-rig-presentation-left` / `net-rig-presentation-right` use production `HostGame` / `JoinGame` and the real spawned Player scene. Both default factors, named rest/pose scales, and authored visual ancestor scales must agree. Client phase/tree observations require a true remote role with its local move machine Inactive. Existing `net-defensive-telegraph-telegraph`, `net-defensive-telegraph-control`, and `net-behindtheback-sweep` remain transport/display proofs with minimal player fixtures. | The new proof is authored default parity. `PlayerRigScaler` has no production runtime factor replication: server-only `SetBuild` is not networked customization. These tests add no such feature. Short-phase observation under client scheduling/packet delays remains an explicit gap, reported below. |
 | Later comment: Y Bot / RigScaler UID backfill (PR #268) | `assets/Y Bot.fbx.import` is tracked, but the two corresponding `Player.tscn` ext_resources still resolve by path without `uid=`; `PlayerRigScaler.cs.uid` is ignored/untracked. Scene and rig loading prove today's path resolution only. | UID portability/backfill remains open on #178. No scene re-save or sidecar policy change is included here. |
 | Later comment: idle/run BoneMap UID backfill (PR #270) | Both `assets/retarget/idle_bonemap.tres` and `run_bonemap.tres` reference `MixamoProfile.tres` by path without `uid=`. Existing retarget/clip binding proofs establish current import results. | Import-time UID portability remains open on #178; runtime track binding is not proof of portability after resource moves. |
 
@@ -89,6 +89,7 @@ documentation and the pinned C# compile/runtime verify the engine API decisions:
 - [Capsule dimensions](https://docs.godotengine.org/en/4.7/classes/class_capsuleshape3d.html#class-capsuleshape3d-property-height) and [CollisionShape3D scaling/disabled state](https://docs.godotengine.org/en/4.7/classes/class_collisionshape3d.html).
 - [Actual state-machine current node](https://docs.godotengine.org/en/4.7/classes/class_animationnodestatemachineplayback.html#class-animationnodestatemachineplayback-method-get-current-node), rather than the last requested state.
 - [Multiplayer signals and RPCs](https://docs.godotengine.org/en/4.7/tutorials/networking/high_level_multiplayer.html#remote-procedure-calls), [sender identity](https://docs.godotengine.org/en/4.7/classes/class_multiplayerapi.html#class-multiplayerapi-method-get-remote-sender-id), and [Variant-compatible C# arrays](https://docs.godotengine.org/en/4.7/tutorials/scripting/c_sharp/c_sharp_variant.html#variant-compatible-types).
+- [Transfer modes](https://docs.godotengine.org/en/4.7/tutorials/networking/high_level_multiplayer.html#channels) and [physics callback ordering](https://docs.godotengine.org/en/4.7/classes/class_node.html#class-node-property-process-physics-priority) bound remote observation: unreliable ordered updates can discard late packets, and equal-priority nodes process in tree order.
 
 ## Validation and deliberate breaks
 
@@ -104,7 +105,13 @@ the exhaustive local equivalent of CI's four integration shards.
 passed every gate. Its integration shards passed 64/64, 63/63, 85/85, and 67/67
 cases: 279/279, including all four new/strengthened rig cases.
 
-A local sweep recorded one process-exit discrepancy in the existing
+The completed local sweep passed 277/279 cases and returned exit 1. Its two
+failures are reported separately here; isolated repeats do not replace that
+original result. Both full CI runs, including
+[run 37788086763](https://github.com/JoseTomanan/hooper-game/actions/runs/37788086763),
+passed all 279 integration cases and all seven gates.
+
+The first local failure was a process-exit discrepancy in the existing
 `transit-steal-test-normal-window-unchanged`: its native log printed PASS and
 Quit(0), but the process returned 1. Three isolated repeats returned 0 and
 the same case passed CI with exit 0. No source was changed for the repeats,
@@ -115,6 +122,35 @@ avoiding the catalog selector's paired-control expansion, is:
 
 ```powershell
 & $issue367Godot --headless --path . --log-file .godot/issue367-transit-single.log res://tests/integration/TransitStealTest.tscn -- --harness-scenario=normal-window-unchanged
+```
+
+The second local failure was `net-rig-presentation-right`: the client loaded
+the default rig and acknowledged readiness, but never observed a matching
+Startup/StealStartupRight pair. It timed out at stage 0 with its final display
+Inactive/Locomotion. The server log confirms the right steal began. Three
+unmodified, isolated left/right pairs subsequently passed (6/6), each with
+all four ordered phase/node observations and both process exits 0. Evidence:
+`.godot/issue367-remote-repro-results.json` and the original native logs
+`.godot/harness-logs/net-rig-presentation-right-1735-{client,server}.log`.
+The original failure's cause remains unidentified; a successful repeat does
+not establish reliable observation under scheduling or packet delays.
+
+A separate controlled probe inserted one 200 ms client stall immediately
+after sending readiness. The first subsequent observation was
+Active/Locomotion, followed by Active/StealActiveRight,
+Recovery/StealRecoveryRight, and Inactive/Locomotion. Startup was never
+observed and the strict scenario returned 1 at stage 0. This demonstrates
+scheduling exposure, not the cause of the original failure. The exact
+temporary patch and trace are in `.godot/issue367-stall200/`; its source was
+restored byte-for-byte (matching SHA-256), all tagged instrumentation was
+removed, and the restored harness build passed.
+
+The remote fixture deliberately retains its strict one-shot verdict. It does
+not aggregate phases across moves, retry a failed arc, or change production
+transport/frame data. The exact isolated reproducer is:
+
+```powershell
+python tools/harness_catalog.py run --id net-rig-presentation-right --run-id issue367-remote-single --godot $issue367Godot --bash 'C:/Program Files/Git/bin/bash.exe'
 ```
 
 All 18 temporary deliberate breaks below compiled/loaded successfully and
@@ -206,6 +242,17 @@ These remain separate from the numerical verdict for #367:
   shipped default 1.0/1.0 on both peers, without adding an observation RPC
   that changes either peer's rig. Networked customization requires separate
   scope.
+- **Remote short-phase observation:** the local full-sweep failure and the
+  isolated reproducer above expose an unresolved observation gap. A default
+  steal has only eight Startup ticks. The production display retains the
+  latest unreliable ordered snapshot, while this parent harness observes
+  before its production player/tree children at equal physics priority.
+  A green arc establishes the observed ordering for that run; it does not
+  guarantee every short phase remains observable through client stalls or
+  packet loss. Neither production transport nor test scheduling is changed
+  here. Investigating display guarantees or changing the observer requires
+  separate evidence; no production presentation defect is inferred solely
+  from the stage-0 timeout.
 
 ## Human verification (no feel acceptance)
 
