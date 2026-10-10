@@ -178,7 +178,9 @@ public class ContactMathTests
         var other = Body(new(.5f, 4, 0), peer: 2) with { CapsuleCenterHeight = 0 };
         Assert.Equal(default(ContactResponse), ContactMath.Resolve(self, other, 0));
         Assert.Equal(default(ContactResponse), ContactMath.Resolve(other, self, 0));
-    }    [Fact]
+    }
+
+    [Fact]
     public void HugeDiagonalCenterCrossingPreservesRawDeterminantAndSwapSymmetry()
     {
         var self = Body(new(-4.564524167960986e16f, 0, -2.394750498688205e16f), new(9.129048335921972e16f, 0, 4.78950099737641e16f));
@@ -189,4 +191,5 @@ public class ContactMathTests
         var swapped = ContactMath.Resolve(other, self, 1);
         Assert.Equal(response.Self, swapped.Opponent);
         Assert.Equal(response.Opponent, swapped.Self);
-    }}
+    }
+}
