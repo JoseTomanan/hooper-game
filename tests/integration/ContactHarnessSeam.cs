@@ -14,6 +14,8 @@ namespace HOOPERGAME.Tests.Integration
         internal PlayerController First { get; private set; }
         internal PlayerController Second { get; private set; }
         internal int StepCount { get; private set; }
+        internal string FirstName { get; set; } = "1";
+        internal string SecondName { get; set; } = "2";
         internal double FixedDelta => 1.0 / Engine.PhysicsTicksPerSecond;
         private ulong _lastPhysicsFrame = ulong.MaxValue;
 
@@ -36,8 +38,8 @@ namespace HOOPERGAME.Tests.Integration
             // Source: https://docs.godotengine.org/en/4.7/classes/class_packedscene.html#class-packedscene-method-instantiate
             var scene = ResourceLoader.Load<PackedScene>("res://scenes/Player.tscn")
                 ?? throw new InvalidOperationException("Player.tscn could not be loaded");
-            First = AddPlayer(scene, players, "1", new Vector3(0, 0, 10));
-            Second = AddPlayer(scene, players, "2", Vector3.Zero);
+            First = AddPlayer(scene, players, FirstName, new Vector3(0, 0, 10));
+            Second = AddPlayer(scene, players, SecondName, Vector3.Zero);
         }
 
         private static PlayerController AddPlayer(PackedScene scene, Node parent, string name, Vector3 position)
