@@ -51,6 +51,13 @@ class HarnessCatalogCliTests(unittest.TestCase):
              'rig-scale-harness-test-capsule-contract',
              'contact-fixture-test-contact',
              'contact-fixture-test-no-contact',
+             'contact-kernel-test-set-drive',
+             'contact-kernel-test-unset-drive',
+             'contact-kernel-test-disabled-kernel',
+             'contact-kernel-test-overlap',
+             'contact-kernel-test-coincident',
+             'contact-kernel-test-crossing',
+             'contact-kernel-test-dimensions',
              'net-rig-presentation-left',
              'net-rig-presentation-right']
             + [f'committed-replay-{move}-{contact}-{delay}ms'
@@ -100,6 +107,7 @@ class HarnessCatalogCliTests(unittest.TestCase):
     def test_source_declared_cross_invocation_controls_are_connected(self):
         catalog = load_catalog_module()
         components = (
+            ('contact-kernel-test-set-drive', 'contact-kernel-test-unset-drive', 'contact-kernel-test-disabled-kernel'),
             ('contact-fixture-test-contact', 'contact-fixture-test-no-contact'),
             ('held-steal-test-held-vulnerable', 'held-steal-test-held-immune-outside-window', 'held-steal-test-pumpfake-now-exposed'),
             ('held-steal-test-held-static-vulnerable', 'held-steal-test-held-static-immune-out-of-reach', 'held-steal-test-held-static-immune-shielded', 'held-steal-test-held-static-immune-wrong-side'),
@@ -249,7 +257,9 @@ class HarnessCatalogShardTests(unittest.TestCase):
                 for delay in (0, 30):
                     self.assertEqual(catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS,
                                      weights[f'committed-replay-{move}-{contact}-{delay}ms'])
-        self.assertAlmostEqual(465.0, sum(weights.values()))
+        for scenario in ('set-drive', 'unset-drive', 'disabled-kernel', 'overlap', 'coincident', 'crossing', 'dimensions'):
+            self.assertEqual(catalog.DEFAULT_SINGLE_WEIGHT_SECONDS, weights[f'contact-kernel-test-{scenario}'])
+        self.assertAlmostEqual(472.0, sum(weights.values()))
 
         base = catalog.CATALOG[0]
         new_single = replace(base, id='new-single', scenes=(catalog.SceneMetadata('res://tests/integration/Unknown.tscn'),))
@@ -451,8 +461,10 @@ class HarnessCatalogRunnerTests(unittest.TestCase):
         self.assertEqual('--harness-scenario=capsule-contract', popen.calls[baseline_tail + 4][0][-1])
         self.assertEqual('--harness-scenario=contact', popen.calls[baseline_tail + 5][0][-1])
         self.assertEqual('--harness-scenario=no-contact', popen.calls[baseline_tail + 6][0][-1])
-        self.assertEqual('left', popen.calls[baseline_tail + 7][0][-1])
-        self.assertEqual('right', popen.calls[baseline_tail + 8][0][-1])
+        self.assertEqual('--harness-scenario=set-drive', popen.calls[baseline_tail + 7][0][-1])
+        self.assertEqual('--harness-scenario=dimensions', popen.calls[baseline_tail + 13][0][-1])
+        self.assertEqual('left', popen.calls[baseline_tail + 14][0][-1])
+        self.assertEqual('right', popen.calls[baseline_tail + 15][0][-1])
 
     def test_run_one_shard_executes_only_that_shard_with_a_stable_run_id(self):
         shard_number = 2
