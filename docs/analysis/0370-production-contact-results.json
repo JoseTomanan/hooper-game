@@ -1,0 +1,505 @@
+{
+  "issue": 370,
+  "measurement_date": "2026-10-10",
+  "runtime": {
+    "godot": "4.7.1 .NET",
+    "dotnet_sdk": "8.0.421",
+    "physics_hz": 60
+  },
+  "game_build": {
+    "passed": true,
+    "include_integration_harness": [
+      false,
+      true
+    ],
+    "warnings": 0,
+    "errors": 0
+  },
+  "unit_tests": {
+    "passed": 1173,
+    "skipped": 5,
+    "failed": 0
+  },
+  "repository_contracts": {
+    "passed": 61,
+    "failed": 0,
+    "environment": "Git Bash prepended to PATH; unrestricted temporary directory access"
+  },
+  "local": {
+    "source_artifact": ".godot/production-contact/local/20261010T130005Z/summary.json",
+    "scenarios": [
+      {
+        "scenario": "set-drive",
+        "exit_code": 0,
+        "passed": true,
+        "markers": [
+          "[Harness] PASS production-contact/set-drive: ticks=30 separation=1.000001"
+        ]
+      },
+      {
+        "scenario": "unset-drive",
+        "exit_code": 0,
+        "passed": true,
+        "markers": [
+          "[Harness] PASS production-contact/unset-drive: ticks=30 separation=1.000001"
+        ]
+      },
+      {
+        "scenario": "disabled-contact",
+        "exit_code": 0,
+        "passed": true,
+        "markers": [
+          "[Harness] PASS production-contact/disabled-contact: ticks=30 separation=0.000001"
+        ]
+      },
+      {
+        "scenario": "overlap",
+        "exit_code": 0,
+        "passed": true,
+        "markers": [
+          "[Harness] PASS production-contact/overlap: first-tick correction/sweep"
+        ]
+      },
+      {
+        "scenario": "coincident",
+        "exit_code": 0,
+        "passed": true,
+        "markers": [
+          "[Harness] PASS production-contact/coincident: first-tick correction/sweep"
+        ]
+      },
+      {
+        "scenario": "crossing",
+        "exit_code": 0,
+        "passed": true,
+        "markers": [
+          "[Harness] PASS production-contact/crossing: first-tick correction/sweep"
+        ]
+      },
+      {
+        "scenario": "floor",
+        "exit_code": 0,
+        "passed": true,
+        "markers": [
+          "[Harness] PASS production-contact/floor: ticks=30 separation=1.000001"
+        ]
+      },
+      {
+        "scenario": "wall",
+        "exit_code": 0,
+        "passed": true,
+        "markers": [
+          "[Harness] PASS production-contact/wall: ticks=30 separation=1.000000"
+        ]
+      },
+      {
+        "scenario": "corner",
+        "exit_code": 0,
+        "passed": true,
+        "markers": [
+          "[Harness] PASS production-contact/corner: ticks=30 separation=1.000000"
+        ]
+      },
+      {
+        "scenario": "startup",
+        "exit_code": 0,
+        "passed": true,
+        "markers": [
+          "[Harness] PASS production-contact/startup: committed phase crossing and independent unobstructed control"
+        ]
+      },
+      {
+        "scenario": "active",
+        "exit_code": 0,
+        "passed": true,
+        "markers": [
+          "[Harness] PASS production-contact/active: committed phase crossing and independent unobstructed control"
+        ]
+      },
+      {
+        "scenario": "recovery",
+        "exit_code": 0,
+        "passed": true,
+        "markers": [
+          "[Harness] PASS production-contact/recovery: committed phase crossing and independent unobstructed control"
+        ]
+      },
+      {
+        "scenario": "timeline",
+        "exit_code": 0,
+        "passed": true,
+        "markers": [
+          "[Harness] PASS production-contact/timeline: all 16 shipped moves retain natural phase durations"
+        ]
+      },
+      {
+        "scenario": "box-out",
+        "exit_code": 0,
+        "passed": true,
+        "markers": [
+          "[Harness] PASS production-contact/box-out: ticks=30 separation=1.000001"
+        ]
+      },
+      {
+        "scenario": "pickup-tie",
+        "exit_code": 0,
+        "passed": true,
+        "markers": [
+          "[Harness] PASS production-contact/pickup-tie: real pickup exact-distance tie stable under reversed enumeration"
+        ]
+      },
+      {
+        "scenario": "solver-mask",
+        "exit_code": 0,
+        "passed": true,
+        "markers": [
+          "[Harness] PASS production-contact/solver-mask: shipped masks leave absent-kernel probe unobstructed"
+        ]
+      },
+      {
+        "scenario": "immutable-crossing",
+        "exit_code": 0,
+        "passed": true,
+        "markers": [
+          "[Harness] PASS production-contact/immutable-crossing: immutable sample swept crossing and free control"
+        ]
+      },
+      {
+        "scenario": "reconcile-overlap",
+        "exit_code": 0,
+        "passed": true,
+        "markers": [
+          "[Harness] PASS production-contact/reconcile-overlap: actual empty-buffer reconcile repairs raw overlap; unavailable-sample control stays at authoritative snap"
+        ]
+      }
+    ]
+  },
+  "mutations": {
+    "source_artifact": ".godot/production-contact/mutations/20261010T130101Z-0d703f56/summary.json",
+    "run_id": "20261010T130101Z-0d703f56",
+    "results": [
+      {
+        "mutation": "disabled-contact",
+        "exit_code": 1,
+        "assertion": "production contact separation failed",
+        "killed": true
+      },
+      {
+        "mutation": "display-state",
+        "exit_code": 1,
+        "assertion": "actual movement used display state instead of raw broadcast",
+        "killed": true
+      },
+      {
+        "mutation": "skipped-active",
+        "exit_code": 1,
+        "assertion": "committed sweep emerged behind set body",
+        "killed": true
+      },
+      {
+        "mutation": "solver-contact",
+        "exit_code": 1,
+        "assertion": "player solver mask bypass failed",
+        "killed": true
+      }
+    ],
+    "restored": true
+  },
+  "network_results": "0370-production-contact-network-results.json",
+  "full_catalog": {
+    "passed": 330,
+    "run": 330,
+    "exit_code": 0,
+    "source_artifact": ".godot/production-contact/full-catalog-effective-result.json",
+    "passing_cases_by_run": {
+      "370-final": 291,
+      "370-final-network": 27,
+      "370-final-replay": 12
+    },
+    "initial_environment_failures": [
+      {
+        "status": "FAIL",
+        "case_id": "net-handshake",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "net-state-sync",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "net-node-replication",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "dedicated-roster",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "dedicated-discovery-join",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "net-behindtheback-sweep",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "net-defensive-telegraph-telegraph",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "net-defensive-telegraph-control",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "net-exitvector-rpc-poisoned",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "net-exitvector-rpc-steady",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "dedicated-game-journey-healthy",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "dedicated-game-journey-discovery-disabled",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "dedicated-game-journey-score-rpc-disabled",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "net-rig-presentation-left",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "net-rig-presentation-right",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "committed-replay-neutral-contact-0ms",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "committed-replay-neutral-contact-30ms",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "committed-replay-neutral-no-contact-0ms",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "committed-replay-neutral-no-contact-30ms",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "committed-replay-crossover-contact-0ms",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "committed-replay-crossover-contact-30ms",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "committed-replay-crossover-no-contact-0ms",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "committed-replay-crossover-no-contact-30ms",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "committed-replay-gather-contact-0ms",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "committed-replay-gather-contact-30ms",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "committed-replay-gather-no-contact-0ms",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "committed-replay-gather-no-contact-30ms",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "production-contact-neutral-contact-0ms",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "production-contact-neutral-contact-30ms",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "production-contact-neutral-no-contact-0ms",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "production-contact-neutral-no-contact-30ms",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "production-contact-crossover-contact-0ms",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "production-contact-crossover-contact-30ms",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "production-contact-crossover-no-contact-0ms",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "production-contact-crossover-no-contact-30ms",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "production-contact-gather-contact-0ms",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "production-contact-gather-contact-30ms",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "production-contact-gather-no-contact-0ms",
+        "exit_code": 3221225794
+      },
+      {
+        "status": "FAIL",
+        "case_id": "production-contact-gather-no-contact-30ms",
+        "exit_code": 3221225794
+      }
+    ],
+    "intermediate_network_failures": [
+      {
+        "status": "FAIL",
+        "case_id": "committed-replay-neutral-contact-0ms",
+        "exit_code": 1
+      },
+      {
+        "status": "FAIL",
+        "case_id": "committed-replay-neutral-contact-30ms",
+        "exit_code": 1
+      },
+      {
+        "status": "FAIL",
+        "case_id": "committed-replay-neutral-no-contact-0ms",
+        "exit_code": 1
+      },
+      {
+        "status": "FAIL",
+        "case_id": "committed-replay-neutral-no-contact-30ms",
+        "exit_code": 1
+      },
+      {
+        "status": "FAIL",
+        "case_id": "committed-replay-crossover-contact-0ms",
+        "exit_code": 1
+      },
+      {
+        "status": "FAIL",
+        "case_id": "committed-replay-crossover-contact-30ms",
+        "exit_code": 1
+      },
+      {
+        "status": "FAIL",
+        "case_id": "committed-replay-crossover-no-contact-0ms",
+        "exit_code": 1
+      },
+      {
+        "status": "FAIL",
+        "case_id": "committed-replay-crossover-no-contact-30ms",
+        "exit_code": 1
+      },
+      {
+        "status": "FAIL",
+        "case_id": "committed-replay-gather-contact-0ms",
+        "exit_code": 1
+      },
+      {
+        "status": "FAIL",
+        "case_id": "committed-replay-gather-contact-30ms",
+        "exit_code": 1
+      },
+      {
+        "status": "FAIL",
+        "case_id": "committed-replay-gather-no-contact-0ms",
+        "exit_code": 1
+      },
+      {
+        "status": "FAIL",
+        "case_id": "committed-replay-gather-no-contact-30ms",
+        "exit_code": 1
+      }
+    ],
+    "source_runs": [
+      {
+        "source_result": ".godot\\production-contact\\full-catalog-result.json",
+        "run_id": "370-final",
+        "exit_code": 1,
+        "passed": 291,
+        "run": 330,
+        "log": ".godot\\production-contact\\full-catalog.log"
+      },
+      {
+        "source_result": ".godot\\production-contact\\full-catalog-network-result.json",
+        "run_id": "370-final-network",
+        "exit_code": 1,
+        "passed": 27,
+        "run": 39,
+        "log": ".godot\\production-contact\\full-catalog-network.log"
+      },
+      {
+        "source_result": ".godot\\production-contact\\full-catalog-replay-result.json",
+        "run_id": "370-final-replay",
+        "exit_code": 0,
+        "passed": 12,
+        "run": 12,
+        "log": ".godot\\production-contact\\full-catalog-replay.log"
+      }
+    ]
+  }
+}
