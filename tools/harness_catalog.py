@@ -341,6 +341,13 @@ AnimationHarnessPrimitivesTest.tscn|primitives-state-clips
 RigScaleHarnessTest.tscn|capsule-contract
 ContactFixtureTest.tscn|contact
 ContactFixtureTest.tscn|no-contact
+ContactKernelTest.tscn|set-drive
+ContactKernelTest.tscn|unset-drive
+ContactKernelTest.tscn|disabled-kernel
+ContactKernelTest.tscn|overlap
+ContactKernelTest.tscn|coincident
+ContactKernelTest.tscn|crossing
+ContactKernelTest.tscn|dimensions
 """
 _ADDITIONAL_MULTIPROCESS_ROWS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
     ("net-rig-presentation-left", "tests/integration/run-net-rig-presentation.sh godot left", "NetRigPresentationTest.tscn", (".godot/harness-logs/net-rig-presentation-left-*.log",)),
@@ -399,6 +406,7 @@ def _multiprocess_cases(rows: Iterable[tuple[str, str, str, tuple[str, ...]]]) -
 
 
 _CONTROL_COMPONENTS = (
+    ("contact-kernel-test-set-drive", "contact-kernel-test-unset-drive", "contact-kernel-test-disabled-kernel"),
     ("contact-fixture-test-contact", "contact-fixture-test-no-contact"),
     (
         "held-steal-test-held-vulnerable",
