@@ -345,6 +345,13 @@ ContactFixtureTest.tscn|no-contact
 _ADDITIONAL_MULTIPROCESS_ROWS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
     ("net-rig-presentation-left", "tests/integration/run-net-rig-presentation.sh godot left", "NetRigPresentationTest.tscn", (".godot/harness-logs/net-rig-presentation-left-*.log",)),
     ("net-rig-presentation-right", "tests/integration/run-net-rig-presentation.sh godot right", "NetRigPresentationTest.tscn", (".godot/harness-logs/net-rig-presentation-right-*.log",)),
+) + tuple(
+    (f"committed-replay-{move}-{contact}-{delay}ms",
+     f"tests/integration/run-net-committed-replay.sh godot {move} {contact} {delay}",
+     "CommittedReplayTest.tscn", (f".godot/committed-replay/catalog-{move}-{contact}-{delay}-*/**/*",))
+    for move in ("neutral", "crossover", "gather")
+    for contact in ("contact", "no-contact")
+    for delay in (0, 30)
 )
 
 
@@ -474,6 +481,11 @@ _CONTROL_COMPONENTS = (
     ("net-defensive-telegraph-telegraph", "net-defensive-telegraph-control"),
     ("net-exitvector-rpc-poisoned", "net-exitvector-rpc-steady"),
     ("dedicated-game-journey-healthy", "dedicated-game-journey-discovery-disabled", "dedicated-game-journey-score-rpc-disabled"),
+) + tuple(
+    tuple(f"committed-replay-{move}-{contact}-{delay}ms"
+          for move in ("neutral", "crossover", "gather")
+          for contact in ("contact", "no-contact"))
+    for delay in (0, 30)
 )
 
 

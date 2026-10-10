@@ -52,7 +52,11 @@ class HarnessCatalogCliTests(unittest.TestCase):
              'contact-fixture-test-contact',
              'contact-fixture-test-no-contact',
              'net-rig-presentation-left',
-             'net-rig-presentation-right'],
+             'net-rig-presentation-right']
+            + [f'committed-replay-{move}-{contact}-{delay}ms'
+               for move in ('neutral', 'crossover', 'gather')
+               for contact in ('contact', 'no-contact')
+               for delay in (0, 30)],
             [line.split('\t')[0] for line in lines[baseline_tail + 1:]],
         )
 
@@ -240,7 +244,12 @@ class HarnessCatalogShardTests(unittest.TestCase):
         for case_id in ('net-rig-presentation-left', 'net-rig-presentation-right'):
             self.assertEqual(catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS, weights[case_id])
         self.assertEqual(1.0, catalog.DEFAULT_SINGLE_WEIGHT_SECONDS)
-        self.assertAlmostEqual(369.0, sum(weights.values()))
+        for move in ('neutral', 'crossover', 'gather'):
+            for contact in ('contact', 'no-contact'):
+                for delay in (0, 30):
+                    self.assertEqual(catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS,
+                                     weights[f'committed-replay-{move}-{contact}-{delay}ms'])
+        self.assertAlmostEqual(465.0, sum(weights.values()))
 
         base = catalog.CATALOG[0]
         new_single = replace(base, id='new-single', scenes=(catalog.SceneMetadata('res://tests/integration/Unknown.tscn'),))
