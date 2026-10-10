@@ -68,7 +68,15 @@ def trial(args, move, contact, delay, index):
                 raise RuntimeError("trial exceeded 30-second deadline")
             readable, _, _ = select.select([front, upstream], [], [], 0.001)
             for sock in readable:
-                payload, address = sock.recvfrom(65535)
+                try:
+                    payload, address = sock.recvfrom(65535)
+                except ConnectionResetError:
+                    # Windows surfaces UDP port-unreachable after a peer shuts down.
+                    # Keep peer exit/PASS and bounded-deadline checks as the verdict;
+                    # an early failed peer still fails those checks.
+                    # Source: https://docs.python.org/3.14/library/exceptions.html#ConnectionResetError
+                    # UDP meaning: https://learn.microsoft.com/en-us/windows/win32/api/winsock2/nf-winsock2-recvfrom
+                    continue
                 if sock is front:
                     client_address = address
                     target_socket, target_address, direction = upstream, server_address, "client_to_server"
