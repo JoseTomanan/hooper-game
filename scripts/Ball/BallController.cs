@@ -1202,6 +1202,11 @@ public partial class BallController : Node3D
 	/// </summary>
 	internal float LastContestFactorForHarness { get; private set; } = 1f;
 	internal float LastMovementFactorForHarness { get; private set; } = 1f;
+	internal float LastFacingFactorForHarness { get; private set; } = 1f;
+	internal float LastAccuracyMultiplierForHarness { get; private set; } = 1f;
+	internal Vector3 LastAimTargetForHarness { get; private set; }
+	internal Vector3 LastReleasePositionForHarness { get; private set; }
+	internal int SuccessfulShotReleasesForHarness { get; private set; }
 
 	/// <summary>
 	/// Test-only (issue #284): stage a live loose ball resting at
@@ -3441,9 +3446,14 @@ public partial class BallController : Node3D
 			aimTarget = ShotScatter.Scatter(
 				ShotTarget, distance, angle01, radius01,
 				ShotScatterPerMeter, MaxShotScatter, accuracyMultiplier);
+			LastFacingFactorForHarness = facingFactor;
+			LastAccuracyMultiplierForHarness = accuracyMultiplier;
 		}
 
 		_arc = new ShotArc(GlobalPosition, aimTarget, ShotApexHeight, Gravity);
+		LastAimTargetForHarness = aimTarget;
+		LastReleasePositionForHarness = GlobalPosition;
+		SuccessfulShotReleasesForHarness++;
 
 		// Server-only: release-tick block top-up (issue #216 original body
 		// row 5 — moved here from a separate conditional in _PhysicsProcess

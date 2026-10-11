@@ -42,7 +42,7 @@ public partial class PlayerController
         if (!BeginCommittedMove(move)) return false;
         // RPCs require matching node paths on both peers.
         // Source: https://docs.godotengine.org/en/4.7/tutorials/networking/high_level_multiplayer.html#remote-procedure-calls
-        RpcId(1, MethodName.RequestBeginMove, id, id == "crossover" ? 1f : 0f, false);
+        RpcId(1, MethodName.RequestBeginMove, id, id == "crossover" ? 1f : 0f, false, 0);
         return true;
     }
     internal Dictionary<string, object> ReplayHarnessReconcile(PlayerController oracle, double delta, int tick)

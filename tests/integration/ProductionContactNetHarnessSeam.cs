@@ -24,7 +24,7 @@ public partial class PlayerController
         if (!BeginCommittedMove(request)) return false;
         // Same production request as local input: reliable RPC, owner sender validation.
         // Source: https://docs.godotengine.org/en/4.7/tutorials/networking/high_level_multiplayer.html#remote-procedure-calls
-        RpcId(1, MethodName.RequestBeginMove, move == "gather" ? "drivegather" : "crossover", move == "gather" ? 0f : 1f, false);
+        RpcId(1, MethodName.RequestBeginMove, move == "gather" ? "drivegather" : "crossover", move == "gather" ? 0f : 1f, false, 0);
         return true;
     }
 }

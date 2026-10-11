@@ -36,6 +36,7 @@ locked unless explicitly revisited (see Decision Discipline in §4 below).
 | [ADR-0023](docs/adr/0023-authoritative-gate-prediction-tolerance.md) | Server-authoritative move gates widen their threshold by a bounded network tolerance and reject out-of-tolerance requests — they never begin a move the client did not request (rejects #236's JumpShot-fallback: it breaks the moveId invariant both reconciliation gates depend on) |
 | [ADR-0024](docs/adr/0024-hitl-async-evidence-restructure.md) | HITL restructured to async evidence (Proposed): mandatory harness-first decomposition of `hitl` verifies, rendered-evidence artifact review replaces live editor sessions (spike-gated), default-with-veto unblocks bounded decision gates; feel still never auto-accepted (ADR-0015 gate 4 / ADR-0021 intact) |
 | [ADR-0025](docs/adr/0025-on-ball-body-contact.md) | Accepted contact model: deterministic pre-solver response and depenetration, raw opponent snapshots, binary speed-and-facing set predicate, both movement paths; production implementation #370 closed 2026-10-11; parent #347/#355 remain open |
+| [ADR-0026](docs/adr/0026-first-post-play-slice.md) | First post-play slice: held away-facing posture, slow world-space translation and one committed turnaround; existing accuracy/contact retained; feel #173 and tuning #238 |
 
 ---
 

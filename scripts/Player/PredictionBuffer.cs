@@ -1,5 +1,6 @@
 using Godot;
 using System.Collections.Generic;
+using Hooper.Moves;
 
 namespace Hooper.Player;
 
@@ -47,7 +48,9 @@ public sealed class PredictionBuffer
 	// #346: raw held posture and locally sampled eligibility are distinct. The
 	// server receives only the held request, never a client's eligibility claim.
 	public readonly record struct InputFrame(Vector2 Movement, bool Sprint, bool Protect = false,
-		bool PostureHeld = false, bool StanceEligible = false);
+		bool PostureHeld = false, bool StanceEligible = false,
+		bool PostHeld = false, bool PostEligible = false, Vector3 RimSample = default,
+		MovePhase TurnaroundPhase = MovePhase.Inactive, float TurnaroundTarget = 0, int TurnaroundToken = 0);
 	private readonly Queue<(int seq, InputFrame input)> _pending = new();
 
 	/// <param name="capacity">Maximum buffered inputs before the oldest is evicted. Defaults to 120 (~2 s at 60 Hz), matching PlayerController's original PendingCap.</param>
@@ -69,15 +72,48 @@ public sealed class PredictionBuffer
 	/// <param name="input">This tick's movement intent vector.</param>
 	/// <returns>The sequence number assigned to this input — send this to the server alongside the input.</returns>
 	public int Record(Vector2 input, bool sprint = false, bool protect = false,
-		bool postureHeld = false, bool stanceEligible = false)
+		bool postureHeld = false, bool stanceEligible = false,
+		bool postHeld = false, bool postEligible = false, Vector3 rimSample = default,
+		MovePhase turnaroundPhase = MovePhase.Inactive, float turnaroundTarget = 0, int turnaroundToken = 0)
 	{
 		LastSequence++;
 
 		if (_pending.Count >= Capacity)
 			_pending.Dequeue(); // oldest evicted; 2-s silence required to hit this
 
-		_pending.Enqueue((LastSequence, new InputFrame(input, sprint, protect, postureHeld, stanceEligible)));
+		_pending.Enqueue((LastSequence, new InputFrame(input, sprint, protect, postureHeld, stanceEligible,
+			postHeld, postEligible, rimSample, turnaroundPhase, turnaroundTarget, turnaroundToken)));
 		return LastSequence;
+	}
+
+	/// <summary>Repair the fixed aim only for the confirmed Begin instance.
+	/// Old samples and a future predicted turnaround retain their own targets.</summary>
+	public void ConfirmTurnaroundTarget(int token, float target)
+	{
+		if (token == 0) return;
+		int count = _pending.Count;
+		for (int index = 0; index < count; index++)
+		{
+			var entry = _pending.Dequeue();
+			if (entry.input.TurnaroundToken == token && entry.input.TurnaroundPhase != MovePhase.Inactive)
+				entry.input = entry.input with { TurnaroundTarget = target };
+			_pending.Enqueue(entry);
+		}
+	}
+
+	/// <summary>Once the existing move-rejection gate confirms this Begin never
+	/// took hold, its motion samples must not recreate a phantom committed turn.</summary>
+	public void RejectTurnaround(int token)
+	{
+		if (token == 0) return;
+		int count = _pending.Count;
+		for (int index = 0; index < count; index++)
+		{
+			var entry = _pending.Dequeue();
+			if (entry.input.TurnaroundToken == token)
+				entry.input = entry.input with { TurnaroundPhase = MovePhase.Inactive, TurnaroundTarget = 0, TurnaroundToken = 0 };
+			_pending.Enqueue(entry);
+		}
 	}
 
 	/// <summary>
