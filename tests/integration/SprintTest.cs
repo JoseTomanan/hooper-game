@@ -133,4 +133,3 @@ public partial class SprintTest : Node3D
         catch (Exception error) { GD.Print($"[sprint] FAIL {_scenario}: {error.Message}"); GetTree().Quit(1); }
     }
 }
-
