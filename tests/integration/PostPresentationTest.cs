@@ -146,7 +146,8 @@ public partial class PostPresentationTest : Node3D
             "LeftHand", "RightHand", "LeftUpLeg", "RightUpLeg", "LeftLeg", "RightLeg",
             "LeftFoot", "RightFoot", "LeftToeBase", "RightToeBase" };
         var phases = new[] { MovePhase.Startup, MovePhase.Active, MovePhase.Recovery };
-        int[] ticks = { 48, 4, 20 };
+        var frameData = new TurnaroundShot(0).FrameData;
+        int[] ticks = { frameData.StartupFrames, frameData.ActiveFrames, frameData.RecoveryFrames };
         for (int i = 0; i < phases.Length; i++)
         {
             string state = "Turnaround" + phases[i];
@@ -155,6 +156,23 @@ public partial class PostPresentationTest : Node3D
             Require(node != null && node.Animation.ToString() == "turnaround/turnaround" + phases[i].ToString().ToLowerInvariant(), "turnaround state reuses wrong identity");
             var clip = animationPlayer.GetAnimation(node.Animation);
             Require(Math.Abs(clip.Length - ticks[i] / 60.0) <= .001 && clip.LoopMode == Animation.LoopModeEnum.None, $"{state} frame window mismatch");
+            // The established shot segment's manifest covers all 52 authored rotations;
+            // the explicit material list below also catches source-library coverage drift.
+            var source = animationPlayer.GetAnimation("locomotion/jumpshot" + phases[i].ToString().ToLowerInvariant());
+            for (int track = 0; track < source.GetTrackCount(); track++)
+            {
+                if (source.TrackGetType(track) != Animation.TrackType.Rotation3D) continue;
+                int corresponding = clip.FindTrack(source.TrackGetPath(track), Animation.TrackType.Rotation3D);
+                Require(corresponding >= 0 && clip.TrackGetKeyCount(corresponding) > 0,
+                    $"{state} missing authored rotation {source.TrackGetPath(track)}");
+                foreach (double fraction in new[] { 0.0, .5, 1.0 })
+                {
+                    double time = source.Length * fraction;
+                    var actual = clip.RotationTrackInterpolate(corresponding, time + (i == 0 ? .5 : 0));
+                    Require(actual.IsFinite() && Angle(actual, source.RotationTrackInterpolate(track, time)) < .0001f,
+                        $"{state} stopped preserving established shot arc: {source.TrackGetPath(track)}");
+                }
+            }
             foreach (string bone in bones)
             {
                 bool tracked = false;
