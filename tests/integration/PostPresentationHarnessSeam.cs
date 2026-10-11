@@ -5,6 +5,9 @@ namespace Hooper.Player;
 
 public partial class PlayerController
 {
+    internal void PostApplyCaptureHeadingForHarness(float heading)
+    { SetHeadingForHarness(heading); ApplyCosmetics(); }
+
     // Presentation fixtures only. Real request/transport progression is covered by
     // PostTest/NetPostTest; this seam holds the display inputs still while the rig runs.
     internal void PostSetPresentationForHarness(bool posting, bool established, HandSide hand,

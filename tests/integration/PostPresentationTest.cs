@@ -45,6 +45,8 @@ public partial class PostPresentationTest : Node3D
             Require(_modifier != null, "shipped player missing PostPose");
             _modifier.ModificationProcessed += Observe;
             CheckClipsAndGraph();
+            if (HarnessArgs.ReadArg(OS.GetCmdlineUserArgs(), "--harness-scenario", "presentation") == "capture")
+                SetupCapture();
             Configure(false);
         }
         catch (Exception error) { Fail(error); }
@@ -59,6 +61,7 @@ public partial class PostPresentationTest : Node3D
             Rotation("LeftArm"), Rotation("RightArm"), Rotation("LeftForeArm"), Rotation("RightForeArm"),
             Rotation("LeftUpLeg"), Rotation("RightUpLeg"), Rotation("LeftLeg"), Rotation("RightLeg"));
         _observations++;
+        if (_captureMode) FrameCaptureCamera();
     }
 
     public override void _PhysicsProcess(double delta)
@@ -66,6 +69,7 @@ public partial class PostPresentationTest : Node3D
         try
         {
             _ticks++;
+            if (_captureMode) { TickCapture(); return; }
             _animation.Advance(0); // Paired controls see exactly the same authored animation time.
             if (_ticks % 4 != 0) return;
             Require(_observations >= _ticks - 3 && _current != null, "actual post modifier did not process");
