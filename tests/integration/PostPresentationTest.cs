@@ -198,14 +198,19 @@ public partial class PostPresentationTest : Node3D
     }
 
     // Component-space distance avoids acos float noise near identical quaternions.
-    private static float Angle(Quaternion a, Quaternion b) => 2f * Mathf.Atan2(
-        new Vector3((a.Inverse()*b).X, (a.Inverse()*b).Y, (a.Inverse()*b).Z).Length(), Mathf.Abs((a.Inverse()*b).W));
+    private static float Angle(Quaternion a, Quaternion b)
+    {
+        // Imported animation keys have small float norm error. Normalize the measured
+        // rotations before taking an inverse, whose Godot contract requires unit input.
+        var difference = a.Normalized().Inverse() * b.Normalized();
+        return 2f * Mathf.Atan2(new Vector3(difference.X, difference.Y, difference.Z).Length(), Mathf.Abs(difference.W));
+    }
     private static bool Same(Pose a, Pose b) => a.Hips.DistanceTo(b.Hips) < .0001f
         && Angle(a.LeftArm,b.LeftArm)<.0001f && Angle(a.RightArm,b.RightArm)<.0001f
         && Angle(a.LeftForeArm,b.LeftForeArm)<.0001f && Angle(a.RightForeArm,b.RightForeArm)<.0001f
         && Angle(a.LeftThigh,b.LeftThigh)<.0001f && Angle(a.RightThigh,b.RightThigh)<.0001f
         && Angle(a.LeftKnee,b.LeftKnee)<.0001f && Angle(a.RightKnee,b.RightKnee)<.0001f;
     private static void Require(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
-    private void Fail(Exception error) { GD.Print($"[post-presentation] FAIL: {error.Message}"); GetTree().Quit(1); }
+    private void Fail(Exception error) { GD.Print($"[post-presentation] FAIL: {error}"); GetTree().Quit(1); }
     public override void _ExitTree() => _peer?.Close();
 }
