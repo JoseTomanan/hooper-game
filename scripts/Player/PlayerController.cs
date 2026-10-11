@@ -110,12 +110,19 @@ public partial class PlayerController : CharacterBody3D
 	/// <summary>Multiplier of the normal turn rate while sprinting; provisional for #238/#173.</summary>
 	[Export] public float SprintTurnRateScale { get; set; } = 0.65f;
 
+	/// <summary>Protected dribble ceiling in metres/second; provisional for #238/#173.</summary>
+	[Export] public float ProtectSpeed { get; set; } = 1.0f;
+	private bool _requestedProtect, _pendingProtectRequest, _serverProtect;
+	public bool IsProtecting => _requestedProtect && !_machine.IsActive
+		&& IsBallHolder && GetBall()?.State == BallState.Dribbling;
+	public bool DisplayProtecting => !IsServer && !IsLocalPlayer ? _serverProtect : IsProtecting;
 	private bool _requestedSprint;
 	private bool _pendingSprintRequest;
 	/// <summary>Fresh effective pace, so lost possession or a commitment cannot leave exposure stale.</summary>
 	public bool IsSprinting => ResolveSprint(_requestedSprint);
 
-	private bool ResolveSprint(bool requested) => requested && !_machine.IsActive
+	// Raw protection wins even when ineligible; holding both must never accidentally sprint.
+	private bool ResolveSprint(bool requested) => requested && !_requestedProtect && !_machine.IsActive
 		&& IsBallHolder && GetBall()?.State == BallState.Dribbling;
 
 	// ── Heading tuning (issue #80) ────────────────────────────────────────────
@@ -1543,6 +1550,10 @@ public partial class PlayerController : CharacterBody3D
 			}
 		}
 
+        var protectionSkeletons = FindChildren("*", nameof(Skeleton3D), recursive: true, owned: false);
+        if (protectionSkeletons.Count > 0 && protectionSkeletons[0] is Skeleton3D protectionSkeleton)
+            protectionSkeleton.AddChild(new ProtectionPose { Name = "ProtectionPose", Player = this });
+
 		_gameManager = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
 		if (_gameManager == null)
 			GD.PrintErr("[PlayerController] No node in group 'game_manager' found. Game-over freeze will not work until GameManager is added to the scene (issue #27).");
@@ -1633,6 +1644,7 @@ public partial class PlayerController : CharacterBody3D
 		// Held action, not an edge: releasing the trigger restores the ordinary pace.
 		// Source: https://docs.godotengine.org/en/4.7/classes/class_input.html#class-input-method-is-action-pressed
 		_requestedSprint = Input.IsActionPressed("move_sprint");
+		_requestedProtect = Input.IsActionPressed("move_protect");
 
 		if (_machine.IsActive)
 			// The host IS the local machine — ReadInput() is the TRUE, zero-
@@ -1642,7 +1654,7 @@ public partial class PlayerController : CharacterBody3D
 		else
 		{
 			Vector2 input = ReadInput();
-			Move(input, delta, GetContactOpponent(server: true), IsSprinting);
+			Move(input, delta, GetContactOpponent(server: true), IsSprinting, IsProtecting);
 			CheckAutoStartDribble(input);
 		}
 
@@ -1671,7 +1683,7 @@ public partial class PlayerController : CharacterBody3D
 		else Rpc(MethodName.ReceiveState, 0, GlobalPosition, Velocity,
 			(int)_machine.Phase, _machine.FrameInPhase, MoveIdOf(_machine.CurrentMove), MoveParamOf(_machine.CurrentMove),
 			Heading, (int)HandSide, _machine.WasRecoveryEnteredEarly, _pivot.HasLatch, _pivot.LatchedYaw,
-			IsBeaten(PhysicsTick));
+			IsBeaten(PhysicsTick), IsProtecting);
 	}
 
 	/// <summary>
@@ -1690,6 +1702,7 @@ public partial class PlayerController : CharacterBody3D
 	{
 		_machine.Tick();
 		_requestedSprint = _pendingSprintRequest;
+		_requestedProtect = _pendingProtectRequest;
 
 		if (_machine.IsActive)
 			// #210 fix: PREFER the exit vector delivered by the client's
@@ -1706,7 +1719,7 @@ public partial class PlayerController : CharacterBody3D
 			TickCommittedMoveBehavior(delta, _authoritativeExitVector ?? _pendingRawStick, GetContactOpponent(server: true));
 		else
 		{
-			Move(_pendingInput, delta, GetContactOpponent(server: true), IsSprinting);
+			Move(_pendingInput, delta, GetContactOpponent(server: true), IsSprinting, IsProtecting);
 
 			// #224 fix: only honor drive intent from _pendingInput once a
 			// genuinely FRESH (post-award) SubmitInput has actually arrived —
@@ -1744,7 +1757,7 @@ public partial class PlayerController : CharacterBody3D
 		else Rpc(MethodName.ReceiveState, _serverAckedSeq, GlobalPosition, Velocity,
 			(int)_machine.Phase, _machine.FrameInPhase, MoveIdOf(_machine.CurrentMove), MoveParamOf(_machine.CurrentMove),
 			Heading, (int)HandSide, _machine.WasRecoveryEnteredEarly, _pivot.HasLatch, _pivot.LatchedYaw,
-			IsBeaten(PhysicsTick));
+			IsBeaten(PhysicsTick), IsProtecting);
 	}
 
 	/// <summary>
@@ -1780,12 +1793,14 @@ public partial class PlayerController : CharacterBody3D
 		Vector2 rawStick = ReadInput();
 		Vector2 moveInput = _machine.IsActive ? Vector2.Zero : rawStick;
 		_requestedSprint = Input.IsActionPressed("move_sprint");
+		_requestedProtect = Input.IsActionPressed("move_protect");
 		bool sprint = IsSprinting;
+		bool protect = IsProtecting;
 
 		// Record() assigns the seq and handles capacity eviction (see
 		// PredictionBuffer doc) — behavior-identical to the inline
 		// _seq++ / cap-check / enqueue this replaced.
-		int seq = _buffer.Record(moveInput, sprint);
+		int seq = _buffer.Record(moveInput, sprint, protect);
 
 		if (_machine.IsActive)
 		{
@@ -1811,7 +1826,7 @@ public partial class PlayerController : CharacterBody3D
 		}
 		else
 		{
-			Move(moveInput, delta, GetContactOpponent(server: false), sprint);
+			Move(moveInput, delta, GetContactOpponent(server: false), sprint, protect);
 			CheckAutoStartDribble(moveInput);
 		}
 
@@ -1829,7 +1844,7 @@ public partial class PlayerController : CharacterBody3D
 		// stream rather than the moveId/moveParam one-shot RPC).
 		// Raw request only: the server resolves its own possession/commitment gates.
 		// Source: https://docs.godotengine.org/en/4.7/tutorials/networking/high_level_multiplayer.html#remote-procedure-calls
-		RpcId(1, MethodName.SubmitInput, seq, moveInput.X, moveInput.Y, rawStick.X, rawStick.Y, _requestedSprint);
+		RpcId(1, MethodName.SubmitInput, seq, moveInput.X, moveInput.Y, rawStick.X, rawStick.Y, _requestedSprint, _requestedProtect);
 	}
 
 	/// <summary>
@@ -1895,7 +1910,7 @@ public partial class PlayerController : CharacterBody3D
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer,
 		 CallLocal = false,
 		 TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
-	private void SubmitInput(int seq, float inputX, float inputY, float rawStickX, float rawStickY, bool sprintRequested)
+	private void SubmitInput(int seq, float inputX, float inputY, float rawStickX, float rawStickY, bool sprintRequested, bool protectRequested)
 	{
 		// Validate sender (read synchronously at top — GetRemoteSenderId() is
 		// only valid during the RPC call, never after).
@@ -1921,6 +1936,7 @@ public partial class PlayerController : CharacterBody3D
 		// applied on this end.
 		_pendingRawStick = new Vector2(rawStickX, rawStickY);
 		_pendingSprintRequest = sprintRequested;
+		_pendingProtectRequest = protectRequested;
 	}
 
 	/// <summary>
@@ -2600,7 +2616,7 @@ public partial class PlayerController : CharacterBody3D
 		 TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
 	private void ReceiveState(int ackSeq, Vector3 pos, Vector3 vel,
 		int movePhase, int frameInPhase, string moveId, float moveParam, float heading, int handSide,
-		bool endedActiveEarly, bool pivotHasLatch, float pivotLatchedYaw, bool isBeaten)
+		bool endedActiveEarly, bool pivotHasLatch, float pivotLatchedYaw, bool isBeaten, bool protect = false)
 	{
 		_serverPos       = pos;
 		_serverVel       = vel;
@@ -2628,6 +2644,7 @@ public partial class PlayerController : CharacterBody3D
 		// (#102) See _serverIsBeaten's field doc — same level-triggered
 		// overwrite-every-broadcast reasoning.
 		_serverIsBeaten  = isBeaten;
+		_serverProtect = protect;
 		_hasNewState     = true;
 		_hasContactSnapshot = true;
 	}
@@ -2830,7 +2847,7 @@ public partial class PlayerController : CharacterBody3D
 		double fixedDelta = 1.0 / Engine.PhysicsTicksPerSecond;
 		ContactOpponent? replayOpponent = GetContactOpponent(server: false);
 		foreach (PredictionBuffer.InputFrame input in _buffer.ReplayInputs())
-			Move(input.Movement, fixedDelta, replayOpponent, input.Sprint);
+			Move(input.Movement, fixedDelta, replayOpponent, input.Sprint, input.Protect);
 		// A fully acknowledged buffer still needs to repair a snap into the raw opponent.
 		DepenetrateAgainstContactSnapshot(replayOpponent);
 		// Observe physical correction after replay, before this tick's new prediction and
@@ -4195,10 +4212,11 @@ public partial class PlayerController : CharacterBody3D
 	/// Keep it pure: no role checks, no network calls, no side effects.
 	/// Any divergence between server and client is a bug in this function.
 	/// </summary>
-	// Sprint is already resolved by the role-aware caller. Replay passes the
+	// Both pace flags are resolved by the role-aware caller. Replay passes the
 	// historically resolved bit; re-reading today's ball state here would rewrite history.
-	public void Move(Vector2 inputDir, double delta, ContactOpponent? opponent = null, bool sprint = false)
+	public void Move(Vector2 inputDir, double delta, ContactOpponent? opponent = null, bool sprint = false, bool protect = false)
 	{
+		sprint &= !protect;
 		// Advance the authoritative heading — and the in-place-pivot latch it
 		// now carries (issue #172) — toward inputDir at a bounded non-linear
 		// rate BEFORE velocity, because velocity below depends on whether this
@@ -4234,7 +4252,7 @@ public partial class PlayerController : CharacterBody3D
 			// MovementMath now (issue #37) so it's unit-testable without a
 			// running Godot instance — this call is behavior-identical to the
 			// inline ComputeVelocity it replaced.
-			Velocity = MovementMath.ComputeVelocity(Velocity, wishDir, delta, sprint ? SprintSpeed : MoveSpeed, Accel, Decel);
+			Velocity = MovementMath.ComputeVelocity(Velocity, wishDir, delta, protect ? ProtectSpeed : sprint ? SprintSpeed : MoveSpeed, Accel, Decel);
 		}
 
 		IntegrateContactMotion(delta, opponent);

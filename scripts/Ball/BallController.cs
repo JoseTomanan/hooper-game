@@ -567,6 +567,10 @@ public partial class BallController : Node3D
 	/// </summary>
 	[Export] public float StealHiExposed { get; set; } = 0.65f;
 
+	/// <summary>Protected dribble lower exposed phase [0,1]; provisional for #238/#173.</summary>
+	[Export] public float ProtectStealLoExposed { get; set; } = 0.45f;
+	/// <summary>Protected dribble upper exposed phase [0,1]; provisional for #238/#173.</summary>
+	[Export] public float ProtectStealHiExposed { get; set; } = 0.55f;
 	/// <summary>Sprint's lower exposed dribble phase [0,1]; provisional for #238/#173.</summary>
 	[Export] public float SprintStealLoExposed { get; set; } = 0.2f;
 	/// <summary>Sprint's upper exposed dribble phase [0,1]; provisional for #238/#173.</summary>
@@ -1891,8 +1895,8 @@ public partial class BallController : Node3D
 			// same result on server AND any predicting client (ADR-0004).
 			bool normalWindowSucceeds = DefensiveResolution.StealSucceeds(
 				_dribble.Phase,
-				holder.IsSprinting ? SprintStealLoExposed : StealLoExposed,
-				holder.IsSprinting ? SprintStealHiExposed : StealHiExposed,
+				holder.IsProtecting ? ProtectStealLoExposed : holder.IsSprinting ? SprintStealLoExposed : StealLoExposed,
+				holder.IsProtecting ? ProtectStealHiExposed : holder.IsSprinting ? SprintStealHiExposed : StealHiExposed,
 				targetHand, holder.HandSide);
 
 			// Window (b) — transit window (issue #196, ADR-0018 Amendment
