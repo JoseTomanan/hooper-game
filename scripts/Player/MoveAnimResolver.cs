@@ -171,6 +171,7 @@ public static class MoveAnimResolver
     private static readonly Dictionary<string, string> ClippedMovePrefixes = new()
     {
         ["jumpshot"]      = "Jumpshot",
+        ["turnaround"]    = "Turnaround", // #348: its own planted turn/gather, established release/landing.
         ["crossover"]     = "Crossover",
         ["behindtheback"] = "BehindTheBack",
         ["steal"]         = "Steal",
