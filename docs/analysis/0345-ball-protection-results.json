@@ -1,0 +1,1758 @@
+{
+  "issue": 345,
+  "run_id": "issue345-full",
+  "godot": "4.7.1.stable.mono.official.a13da4feb",
+  "source_commits": [
+    "3ab1daa",
+    "a7b5ea2",
+    "90d417b"
+  ],
+  "coverage": {
+    "expected": 348,
+    "run": 348,
+    "passed": 348,
+    "failed": 0
+  },
+  "cases": [
+    {
+      "id": "smoke-test",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "input-map-defensive-actions-test",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "steal-turnover-test-success",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "steal-turnover-test-whiff",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "steal-turnover-test-recovery-reset",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "held-steal-test-held-vulnerable",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "held-steal-test-held-immune-outside-window",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "held-steal-test-pumpfake-now-exposed",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "held-steal-test-held-static-vulnerable",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "held-steal-test-held-static-immune-out-of-reach",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "held-steal-test-held-static-immune-shielded",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "held-steal-test-held-static-immune-wrong-side",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "transit-steal-test-transit-steal",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "transit-steal-test-out-of-reach-recovery",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "transit-steal-test-normal-window-unchanged",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "transit-steal-test-transit-steal-behind-the-back",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "transit-steal-test-out-of-reach-recovery-behind-the-back",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "transit-steal-test-transit-steal-between-the-legs",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "transit-steal-test-out-of-reach-recovery-between-the-legs",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "transit-steal-test-transit-steal-spin",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "transit-steal-test-out-of-reach-recovery-spin",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "steal-facing-mapping-test-face-to-face",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "steal-facing-mapping-test-side-by-side",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "block-turnover-test-success",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "block-turnover-test-success-lastactive",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "block-turnover-test-whiff",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "block-turnover-test-out-of-range",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "block-turnover-test-control-make",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "block-turnover-test-control-make-default-geometry",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "terminal-no-holder-test-terminal-rebound",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "terminal-no-holder-test-terminal-oob",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "terminal-no-holder-test-nonwinning-make",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "terminal-no-holder-test-live-rebound",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "terminal-no-holder-test-oob-award",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "layup-test-uncontested-make",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "layup-test-block-success",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "layup-test-block-whiff",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "layup-test-range-gate-inside",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "layup-test-range-gate-tolerated",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "layup-test-range-gate-rejected",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "euro-step-test-euro-step-beats-committed-defender",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "euro-step-test-euro-step-read-still-contests",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "euro-step-test-euro-step-whiff-recovery",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "euro-step-anim-test",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "jab-step-test-legal-held",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "jab-step-test-legal-dead-held",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "jab-step-test-illegal-dribbling",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "in-and-out-test-quick-return-empty-hand",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "in-and-out-test-quick-return-ball-hand",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "in-and-out-test-handside-unchanged",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "in-and-out-test-fallback-toward-ball-hand",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "in-and-out-test-dead-dribble-gate",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "in-and-out-test-feint-refused",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "in-and-out-test-reconstruct",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "spin-test-rotation",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "spin-test-handside-swap-timing",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "spin-test-dead-dribble-gate",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "spin-test-exit-burst-continues-entry-line",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "spin-test-sweep-path",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "spin-test-real-input-trigger",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "spin-test-reconstruct",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "spin-test-remote-exit-vector-preferred",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "contest-scatter-test-contest-active",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "contest-scatter-test-no-contest",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "fadeaway-trigger-test-mid-pivot",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "fadeaway-trigger-test-squared-up",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "blow-by-window-test-whiff-triggers",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "blow-by-window-test-suppressed",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "blow-by-window-test-control",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "oob-turnover-test-held-turnover",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "oob-turnover-test-defender-exempt",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "oob-turnover-test-both-oob",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "oob-turnover-test-wall-placement",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "triple-threat-test-dead-dribble",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "triple-threat-test-production-drive",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "award-freshness-test-stale-blocked-fresh-works",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "cradle-race-test-out-of-order",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "cradle-race-test-in-order",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "cradle-race-test-later-legit-drive",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "step-back-cradle-race-test-out-of-order",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "step-back-cradle-race-test-in-order",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "step-back-cradle-race-test-no-drive-ever",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "crossover-sweep-test-crossover-sweep",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "crossover-sweep-test-possession-change-no-sweep",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "crossover-sweep-test-remote-handside-sweep",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "pivot-plant-test-exports",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "pivot-plant-test-flick-180",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "pivot-plant-test-held-135",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "pivot-plant-test-no-plant-boundary",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "pivot-plant-test-committed-cancel",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "pivot-anim-test-pivot-enters-exits",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "pivot-anim-test-control-locomotion",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "move-kind-anim-test-clipped-reaches-permove",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "move-kind-anim-test-unclipped-stays-generic",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "rebound-grab-test-grab-fires",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "rebound-grab-test-made-basket-no-grab",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "rebound-grab-test-consecutive-rebounds",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "rebound-grab-test-rebound-clip-contract",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "rebound-grab-test-rebound-display-duration",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "rebound-grab-test-rebound-latch-mutation-control",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "dribble-loop-test-dribble-entered",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "dribble-loop-test-no-ball-locomotion",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "dribble-loop-test-held-no-dribble",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "dribble-loop-test-move-outranks-dribble",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "dribble-hand-alignment-test-hand-alignment-left",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "dribble-hand-alignment-test-hand-alignment-right",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "dribble-hand-alignment-test-hand-follows-authoritative-flip",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "dribble-hand-alignment-test-dribble-states-own-clips",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "rig-scale-harness-test-independent-scaling",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "locomotion-clip-test",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "jumpshot-anim-test-jumpshot-phases",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "jumpshot-anim-test-fadeaway-active",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "jumpshot-anim-test-no-fadeaway-when-squared-up",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "jumpshot-anim-test-no-placeholder-leak",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "jumpshot-anim-test-jumpshot-airborne-active",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "jumpshot-anim-test-control-jumpshot-grounded-startup",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "jumpshot-anim-test-jumpshot-track-completeness",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "jumpshot-anim-test-fadeaway-leans-back",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "jumpshot-anim-test-control-jumpshot-active-is-upright",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "jumpshot-anim-test-fadeaway-segment-length",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "jumpshot-anim-test-fadeaway-track-completeness",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "crossover-anim-test-crossover-left-origin",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "crossover-anim-test-crossover-right-origin",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "crossover-anim-test-crossover-single-polarity",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "crossover-anim-test-no-unsuffixed-crossover-state",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "crossover-anim-test-crossover-track-completeness",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "crossover-anim-test-crossover-active-distinct-from-siblings",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "crossover-anim-test-crossover-polarity-content",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "behind-the-back-anim-test-btb-left-origin",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "behind-the-back-anim-test-btb-right-origin",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "behind-the-back-anim-test-btb-single-polarity",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "behind-the-back-anim-test-no-unsuffixed-btb-state",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "behind-the-back-anim-test-control-unsuffixed-probe",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "behind-the-back-anim-test-btb-segment-lengths",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "behind-the-back-anim-test-btb-no-placeholder-leak",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "behind-the-back-anim-test-btb-poses-the-skeleton",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "steal-anim-test-steal-left-reach",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "steal-anim-test-steal-right-reach",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "steal-anim-test-steal-constant-polarity",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "steal-anim-test-steal-face-to-face-reads-true",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "steal-anim-test-steal-segment-lengths",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "steal-anim-test-steal-startup-fills-window",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "steal-anim-test-steal-no-placeholder-leak",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "steal-anim-test-steal-poses-the-skeleton",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "steal-anim-test-no-unsuffixed-steal-state",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "steal-anim-test-control-unsuffixed-probe",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "layup-anim-test-layup-phases",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "layup-anim-test-layup-no-placeholder-leak",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "layup-anim-test-layup-segment-lengths",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "layup-anim-test-layup-edges",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "layup-anim-test-layup-startup-differs-from-recovery",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "layup-anim-test-layup-airborne-active",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "layup-anim-test-control-layup-grounded-startup",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "layup-anim-test-layup-arm-extends-overhead",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "layup-anim-test-control-layup-arm-low-startup",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "contest-anim-test-contest-phases",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "contest-anim-test-contest-no-placeholder-leak",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "contest-anim-test-contest-segment-lengths",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "contest-anim-test-contest-edges",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "contest-anim-test-contest-startup-differs-from-recovery",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "contest-anim-test-contest-stays-grounded",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "contest-anim-test-control-layup-leaves-ground",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "contest-anim-test-contest-arms-rise",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "contest-anim-test-control-contest-arms-low-startup",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "jab-step-anim-test-jabstep-phases",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "jab-step-anim-test-jabstep-no-placeholder-leak",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "jab-step-anim-test-jabstep-segment-lengths",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "jab-step-anim-test-jabstep-edges",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "jab-step-anim-test-jabstep-startup-differs-from-recovery",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "jab-step-anim-test-jabstep-torso-pitches-forward-in-active",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "jab-step-anim-test-control-jabstep-torso-modest-in-startup",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "jab-step-anim-test-jabstep-differs-from-retreatdribble",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "retreat-dribble-anim-test-retreatdribble-phases",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "retreat-dribble-anim-test-retreatdribble-no-placeholder-leak",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "retreat-dribble-anim-test-retreatdribble-segment-lengths",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "retreat-dribble-anim-test-retreatdribble-edges",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "retreat-dribble-anim-test-retreatdribble-startup-differs-from-recovery",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "retreat-dribble-anim-test-retreatdribble-torso-goes-back-in-active",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "retreat-dribble-anim-test-control-retreatdribble-torso-modest-in-startup",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "retreat-dribble-anim-test-retreatdribble-hips-stay-in-place",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "step-back-anim-test-stepback-phases",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "step-back-anim-test-stepback-no-placeholder-leak",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "step-back-anim-test-stepback-segment-lengths",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "step-back-anim-test-stepback-edges",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "step-back-anim-test-stepback-startup-differs-from-recovery",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "step-back-anim-test-stepback-active-displaces-back",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "step-back-anim-test-control-stepback-startup-displaces-forward",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "step-back-anim-test-stepback-recovery-hands-off-to-jumpshot",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "block-anim-test-block-phases",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "block-anim-test-block-no-placeholder-leak",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "block-anim-test-block-segment-lengths",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "block-anim-test-block-airborne-active",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "block-anim-test-control-block-grounded-startup",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "in-and-out-anim-test-inandout-phases",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "in-and-out-anim-test-inandout-no-placeholder-leak",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "in-and-out-anim-test-inandout-segment-lengths",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "in-and-out-anim-test-inandout-edges",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "in-and-out-anim-test-inandout-startup-differs-from-recovery",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "in-and-out-anim-test-inandout-stays-unsuffixed",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "in-and-out-anim-test-inandout-ball-hand-goes-in-then-out",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "in-and-out-anim-test-inandout-offhand-stays-out-in-active",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "in-and-out-anim-test-control-inandout-ballhand-does-come-in",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "between-the-legs-anim-test-betweenthelegs-phases",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "between-the-legs-anim-test-btl-right-origin",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "between-the-legs-anim-test-btl-single-polarity",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "between-the-legs-anim-test-no-unsuffixed-btl-state",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "between-the-legs-anim-test-control-unsuffixed-probe",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "between-the-legs-anim-test-betweenthelegs-segment-lengths",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "between-the-legs-anim-test-betweenthelegs-no-placeholder-leak",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "between-the-legs-anim-test-betweenthelegs-startup-differs-from-recovery",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "between-the-legs-anim-test-control-identical-clips-read-as-identical",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "between-the-legs-anim-test-btl-poses-the-skeleton",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "hesitation-anim-test-hesitation-phases",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "hesitation-anim-test-hesitation-no-placeholder-leak",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "hesitation-anim-test-hesitation-segment-lengths",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "hesitation-anim-test-hesitation-edges",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "hesitation-anim-test-hesitation-startup-differs-from-recovery",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "hesitation-anim-test-hesitation-clip-drives-the-rig",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "hesitation-anim-test-hesitation-active-raises-hips",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "hesitation-anim-test-control-hesitation-recovery-lowers-hips",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "hesitation-anim-test-hesitation-active-is-held",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "hesitation-anim-test-control-hesitation-startup-is-not-held",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "spin-anim-test-spin-phases",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "spin-anim-test-spin-no-placeholder-leak",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "spin-anim-test-spin-segment-lengths",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "spin-anim-test-spin-edges",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "spin-anim-test-spin-stays-unsuffixed",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "spin-anim-test-spin-startup-differs-from-recovery",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "spin-anim-test-spin-clip-drives-the-rig",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "spin-anim-test-spin-clip-does-not-rotate-root",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "spin-anim-test-spin-shoulder-twist-reverses",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "spin-anim-test-control-spin-startup-twist-does-not-reverse",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "drive-gather-anim-test-drivegather-phases",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "drive-gather-anim-test-drivegather-no-placeholder-leak",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "drive-gather-anim-test-drivegather-segment-lengths",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "drive-gather-anim-test-drivegather-edges",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "drive-gather-anim-test-drivegather-startup-differs-from-recovery",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "drive-gather-anim-test-drivegather-clip-drives-the-rig",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "drive-gather-anim-test-drivegather-active-brings-both-hands-to-ball",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "drive-gather-anim-test-control-drivegather-startup-hands-apart",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "drive-gather-anim-test-drivegather-active-displaces-forward",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "drive-gather-anim-test-control-drivegather-startup-loads-back",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "drive-gather-anim-test-drivegather-recovery-hands-off-to-layup",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "moving-crossover-test-retains-speed",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "moving-crossover-test-stationary-forward-exit",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "moving-crossover-test-hesitation-still-hard-zeroes",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "moving-crossover-test-remote-pending-stick",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "behind-the-back-test-shielded-sweep",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "behind-the-back-test-narrower-exit-cone",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "behind-the-back-test-dead-dribble-gate",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "between-the-legs-test-through-legs-dip",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "between-the-legs-test-finesse-selects-betweenthelegs",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "between-the-legs-test-dead-dribble-gate",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "step-back-test-step-back-gathers",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "step-back-test-retreat-dribble-no-gather",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "step-back-test-retreat-dribble-dead-dribble-gate",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "drive-gather-test-gather-bleed",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "drive-gather-test-heading-turn",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "drive-gather-test-gather-to-layup-chain",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "drive-gather-test-dead-dribble-gate",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "net-handshake",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "net-state-sync",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "net-node-replication",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "dedicated-roster",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "dedicated-discovery-join",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "net-behindtheback-sweep",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "net-defensive-telegraph-telegraph",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "net-defensive-telegraph-control",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "net-exitvector-rpc-poisoned",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "net-exitvector-rpc-steady",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "dedicated-game-journey-healthy",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "dedicated-game-journey-discovery-disabled",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "dedicated-game-journey-score-rpc-disabled",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "animation-harness-primitives-test-primitives-discovery",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "animation-harness-primitives-test-primitives-resources",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "animation-harness-primitives-test-primitives-state-clips",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "rig-scale-harness-test-capsule-contract",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "contact-fixture-test-contact",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "contact-fixture-test-no-contact",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "contact-kernel-test-set-drive",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "contact-kernel-test-unset-drive",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "contact-kernel-test-disabled-kernel",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "contact-kernel-test-overlap",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "contact-kernel-test-coincident",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "contact-kernel-test-crossing",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "contact-kernel-test-dimensions",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "production-contact-test-set-drive",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "production-contact-test-unset-drive",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "production-contact-test-disabled-contact",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "production-contact-test-overlap",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "production-contact-test-coincident",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "production-contact-test-crossing",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "production-contact-test-floor",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "production-contact-test-wall",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "production-contact-test-corner",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "production-contact-test-startup",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "production-contact-test-active",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "production-contact-test-recovery",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "production-contact-test-timeline",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "production-contact-test-box-out",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "production-contact-test-pickup-tie",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "production-contact-test-solver-mask",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "production-contact-test-immutable-crossing",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "production-contact-test-reconcile-overlap",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "sprint-test-speed",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "sprint-test-turn",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "sprint-test-gates",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "sprint-test-shot",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "sprint-test-steal-jog",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "sprint-test-steal-sprint",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "sprint-test-steal-outside",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "sprint-test-steal-wrong-hand",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "net-sprint-test",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "protection-test-speed",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "protection-test-gates",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "protection-test-steal-neutral",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "protection-test-steal-protect",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "protection-test-steal-center",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "protection-test-steal-wrong-hand",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "protection-test-held-static",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "protection-test-presentation",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "net-protection-test",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "net-rig-presentation-left",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "net-rig-presentation-right",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "committed-replay-neutral-contact-0ms",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "committed-replay-neutral-contact-30ms",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "committed-replay-neutral-no-contact-0ms",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "committed-replay-neutral-no-contact-30ms",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "committed-replay-crossover-contact-0ms",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "committed-replay-crossover-contact-30ms",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "committed-replay-crossover-no-contact-0ms",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "committed-replay-crossover-no-contact-30ms",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "committed-replay-gather-contact-0ms",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "committed-replay-gather-contact-30ms",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "committed-replay-gather-no-contact-0ms",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "committed-replay-gather-no-contact-30ms",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "production-contact-neutral-contact-0ms",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "production-contact-neutral-contact-30ms",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "production-contact-neutral-no-contact-0ms",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "production-contact-neutral-no-contact-30ms",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "production-contact-crossover-contact-0ms",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "production-contact-crossover-contact-30ms",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "production-contact-crossover-no-contact-0ms",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "production-contact-crossover-no-contact-30ms",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "production-contact-gather-contact-0ms",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "production-contact-gather-contact-30ms",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "production-contact-gather-no-contact-0ms",
+      "status": "PASS",
+      "native_exit_code": 0
+    },
+    {
+      "id": "production-contact-gather-no-contact-30ms",
+      "status": "PASS",
+      "native_exit_code": 0
+    }
+  ]
+}
