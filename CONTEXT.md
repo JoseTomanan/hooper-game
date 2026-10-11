@@ -40,7 +40,9 @@ Do not add design reasoning here. If a decision belongs somewhere, it belongs in
 
 **Change of pace** — Varying movement speed within the continuous neutral game to manipulate the defender's positioning. Driven by left stick. see: [ADR-0003](docs/adr/0003-input-model-hybrid.md)
 
-**Body contact** — What happens when two players' bodies meet: the denial half of the spacing spine. Resolved by a deterministic contact term, never by the physics solver — the solver plays no part in player-to-player contact. see: [ADR-0025](docs/adr/0025-on-ball-body-contact.md), issue #347
+**Sprint / run with ball** — A held modifier in the continuous analog-movement layer: faster dribbling, a wider steal-exposure band and a reduced turn rate. Available to the ball-handler while dribbling outside a committed move; it is not a committed move and has no stamina cost while M11 remains on hold. Shipped in #325, closed 2026-10-11. see: [issue #325](https://github.com/JoseTomanan/hooper-game/issues/325), [ADR-0003](docs/adr/0003-input-model-hybrid.md)
+
+**Body contact** — What happens when two players' bodies meet: the denial half of the spacing spine. Resolved by deterministic pre-solver response and depenetration across neutral and committed movement, with client prediction using raw opponent snapshots; the physics solver does not resolve player pairs. The kernel and production integration shipped in #369/#370, closed 2026-10-10/11. see: [ADR-0025](docs/adr/0025-on-ball-body-contact.md), [issue #369](https://github.com/JoseTomanan/hooper-game/issues/369), [issue #370](https://github.com/JoseTomanan/hooper-game/issues/370)
 
 **Set / legal guarding position** — The binary condition under which a player absorbs contact rather than being driven through: low speed *and* facing the contact. A defender who is set stops the drive; one backpedalling or turned sideways gets driven through. Server-authoritative; never derived from cosmetic facing. see: [ADR-0025](docs/adr/0025-on-ball-body-contact.md)
 

@@ -8,6 +8,21 @@
 
 ## Context
 
+**Implementation status checked 2026-10-11:** the problem description and
+follow-on list below record the decision-time baseline. The contact fixture
+[#356](https://github.com/JoseTomanan/hooper-game/issues/356), replay investigation
+[#368](https://github.com/JoseTomanan/hooper-game/issues/368), deterministic kernel
+[#369](https://github.com/JoseTomanan/hooper-game/issues/369) and production
+integration [#370](https://github.com/JoseTomanan/hooper-game/issues/370) are now
+closed. Integration covers neutral and committed movement, solver masking,
+depenetration, dedicated-server correction/convergence and positional box-out.
+See [the production proof and limits](../analysis/0370-production-contact-proof.md)
+and [replay characterization](../analysis/0368-committed-move-replay.md).
+Neutral-only reconciliation replay and latest-opponent-snapshot reuse remain
+accepted approximations; closure does not establish exact historical contact
+reconstruction or matching committed phases. Parent #347 and umbrella #355
+remain open. This status note changes no architectural decision or feel gate.
+
 The design identity is *"the duel is the space between two players"*, and
 [AGENTS.md §1](../../AGENTS.md) names the spine as **separation creation vs.
 denial**. Nobody had ever designed what happens when the two bodies meet.

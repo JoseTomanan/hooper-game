@@ -25,7 +25,7 @@ locked unless explicitly revisited (see Decision Discipline in §4 below).
 | [ADR-0012](docs/adr/0012-authoritative-ball-hand.md) | Ball-hand-side is server-authoritative state, not cosmetic |
 | [ADR-0013](docs/adr/0013-afk-hitl-separate-issues.md) | AFK build work and HITL editor verification live in separate issues (no dual-labelled issue) |
 | [ADR-0014](docs/adr/0014-reference-game-decision-authority.md) | Reference-game decision authority: ranked references (real half-court ball > Undisputed 3 feel > 2K taxonomy) — self-resolve reference-grounded calls on the record, escalate only genuine design calls |
-| [ADR-0015](docs/adr/0015-autonomous-merge-proven-by-harness.md) | Autonomous merge for the AFK lane + harness-closed `hitl`; "Done means proven" redefined as proven-by-harness (supersedes "human owns merges"); feel batched to one human pass per milestone |
+| [ADR-0015](docs/adr/0015-autonomous-merge-proven-by-harness.md) | Autonomous merge for the AFK lane + harness-closed `hitl`; "Done means proven" redefined as proven-by-harness (supersedes "human owns merges"); feel now deferred to human-scheduled #173 by ADR-0021 |
 | [ADR-0016](docs/adr/0016-headless-verification-harness.md) | Headless Godot harness (`tests/integration/`, `--headless`, exit-code pass/fail) is the official verification surface — the automated stand-in for human in-editor verification of state-checkable acceptance criteria |
 | [ADR-0017](docs/adr/0017-autopilot-activates-deferred-milestones.md) | Autopilot may activate DEFERRED milestones in the §2 dependency order without a per-milestone human "go" (supersedes "do not build ahead of the current milestone"); activation gates pickup, not merge |
 | [ADR-0018](docs/adr/0018-defensive-timing-window-model.md) | Defensive timing-window & reaction-tilt model (tick-interval overlap, `DefensiveResolution.Succeeds`) |
@@ -35,7 +35,7 @@ locked unless explicitly revisited (see Decision Discipline in §4 below).
 | [ADR-0022](docs/adr/0022-rim-finishing-offensive-vertical.md) | Rim-finishing offensive vertical (un-defer of #203): a new ADR, not an ADR-0009 amendment — the layup reuses the existing shot-accuracy model verbatim, the drive-gather reuses the hybrid-gather momentum model, the euro-step reuses the exit-cone precedent |
 | [ADR-0023](docs/adr/0023-authoritative-gate-prediction-tolerance.md) | Server-authoritative move gates widen their threshold by a bounded network tolerance and reject out-of-tolerance requests — they never begin a move the client did not request (rejects #236's JumpShot-fallback: it breaks the moveId invariant both reconciliation gates depend on) |
 | [ADR-0024](docs/adr/0024-hitl-async-evidence-restructure.md) | HITL restructured to async evidence (Proposed): mandatory harness-first decomposition of `hitl` verifies, rendered-evidence artifact review replaces live editor sessions (spike-gated), default-with-veto unblocks bounded decision gates; feel still never auto-accepted (ADR-0015 gate 4 / ADR-0021 intact) |
-| [ADR-0025](docs/adr/0025-on-ball-body-contact.md) | Accepted contact model: deterministic pre-solver response and depenetration, raw opponent snapshots, binary speed-and-facing set predicate, both movement paths; implementation tracked under #347/#355 |
+| [ADR-0025](docs/adr/0025-on-ball-body-contact.md) | Accepted contact model: deterministic pre-solver response and depenetration, raw opponent snapshots, binary speed-and-facing set predicate, both movement paths; production implementation #370 closed 2026-10-11; parent #347/#355 remain open |
 
 ---
 
@@ -84,7 +84,7 @@ the human.
 
 ## 2. Current milestone
 
-> **Status checked against GitHub on 2026-09-05:** M8b (#171) and M9 (#75)
+> **Status checked against GitHub on 2026-10-11:** M8b (#171) and M9 (#75)
 > are closed (both closed 2026-09-03); M10 (#89) is also closed. Their open
 > verification issues remain separate from those build-epic closures.
 >
@@ -109,19 +109,39 @@ the human.
 > there is a change to all of them.
 >
 > **Verification debt:** #153's net/fence pass succeeded 2026-07-19, and #170's
-> rig build is closed. #178 remains open for rig verification, with objective
-> proof gaps split into #367. #301 remains a distinct moving-dribble visual
+> rig build is closed. #367 closed 2026-10-09 with structural and remote-display
+> proof; #178 remains open for its remaining visual/verification criteria (see
+> `docs/analysis/0367-rig-verification-proof.md`). #301 remains a distinct moving-dribble visual
 > verify with its own human-directed reference and explicit #173 exception;
-> its build prerequisite #300 is closed. Capture spike #365 will test evidence
-> capture, not automatic feel acceptance. #366 tracks automation of #32's
-> dedicated-server journey; neither new task is implemented yet.
+> its build prerequisite #300 is closed. Capture spike #365 closed 2026-09-06
+> with hosted rendered-evidence GO (`docs/spikes/0013-rendered-evidence-capture.md`);
+> this does not accept proposed ADR-0024 or sign off visual quality. Dedicated
+> topology, terminal no-holder repair, browser join and full-game proofs
+> #372–#375 are closed. Parents #32/#366 remain open; their state must not be
+> inferred from child closure (`docs/analysis/0375-dedicated-game-proof.md`).
 >
-> **Next AFK work:** evidence tasks #365–#367, then #356's contact fixture and
-> the accepted ADR-0025 implementation (#368–#370) under #347 / umbrella #355.
-> Follow GitHub's parent and blocked-by links for the contact dependency order.
-> #325 (sprint) precedes #345 (protection); #346 (stance) and #348 (post-up)
-> still need scoped triage. #355 is an existing work umbrella, not a newly
-> activated numbered milestone. This queue does not reopen M9/M10 or lift M11.
+> **Spacing-spine work:** #356's contact fixture, #368's replay characterization,
+> #369's kernel and #370's complete production integration are closed. The
+> latter includes neutral/committed movement, solver masking, network correction
+> and positional box-out proof, with replay limitations retained (see
+> `docs/analysis/0370-production-contact-proof.md`). #325's offensive sprint
+> closed 2026-10-11: hold Shift/right trigger while dribbling for higher speed,
+> wider steal exposure and reduced turning; no stamina is added.
+> **Next AFK work:** #345 (protection), then scoped #346 (stance) and #348
+> (first post-play slice), both blocked on #345 per their approved 2026-10-11
+> briefs. Re-check native blockers and labels at pickup. #347 and umbrella
+> #355 remain open. This queue does not reopen M9/M10, assign #355 a numbered
+> milestone, or lift M11.
+>
+> **Repository improvements:** umbrella #385 closed 2026-10-09. #380–#384
+> aligned the orchestration gate, made the harness catalog authoritative,
+> sharded exhaustive CI, canonicalized mirrored skills and reduced discovery
+> payloads. #389's build-isolation spike retained one assembly with explicit
+> `IncludeIntegrationHarness=false` for ordinary compilation and `true` for
+> proof; omitted property defaults to `true`. #390 shared animation harness
+> primitives and migrated StepBack. #388 concluded NO-GO for same-scene
+> process reuse; #394 closed `NOT_PLANNED`/`wontfix`, not implemented. The
+> isolated runner remains authoritative. See spikes 0014/0015 and analysis 0390.
 >
 > **Closed-milestone detail is deliberately not repeated here.** What landed
 > under M9's original scope and M10's defensive core lives in GitHub; the rules
@@ -144,7 +164,7 @@ the human.
 | M3 — Hybrid input: committed moves | Done | #13 |
 | M4 — Networked ball + committed moves | Done | #19 |
 | M5 — Win condition + scoring | Done | #23 |
-| M6a — Dedicated server + server browser | Build epic closed; #32 proof debt has AFK child #366 | #28 |
+| M6a — Dedicated server + server browser | Build epic closed; #372–#375 proof children closed; #32/#366 remain open | #28 |
 | M6b — Possession loop | Done (epic closed 2026-06-24; feel deferred to #173 per ADR-0021) | #46 |
 | M7a — Static readability pass | Done | #53 |
 | M7b — Rigged humanoid animation | Done (epic closed 2026-06-26) | #54 |

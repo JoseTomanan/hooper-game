@@ -15,19 +15,40 @@
 - **Proposed async evidence review** — screenshots/clips attached to an issue,
   judged from any device on your own schedule
   ([ADR-0024](docs/adr/0024-hitl-async-evidence-restructure.md), still Proposed).
-  Capture infrastructure is not yet shipped as of 2026-09-05; AFK spike #365
-  tests local and hosted-CI capture. Do not mistake this proposal for evidence
-  that a capture job already exists, or an agent review for human acceptance.
+  [Capture spike #365](https://github.com/JoseTomanan/hooper-game/issues/365)
+  closed 2026-09-06 with a hosted-CI GO: repeatable local and remote production
+  gameplay captures, manifests, and deliberate-break checks shipped. See the
+  [capture report](docs/spikes/0013-rendered-evidence-capture.md). This experiment
+  does not accept ADR-0024 or substitute agent observations for human acceptance.
 - **Optional vetoes** on posted decision briefs (also ADR-0024).
 - **Editor import-dialog settings that have no headless path at all** — the one
   remaining structural exclusion.
 
-**Current proof work (2026-09-05):** #366 is the AFK child of #32 for the full
-dedicated-server/browser journey; #367 maps and fills objective gaps in #178's
-rig verification. #153's net/fence visuals passed 2026-07-19, and #170's rig
-build is closed. #301 remains its own moving-dribble visual verification,
-with its explicit #173 exception and human-directed reference intact; #300,
-its former build blocker, is closed. Follow GitHub for the live issue state.
+**Proof status checked against GitHub on 2026-10-11:**
+
+- Dedicated topology, discovery/browser join, terminal no-holder behavior and
+  a complete five-point game are proven by closed
+  [#372](https://github.com/JoseTomanan/hooper-game/issues/372) through
+  [#375](https://github.com/JoseTomanan/hooper-game/issues/375).
+  [#32](https://github.com/JoseTomanan/hooper-game/issues/32) and its proof
+  umbrella [#366](https://github.com/JoseTomanan/hooper-game/issues/366) remain
+  open. The [dedicated-game proof](docs/analysis/0375-dedicated-game-proof.md)
+  uses three production-scene processes and loopback discovery; separately
+  exported builds and cross-machine LAN discovery remain outside that proof.
+- [#367](https://github.com/JoseTomanan/hooper-game/issues/367) closed
+  2026-10-09 with structural rig, independent scaling, fixed-capsule and real
+  remote-display evidence. Its [source-to-proof matrix](docs/analysis/0367-rig-verification-proof.md)
+  was posted on [#178](https://github.com/JoseTomanan/hooper-game/issues/178),
+  which remains open for proportions, foot-sliding, readability and UID
+  portability. Remote authored defaults are proven; runtime scale replication
+  is not a shipped customization feature, and short-phase observation remains
+  a separate evidence gap.
+- #153's net/fence visuals passed 2026-07-19; #170's rig build is closed.
+  [#301](https://github.com/JoseTomanan/hooper-game/issues/301) remains its own
+  moving-dribble visual verification, with its explicit #173 exception and
+  human-directed reference intact; #300, its former build blocker, is closed.
+
+Follow GitHub for subsequent issue-state changes.
 
 **What is no longer yours**, despite what the per-milestone sections below may
 imply — each was handed to Claude or the harness by a specific decision:

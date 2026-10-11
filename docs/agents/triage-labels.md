@@ -12,7 +12,7 @@ reuse those existing labels rather than creating duplicates.
 | `needs-triage`     | `needs-triage`       | Maintainer needs to evaluate this issue       |
 | `needs-info`       | `needs-info`         | Waiting on reporter for more information       |
 | `ready-for-agent`  | `afk`                | Fully specified, ready for an AFK agent        |
-| `ready-for-human`  | `hitl`               | Requires human (editor-level) verification     |
+| `ready-for-human`  | `hitl`               | Remaining human judgment or verification       |
 | `wontfix`          | `wontfix`            | Will not be actioned                          |
 
 When a skill mentions a role (e.g. "apply the AFK-ready triage label"), use the
@@ -30,5 +30,9 @@ corresponding label string from the right-hand column.
 - Because `afk` and `hitl` are single-purpose (ADR-0013), never apply both to the
   same issue. `ready-for-agent` and `ready-for-human` are therefore mutually
   exclusive here too.
+- Closed objective-proof children do not automatically close a `hitl` parent.
+  For example, #367 closed 2026-10-09 while rig verification #178 remains open.
+  Rendered capture #365 supplies review evidence; it does not accept feel or
+  the still-Proposed ADR-0024. Feel remains human-owned under ADR-0021.
 
 Edit the right-hand column if the vocabulary changes.

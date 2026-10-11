@@ -8,7 +8,7 @@ longer exists — see AGENTS.md §3). Use the `gh` CLI for all operations.
 
 - **Create an issue**: `gh issue create --title "..." --body-file <utf8-file>`. Use a temporary UTF-8 file for multiline bodies so shell quoting preserves the exact text.
 - **Read an issue**: `gh issue view <number> --comments`, filtering comments by `jq` and also fetching labels.
-- **List issues**: `gh issue list --state open --json number,title,body,labels,comments --jq '[.[] | {number, title, body, labels: [.labels[].name], comments: [.comments[].body]}]'` with appropriate `--label` and `--state` filters.
+- **List issues**: use lightweight metadata for discovery, then fetch bodies/comments only for selected candidates (two-stage discovery from [#384](https://github.com/JoseTomanan/hooper-game/issues/384), closed 2026-10-03). Follow the paginated procedure below for complete orchestration discovery; a bounded `gh issue list` is suitable only for a targeted lookup.
 - **Comment on an issue**: `gh issue comment <number> --body "..."`
 - **Apply / remove labels**: `gh issue edit <number> --add-label "..."` / `--remove-label "..."`
 - **Close**: `gh issue close <number> --comment "..."`

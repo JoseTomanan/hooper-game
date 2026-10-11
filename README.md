@@ -51,7 +51,7 @@ hooper-game/
 │   ├── Input/        # Input reading, committed-move state machine
 │   ├── Ball/         # Deterministic mini-physics
 │   └── Systems/      # Cross-cutting systems
-├── scenes/           # .tscn files (human-authored in the Godot editor)
+├── scenes/           # Agent-authored .tscn files and resources (ADR-0011)
 ├── assets/           # Models, textures, sounds (placeholder/gray for now)
 ├── addons/           # Godot editor plugins — see AGENTS.md §3 (godot_dotnet_mcp)
 └── docs/
@@ -59,20 +59,26 @@ hooper-game/
     └── handoffs/     # Cross-session scratch notes (gitignored)
 ```
 
-`scenes/` files are wired in the Godot editor by the human. `scripts/` is AI-written C#. The two halves meet at `[Export]` properties and node paths.
+Agents author scene wiring, resources and Input Map entries directly as text
+(ADR-0011). Scene properties and node paths connect the scenes to C# scripts;
+the human owns visual and feel judgments.
 
 ---
 
 ## Running the Project
 
-This project requires **Godot 4 (.NET edition)** — the standard Godot 4 build does *not* include C# support.
+This project uses **Godot 4.7.1 (.NET edition)** and the **.NET 8 SDK** — the
+standard Godot build does *not* include C# support.
 
-1. Install [Godot 4 .NET](https://godotengine.org/download/) and the [.NET 8 SDK](https://dotnet.microsoft.com/download).
+1. Install Godot **4.7.1 .NET** and the [.NET 8 SDK](https://dotnet.microsoft.com/download).
 2. Open `project.godot` in Godot.
 3. Build the C# solution (`Build > Build Solution` or MSBuild via CLI).
 4. Run the `Main` scene.
 
-Input actions (`move_left`, `move_right`, `move_forward`, `move_backward`) must be configured in **Project → Project Settings → Input Map** before movement works.
+Input actions are already configured in `project.godot`; no manual Input Map
+setup is required. Offensive sprint uses Shift or the right trigger while
+dribbling ([#325](https://github.com/JoseTomanan/hooper-game/issues/325), closed
+2026-10-11).
 
 ### Running tests
 
@@ -84,8 +90,25 @@ headless xUnit suite that runs without opening Godot:
 dotnet test tests/Hooper.Ball.Tests
 ```
 
-This suite is a **green-before-merge gate** for M7a (issue #37): any visual
-change to the player must not regress movement or reconciliation underneath it.
+The unit suite is one merge gate. State-checkable integration proof runs through
+the executable headless harness catalog, alongside build and code review gates
+(ADR-0015/0016). [#381](https://github.com/JoseTomanan/hooper-game/issues/381)
+made the catalog authoritative; [#382](https://github.com/JoseTomanan/hooper-game/issues/382)
+sharded exhaustive CI without reducing coverage.
+
+Build a proof-capable assembly before running integration scenes:
+
+```powershell
+dotnet build "HOOPER GAME.csproj" -p:IncludeIntegrationHarness=true
+python tools/harness_catalog.py run --all --godot <path-to-godot-console> --bash <path-to-bash>
+```
+
+For an ordinary game compile, `-p:IncludeIntegrationHarness=false` omits
+integration sources; the compatibility default is `true`. See
+[build-isolation spike #389](docs/spikes/0015-harness-build-isolation.md) for the
+configuration boundary. Same-scene process batching was rejected after
+[#388's NO-GO](docs/spikes/0014-same-scene-process-reuse.md);
+[#394](https://github.com/JoseTomanan/hooper-game/issues/394) closed as not planned.
 
 ---
 
@@ -98,5 +121,5 @@ All significant decisions — engine choice, networking model, input model, ball
 ## Project Notes
 
 - Built by a solo developer with no prior game-dev experience, driving implementation primarily through AI-written code (Claude Code).
-- Issues are tracked in [GitHub Issues](../../issues). `afk` label = ready for AI implementation; `hitl` label = requires a human editor step in Godot before closing.
-- "Done means proven, not written." `hitl` issues close only after in-editor verification.
+- Issues are tracked in [GitHub Issues](https://github.com/JoseTomanan/hooper-game/issues). `afk` means ready for agent implementation; `hitl` tracks remaining human judgments or verification.
+- "Done means proven, not written." State-checkable criteria use headless proof; visual and feel judgments remain human-owned. [#365](https://github.com/JoseTomanan/hooper-game/issues/365) proved hosted rendered capture, which supplies evidence without accepting feel. The consolidated feel pass remains deferred in [#173](https://github.com/JoseTomanan/hooper-game/issues/173) (ADR-0021); ADR-0024 remains Proposed.
