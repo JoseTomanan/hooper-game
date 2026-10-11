@@ -2,7 +2,7 @@
 
 - **Issue:** [#346](https://github.com/JoseTomanan/hooper-game/issues/346), approved brief dated 2026-10-11
 - **ADRs:** 0003, 0010 (authorized stance amendment), 0018, 0025
-- **Date:** 2026-10-11
+- **Date:** Measurements 2026-10-11; verification finalized 2026-10-12
 - **Purpose:** Record state and rendered evidence for the continuous defensive posture. The human owns feel in #173; provisional movement tuning remains in #238. These results do not sign off either.
 
 ## Method
@@ -54,6 +54,35 @@ These 700×700 captures use the production Mobile/D3D12 renderer and real animat
 | ![Neutral](0346-evidence/production-neutral.png) | ![Stance](0346-evidence/production-stance.png) |
 
 [Steal startup](0346-evidence/production-steal.png), [Block startup](0346-evidence/production-block.png), and [Contest startup](0346-evidence/production-contest.png) select `StealStartupRight`, `BlockStartup`, and `ContestStartup` respectively, with stance false. The pose test separately proves modifier bypass using identical authored frames; these captures show production state selection.
+
+## Verification record
+
+TDD started with a live left-slide failure on the old movement path (`instant/unbounded stance heading`) and a presentation failure when the shipped modifier was absent (`shipped player has no DefensiveStancePose modifier`). The new motion and actual skeleton observations turn those checks green.
+
+The full unit suite passed 1,182 tests with five intentionally skipped characterization theories. All 61 repository contracts passed. [PR workflow 38143901205](https://github.com/JoseTomanan/hooper-game/actions/runs/38143901205) passed the ordinary game build, units/contracts, all four exhaustive integration shards, aggregate integration gate, and rendered-evidence spike. The catalog contains 361 isolated cases: 320 single-process and 41 multiprocess.
+
+The Windows isolated sweep also completed all 361 cases, each with PASS and exit 0. Its parsed case IDs exactly match the catalog. The outer PowerShell 5.1 process reported exit 1 because redirected native stderr became `NativeCommandError` for an existing fixture warning. A minimal stderr/exit-zero reproduction confirmed `$LASTEXITCODE = 0` while `$? = false`. The full run's original `$LASTEXITCODE` was not captured directly; the catalog's return-zero follows its unchanged return logic and every recorded case exit. This shell distinction is retained in `.godot/stance-full-matrix-final-verdict.json`; it is not concealed as a test failure or a measured top-level exit zero.
+
+The final strengthened network check requires the observing client's local posture input to be released while the received remote stance is true. Separate baseline/30 ms runs passed this condition, with a measured physical wire correction of 0.9013878 m in both and zero independent replay error. Delayed direction minima were at least 30.0255 ms. These two runs are distinct from the earlier six repeated trials.
+
+Independent code review of PR #407 found no high-confidence introduced correctness defects. This is a review result, not a replacement for the harness verdicts.
+
+### Discriminating mutations
+
+The clean history passes the independent replay reference. Changing only its buffered held posture or historical eligibility produces the first two real-engine failures below. The other four mutate production source, build successfully, and fail the named real-engine assertion with exit 1; a build error or timeout is not counted as a caught mutation.
+
+| Mutation | Oracle | Observed failure |
+|---|---|---|
+| Drop buffered held posture | Independent twelve-tick replay | Position error 0.08574985 m |
+| Replace sampled eligibility with today's Loose-ball context | Independent twelve-tick replay | Position error 0.08574985 m |
+| Replace bounded stance rate with 360000 degrees/s | Moving-target heading cap | `unbounded stance heading` |
+| Remove the owed-pivot branch | Existing pivot completion | `pivot did not resolve owed target` |
+| Substitute cosmetic opponent snapshot for latest raw state | Dedicated replay source control | `identical stationary raw replay sample premise` |
+| Force the paired defender's set predicate true | Fast stance contact control | `unset fast stance did not share impulse` |
+
+Velocity and heading return to the same values during the final ordinary ticks in these two mutations. Position remains different, so the position assertion is necessary; checking only final velocity/heading would miss the defect.
+
+Each source mutation was restored byte-for-byte before the next. SHA-256 checks confirmed restoration of all three touched production files. The final clean game build had zero warnings/errors, and bounded heading, owed pivot, fast contact and dedicated network baseline controls all returned exit 0 again. Temporary substitutions do not appear in the branch diff.
 
 ## Reproduction
 
