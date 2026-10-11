@@ -6,6 +6,14 @@
 !.claude/hooks/
 !.claude/settings.json
 
+# Machine-local Codex MCP configuration; shared agents and hooks stay tracked.
+/.codex/config.toml
+
+# Local investigation scratch and isolated agent checkouts.
+/.tmp/
+/.out-of-scope/
+/.worktrees/
+
 # Godot 4
 .godot/
 /android/
