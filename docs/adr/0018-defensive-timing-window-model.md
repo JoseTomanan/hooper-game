@@ -728,3 +728,32 @@ Rejected: using dribble period as the exposure lever. A phase-band fraction is
 independent of cycle length, and a longer period has opposing effects on
 mistimed overlap and deliberately timed reads. Rejected: making every sprint
 steal succeed, which would discard both the timing and hand-side read.
+
+## Amendment 2026-10-11 - Protection narrows the existing dribble exposure band (#345)
+
+For an effectively protecting live dribble holder, the server substitutes
+`ProtectStealLoExposed`/`ProtectStealHiExposed` (initially 0.45/0.55) for the
+ordinary 0.35/0.65 band. Protection takes precedence over sprint. The existing
+inclusive phase-band predicate and authoritative hand match remain unchanged:
+a phase-0.40 same-hand read that connects against neutral misses against
+protection, while phase 0.50 still connects. Other steal windows retain their
+existing rules, including transit and both #255/#206 Held exposure paths.
+
+This is #345's single protection benefit. It does not change `HandSide`,
+introduce an away-hand lock, or grant invulnerability. Real-ball basis
+(ADR-0014 tier 2): body and non-dribbling-arm shielding reduce the reachable
+exposure of a controlled dribble; see [Jr. NBA's dribbling guidance](https://jr.nba.com/how-to-dribble-a-basketball).
+The one-third-width band is a bounded modeling default, not a measured
+real-ball timing claim. Magnitude tuning stays in #238 and feel in #173.
+
+ADR-0003's matching amendment records the continuous ground-coverage cost,
+input eligibility and replay contract. Server resolution reads authoritative
+gameplay eligibility, never the cosmetic shield pose or a client-supplied
+effective-posture claim. No defensive primitive or RNG is added.
+
+Rejected: layering automatic away-hand selection over this band, because
+stacking both benefits obscures which read beats protection. Rejected:
+closing the band completely, which recreates the steal-immune stall. A
+dead-Held handler with protection held remains exposed under #255; the
+future possession clock and held M11 stamina economy are not required to
+make this trade operational.

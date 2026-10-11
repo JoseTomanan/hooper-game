@@ -113,7 +113,7 @@ public partial class PlayerController
         Rpc(MethodName.ReceiveState, ack, GlobalPosition, Velocity,
             (int)_machine.Phase, _machine.FrameInPhase, MoveIdOf(_machine.CurrentMove), MoveParamOf(_machine.CurrentMove),
             Heading, (int)HandSide, _machine.WasRecoveryEnteredEarly, _pivot.HasLatch, _pivot.LatchedYaw,
-            IsBeaten(PhysicsTick));
+            IsBeaten(PhysicsTick), IsProtecting);
         _contactDeferredAck = null;
     }
 

@@ -462,3 +462,51 @@ Rejected: a sprint `CommittedMove`, because continuous movement intent belongs
 to the spacing spine and has no cancellable payload. Rejected: allowing sprint
 from a dead-dribble hold, which would erase the existing cradle cost. The
 existing committed-move completion and no-flow-cancel rules remain intact.
+
+## Amendment 2026-10-11 - Held ball protection belongs to continuous movement (#345)
+
+The other end of #325's pace axis is held `move_protect`, bound to Ctrl and
+the left trigger. It is effective only for the live `Dribbling` holder outside
+a committed move. A held protection request takes precedence over sprint;
+eligibility is evaluated each tick, without a release-to-rearm requirement.
+The same action remains available for #346's separately approved defensive
+stance; this amendment implements no defensive stance or post-up behavior.
+
+Protection uses the existing finite acceleration/deceleration movement step
+with an initial 1 m/s target ceiling, versus the unchanged 6 m/s neutral pace.
+Entry carries existing momentum before decelerating toward the protected
+pace; exit accelerates from the surviving velocity. Existing pivot plants,
+committed moves and deterministic contact retain their rules. No possession
+clock or stamina cost is presumed while those systems remain deferred.
+
+Reference basis (ADR-0014 tier 2): a controlled protected dribble concedes
+ground coverage while the body and off-arm shield the ball. [Jr. NBA's
+dribbling guidance](https://jr.nba.com/how-to-dribble-a-basketball) describes
+body and non-dribbling-arm shielding. The speed is a provisional modeling
+default, not a measured real-player speed; tuning belongs to #238 and feel
+to the human-scheduled #173 pass. A procedural lowered/off-arm posture on
+the existing rig supplies the visible deliverable; committed/pivot
+presentation takes precedence. There is no bespoke clip requirement on the
+closed animation batch #302.
+
+Authoritative heading and hand-side keep their existing rules. Protection
+adds no automatic facing, away-hand bias, or shot-specific accuracy term;
+shots continue to consume actual heading through ADR-0009. Held/dead-Held
+possessions receive no protection benefit, preserving ADR-0018's #255
+static exposure and pump-fake windows.
+
+The held request rides guarded `SubmitInput`; the server derives effective
+protection from its own gameplay state. Client prediction buffers the
+effective protection sampled for each tick alongside sprint and movement,
+then supplies it to replay explicitly. Replaying those ticks never resolves
+eligibility from today's possession or hardware input. As in #325, sampled
+effective eligibility preserves the original local prediction; it does not
+reconstruct historical authoritative possession or committed-move motion.
+Remote presentation consumes broadcast effective protection, never remote
+hardware input or an unticked remote move machine.
+
+Rejected: a protection `CommittedMove`, because this is a continuous pace
+and exposure trade without a cancellable payload. Rejected: stacking an
+away-hand lock on the narrower phase band, because #345 requires exactly
+one protection benefit. Rejected: instantaneous velocity clamping on entry,
+which would erase the momentum cost of switching posture.
