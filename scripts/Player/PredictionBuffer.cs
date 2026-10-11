@@ -44,7 +44,10 @@ public sealed class PredictionBuffer
 	/// </summary>
 	public int LastSequence { get; private set; }
 
-	public readonly record struct InputFrame(Vector2 Movement, bool Sprint, bool Protect = false);
+	// #346: raw held posture and locally sampled eligibility are distinct. The
+	// server receives only the held request, never a client's eligibility claim.
+	public readonly record struct InputFrame(Vector2 Movement, bool Sprint, bool Protect = false,
+		bool PostureHeld = false, bool StanceEligible = false);
 	private readonly Queue<(int seq, InputFrame input)> _pending = new();
 
 	/// <param name="capacity">Maximum buffered inputs before the oldest is evicted. Defaults to 120 (~2 s at 60 Hz), matching PlayerController's original PendingCap.</param>
@@ -65,14 +68,15 @@ public sealed class PredictionBuffer
 	/// </summary>
 	/// <param name="input">This tick's movement intent vector.</param>
 	/// <returns>The sequence number assigned to this input — send this to the server alongside the input.</returns>
-	public int Record(Vector2 input, bool sprint = false, bool protect = false)
+	public int Record(Vector2 input, bool sprint = false, bool protect = false,
+		bool postureHeld = false, bool stanceEligible = false)
 	{
 		LastSequence++;
 
 		if (_pending.Count >= Capacity)
 			_pending.Dequeue(); // oldest evicted; 2-s silence required to hit this
 
-		_pending.Enqueue((LastSequence, new InputFrame(input, sprint, protect)));
+		_pending.Enqueue((LastSequence, new InputFrame(input, sprint, protect, postureHeld, stanceEligible)));
 		return LastSequence;
 	}
 

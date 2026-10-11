@@ -336,3 +336,54 @@ Rejected: a cosmetic-only slower turn, because the movement and steal rules
 need the authoritative heading. Rejected: replaying movement vectors without
 the sprint modifier, because correction would reconstruct a jog instead of
 the sprint the player predicted.
+
+## Amendment 2026-10-11 - Held defensive stance faces the live attacker (#346)
+
+The maintainer explicitly approved automatic attacker-facing slides in
+[#346's approved brief](https://github.com/JoseTomanan/hooper-game/issues/346#issuecomment-6104239046)
+on 2026-10-11. This narrowly revisits Alternative 3's movement-intent-facing
+rule: while `move_protect` is held by the defender of a live Held/Dribbling
+opponent, the movement stick keeps its world-space translation meaning and
+authoritative heading approaches the floor-plane bearing to that opponent.
+Idle stance also turns. Coincident positions retain heading. There is no aim
+channel, pursuit, attraction or automated translation.
+
+`HeadingMath.StepDefensiveStance` uses the existing bounded non-linear turn
+schedule with `StanceTurnRateDeg = 360` degrees/s. An ordinary pivot already
+owed is completed first at the ordinary rate, without retargeting its latch
+to the attacker or applying two heading steps on its completion tick. Released
+posture retains ordinary stick-facing and latch-retarget rules. Committed
+moves own their existing heading/displacement/timeline throughout; holding
+posture can resume stance after completion but cannot alter a move.
+
+The same Ctrl/left-trigger action selects protection for the live dribbling
+holder and stance for the defender. Raw posture wins over sprint. Stance is
+ineligible for Loose/InFlight, an absent opponent or a committed defender;
+eligibility is re-evaluated without a release-to-rearm requirement. Starting
+movement tunables are `StanceSpeed = 3` m/s, `StanceAccel = 60` m/s² and
+`StanceDecel = 90` m/s² against unchanged neutral 6/45/70. These model the
+approved real-half-court (ADR-0014 tier 2) trade: a low slide changes lateral
+direction sooner but recovers less ground than upright running. Half neutral
+speed and a bounded one-third acceleration increase are modeling defaults,
+not measurements of real-player speed. Tuning remains #238 and feel #173.
+Finite velocity integration preserves entry/exit momentum. Contact consumes
+the resulting heading and velocity without changing its speed/facing set
+predicate, leverage or any defensive success/shot/rebound rule.
+
+Authority/prediction/replay share explicit motion inputs. Server callers use
+true opponent state and derive eligibility independently from their ball and
+move state; clients use latest raw broadcast opponent state. The prediction
+buffer retains both held posture input and locally sampled eligibility for
+each tick, including committed-move exclusion. Replay uses this historical
+context rather than today's possession or hardware. It re-evaluates pivot
+precedence from the restored authoritative pivot state. Effective stance is
+broadcast for remote presentation and restored before replay. No stale move
+frame counter is force-matched. As accepted under ADR-0025/#370, all replayed
+ticks use the latest available raw opponent sample: exact moving-opponent
+history and committed-motion replay remain unclaimed approximations.
+
+Rejected: instant lock-on, cosmetic-only facing, a general independent aim
+channel, or clearing an owed pivot on posture entry. Rejected: a stance
+CommittedMove, defensive sprint, automatic set status or new success bonuses.
+The low/wide skeleton modifier reads effective posture and gives committed
+clips/pivots priority; it never feeds authoritative state.

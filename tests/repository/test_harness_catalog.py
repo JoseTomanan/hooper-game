@@ -69,7 +69,12 @@ class HarnessCatalogCliTests(unittest.TestCase):
             + [f'protection-test-{scenario}' for scenario in (
                 'speed', 'gates', 'steal-neutral', 'steal-protect', 'steal-center',
                 'steal-wrong-hand', 'held-static', 'presentation')]
-            + ['net-protection-test', 'net-rig-presentation-left', 'net-rig-presentation-right']
+            + ['net-protection-test']
+            + [f'defensive-stance-test-{scenario}' for scenario in (
+                'slides-left', 'slides-right', 'idle-facing', 'bounded-moving', 'response',
+                'gates', 'pivot', 'committed', 'contact-slow', 'contact-fast')]
+            + ['defensive-stance-presentation-test-presentation',
+               'net-rig-presentation-left', 'net-rig-presentation-right']
             + [f'committed-replay-{move}-{contact}-{delay}ms'
                for move in ('neutral', 'crossover', 'gather')
                for contact in ('contact', 'no-contact')
@@ -77,7 +82,8 @@ class HarnessCatalogCliTests(unittest.TestCase):
             + [f'production-contact-{move}-{contact}-{delay}ms'
                for move in ('neutral', 'crossover', 'gather')
                for contact in ('contact', 'no-contact')
-               for delay in (0, 30)],
+               for delay in (0, 30)]
+            + [f'defensive-stance-{delay}ms' for delay in (0, 30)],
             [line.split('\t')[0] for line in lines[baseline_tail + 1:]],
         )
 
@@ -280,7 +286,12 @@ class HarnessCatalogShardTests(unittest.TestCase):
                 self.assertEqual(catalog.DEFAULT_SINGLE_WEIGHT_SECONDS, weights[case.id])
             elif case.id.startswith('production-contact-'):
                 self.assertEqual(catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS, weights[case.id])
-        self.assertAlmostEqual(604.0, sum(weights.values()))
+        for case in catalog.CATALOG:
+            if case.id.startswith('defensive-stance-test-') or case.id.startswith('defensive-stance-presentation-test-'):
+                self.assertEqual(catalog.DEFAULT_SINGLE_WEIGHT_SECONDS, weights[case.id])
+            elif case.id in ('defensive-stance-0ms', 'defensive-stance-30ms'):
+                self.assertEqual(catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS, weights[case.id])
+        self.assertAlmostEqual(631.0, sum(weights.values()))
 
         base = catalog.CATALOG[0]
         new_single = replace(base, id='new-single', scenes=(catalog.SceneMetadata('res://tests/integration/Unknown.tscn'),))
@@ -478,18 +489,26 @@ class HarnessCatalogRunnerTests(unittest.TestCase):
         self.assertIn('SmokeTest.tscn', ' '.join(popen.calls[0][0]))
         baseline_tail = len(self.catalog.MIGRATION_BASELINE_CATALOG) - 1
         self.assertEqual('score-rpc-disabled', popen.calls[baseline_tail][0][-1])
-        self.assertEqual('--harness-scenario=primitives-state-clips', popen.calls[baseline_tail + 3][0][-1])
-        self.assertEqual('--harness-scenario=capsule-contract', popen.calls[baseline_tail + 4][0][-1])
-        self.assertEqual('--harness-scenario=contact', popen.calls[baseline_tail + 5][0][-1])
-        self.assertEqual('--harness-scenario=no-contact', popen.calls[baseline_tail + 6][0][-1])
-        self.assertEqual('--harness-scenario=set-drive', popen.calls[baseline_tail + 7][0][-1])
-        self.assertEqual('--harness-scenario=dimensions', popen.calls[baseline_tail + 13][0][-1])
-        self.assertEqual('--harness-scenario=immutable-crossing', popen.calls[baseline_tail + 30][0][-1])
-        self.assertEqual('--harness-scenario=reconcile-overlap', popen.calls[baseline_tail + 31][0][-1])
-        self.assertEqual('--harness-scenario=speed', popen.calls[baseline_tail + 32][0][-1])
-        self.assertIn('NetSprintTest.tscn', ' '.join(popen.calls[baseline_tail + 40][0]))
-        self.assertEqual('left', popen.calls[baseline_tail + 50][0][-1])
-        self.assertEqual('right', popen.calls[baseline_tail + 51][0][-1])
+        calls_by_id = {case.id: call[0] for case, call in zip(self.catalog.CATALOG, popen.calls)}
+        for case_id, scenario in (
+            ('animation-harness-primitives-test-primitives-state-clips', 'primitives-state-clips'),
+            ('rig-scale-harness-test-capsule-contract', 'capsule-contract'),
+            ('contact-fixture-test-contact', 'contact'),
+            ('contact-fixture-test-no-contact', 'no-contact'),
+            ('contact-kernel-test-set-drive', 'set-drive'),
+            ('contact-kernel-test-dimensions', 'dimensions'),
+            ('production-contact-test-immutable-crossing', 'immutable-crossing'),
+            ('production-contact-test-reconcile-overlap', 'reconcile-overlap'),
+            ('sprint-test-speed', 'speed'),
+            ('defensive-stance-test-gates', 'gates'),
+            ('defensive-stance-presentation-test-presentation', 'presentation'),
+        ):
+            self.assertEqual(f'--harness-scenario={scenario}', calls_by_id[case_id][-1])
+        self.assertIn('NetSprintTest.tscn', ' '.join(calls_by_id['net-sprint-test']))
+        for side in ('left', 'right'):
+            self.assertEqual(side, calls_by_id[f'net-rig-presentation-{side}'][-1])
+        for delay in (0, 30):
+            self.assertEqual(str(delay), calls_by_id[f'defensive-stance-{delay}ms'][-1])
 
     def test_run_one_shard_executes_only_that_shard_with_a_stable_run_id(self):
         shard_number = 2

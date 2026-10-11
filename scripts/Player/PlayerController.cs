@@ -1552,7 +1552,10 @@ public partial class PlayerController : CharacterBody3D
 
         var protectionSkeletons = FindChildren("*", nameof(Skeleton3D), recursive: true, owned: false);
         if (protectionSkeletons.Count > 0 && protectionSkeletons[0] is Skeleton3D protectionSkeleton)
+        {
             protectionSkeleton.AddChild(new ProtectionPose { Name = "ProtectionPose", Player = this });
+            protectionSkeleton.AddChild(new DefensiveStancePose { Name = "DefensiveStancePose", Player = this });
+        }
 
 		_gameManager = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
 		if (_gameManager == null)
@@ -1654,7 +1657,7 @@ public partial class PlayerController : CharacterBody3D
 		else
 		{
 			Vector2 input = ReadInput();
-			Move(input, delta, GetContactOpponent(server: true), IsSprinting, IsProtecting);
+			Move(input, delta, GetContactOpponent(server: true), IsSprinting, IsProtecting, _requestedProtect && StanceEligible());
 			CheckAutoStartDribble(input);
 		}
 
@@ -1683,7 +1686,7 @@ public partial class PlayerController : CharacterBody3D
 		else Rpc(MethodName.ReceiveState, 0, GlobalPosition, Velocity,
 			(int)_machine.Phase, _machine.FrameInPhase, MoveIdOf(_machine.CurrentMove), MoveParamOf(_machine.CurrentMove),
 			Heading, (int)HandSide, _machine.WasRecoveryEnteredEarly, _pivot.HasLatch, _pivot.LatchedYaw,
-			IsBeaten(PhysicsTick), IsProtecting);
+			IsBeaten(PhysicsTick), IsProtecting, IsInDefensiveStance);
 	}
 
 	/// <summary>
@@ -1719,7 +1722,7 @@ public partial class PlayerController : CharacterBody3D
 			TickCommittedMoveBehavior(delta, _authoritativeExitVector ?? _pendingRawStick, GetContactOpponent(server: true));
 		else
 		{
-			Move(_pendingInput, delta, GetContactOpponent(server: true), IsSprinting, IsProtecting);
+			Move(_pendingInput, delta, GetContactOpponent(server: true), IsSprinting, IsProtecting, _requestedProtect && StanceEligible());
 
 			// #224 fix: only honor drive intent from _pendingInput once a
 			// genuinely FRESH (post-award) SubmitInput has actually arrived —
@@ -1757,7 +1760,7 @@ public partial class PlayerController : CharacterBody3D
 		else Rpc(MethodName.ReceiveState, _serverAckedSeq, GlobalPosition, Velocity,
 			(int)_machine.Phase, _machine.FrameInPhase, MoveIdOf(_machine.CurrentMove), MoveParamOf(_machine.CurrentMove),
 			Heading, (int)HandSide, _machine.WasRecoveryEnteredEarly, _pivot.HasLatch, _pivot.LatchedYaw,
-			IsBeaten(PhysicsTick), IsProtecting);
+			IsBeaten(PhysicsTick), IsProtecting, IsInDefensiveStance);
 	}
 
 	/// <summary>
@@ -1796,11 +1799,12 @@ public partial class PlayerController : CharacterBody3D
 		_requestedProtect = Input.IsActionPressed("move_protect");
 		bool sprint = IsSprinting;
 		bool protect = IsProtecting;
+		bool stanceEligible = StanceEligible();
 
 		// Record() assigns the seq and handles capacity eviction (see
 		// PredictionBuffer doc) — behavior-identical to the inline
 		// _seq++ / cap-check / enqueue this replaced.
-		int seq = _buffer.Record(moveInput, sprint, protect);
+		int seq = _buffer.Record(moveInput, sprint, protect, _requestedProtect, stanceEligible);
 
 		if (_machine.IsActive)
 		{
@@ -1826,7 +1830,7 @@ public partial class PlayerController : CharacterBody3D
 		}
 		else
 		{
-			Move(moveInput, delta, GetContactOpponent(server: false), sprint, protect);
+			Move(moveInput, delta, GetContactOpponent(server: false), sprint, protect, _requestedProtect && stanceEligible);
 			CheckAutoStartDribble(moveInput);
 		}
 
@@ -2616,7 +2620,7 @@ public partial class PlayerController : CharacterBody3D
 		 TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
 	private void ReceiveState(int ackSeq, Vector3 pos, Vector3 vel,
 		int movePhase, int frameInPhase, string moveId, float moveParam, float heading, int handSide,
-		bool endedActiveEarly, bool pivotHasLatch, float pivotLatchedYaw, bool isBeaten, bool protect = false)
+		bool endedActiveEarly, bool pivotHasLatch, float pivotLatchedYaw, bool isBeaten, bool protect = false, bool stance = false)
 	{
 		_serverPos       = pos;
 		_serverVel       = vel;
@@ -2645,6 +2649,7 @@ public partial class PlayerController : CharacterBody3D
 		// overwrite-every-broadcast reasoning.
 		_serverIsBeaten  = isBeaten;
 		_serverProtect = protect;
+		_serverStance = stance;
 		_hasNewState     = true;
 		_hasContactSnapshot = true;
 	}
@@ -2838,6 +2843,7 @@ public partial class PlayerController : CharacterBody3D
 		// pre-existing, _smoothOffset-covered positional trade-off that _pivot
 		// now inherits rather than introduces.
 		_pivot = new HeadingMath.PivotState(_serverPivotHasLatch, _serverPivotLatchedYaw);
+		_effectiveStance = _serverStance;
 
 		// Step 3: replay unacknowledged inputs using the fixed physics timestep.
 		// The server simulated each of these at the same fixed rate, so using
@@ -2847,7 +2853,8 @@ public partial class PlayerController : CharacterBody3D
 		double fixedDelta = 1.0 / Engine.PhysicsTicksPerSecond;
 		ContactOpponent? replayOpponent = GetContactOpponent(server: false);
 		foreach (PredictionBuffer.InputFrame input in _buffer.ReplayInputs())
-			Move(input.Movement, fixedDelta, replayOpponent, input.Sprint, input.Protect);
+			Move(input.Movement, fixedDelta, replayOpponent, input.Sprint, input.Protect,
+				input.PostureHeld && input.StanceEligible);
 		// A fully acknowledged buffer still needs to repair a snap into the raw opponent.
 		DepenetrateAgainstContactSnapshot(replayOpponent);
 		// Observe physical correction after replay, before this tick's new prediction and
@@ -4214,9 +4221,11 @@ public partial class PlayerController : CharacterBody3D
 	/// </summary>
 	// Both pace flags are resolved by the role-aware caller. Replay passes the
 	// historically resolved bit; re-reading today's ball state here would rewrite history.
-	public void Move(Vector2 inputDir, double delta, ContactOpponent? opponent = null, bool sprint = false, bool protect = false)
+	public void Move(Vector2 inputDir, double delta, ContactOpponent? opponent = null, bool sprint = false, bool protect = false, bool stance = false)
 	{
-		sprint &= !protect;
+		stance &= opponent.HasValue;
+		sprint &= !protect && !stance;
+		_effectiveStance = stance && !_pivot.HasLatch;
 		// Advance the authoritative heading — and the in-place-pivot latch it
 		// now carries (issue #172) — toward inputDir at a bounded non-linear
 		// rate BEFORE velocity, because velocity below depends on whether this
@@ -4226,8 +4235,14 @@ public partial class PlayerController : CharacterBody3D
 		// motion step — it replays identically on the server, the client
 		// prediction, and the reconciliation replay loop without any extra
 		// code paths.
-		HeadingMath.HeadingStep step = HeadingMath.Step(
-			Heading, _pivot, inputDir, delta, MaxTurnRateDeg * (sprint ? SprintTurnRateScale : 1f), BackTurnSlowFactor, PivotThresholdDeg);
+		// #346: the raw opponent sample is supplied by the role-aware caller.
+		// Translation remains world-space; no cosmetic facing or attraction enters motion.
+		Vector3 toAttacker = stance ? opponent.Value.Position - GlobalPosition : Vector3.Zero;
+		HeadingMath.HeadingStep step = stance
+			? HeadingMath.StepDefensiveStance(Heading, _pivot, new Vector2(toAttacker.X, toAttacker.Z),
+				delta, StanceTurnRateDeg, MaxTurnRateDeg, BackTurnSlowFactor, PivotThresholdDeg)
+			: HeadingMath.Step(Heading, _pivot, inputDir, delta,
+				MaxTurnRateDeg * (sprint ? SprintTurnRateScale : 1f), BackTurnSlowFactor, PivotThresholdDeg);
 		Heading = step.NewYaw;
 		_pivot  = step.Pivot;
 
@@ -4252,7 +4267,9 @@ public partial class PlayerController : CharacterBody3D
 			// MovementMath now (issue #37) so it's unit-testable without a
 			// running Godot instance — this call is behavior-identical to the
 			// inline ComputeVelocity it replaced.
-			Velocity = MovementMath.ComputeVelocity(Velocity, wishDir, delta, protect ? ProtectSpeed : sprint ? SprintSpeed : MoveSpeed, Accel, Decel);
+			Velocity = MovementMath.ComputeVelocity(Velocity, wishDir, delta,
+				_effectiveStance ? StanceSpeed : protect ? ProtectSpeed : sprint ? SprintSpeed : MoveSpeed,
+				_effectiveStance ? StanceAccel : Accel, _effectiveStance ? StanceDecel : Decel);
 		}
 
 		IntegrateContactMotion(delta, opponent);
