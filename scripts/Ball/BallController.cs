@@ -453,16 +453,15 @@ public partial class BallController : Node3D
 	/// ADR-0009).  When <see cref="ShotScatterEnabled"/> is true and the
 	/// shooter is moving, the scatter radius is scaled by
 	/// <c>1 + MovementScatterK × speedRatio</c>, where
-	/// <c>speedRatio = clamp(velocity / MoveSpeed, 0, 1)</c>.  A full-sprint
+	/// <c>speedRatio = clamp(initiationSpeed / MoveSpeed, 0, max(1, SprintSpeed / MoveSpeed))</c>. A sprint
 	/// shot receives the maximum penalty; a stationary shot has factor 1 (no
 	/// penalty beyond the base distance scatter).
 	///
 	/// Only active inside the <c>IsServer &amp;&amp; ShotScatterEnabled</c>
 	/// block — client prediction keeps aiming dead-centre, unchanged.
 	///
-	/// 0.8 ⇒ a full-sprint shot scatters 1.8× as much as a stationary one; in the
-	/// make sweep this turns an open 5 m shot (~67 %) into ~35 % when fired on the
-	/// move, leaving close shots forgiving unless ALSO contested.
+	/// 0.8 gives jog shots the existing 1.8× factor and a 9/6 sprint shot 2.2×.
+	/// Exact magnitudes remain provisional for #238 and the deferred #173 feel pass.
 	///
 	/// <b>Open design question (#64):</b> continuous speed-ratio (current)
 	/// vs. a discrete planted/not-planted threshold.  A threshold may fit
@@ -567,6 +566,11 @@ public partial class BallController : Node3D
 	/// floor contact point on the upward arc. Tuning deferred to #104.
 	/// </summary>
 	[Export] public float StealHiExposed { get; set; } = 0.65f;
+
+	/// <summary>Sprint's lower exposed dribble phase [0,1]; provisional for #238/#173.</summary>
+	[Export] public float SprintStealLoExposed { get; set; } = 0.2f;
+	/// <summary>Sprint's upper exposed dribble phase [0,1]; provisional for #238/#173.</summary>
+	[Export] public float SprintStealHiExposed { get; set; } = 0.8f;
 
 	/// <summary>
 	/// Horizontal speed (m/s) of the provisional "knock" velocity a successful
@@ -1193,6 +1197,7 @@ public partial class BallController : Node3D
 	/// range (or a beaten window forced it), exactly like the sibling.
 	/// </summary>
 	internal float LastContestFactorForHarness { get; private set; } = 1f;
+	internal float LastMovementFactorForHarness { get; private set; } = 1f;
 
 	/// <summary>
 	/// Test-only (issue #284): stage a live loose ball resting at
@@ -1886,7 +1891,8 @@ public partial class BallController : Node3D
 			// same result on server AND any predicting client (ADR-0004).
 			bool normalWindowSucceeds = DefensiveResolution.StealSucceeds(
 				_dribble.Phase,
-				StealLoExposed, StealHiExposed,
+				holder.IsSprinting ? SprintStealLoExposed : StealLoExposed,
+				holder.IsSprinting ? SprintStealHiExposed : StealHiExposed,
 				targetHand, holder.HandSide);
 
 			// Window (b) — transit window (issue #196, ADR-0018 Amendment
@@ -3341,17 +3347,16 @@ public partial class BallController : Node3D
 			// uncontested shot has multiplier 1.0 and behaves identically to
 			// the pre-#64/#65 path.
 
-			// #64 — movement penalty: full-sprint shot scatters most.
-			// speedRatio is in [0,1]: 0 = standing still, 1 = full MoveSpeed.
+			// #64/#325 — movement penalty: jog keeps its original denominator;
+			// the bounded sprint/jog ceiling admits the extra sprint momentum.
 			// Reads ShotInitiationSpeed (XZ speed captured when the JumpShot
 			// BEGAN), NOT the release-time Velocity: the committed shot plants the
 			// feet (Velocity≈0) by the time it releases, so reading Velocity here
 			// made the penalty inert — a sprint pull-up scattered like a set shot
 			// (#137). ShotInitiationSpeed is server-authoritative for this calc.
-			float speedRatio      = holder.MoveSpeed > 0f
-				? Math.Clamp(holder.ShotInitiationSpeed / holder.MoveSpeed, 0f, 1f)
-				: 0f;
-			float movementFactor  = 1f + MovementScatterK * speedRatio;
+			float movementFactor = ShotMovement.Factor(holder.ShotInitiationSpeed,
+				holder.MoveSpeed, holder.SprintSpeed, MovementScatterK);
+			LastMovementFactorForHarness = movementFactor;
 
 			// #65 — contest penalty: defender within ContestRange → larger factor.
 			// proximity is in [0,1]: 0 = at ContestRange edge, 1 = on top of shooter.

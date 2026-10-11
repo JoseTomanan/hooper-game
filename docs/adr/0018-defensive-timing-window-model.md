@@ -704,3 +704,27 @@ evidence bar.
 Tuning (`HeldStealReachRadius`, `HeldStealExposureConeDegrees`) is
 provisional, deferred to the consolidated tuning pass #238 — not this
 issue's or this ADR's to sign off.
+
+
+## Amendment 2026-10-11 - Sprint widens the existing dribble exposure band (#325)
+
+The live-dribble steal predicate and hand-side read remain unchanged. When the
+server resolves the holder as sprinting, it uses `SprintStealLoExposed` and
+`SprintStealHiExposed` (initially 0.20 and 0.80) in place of the ordinary
+`StealLoExposed`/`StealHiExposed` band (0.35 and 0.65). Thus a phase outside the
+jog band but inside the sprint band becomes vulnerable, while phases outside
+even the widened band and wrong-hand reads remain misses. Other steal windows
+retain their existing rules.
+
+Reference basis: the accepted #325 brief describes a full-speed dribble pushed
+in front of the body as continuously more exposed. Eligibility and exposure
+read server gameplay state, never a client-supplied effective sprint claim or
+cosmetic animation. This adds no defensive primitive or random success roll.
+The initial band widens each boundary by half the existing band's 0.30 width;
+that expresses a bounded starting cost, not a feel sign-off. Tuning stays in
+#238 and the human-scheduled #173 pass.
+
+Rejected: using dribble period as the exposure lever. A phase-band fraction is
+independent of cycle length, and a longer period has opposing effects on
+mistimed overlap and deliberately timed reads. Rejected: making every sprint
+steal succeed, which would discard both the timing and hand-side read.

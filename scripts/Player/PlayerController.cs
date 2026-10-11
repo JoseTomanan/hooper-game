@@ -105,6 +105,19 @@ public partial class PlayerController : CharacterBody3D
 	/// <summary>Top ground speed in metres/second.</summary>
 	[Export] public float MoveSpeed { get; set; } = 6.0f;
 
+	/// <summary>Sprint ceiling in metres/second. Provisional pace tuning for #238/#173.</summary>
+	[Export] public float SprintSpeed { get; set; } = 9.0f;
+	/// <summary>Multiplier of the normal turn rate while sprinting; provisional for #238/#173.</summary>
+	[Export] public float SprintTurnRateScale { get; set; } = 0.65f;
+
+	private bool _requestedSprint;
+	private bool _pendingSprintRequest;
+	/// <summary>Fresh effective pace, so lost possession or a commitment cannot leave exposure stale.</summary>
+	public bool IsSprinting => ResolveSprint(_requestedSprint);
+
+	private bool ResolveSprint(bool requested) => requested && !_machine.IsActive
+		&& IsBallHolder && GetBall()?.State == BallState.Dribbling;
+
 	// ── Heading tuning (issue #80) ────────────────────────────────────────────
 
 	/// <summary>
@@ -1617,6 +1630,9 @@ public partial class PlayerController : CharacterBody3D
 	private void TickServerOwnPlayer(double delta)
 	{
 		SampleMoveInput(isServer: true); // reads gesture + feint, advances machine one tick
+		// Held action, not an edge: releasing the trigger restores the ordinary pace.
+		// Source: https://docs.godotengine.org/en/4.7/classes/class_input.html#class-input-method-is-action-pressed
+		_requestedSprint = Input.IsActionPressed("move_sprint");
 
 		if (_machine.IsActive)
 			// The host IS the local machine — ReadInput() is the TRUE, zero-
@@ -1626,7 +1642,7 @@ public partial class PlayerController : CharacterBody3D
 		else
 		{
 			Vector2 input = ReadInput();
-			Move(input, delta, GetContactOpponent(server: true));
+			Move(input, delta, GetContactOpponent(server: true), IsSprinting);
 			CheckAutoStartDribble(input);
 		}
 
@@ -1673,6 +1689,7 @@ public partial class PlayerController : CharacterBody3D
 	private void TickServerRemotePlayer(double delta)
 	{
 		_machine.Tick();
+		_requestedSprint = _pendingSprintRequest;
 
 		if (_machine.IsActive)
 			// #210 fix: PREFER the exit vector delivered by the client's
@@ -1689,7 +1706,7 @@ public partial class PlayerController : CharacterBody3D
 			TickCommittedMoveBehavior(delta, _authoritativeExitVector ?? _pendingRawStick, GetContactOpponent(server: true));
 		else
 		{
-			Move(_pendingInput, delta, GetContactOpponent(server: true));
+			Move(_pendingInput, delta, GetContactOpponent(server: true), IsSprinting);
 
 			// #224 fix: only honor drive intent from _pendingInput once a
 			// genuinely FRESH (post-award) SubmitInput has actually arrived —
@@ -1762,11 +1779,13 @@ public partial class PlayerController : CharacterBody3D
 		// for but doesn't need to eliminate it.
 		Vector2 rawStick = ReadInput();
 		Vector2 moveInput = _machine.IsActive ? Vector2.Zero : rawStick;
+		_requestedSprint = Input.IsActionPressed("move_sprint");
+		bool sprint = IsSprinting;
 
 		// Record() assigns the seq and handles capacity eviction (see
 		// PredictionBuffer doc) — behavior-identical to the inline
 		// _seq++ / cap-check / enqueue this replaced.
-		int seq = _buffer.Record(moveInput);
+		int seq = _buffer.Record(moveInput, sprint);
 
 		if (_machine.IsActive)
 		{
@@ -1792,7 +1811,7 @@ public partial class PlayerController : CharacterBody3D
 		}
 		else
 		{
-			Move(moveInput, delta, GetContactOpponent(server: false));
+			Move(moveInput, delta, GetContactOpponent(server: false), sprint);
 			CheckAutoStartDribble(moveInput);
 		}
 
@@ -1808,7 +1827,9 @@ public partial class PlayerController : CharacterBody3D
 		// blanked moveInput/_pendingInput. See _pendingRawStick's doc for the
 		// full doubt-driven rationale (why this rides SubmitInput's continuous
 		// stream rather than the moveId/moveParam one-shot RPC).
-		RpcId(1, MethodName.SubmitInput, seq, moveInput.X, moveInput.Y, rawStick.X, rawStick.Y);
+		// Raw request only: the server resolves its own possession/commitment gates.
+		// Source: https://docs.godotengine.org/en/4.7/tutorials/networking/high_level_multiplayer.html#remote-procedure-calls
+		RpcId(1, MethodName.SubmitInput, seq, moveInput.X, moveInput.Y, rawStick.X, rawStick.Y, _requestedSprint);
 	}
 
 	/// <summary>
@@ -1874,7 +1895,7 @@ public partial class PlayerController : CharacterBody3D
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer,
 		 CallLocal = false,
 		 TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
-	private void SubmitInput(int seq, float inputX, float inputY, float rawStickX, float rawStickY)
+	private void SubmitInput(int seq, float inputX, float inputY, float rawStickX, float rawStickY, bool sprintRequested)
 	{
 		// Validate sender (read synchronously at top — GetRemoteSenderId() is
 		// only valid during the RPC call, never after).
@@ -1899,6 +1920,7 @@ public partial class PlayerController : CharacterBody3D
 		// field always reflects the true stick, not a role/move-state gate
 		// applied on this end.
 		_pendingRawStick = new Vector2(rawStickX, rawStickY);
+		_pendingSprintRequest = sprintRequested;
 	}
 
 	/// <summary>
@@ -2807,8 +2829,8 @@ public partial class PlayerController : CharacterBody3D
 		// here — only the buffer bookkeeping moved to PredictionBuffer (#55).
 		double fixedDelta = 1.0 / Engine.PhysicsTicksPerSecond;
 		ContactOpponent? replayOpponent = GetContactOpponent(server: false);
-		foreach (Vector2 input in _buffer.Replay())
-			Move(input, fixedDelta, replayOpponent);
+		foreach (PredictionBuffer.InputFrame input in _buffer.ReplayInputs())
+			Move(input.Movement, fixedDelta, replayOpponent, input.Sprint);
 		// A fully acknowledged buffer still needs to repair a snap into the raw opponent.
 		DepenetrateAgainstContactSnapshot(replayOpponent);
 		// Observe physical correction after replay, before this tick's new prediction and
@@ -2993,7 +3015,8 @@ public partial class PlayerController : CharacterBody3D
 
 		// Locomotion blend (#68): feed horizontal speed; the Y component is
 		// vertical and irrelevant to a ground idle/run blend.
-		float horizontalSpeed = new Vector2(Velocity.X, Velocity.Z).Length();
+		// Sprint reuses the fastest authored locomotion/dribble clip (no new asset).
+		float horizontalSpeed = System.MathF.Min(new Vector2(Velocity.X, Velocity.Z).Length(), MoveSpeed);
 		_animTree.Set("parameters/Locomotion/blend_position", horizontalSpeed);
 		// Dribble blend (#285): the live-dribble neutral is the SAME idle↔moving
 		// speed blend on a second BlendSpace1D, so it is fed the same value. Set
@@ -4172,7 +4195,9 @@ public partial class PlayerController : CharacterBody3D
 	/// Keep it pure: no role checks, no network calls, no side effects.
 	/// Any divergence between server and client is a bug in this function.
 	/// </summary>
-	public void Move(Vector2 inputDir, double delta, ContactOpponent? opponent = null)
+	// Sprint is already resolved by the role-aware caller. Replay passes the
+	// historically resolved bit; re-reading today's ball state here would rewrite history.
+	public void Move(Vector2 inputDir, double delta, ContactOpponent? opponent = null, bool sprint = false)
 	{
 		// Advance the authoritative heading — and the in-place-pivot latch it
 		// now carries (issue #172) — toward inputDir at a bounded non-linear
@@ -4184,7 +4209,7 @@ public partial class PlayerController : CharacterBody3D
 		// prediction, and the reconciliation replay loop without any extra
 		// code paths.
 		HeadingMath.HeadingStep step = HeadingMath.Step(
-			Heading, _pivot, inputDir, delta, MaxTurnRateDeg, BackTurnSlowFactor, PivotThresholdDeg);
+			Heading, _pivot, inputDir, delta, MaxTurnRateDeg * (sprint ? SprintTurnRateScale : 1f), BackTurnSlowFactor, PivotThresholdDeg);
 		Heading = step.NewYaw;
 		_pivot  = step.Pivot;
 
@@ -4209,7 +4234,7 @@ public partial class PlayerController : CharacterBody3D
 			// MovementMath now (issue #37) so it's unit-testable without a
 			// running Godot instance — this call is behavior-identical to the
 			// inline ComputeVelocity it replaced.
-			Velocity = MovementMath.ComputeVelocity(Velocity, wishDir, delta, MoveSpeed, Accel, Decel);
+			Velocity = MovementMath.ComputeVelocity(Velocity, wishDir, delta, sprint ? SprintSpeed : MoveSpeed, Accel, Decel);
 		}
 
 		IntegrateContactMotion(delta, opponent);

@@ -311,3 +311,28 @@ This amendment does not reverse the Decision or weaken the general
 narrowly-scoped, pure-function exception for one move's one phase, exactly as
 the original Consequences section already contemplated. Status remains
 **Accepted**.
+
+
+## Amendment 2026-10-11 - Offensive sprint composes a turn-rate factor (#325)
+
+Eligible analog sprint scales the effective `MaxTurnRateDeg` by the exported
+`SprintTurnRateScale` (initially 0.65) in the same shared movement step used by
+authority, prediction, and replay. The existing non-linear turn profile and
+plant/pivot latch remain in force. The base export stays 900 degrees/s; the
+sprint factor does not retune ordinary jogging or committed-move heading.
+
+Reference basis: #325's accepted brief applies real half-court basketball's
+line commitment: a body driving at speed cannot redirect as freely as a jog?to
+the existing authoritative heading model. The initial factor is a provisional
+cost, with magnitude tuning in #238 and feel judgment in #173.
+
+Sprint requests travel with continuous input. The server derives eligibility
+from its holder, ball, and move state. Prediction records the resolved modifier
+alongside each tick's movement intent, so correction replay uses that tick's
+modifier rather than today's button or ball state. Authority still owns truth;
+cosmetic facing never determines speed, turning, or exposure.
+
+Rejected: a cosmetic-only slower turn, because the movement and steal rules
+need the authoritative heading. Rejected: replaying movement vectors without
+the sprint modifier, because correction would reconstruct a jog instead of
+the sprint the player predicted.

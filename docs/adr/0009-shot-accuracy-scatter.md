@@ -480,3 +480,27 @@ This amendment adds no new export — it gates the EXISTING `ContestScatterK`/
 `ContestRange` (#65) and `ContestMoveScatterK` (#99) terms on
 `PlayerController.IsBeaten`, itself driven by `BallController.
 BlowByWindowTicks` (ADR-0018's amendment covers that export's own citation).
+
+
+## Amendment 2026-10-11 - Sprint raises the movement-penalty ceiling (#325)
+
+The movement factor keeps its jog-speed denominator and uses the authoritative
+shot-initiation speed captured before the shot plants the feet:
+
+```
+ceiling = max(1, holder.SprintSpeed / holder.MoveSpeed)
+speedRatio = clamp(holder.ShotInitiationSpeed / holder.MoveSpeed, 0, ceiling)
+movementFactor = 1 + MovementScatterK * speedRatio
+```
+
+A non-positive jog speed yields the stationary factor 1. Existing stationary
+and jog-speed factors are preserved. With the initial 6 m/s jog, 9 m/s sprint,
+and `MovementScatterK = 0.8`, jog produces 1.8 and sprint produces 2.2. The
+other accuracy factors and server-only RNG draw are unchanged. The ceiling
+remains finite and bounded by the configured sprint/jog ratio.
+
+Rejected: replacing the denominator with sprint speed, because that would
+reduce the established jog penalty. Rejected: retaining the ceiling at 1,
+because it makes a sprint pull-up as accurate as a jog pull-up and hides the
+new pace cost. This is the explicit choice required by #325's accepted brief;
+using initiation speed preserves the #137 repair.

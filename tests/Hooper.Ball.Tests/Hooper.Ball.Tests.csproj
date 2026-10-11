@@ -49,6 +49,7 @@
     <Compile Include="..\..\scripts\Ball\FlightTermination.cs" />
     <Compile Include="..\..\scripts\Ball\ShotScatter.cs" />
     <Compile Include="..\..\scripts\Ball\ShotFacing.cs" />
+    <Compile Include="..\..\scripts\Ball\ShotMovement.cs" />
     <Compile Include="..\..\scripts\Ball\FloorBounce.cs" />
     <!-- M10 defensive resolution helper (issue #96, ADR-0018 §1) -->
     <Compile Include="..\..\scripts\Ball\DefensiveResolution.cs" />
