@@ -384,6 +384,17 @@ ProtectionTest.tscn|steal-wrong-hand
 ProtectionTest.tscn|held-static
 ProtectionTest.tscn|presentation
 NetProtectionTest.tscn|
+DefensiveStanceTest.tscn|slides-left
+DefensiveStanceTest.tscn|slides-right
+DefensiveStanceTest.tscn|idle-facing
+DefensiveStanceTest.tscn|bounded-moving
+DefensiveStanceTest.tscn|response
+DefensiveStanceTest.tscn|gates
+DefensiveStanceTest.tscn|pivot
+DefensiveStanceTest.tscn|committed
+DefensiveStanceTest.tscn|contact-slow
+DefensiveStanceTest.tscn|contact-fast
+DefensiveStancePresentationTest.tscn|presentation
 """
 _ADDITIONAL_MULTIPROCESS_ROWS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
     ("net-rig-presentation-left", "tests/integration/run-net-rig-presentation.sh godot left", "NetRigPresentationTest.tscn", (".godot/harness-logs/net-rig-presentation-left-*.log",)),
@@ -401,6 +412,11 @@ _ADDITIONAL_MULTIPROCESS_ROWS: tuple[tuple[str, str, str, tuple[str, ...]], ...]
      "NetProductionContactTest.tscn", (f".godot/production-contact/catalog-{move}-{contact}-{delay}-*/**/*",))
     for move in ("neutral", "crossover", "gather")
     for contact in ("contact", "no-contact")
+    for delay in (0, 30)
+) + tuple(
+    (f"defensive-stance-{delay}ms",
+     f"tests/integration/run-net-defensive-stance.sh godot {delay}",
+     "NetDefensiveStanceTest.tscn", (f".godot/stance-net/catalog-{delay}-none-*/**/*",))
     for delay in (0, 30)
 )
 
@@ -449,6 +465,7 @@ def _multiprocess_cases(rows: Iterable[tuple[str, str, str, tuple[str, ...]]]) -
 
 
 _CONTROL_COMPONENTS = (
+    ("defensive-stance-test-contact-slow", "defensive-stance-test-contact-fast"),
     ("protection-test-steal-neutral", "protection-test-steal-protect", "protection-test-steal-center", "protection-test-steal-wrong-hand"),
     ("sprint-test-steal-sprint", "sprint-test-steal-jog", "sprint-test-steal-outside", "sprint-test-steal-wrong-hand"),
     ("production-contact-test-set-drive", "production-contact-test-unset-drive", "production-contact-test-disabled-contact"),

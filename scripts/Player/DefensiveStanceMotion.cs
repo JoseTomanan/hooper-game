@@ -7,10 +7,14 @@ public partial class PlayerController
 {
     // #346: half neutral coverage, quicker finite lateral response. These are
     // provisional modeling defaults from the approved brief, for #238/#173.
-    [Export] public float StanceSpeed { get; set; } = 3f; // metres/second
-    [Export] public float StanceAccel { get; set; } = 60f; // metres/second squared
-    [Export] public float StanceDecel { get; set; } = 90f; // metres/second squared
-    [Export] public float StanceTurnRateDeg { get; set; } = 360f; // degrees/second
+    /// <summary>Defensive slide speed in metres per second.</summary>
+    [Export] public float StanceSpeed { get; set; } = 3f;
+    /// <summary>Defensive slide acceleration in metres per second squared.</summary>
+    [Export] public float StanceAccel { get; set; } = 60f;
+    /// <summary>Defensive slide stopping rate in metres per second squared.</summary>
+    [Export] public float StanceDecel { get; set; } = 90f;
+    /// <summary>Maximum attacker-facing turn rate in degrees per second.</summary>
+    [Export] public float StanceTurnRateDeg { get; set; } = 360f;
     private bool _effectiveStance, _serverStance;
 
     public bool IsInDefensiveStance => _effectiveStance && _requestedProtect
