@@ -60,7 +60,7 @@ public partial class PlayerController
         foreach (bool value in _replayHarnessCommitted.Values) if (value) committed++;
         oracle.ResetContactStateForHarness(authPosition, _serverHeading, authVelocity);
         oracle._pivot = new HeadingMath.PivotState(_serverPivotHasLatch, _serverPivotLatchedYaw);
-        foreach (Vector2 input in _buffer.Replay()) { if (input == Vector2.Zero) zeros++; oracle.Move(input, 1.0 / Engine.PhysicsTicksPerSecond); }
+        foreach (PredictionBuffer.InputFrame input in _buffer.ReplayInputs()) { if (input.Movement == Vector2.Zero) zeros++; oracle.Move(input.Movement, 1.0 / Engine.PhysicsTicksPerSecond, sprint: input.Sprint); }
         float oraclePositionError = oracle.GlobalPosition.DistanceTo(GlobalPosition);
         float oracleVelocityError = oracle.Velocity.DistanceTo(Velocity);
         return new Dictionary<string, object> {

@@ -44,7 +44,8 @@ public sealed class PredictionBuffer
 	/// </summary>
 	public int LastSequence { get; private set; }
 
-	private readonly Queue<(int seq, Vector2 input)> _pending = new();
+	public readonly record struct InputFrame(Vector2 Movement, bool Sprint);
+	private readonly Queue<(int seq, InputFrame input)> _pending = new();
 
 	/// <param name="capacity">Maximum buffered inputs before the oldest is evicted. Defaults to 120 (~2 s at 60 Hz), matching PlayerController's original PendingCap.</param>
 	public PredictionBuffer(int capacity = 120)
@@ -64,14 +65,14 @@ public sealed class PredictionBuffer
 	/// </summary>
 	/// <param name="input">This tick's movement intent vector.</param>
 	/// <returns>The sequence number assigned to this input — send this to the server alongside the input.</returns>
-	public int Record(Vector2 input)
+	public int Record(Vector2 input, bool sprint = false)
 	{
 		LastSequence++;
 
 		if (_pending.Count >= Capacity)
 			_pending.Dequeue(); // oldest evicted; 2-s silence required to hit this
 
-		_pending.Enqueue((LastSequence, input));
+		_pending.Enqueue((LastSequence, new InputFrame(input, sprint)));
 		return LastSequence;
 	}
 
@@ -94,7 +95,14 @@ public sealed class PredictionBuffer
 	/// </summary>
 	public IEnumerable<Vector2> Replay()
 	{
-		foreach ((_, Vector2 input) in _pending)
-			yield return input;
+		foreach ((_, InputFrame input) in _pending)
+			yield return input.Movement;
+	}
+
+	/// <summary>Replays the pace resolved when each historical tick was predicted.
+	/// Current possession must never silently change an already buffered tick.</summary>
+	public IEnumerable<InputFrame> ReplayInputs()
+	{
+		foreach (var entry in _pending) yield return entry.input;
 	}
 }

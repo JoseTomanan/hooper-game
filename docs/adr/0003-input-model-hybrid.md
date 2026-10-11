@@ -440,3 +440,25 @@ path to `CommittedMoveMachine` contradicts this ruling; it does not refine it.
   case after the ball (Milestone 4).
 - "Flow-cancel" feature requests from playtesters should be treated as
   contradicting the design identity, not as refinements.
+
+
+## Amendment 2026-10-11 - Held offensive sprint stays in analog movement (#325)
+
+`move_sprint` is a held modifier of ordinary movement, bound to right trigger
+and Shift. It has no committed-move phases or payload: releasing it ends the
+modifier immediately, while its exposure cost is paid on every eligible tick.
+Only the current holder of a `Dribbling` ball can sprint. A `Held` ball,
+including a dead dribble after a pump fake, grants no sprint capability;
+committed moves and off-ball movement receive no sprint modifier.
+
+The starting `SprintSpeed` is 9 m/s (1.5 times the existing 6 m/s jog).
+This ratio expresses the pace distinction in #325's accepted brief, rather
+than claiming a measured feel calibration. Speed, turning, and exposure
+magnitudes remain provisional tuning for #238 and feel for #173. No stamina
+consumer is added while M11 is held. Sprint uses the existing locomotion blend,
+saturated at its fastest authored clip; a new sprint clip is out of scope.
+
+Rejected: a sprint `CommittedMove`, because continuous movement intent belongs
+to the spacing spine and has no cancellable payload. Rejected: allowing sprint
+from a dead-dribble hold, which would erase the existing cradle cost. The
+existing committed-move completion and no-flow-cancel rules remain intact.
