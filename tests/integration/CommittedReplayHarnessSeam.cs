@@ -20,6 +20,15 @@ public partial class PlayerController
         TickClientOwnPlayer(delta);
         _replayHarnessCommitted[_buffer.LastSequence] = _machine.IsActive;
     }
+    internal void ReplayHarnessPair(PlayerController other, double delta, Vector2 otherInput)
+    {
+        other._pendingInput = other._pendingRawStick = otherInput;
+        TickServerContactPair(other, delta);
+    }
+    internal bool ReplayContactResponse => _lastContactResponse.Self.Position != Vector3.Zero
+        || _lastContactResponse.Self.Velocity != Vector3.Zero
+        || _lastContactResponse.Opponent.Position != Vector3.Zero
+        || _lastContactResponse.Opponent.Velocity != Vector3.Zero;
     internal string ReplayPhase => _machine.Phase.ToString();
     internal int ReplayFrame => _machine.FrameInPhase;
     internal int ReplayAck => _serverAckedSeq;

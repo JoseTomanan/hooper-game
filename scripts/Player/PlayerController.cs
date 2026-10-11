@@ -1593,16 +1593,14 @@ public partial class PlayerController : CharacterBody3D
 		// freeze is the only correct choice here, not just the simplest one.
 		if (GetGameManager()?.IsGameOver == true) return;
 
+		if (IsServer && TryTickAutomaticContactPair(delta)) return;
+
 		if      (IsServer && IsLocalPlayer)  TickServerOwnPlayer(delta);
 		else if (IsServer && !IsLocalPlayer) TickServerRemotePlayer(delta);
 		else if (!IsServer && IsLocalPlayer) TickClientOwnPlayer(delta);
 		else                                 TickClientRemotePlayer();
 
-		ApplySmoothCorrection();
-		ApplyCosmetics();
-		TickReboundGrabLatch();
-		ApplyAnimation();
-		ApplyBeatenCue();
+		ApplyContactTickPresentation();
 	}
 
 	// ── Tick roles ────────────────────────────────────────────────────────────
@@ -1624,11 +1622,11 @@ public partial class PlayerController : CharacterBody3D
 			// The host IS the local machine — ReadInput() is the TRUE, zero-
 			// latency left stick, exactly what the exit-vector snapshot needs
 			// at Active-entry (#198). No network involved for this role.
-			TickCommittedMoveBehavior(delta, ReadInput());
+			TickCommittedMoveBehavior(delta, ReadInput(), GetContactOpponent(server: true));
 		else
 		{
 			Vector2 input = ReadInput();
-			Move(input, delta);
+			Move(input, delta, GetContactOpponent(server: true));
 			CheckAutoStartDribble(input);
 		}
 
@@ -1653,7 +1651,8 @@ public partial class PlayerController : CharacterBody3D
 		// can't be transposed with any neighboring same-typed param. Computed
 		// fresh here (IsBeaten against THIS tick), not read from a cache, so
 		// it always reflects this broadcast's own instant.
-		Rpc(MethodName.ReceiveState, 0, GlobalPosition, Velocity,
+		if (_contactStaging) _contactDeferredAck = 0;
+		else Rpc(MethodName.ReceiveState, 0, GlobalPosition, Velocity,
 			(int)_machine.Phase, _machine.FrameInPhase, MoveIdOf(_machine.CurrentMove), MoveParamOf(_machine.CurrentMove),
 			Heading, (int)HandSide, _machine.WasRecoveryEnteredEarly, _pivot.HasLatch, _pivot.LatchedYaw,
 			IsBeaten(PhysicsTick));
@@ -1687,10 +1686,10 @@ public partial class PlayerController : CharacterBody3D
 			// happen (a timing race under jitter, not a guarantee either
 			// way); bounded to no worse than the pre-#210 status quo in that
 			// residual case.
-			TickCommittedMoveBehavior(delta, _authoritativeExitVector ?? _pendingRawStick);
+			TickCommittedMoveBehavior(delta, _authoritativeExitVector ?? _pendingRawStick, GetContactOpponent(server: true));
 		else
 		{
-			Move(_pendingInput, delta);
+			Move(_pendingInput, delta, GetContactOpponent(server: true));
 
 			// #224 fix: only honor drive intent from _pendingInput once a
 			// genuinely FRESH (post-award) SubmitInput has actually arrived —
@@ -1724,7 +1723,8 @@ public partial class PlayerController : CharacterBody3D
 		// in sync on this trailing arg by hand; there is no shared factory
 		// (matching this file's existing two-call-site convention for every
 		// prior trailing-param addition — #175, #172).
-		Rpc(MethodName.ReceiveState, _serverAckedSeq, GlobalPosition, Velocity,
+		if (_contactStaging) _contactDeferredAck = _serverAckedSeq;
+		else Rpc(MethodName.ReceiveState, _serverAckedSeq, GlobalPosition, Velocity,
 			(int)_machine.Phase, _machine.FrameInPhase, MoveIdOf(_machine.CurrentMove), MoveParamOf(_machine.CurrentMove),
 			Heading, (int)HandSide, _machine.WasRecoveryEnteredEarly, _pivot.HasLatch, _pivot.LatchedYaw,
 			IsBeaten(PhysicsTick));
@@ -1788,11 +1788,11 @@ public partial class PlayerController : CharacterBody3D
 			// deliberately zeroed above for Move()/replay purposes — see the
 			// comment on that line — but the exit-vector snapshot needs the
 			// TRUE stick, #198).
-			TickCommittedMoveBehavior(delta, rawStick);
+			TickCommittedMoveBehavior(delta, rawStick, GetContactOpponent(server: false));
 		}
 		else
 		{
-			Move(moveInput, delta);
+			Move(moveInput, delta, GetContactOpponent(server: false));
 			CheckAutoStartDribble(moveInput);
 		}
 
@@ -2607,6 +2607,7 @@ public partial class PlayerController : CharacterBody3D
 		// overwrite-every-broadcast reasoning.
 		_serverIsBeaten  = isBeaten;
 		_hasNewState     = true;
+		_hasContactSnapshot = true;
 	}
 
 	// ── Reconciliation ────────────────────────────────────────────────────────
@@ -2638,6 +2639,7 @@ public partial class PlayerController : CharacterBody3D
 	/// </summary>
 	private void ReconcileFromServer(Vector3 authPos, Vector3 authVel, int ackSeq, float authHeading, double delta)
 	{
+		Vector3 bodyBeforeContactReconcile = GlobalPosition;
 		// Step 0: only correct the ONE divergence that actually matters for
 		// the contract — the server confirms the move the client predicted
 		// never took hold (rejected because the server's own copy was still
@@ -2804,8 +2806,14 @@ public partial class PlayerController : CharacterBody3D
 		// Move() (the engine-bound replay step, MoveAndSlide included) stays
 		// here — only the buffer bookkeeping moved to PredictionBuffer (#55).
 		double fixedDelta = 1.0 / Engine.PhysicsTicksPerSecond;
+		ContactOpponent? replayOpponent = GetContactOpponent(server: false);
 		foreach (Vector2 input in _buffer.Replay())
-			Move(input, fixedDelta);
+			Move(input, fixedDelta, replayOpponent);
+		// A fully acknowledged buffer still needs to repair a snap into the raw opponent.
+		DepenetrateAgainstContactSnapshot(replayOpponent);
+		// Observe physical correction after replay, before this tick's new prediction and
+		// cosmetic smoothing. A received snapshot alone is not evidence of correction.
+		_contactReconciliationObserver?.Invoke(bodyBeforeContactReconcile, GlobalPosition, _buffer.Count);
 
 		// Step 4: measure divergence and start a visual smooth correction if needed.
 		Vector3 divergence = renderedPos - GlobalPosition;
@@ -3283,6 +3291,11 @@ public partial class PlayerController : CharacterBody3D
 	/// </summary>
 	private void CheckAutoStartDribble(Vector2 input)
 	{
+		if (_contactStaging)
+		{
+			_contactDeferredDribble = input;
+			return;
+		}
 		if (input == Vector2.Zero) return;
 		if (!IsBallHolder) return;
 		GetBall()?.TryStartDribble(OwnPeerId);
@@ -3719,7 +3732,7 @@ public partial class PlayerController : CharacterBody3D
 	/// _pendingRawStick's doc for why this is a distinct channel from the
 	/// regular movement input.
 	/// </param>
-	private void TickCommittedMoveBehavior(double delta, Vector2 exitVectorSample)
+	private void TickCommittedMoveBehavior(double delta, Vector2 exitVectorSample, ContactOpponent? opponent = null)
 	{
 		switch (_machine.Phase)
 		{
@@ -3795,7 +3808,7 @@ public partial class PlayerController : CharacterBody3D
 					}
 				}
 
-				MoveAndSlide();
+				IntegrateContactMotion(delta, opponent);
 				break;
 
 			case MovePhase.Active:
@@ -4081,12 +4094,12 @@ public partial class PlayerController : CharacterBody3D
 						HandSide = HandStateResolver.Opposite(HandSide);
 					}
 				}
-				MoveAndSlide();
+				IntegrateContactMotion(delta, opponent);
 				break;
 
 			case MovePhase.Recovery:
 				Velocity = Velocity.MoveToward(Vector3.Zero, Decel * (float)delta);
-				MoveAndSlide();
+				IntegrateContactMotion(delta, opponent);
 				break;
 		}
 	}
@@ -4159,7 +4172,7 @@ public partial class PlayerController : CharacterBody3D
 	/// Keep it pure: no role checks, no network calls, no side effects.
 	/// Any divergence between server and client is a bug in this function.
 	/// </summary>
-	public void Move(Vector2 inputDir, double delta)
+	public void Move(Vector2 inputDir, double delta, ContactOpponent? opponent = null)
 	{
 		// Advance the authoritative heading — and the in-place-pivot latch it
 		// now carries (issue #172) — toward inputDir at a bounded non-linear
@@ -4199,6 +4212,6 @@ public partial class PlayerController : CharacterBody3D
 			Velocity = MovementMath.ComputeVelocity(Velocity, wishDir, delta, MoveSpeed, Accel, Decel);
 		}
 
-		MoveAndSlide();
+		IntegrateContactMotion(delta, opponent);
 	}
 }

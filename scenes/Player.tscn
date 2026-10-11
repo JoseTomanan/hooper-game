@@ -1027,6 +1027,8 @@ transitions = ["Start", "Locomotion", SubResource("AnimationNodeStateMachineTran
 graph_offset = Vector2(56.084297, 0)
 
 [node name="CharacterBody3D" type="CharacterBody3D" unique_id=700308040]
+collision_layer = 2
+collision_mask = 1
 script = ExtResource("1_p0vlq")
 VisualRoot = NodePath("CharacterModel")
 AnimationTreePath = NodePath("AnimationTree")

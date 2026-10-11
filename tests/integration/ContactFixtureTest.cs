@@ -5,7 +5,8 @@ using Hooper.Player;
 
 namespace HOOPERGAME.Tests.Integration;
 
-/// <summary>Baseline engine-collision proof and its deliberately non-contact control (#356).</summary>
+/// <summary>Historical engine-collision fixture proof and its disabled-solver control (#356).
+/// Production replacement is separately proven by ProductionContactTest (#370).</summary>
 public partial class ContactFixtureTest : Node3D
 {
     private const int TargetTicks = 30;
@@ -27,6 +28,11 @@ public partial class ContactFixtureTest : Node3D
             Require(_scenario is "contact" or "no-contact", $"unknown scenario '{_scenario}'");
             _fixture = new ContactHarnessSeam { Name = "ContactFixture" };
             AddChild(_fixture);
+            // Retain #356's historical solver experiment explicitly. The shipped scene
+            // now masks player-player contact; this fixture deliberately measures Jolt
+            // through Move's absent-opponent path, not the production replacement.
+            _fixture.First.CollisionLayer = _fixture.First.CollisionMask = 1;
+            _fixture.Second.CollisionLayer = _fixture.Second.CollisionMask = 1;
             _combinedRadius = CapsuleRadius(_fixture.First) + CapsuleRadius(_fixture.Second);
             Require(_fixture.First.MoveSpeed > 0, "driver must have a positive shipped speed");
             // Start at full speed to make the free endpoint an independent distance
@@ -49,7 +55,7 @@ public partial class ContactFixtureTest : Node3D
             {
                 Require((_fixture.First.CollisionMask & _fixture.Second.CollisionLayer) != 0
                     && (_fixture.Second.CollisionMask & _fixture.First.CollisionLayer) != 0,
-                    "shipped players must mutually detect each other's collision layers");
+                    "legacy solver fixture must mutually detect its collision layers");
             }
         }
         catch (Exception exception) { Finish(false, exception.Message); }

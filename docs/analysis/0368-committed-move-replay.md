@@ -13,6 +13,16 @@ remain unchanged by this investigation.
 
 ## Method
 
+### Reproducing the pre-contact baseline
+
+The archived measurements below describe the pre-#370 implementation at
+`f729adc`. Check out that revision to reproduce them. #370 wires the current
+instrument to the production deterministic pair step and counts actual contact
+responses instead of player solver slides. Its no-contact replay oracle remains
+exact; contact rows remain diagnostic because replay uses the latest opponent
+snapshot rather than historical opponent state. The updated production evidence
+is recorded in [0370-production-contact-proof.md](0370-production-contact-proof.md).
+
 The instrument uses two real ENet processes and #356's `ContactHarnessSeam`,
 which instances the shipped `Player.tscn` with real capsule geometry and scene
 exports. Fresh processes isolate each motion/contact/delay condition. Server

@@ -1,0 +1,3757 @@
+{
+  "issue": 370,
+  "measurement_date": "2026-10-10",
+  "runtime": {
+    "godot": "4.7.1 .NET",
+    "physics_hz": 60,
+    "topology": "one dedicated server and two clients; separate real ENet processes; two independently measured UDP relays"
+  },
+  "assertion_notes": [
+    "Full matrix: 24 fresh trials, 12 conditions repeated twice.",
+    "The strengthened 8 fresh committed-contact trials exclude neutral reconciliation replay from the actual committed-response count; motion rows record replay and committed_integration independently.",
+    "Body correction is measured before current prediction integration, after authoritative snap and neutral replay. The driver requires nonzero correction; a perfectly predicted baseline defender can have zero corrections.",
+    "Each client independently requires nonempty replay and convergence to a reliable settled authoritative sample within 0.01 m for ten consecutive observations.",
+    "Moving stale snapshot distances are not treated as same-tick server/client error; phase/frame equality and exact historical committed replay are not claimed."
+  ],
+  "trials": [
+    {
+      "move": "neutral",
+      "contact": "contact",
+      "requested_delay_ms": 0,
+      "repeat": 0,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 334,
+            "forwarded": 334,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.013299999864102574,
+            "mean_ms": 0.03127814370995231,
+            "max_ms": 0.12979999996787228
+          },
+          "server_to_client": {
+            "enqueued": 703,
+            "forwarded": 703,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.0113999999484804,
+            "mean_ms": 0.01986159316513597,
+            "max_ms": 0.12199999991935329
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 333,
+            "forwarded": 333,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.01439999982721929,
+            "mean_ms": 0.03193513513876466,
+            "max_ms": 0.12450000008357165
+          },
+          "server_to_client": {
+            "enqueued": 624,
+            "forwarded": 624,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.014000000192027073,
+            "mean_ms": 0.030855288463781924,
+            "max_ms": 0.1435000001492881
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "neutral",
+          "contact": true,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 1,
+          "responses": 90,
+          "committed_responses": 0,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "neutral",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.99999994,
+          "responses": 145,
+          "committed_responses": 0,
+          "corrections": 13,
+          "replays": 101,
+          "source_distinct": 85,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 80
+        },
+        "defender": {
+          "role": "defender",
+          "move": "neutral",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 1,
+          "responses": 1,
+          "committed_responses": 0,
+          "corrections": 7,
+          "replays": 98,
+          "source_distinct": 281,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 82
+        }
+      },
+      "elapsed_seconds": 9.38185210000006,
+      "evidence_set": "full_matrix",
+      "source_artifact": ".godot/production-contact/final125/summary.json"
+    },
+    {
+      "move": "neutral",
+      "contact": "contact",
+      "requested_delay_ms": 0,
+      "repeat": 1,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 336,
+            "forwarded": 336,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.014999999848441803,
+            "mean_ms": 0.033474404757173816,
+            "max_ms": 0.14879999980621506
+          },
+          "server_to_client": {
+            "enqueued": 684,
+            "forwarded": 684,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.011599999879763345,
+            "mean_ms": 0.02413289473347052,
+            "max_ms": 0.143900000011854
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 335,
+            "forwarded": 335,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.014599999985875911,
+            "mean_ms": 0.033930447764067874,
+            "max_ms": 0.13259999991532823
+          },
+          "server_to_client": {
+            "enqueued": 338,
+            "forwarded": 338,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.012999999853491317,
+            "mean_ms": 0.03573757396881677,
+            "max_ms": 0.17400000001543958
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "neutral",
+          "contact": true,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 1,
+          "responses": 92,
+          "committed_responses": 0,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "neutral",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.99999994,
+          "responses": 148,
+          "committed_responses": 0,
+          "corrections": 15,
+          "replays": 57,
+          "source_distinct": 191,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 72
+        },
+        "defender": {
+          "role": "defender",
+          "move": "neutral",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 1,
+          "responses": 1,
+          "committed_responses": 0,
+          "corrections": 5,
+          "replays": 36,
+          "source_distinct": 459,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 55
+        }
+      },
+      "elapsed_seconds": 10.681140599999935,
+      "evidence_set": "full_matrix",
+      "source_artifact": ".godot/production-contact/final125/summary.json"
+    },
+    {
+      "move": "neutral",
+      "contact": "contact",
+      "requested_delay_ms": 30,
+      "repeat": 0,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 331,
+            "forwarded": 331,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.015499999990425,
+            "mean_ms": 33.03800392749099,
+            "max_ms": 45.387500000060754
+          },
+          "server_to_client": {
+            "enqueued": 690,
+            "forwarded": 690,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.0195000002077,
+            "mean_ms": 32.86000289854564,
+            "max_ms": 42.802299999948445
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 330,
+            "forwarded": 330,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.03749999993488,
+            "mean_ms": 33.11027303030903,
+            "max_ms": 43.80530000003091
+          },
+          "server_to_client": {
+            "enqueued": 716,
+            "forwarded": 716,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.017799999995987,
+            "mean_ms": 32.853837011174235,
+            "max_ms": 42.80530000005456
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "neutral",
+          "contact": true,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 1,
+          "responses": 91,
+          "committed_responses": 0,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "neutral",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.99999994,
+          "responses": 167,
+          "committed_responses": 0,
+          "corrections": 11,
+          "replays": 76,
+          "source_distinct": 250,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 83
+        },
+        "defender": {
+          "role": "defender",
+          "move": "neutral",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 1,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 2,
+          "replays": 78,
+          "source_distinct": 530,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 88
+        }
+      },
+      "elapsed_seconds": 9.008375299999898,
+      "evidence_set": "full_matrix",
+      "source_artifact": ".godot/production-contact/final125/summary.json"
+    },
+    {
+      "move": "neutral",
+      "contact": "contact",
+      "requested_delay_ms": 30,
+      "repeat": 1,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 330,
+            "forwarded": 330,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.06010000012793,
+            "mean_ms": 33.1268915151537,
+            "max_ms": 45.0765999999021
+          },
+          "server_to_client": {
+            "enqueued": 713,
+            "forwarded": 713,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.036699999982375,
+            "mean_ms": 33.09236129032269,
+            "max_ms": 45.883399999866015
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 333,
+            "forwarded": 333,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.022200000075827,
+            "mean_ms": 33.36336066066026,
+            "max_ms": 44.935900000155016
+          },
+          "server_to_client": {
+            "enqueued": 708,
+            "forwarded": 708,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.027199999949516,
+            "mean_ms": 33.117211016951266,
+            "max_ms": 45.85680000013781
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "neutral",
+          "contact": true,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 1,
+          "responses": 83,
+          "committed_responses": 0,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "neutral",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.99999994,
+          "responses": 460,
+          "committed_responses": 0,
+          "corrections": 35,
+          "replays": 249,
+          "source_distinct": 170,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 80
+        },
+        "defender": {
+          "role": "defender",
+          "move": "neutral",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 1,
+          "responses": 1,
+          "committed_responses": 0,
+          "corrections": 13,
+          "replays": 261,
+          "source_distinct": 650,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 80
+        }
+      },
+      "elapsed_seconds": 8.90685150000013,
+      "evidence_set": "full_matrix",
+      "source_artifact": ".godot/production-contact/final125/summary.json"
+    },
+    {
+      "move": "neutral",
+      "contact": "no-contact",
+      "requested_delay_ms": 0,
+      "repeat": 0,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 333,
+            "forwarded": 333,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.013399999943430885,
+            "mean_ms": 0.030672672673071256,
+            "max_ms": 0.1289000001634122
+          },
+          "server_to_client": {
+            "enqueued": 702,
+            "forwarded": 702,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.011299999869152089,
+            "mean_ms": 0.018171509969486584,
+            "max_ms": 0.07959999993545352
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 332,
+            "forwarded": 332,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.012499999911597115,
+            "mean_ms": 0.033801807232400706,
+            "max_ms": 0.09920000002239249
+          },
+          "server_to_client": {
+            "enqueued": 701,
+            "forwarded": 701,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.012399999832268804,
+            "mean_ms": 0.02955263908843439,
+            "max_ms": 0.12910000009469513
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "neutral",
+          "contact": false,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 0.026389405,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "neutral",
+          "contact": false,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.026389405,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 15,
+          "replays": 266,
+          "source_distinct": 0,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 80
+        },
+        "defender": {
+          "role": "defender",
+          "move": "neutral",
+          "contact": false,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.026389405,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 0,
+          "replays": 293,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 80
+        }
+      },
+      "elapsed_seconds": 8.496836799999983,
+      "evidence_set": "full_matrix",
+      "source_artifact": ".godot/production-contact/final125/summary.json"
+    },
+    {
+      "move": "neutral",
+      "contact": "no-contact",
+      "requested_delay_ms": 0,
+      "repeat": 1,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 334,
+            "forwarded": 334,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.014899999996487168,
+            "mean_ms": 0.031031137722041417,
+            "max_ms": 0.11650000010376971
+          },
+          "server_to_client": {
+            "enqueued": 406,
+            "forwarded": 406,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.013600000102087506,
+            "mean_ms": 0.029528325130785796,
+            "max_ms": 0.05729999998038693
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 287,
+            "forwarded": 287,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.014500000133921276,
+            "mean_ms": 0.030097560964584626,
+            "max_ms": 0.09230000000570726
+          },
+          "server_to_client": {
+            "enqueued": 706,
+            "forwarded": 706,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.011599999879763345,
+            "mean_ms": 0.023822237963237628,
+            "max_ms": 0.11929999982385198
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "neutral",
+          "contact": false,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 0.026389405,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "neutral",
+          "contact": false,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.026389405,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 5,
+          "replays": 136,
+          "source_distinct": 0,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 79
+        },
+        "defender": {
+          "role": "defender",
+          "move": "neutral",
+          "contact": false,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.026389405,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 12,
+          "replays": 258,
+          "source_distinct": 0,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 80
+        }
+      },
+      "elapsed_seconds": 8.77806959999998,
+      "evidence_set": "full_matrix",
+      "source_artifact": ".godot/production-contact/final125/summary.json"
+    },
+    {
+      "move": "neutral",
+      "contact": "no-contact",
+      "requested_delay_ms": 30,
+      "repeat": 0,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 330,
+            "forwarded": 330,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.014899999969202,
+            "mean_ms": 33.0108903030171,
+            "max_ms": 44.55170000005637
+          },
+          "server_to_client": {
+            "enqueued": 707,
+            "forwarded": 707,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.016800000112198,
+            "mean_ms": 32.69150028288669,
+            "max_ms": 46.01290000005065
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 333,
+            "forwarded": 333,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.03050000006624,
+            "mean_ms": 33.06704654654312,
+            "max_ms": 45.89979999991556
+          },
+          "server_to_client": {
+            "enqueued": 713,
+            "forwarded": 713,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.016899999964153,
+            "mean_ms": 32.690469985974254,
+            "max_ms": 46.0089999999127
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "neutral",
+          "contact": false,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 0.041666314,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "neutral",
+          "contact": false,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.041666314,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 45,
+          "replays": 255,
+          "source_distinct": 0,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 80
+        },
+        "defender": {
+          "role": "defender",
+          "move": "neutral",
+          "contact": false,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.041666314,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 5,
+          "replays": 246,
+          "source_distinct": 0,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 81
+        }
+      },
+      "elapsed_seconds": 9.079887100000178,
+      "evidence_set": "full_matrix",
+      "source_artifact": ".godot/production-contact/final125/summary.json"
+    },
+    {
+      "move": "neutral",
+      "contact": "no-contact",
+      "requested_delay_ms": 30,
+      "repeat": 1,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 328,
+            "forwarded": 328,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.01330000006419,
+            "mean_ms": 32.79245518292458,
+            "max_ms": 44.31169999998019
+          },
+          "server_to_client": {
+            "enqueued": 712,
+            "forwarded": 712,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.02169999990656,
+            "mean_ms": 32.56585660112469,
+            "max_ms": 44.412000000193075
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 329,
+            "forwarded": 329,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.021000000033382,
+            "mean_ms": 32.858084498470305,
+            "max_ms": 44.59109999993416
+          },
+          "server_to_client": {
+            "enqueued": 710,
+            "forwarded": 710,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.0520000000688,
+            "mean_ms": 32.57934253520931,
+            "max_ms": 44.26429999989523
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "neutral",
+          "contact": false,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 0.041666314,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "neutral",
+          "contact": false,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.041666314,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 52,
+          "replays": 260,
+          "source_distinct": 0,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 81
+        },
+        "defender": {
+          "role": "defender",
+          "move": "neutral",
+          "contact": false,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.041666314,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 12,
+          "replays": 275,
+          "source_distinct": 0,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 81
+        }
+      },
+      "elapsed_seconds": 9.0241532,
+      "evidence_set": "full_matrix",
+      "source_artifact": ".godot/production-contact/final125/summary.json"
+    },
+    {
+      "move": "crossover",
+      "contact": "contact",
+      "requested_delay_ms": 0,
+      "repeat": 0,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 338,
+            "forwarded": 338,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.013999999964653398,
+            "mean_ms": 0.03263195267087998,
+            "max_ms": 0.22480000006908085
+          },
+          "server_to_client": {
+            "enqueued": 646,
+            "forwarded": 646,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.012200000128359534,
+            "mean_ms": 0.026525696593486178,
+            "max_ms": 0.20650000010391523
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 364,
+            "forwarded": 364,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.014599999985875911,
+            "mean_ms": 0.03342609890031591,
+            "max_ms": 0.20549999999275315
+          },
+          "server_to_client": {
+            "enqueued": 702,
+            "forwarded": 702,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.010800000154631562,
+            "mean_ms": 0.02351994302193881,
+            "max_ms": 0.19599999995989492
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "crossover",
+          "contact": true,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 1,
+          "responses": 88,
+          "committed_responses": 1,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "crossover",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.99999994,
+          "responses": 137,
+          "committed_responses": 2,
+          "corrections": 14,
+          "replays": 225,
+          "source_distinct": 63,
+          "correction_phases": [
+            "Startup",
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Startup",
+            "Active",
+            "Recovery",
+            "Inactive"
+          ],
+          "convergence_streak": 80
+        },
+        "defender": {
+          "role": "defender",
+          "move": "crossover",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 1,
+          "responses": 1,
+          "committed_responses": 0,
+          "corrections": 9,
+          "replays": 281,
+          "source_distinct": 171,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 81
+        }
+      },
+      "elapsed_seconds": 8.649440700000014,
+      "evidence_set": "full_matrix",
+      "source_artifact": ".godot/production-contact/final125/summary.json"
+    },
+    {
+      "move": "crossover",
+      "contact": "contact",
+      "requested_delay_ms": 0,
+      "repeat": 1,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 369,
+            "forwarded": 369,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.013999999964653398,
+            "mean_ms": 0.02876937669177729,
+            "max_ms": 0.0910000001113076
+          },
+          "server_to_client": {
+            "enqueued": 703,
+            "forwarded": 703,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.011599999879763345,
+            "mean_ms": 0.01758236131066625,
+            "max_ms": 0.10229999998045969
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 362,
+            "forwarded": 362,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.014799999917158857,
+            "mean_ms": 0.027314088398516758,
+            "max_ms": 0.12230000015733822
+          },
+          "server_to_client": {
+            "enqueued": 680,
+            "forwarded": 680,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.013700000181415817,
+            "mean_ms": 0.02793573529114677,
+            "max_ms": 0.12510000010479416
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "crossover",
+          "contact": true,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 1,
+          "responses": 87,
+          "committed_responses": 1,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "crossover",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.99999994,
+          "responses": 120,
+          "committed_responses": 2,
+          "corrections": 14,
+          "replays": 237,
+          "source_distinct": 58,
+          "correction_phases": [
+            "Startup",
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Startup",
+            "Active",
+            "Recovery",
+            "Inactive"
+          ],
+          "convergence_streak": 80
+        },
+        "defender": {
+          "role": "defender",
+          "move": "crossover",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 1,
+          "responses": 1,
+          "committed_responses": 0,
+          "corrections": 9,
+          "replays": 270,
+          "source_distinct": 166,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 80
+        }
+      },
+      "elapsed_seconds": 8.571114200000011,
+      "evidence_set": "full_matrix",
+      "source_artifact": ".godot/production-contact/final125/summary.json"
+    },
+    {
+      "move": "crossover",
+      "contact": "contact",
+      "requested_delay_ms": 30,
+      "repeat": 0,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 333,
+            "forwarded": 333,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.014999999821157,
+            "mean_ms": 33.179654354340016,
+            "max_ms": 41.56439999997019
+          },
+          "server_to_client": {
+            "enqueued": 710,
+            "forwarded": 710,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.02569999989646,
+            "mean_ms": 33.012647746482784,
+            "max_ms": 45.21209999984421
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 332,
+            "forwarded": 332,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.013699999926757,
+            "mean_ms": 33.27751295179734,
+            "max_ms": 45.36639999992076
+          },
+          "server_to_client": {
+            "enqueued": 704,
+            "forwarded": 704,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.032699999992474,
+            "mean_ms": 32.97265568181599,
+            "max_ms": 45.212399999854824
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "crossover",
+          "contact": true,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 1,
+          "responses": 85,
+          "committed_responses": 1,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "crossover",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.99999994,
+          "responses": 541,
+          "committed_responses": 2,
+          "corrections": 38,
+          "replays": 269,
+          "source_distinct": 189,
+          "correction_phases": [
+            "Startup",
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Startup",
+            "Inactive"
+          ],
+          "convergence_streak": 81
+        },
+        "defender": {
+          "role": "defender",
+          "move": "crossover",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 1,
+          "responses": 1,
+          "committed_responses": 0,
+          "corrections": 12,
+          "replays": 247,
+          "source_distinct": 528,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 79
+        }
+      },
+      "elapsed_seconds": 8.890249199999971,
+      "evidence_set": "full_matrix",
+      "source_artifact": ".godot/production-contact/final125/summary.json"
+    },
+    {
+      "move": "crossover",
+      "contact": "contact",
+      "requested_delay_ms": 30,
+      "repeat": 1,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 332,
+            "forwarded": 332,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.023899999832793,
+            "mean_ms": 33.258050903614055,
+            "max_ms": 44.55570000004627
+          },
+          "server_to_client": {
+            "enqueued": 723,
+            "forwarded": 723,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.027600000039456,
+            "mean_ms": 32.79592420469578,
+            "max_ms": 44.39419999994243
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 329,
+            "forwarded": 329,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.0235000001976,
+            "mean_ms": 33.238133738607296,
+            "max_ms": 44.44280000006984
+          },
+          "server_to_client": {
+            "enqueued": 730,
+            "forwarded": 730,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.032699999992474,
+            "mean_ms": 32.79411712328697,
+            "max_ms": 44.387299999925744
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "crossover",
+          "contact": true,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 1,
+          "responses": 84,
+          "committed_responses": 1,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "crossover",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.99999994,
+          "responses": 496,
+          "committed_responses": 1,
+          "corrections": 12,
+          "replays": 117,
+          "source_distinct": 192,
+          "correction_phases": [
+            "Startup",
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Startup",
+            "Inactive"
+          ],
+          "convergence_streak": 83
+        },
+        "defender": {
+          "role": "defender",
+          "move": "crossover",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 1,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 6,
+          "replays": 121,
+          "source_distinct": 351,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 84
+        }
+      },
+      "elapsed_seconds": 9.038699599999973,
+      "evidence_set": "full_matrix",
+      "source_artifact": ".godot/production-contact/final125/summary.json"
+    },
+    {
+      "move": "crossover",
+      "contact": "no-contact",
+      "requested_delay_ms": 0,
+      "repeat": 0,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 335,
+            "forwarded": 335,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.014700000065204222,
+            "mean_ms": 0.030562686571957147,
+            "max_ms": 0.12020000008305942
+          },
+          "server_to_client": {
+            "enqueued": 463,
+            "forwarded": 463,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.014299999975264654,
+            "mean_ms": 0.030041468690732223,
+            "max_ms": 0.1243000001522887
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 336,
+            "forwarded": 336,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.014400000054592965,
+            "mean_ms": 0.030229761898275292,
+            "max_ms": 0.15080000002853922
+          },
+          "server_to_client": {
+            "enqueued": 708,
+            "forwarded": 708,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.010100000054080738,
+            "mean_ms": 0.024375706213522585,
+            "max_ms": 0.12370000013106619
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "crossover",
+          "contact": false,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 0.03194461,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "crossover",
+          "contact": false,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.0069446564,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 10,
+          "replays": 108,
+          "source_distinct": 0,
+          "correction_phases": [
+            "Startup",
+            "Active",
+            "Recovery",
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Startup",
+            "Active",
+            "Recovery",
+            "Inactive"
+          ],
+          "convergence_streak": 81
+        },
+        "defender": {
+          "role": "defender",
+          "move": "crossover",
+          "contact": false,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.15416646,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 2,
+          "replays": 117,
+          "source_distinct": 0,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 80
+        }
+      },
+      "elapsed_seconds": 8.573410599999988,
+      "evidence_set": "full_matrix",
+      "source_artifact": ".godot/production-contact/final125/summary.json"
+    },
+    {
+      "move": "crossover",
+      "contact": "no-contact",
+      "requested_delay_ms": 0,
+      "repeat": 1,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 333,
+            "forwarded": 333,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.0144999999065476,
+            "mean_ms": 0.03132252252906435,
+            "max_ms": 0.15720000010333024
+          },
+          "server_to_client": {
+            "enqueued": 708,
+            "forwarded": 708,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.009100000170292333,
+            "mean_ms": 0.02386327683602835,
+            "max_ms": 0.29279999989739736
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 331,
+            "forwarded": 331,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.013399999943430885,
+            "mean_ms": 0.031655891237297645,
+            "max_ms": 0.14559999999619322
+          },
+          "server_to_client": {
+            "enqueued": 473,
+            "forwarded": 473,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.014799999917158857,
+            "mean_ms": 0.03204799154628604,
+            "max_ms": 0.23759999999128922
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "crossover",
+          "contact": false,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 0.040277988,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "crossover",
+          "contact": false,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.018055364,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 29,
+          "replays": 86,
+          "source_distinct": 0,
+          "correction_phases": [
+            "Startup",
+            "Active",
+            "Recovery",
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Startup",
+            "Active",
+            "Recovery",
+            "Inactive"
+          ],
+          "convergence_streak": 80
+        },
+        "defender": {
+          "role": "defender",
+          "move": "crossover",
+          "contact": false,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.040277988,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 4,
+          "replays": 83,
+          "source_distinct": 0,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 80
+        }
+      },
+      "elapsed_seconds": 8.57408190000001,
+      "evidence_set": "full_matrix",
+      "source_artifact": ".godot/production-contact/final125/summary.json"
+    },
+    {
+      "move": "crossover",
+      "contact": "no-contact",
+      "requested_delay_ms": 30,
+      "repeat": 0,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 333,
+            "forwarded": 333,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.021799999985888,
+            "mean_ms": 33.12118558559299,
+            "max_ms": 48.51660000008451
+          },
+          "server_to_client": {
+            "enqueued": 726,
+            "forwarded": 726,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.031199999939417,
+            "mean_ms": 32.57465950413506,
+            "max_ms": 44.46440000015173
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 329,
+            "forwarded": 329,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.02359999982218,
+            "mean_ms": 32.772382978722995,
+            "max_ms": 44.25429999992048
+          },
+          "server_to_client": {
+            "enqueued": 727,
+            "forwarded": 727,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.018200000085926,
+            "mean_ms": 32.52811966988207,
+            "max_ms": 44.46200000006684
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "crossover",
+          "contact": false,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 0.0027776174,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "crossover",
+          "contact": false,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.0027776174,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 17,
+          "replays": 67,
+          "source_distinct": 0,
+          "correction_phases": [
+            "Startup",
+            "Active",
+            "Recovery",
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Startup",
+            "Active",
+            "Recovery",
+            "Inactive"
+          ],
+          "convergence_streak": 82
+        },
+        "defender": {
+          "role": "defender",
+          "move": "crossover",
+          "contact": false,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.052777626,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 4,
+          "replays": 64,
+          "source_distinct": 0,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 83
+        }
+      },
+      "elapsed_seconds": 9.125611400000025,
+      "evidence_set": "full_matrix",
+      "source_artifact": ".godot/production-contact/final125/summary.json"
+    },
+    {
+      "move": "crossover",
+      "contact": "no-contact",
+      "requested_delay_ms": 30,
+      "repeat": 1,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 335,
+            "forwarded": 335,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.01259999996364,
+            "mean_ms": 33.3580752238755,
+            "max_ms": 45.12350000004517
+          },
+          "server_to_client": {
+            "enqueued": 732,
+            "forwarded": 732,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.02070000002277,
+            "mean_ms": 33.014822540983495,
+            "max_ms": 45.53069999997206
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 328,
+            "forwarded": 328,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.043500000147105,
+            "mean_ms": 32.931128963417535,
+            "max_ms": 43.79449999987628
+          },
+          "server_to_client": {
+            "enqueued": 759,
+            "forwarded": 759,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.04030000010971,
+            "mean_ms": 33.0314003952571,
+            "max_ms": 45.52860000012515
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "crossover",
+          "contact": false,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 0.011111338,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "crossover",
+          "contact": false,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.011111338,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 24,
+          "replays": 46,
+          "source_distinct": 0,
+          "correction_phases": [
+            "Startup",
+            "Active",
+            "Recovery",
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Startup",
+            "Active",
+            "Recovery",
+            "Inactive"
+          ],
+          "convergence_streak": 96
+        },
+        "defender": {
+          "role": "defender",
+          "move": "crossover",
+          "contact": false,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.07361135,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 3,
+          "replays": 43,
+          "source_distinct": 0,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 87
+        }
+      },
+      "elapsed_seconds": 11.753301100000044,
+      "evidence_set": "full_matrix",
+      "source_artifact": ".godot/production-contact/final125/summary.json"
+    },
+    {
+      "move": "gather",
+      "contact": "contact",
+      "requested_delay_ms": 0,
+      "repeat": 0,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 334,
+            "forwarded": 334,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.014899999996487168,
+            "mean_ms": 0.029722754487386895,
+            "max_ms": 0.08830000001580629
+          },
+          "server_to_client": {
+            "enqueued": 358,
+            "forwarded": 358,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.014599999985875911,
+            "mean_ms": 0.026488547494831153,
+            "max_ms": 0.09390000013809185
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 332,
+            "forwarded": 332,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.014599999985875911,
+            "mean_ms": 0.030139156626910885,
+            "max_ms": 0.1313999998728832
+          },
+          "server_to_client": {
+            "enqueued": 703,
+            "forwarded": 703,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.01049999991664663,
+            "mean_ms": 0.0233577524842913,
+            "max_ms": 0.16599999980826396
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "gather",
+          "contact": true,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 1,
+          "responses": 80,
+          "committed_responses": 1,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "gather",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.99999994,
+          "responses": 129,
+          "committed_responses": 2,
+          "corrections": 10,
+          "replays": 86,
+          "source_distinct": 98,
+          "correction_phases": [
+            "Startup",
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Startup",
+            "Active",
+            "Recovery",
+            "Inactive"
+          ],
+          "convergence_streak": 81
+        },
+        "defender": {
+          "role": "defender",
+          "move": "gather",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 1,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 7,
+          "replays": 170,
+          "source_distinct": 169,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 81
+        }
+      },
+      "elapsed_seconds": 8.63421059999996,
+      "evidence_set": "full_matrix",
+      "source_artifact": ".godot/production-contact/final125/summary.json"
+    },
+    {
+      "move": "gather",
+      "contact": "contact",
+      "requested_delay_ms": 0,
+      "repeat": 1,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 335,
+            "forwarded": 335,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.01420000012331002,
+            "mean_ms": 0.02836447761590317,
+            "max_ms": 0.0814999998510757
+          },
+          "server_to_client": {
+            "enqueued": 702,
+            "forwarded": 702,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.01160000010713702,
+            "mean_ms": 0.017217236469679115,
+            "max_ms": 0.0915000000532018
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 334,
+            "forwarded": 334,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.014500000133921276,
+            "mean_ms": 0.028702395214788918,
+            "max_ms": 0.10829999996531114
+          },
+          "server_to_client": {
+            "enqueued": 701,
+            "forwarded": 701,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.014599999985875911,
+            "mean_ms": 0.029354778889073285,
+            "max_ms": 0.1277999999729218
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "gather",
+          "contact": true,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 1,
+          "responses": 78,
+          "committed_responses": 1,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "gather",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.99999994,
+          "responses": 134,
+          "committed_responses": 2,
+          "corrections": 54,
+          "replays": 256,
+          "source_distinct": 76,
+          "correction_phases": [
+            "Startup",
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Startup",
+            "Active",
+            "Recovery",
+            "Inactive"
+          ],
+          "convergence_streak": 80
+        },
+        "defender": {
+          "role": "defender",
+          "move": "gather",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 1,
+          "responses": 1,
+          "committed_responses": 0,
+          "corrections": 17,
+          "replays": 256,
+          "source_distinct": 211,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 80
+        }
+      },
+      "elapsed_seconds": 8.479459099999985,
+      "evidence_set": "full_matrix",
+      "source_artifact": ".godot/production-contact/final125/summary.json"
+    },
+    {
+      "move": "gather",
+      "contact": "contact",
+      "requested_delay_ms": 30,
+      "repeat": 0,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 332,
+            "forwarded": 332,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.016899999964153,
+            "mean_ms": 33.08745963855097,
+            "max_ms": 43.29269999993812
+          },
+          "server_to_client": {
+            "enqueued": 710,
+            "forwarded": 710,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.025600000044506,
+            "mean_ms": 33.37327718309898,
+            "max_ms": 45.78080000010232
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 330,
+            "forwarded": 330,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.01829999993788,
+            "mean_ms": 33.166025151515925,
+            "max_ms": 44.777599999861195
+          },
+          "server_to_client": {
+            "enqueued": 705,
+            "forwarded": 705,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.03279999984443,
+            "mean_ms": 33.393445815600245,
+            "max_ms": 45.6194000000778
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "gather",
+          "contact": true,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 1,
+          "responses": 73,
+          "committed_responses": 1,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "gather",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.99999994,
+          "responses": 547,
+          "committed_responses": 1,
+          "corrections": 30,
+          "replays": 270,
+          "source_distinct": 184,
+          "correction_phases": [
+            "Startup",
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Startup",
+            "Inactive"
+          ],
+          "convergence_streak": 81
+        },
+        "defender": {
+          "role": "defender",
+          "move": "gather",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 1,
+          "responses": 1,
+          "committed_responses": 0,
+          "corrections": 10,
+          "replays": 266,
+          "source_distinct": 517,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 80
+        }
+      },
+      "elapsed_seconds": 9.048127600000043,
+      "evidence_set": "full_matrix",
+      "source_artifact": ".godot/production-contact/final125/summary.json"
+    },
+    {
+      "move": "gather",
+      "contact": "contact",
+      "requested_delay_ms": 30,
+      "repeat": 1,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 330,
+            "forwarded": 330,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.02510000010261,
+            "mean_ms": 33.10386151515007,
+            "max_ms": 44.709800000191535
+          },
+          "server_to_client": {
+            "enqueued": 714,
+            "forwarded": 714,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.033100000082413,
+            "mean_ms": 33.05146302521156,
+            "max_ms": 45.40769999994154
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 330,
+            "forwarded": 330,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.01259999996364,
+            "mean_ms": 32.987967575760386,
+            "max_ms": 44.74760000016431
+          },
+          "server_to_client": {
+            "enqueued": 708,
+            "forwarded": 708,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.0288000000819,
+            "mean_ms": 33.0379905367206,
+            "max_ms": 44.904600000108985
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "gather",
+          "contact": true,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 1,
+          "responses": 75,
+          "committed_responses": 1,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "gather",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.99999994,
+          "responses": 518,
+          "committed_responses": 2,
+          "corrections": 34,
+          "replays": 262,
+          "source_distinct": 191,
+          "correction_phases": [
+            "Startup",
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Startup",
+            "Inactive"
+          ],
+          "convergence_streak": 80
+        },
+        "defender": {
+          "role": "defender",
+          "move": "gather",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 1,
+          "responses": 1,
+          "committed_responses": 0,
+          "corrections": 10,
+          "replays": 265,
+          "source_distinct": 534,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 80
+        }
+      },
+      "elapsed_seconds": 8.915832899999941,
+      "evidence_set": "full_matrix",
+      "source_artifact": ".godot/production-contact/final125/summary.json"
+    },
+    {
+      "move": "gather",
+      "contact": "no-contact",
+      "requested_delay_ms": 0,
+      "repeat": 0,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 335,
+            "forwarded": 335,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.014500000133921276,
+            "mean_ms": 0.02631791045309028,
+            "max_ms": 0.43509999977686675
+          },
+          "server_to_client": {
+            "enqueued": 700,
+            "forwarded": 700,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.009299999874201603,
+            "mean_ms": 0.017447571428225013,
+            "max_ms": 0.1216000000567874
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 362,
+            "forwarded": 362,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.013500000022759195,
+            "mean_ms": 0.0297259668591901,
+            "max_ms": 0.14519999967887998
+          },
+          "server_to_client": {
+            "enqueued": 671,
+            "forwarded": 671,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.01340000017080456,
+            "mean_ms": 0.0269059612576843,
+            "max_ms": 0.1637000000300759
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "gather",
+          "contact": false,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 0.048611134,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "gather",
+          "contact": false,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.073611066,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 14,
+          "replays": 257,
+          "source_distinct": 0,
+          "correction_phases": [
+            "Startup",
+            "Active",
+            "Recovery",
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Startup",
+            "Active",
+            "Recovery",
+            "Inactive"
+          ],
+          "convergence_streak": 80
+        },
+        "defender": {
+          "role": "defender",
+          "move": "gather",
+          "contact": false,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.048611134,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 0,
+          "replays": 234,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 79
+        }
+      },
+      "elapsed_seconds": 8.497284600000285,
+      "evidence_set": "full_matrix",
+      "source_artifact": ".godot/production-contact/final125/summary.json"
+    },
+    {
+      "move": "gather",
+      "contact": "no-contact",
+      "requested_delay_ms": 0,
+      "repeat": 1,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 366,
+            "forwarded": 366,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.013700000181415817,
+            "mean_ms": 0.028117486350122227,
+            "max_ms": 0.09540000019114814
+          },
+          "server_to_client": {
+            "enqueued": 697,
+            "forwarded": 697,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.012699999842880061,
+            "mean_ms": 0.02774691535667801,
+            "max_ms": 0.12200000037410064
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 339,
+            "forwarded": 339,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.013900000340072438,
+            "mean_ms": 0.02818938053405068,
+            "max_ms": 0.09410000029674848
+          },
+          "server_to_client": {
+            "enqueued": 702,
+            "forwarded": 702,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.009300000328948954,
+            "mean_ms": 0.018199857553155428,
+            "max_ms": 0.08650000017951243
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "gather",
+          "contact": false,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 0.029166847,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "gather",
+          "contact": false,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.06805575,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 113,
+          "replays": 287,
+          "source_distinct": 0,
+          "correction_phases": [
+            "Startup",
+            "Active",
+            "Recovery",
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Startup",
+            "Active",
+            "Recovery",
+            "Inactive"
+          ],
+          "convergence_streak": 80
+        },
+        "defender": {
+          "role": "defender",
+          "move": "gather",
+          "contact": false,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.029166847,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 19,
+          "replays": 289,
+          "source_distinct": 0,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 80
+        }
+      },
+      "elapsed_seconds": 8.604337600000235,
+      "evidence_set": "full_matrix",
+      "source_artifact": ".godot/production-contact/final125/summary.json"
+    },
+    {
+      "move": "gather",
+      "contact": "no-contact",
+      "requested_delay_ms": 30,
+      "repeat": 0,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 330,
+            "forwarded": 330,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.02059999971607,
+            "mean_ms": 32.796600909083885,
+            "max_ms": 43.860700000095676
+          },
+          "server_to_client": {
+            "enqueued": 708,
+            "forwarded": 708,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.028799999854527,
+            "mean_ms": 32.64615776836411,
+            "max_ms": 46.05710000032559
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 331,
+            "forwarded": 331,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.0121999998737,
+            "mean_ms": 33.05582386705766,
+            "max_ms": 46.06609999973443
+          },
+          "server_to_client": {
+            "enqueued": 712,
+            "forwarded": 712,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.01300000005358,
+            "mean_ms": 32.62012191011222,
+            "max_ms": 46.058000000357424
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "gather",
+          "contact": false,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 0.020833254,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "gather",
+          "contact": false,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.054166704,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 55,
+          "replays": 261,
+          "source_distinct": 0,
+          "correction_phases": [
+            "Startup",
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Startup",
+            "Inactive"
+          ],
+          "convergence_streak": 82
+        },
+        "defender": {
+          "role": "defender",
+          "move": "gather",
+          "contact": false,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.020833254,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 6,
+          "replays": 248,
+          "source_distinct": 0,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 82
+        }
+      },
+      "elapsed_seconds": 8.867334300000039,
+      "evidence_set": "full_matrix",
+      "source_artifact": ".godot/production-contact/final125/summary.json"
+    },
+    {
+      "move": "gather",
+      "contact": "no-contact",
+      "requested_delay_ms": 30,
+      "repeat": 1,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 330,
+            "forwarded": 330,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.051000000185013,
+            "mean_ms": 32.890630000007484,
+            "max_ms": 44.18820000000778
+          },
+          "server_to_client": {
+            "enqueued": 713,
+            "forwarded": 713,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.04899999996269,
+            "mean_ms": 32.78923730714596,
+            "max_ms": 45.54740000003221
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 330,
+            "forwarded": 330,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.01799999992727,
+            "mean_ms": 32.901746969694365,
+            "max_ms": 43.750899999849935
+          },
+          "server_to_client": {
+            "enqueued": 710,
+            "forwarded": 710,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.038599999897997,
+            "mean_ms": 32.80509464788415,
+            "max_ms": 45.543000000179745
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "gather",
+          "contact": false,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 0.008333206,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "gather",
+          "contact": false,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.033333257,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 60,
+          "replays": 260,
+          "source_distinct": 0,
+          "correction_phases": [
+            "Startup",
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Startup",
+            "Inactive"
+          ],
+          "convergence_streak": 81
+        },
+        "defender": {
+          "role": "defender",
+          "move": "gather",
+          "contact": false,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.008333206,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 8,
+          "replays": 261,
+          "source_distinct": 0,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 81
+        }
+      },
+      "elapsed_seconds": 8.976471299999957,
+      "evidence_set": "full_matrix",
+      "source_artifact": ".godot/production-contact/final125/summary.json"
+    },
+    {
+      "move": "crossover",
+      "contact": "contact",
+      "requested_delay_ms": 0,
+      "repeat": 0,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 339,
+            "forwarded": 339,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.014699999610456871,
+            "mean_ms": 0.03329439528055215,
+            "max_ms": 0.3550000001268927
+          },
+          "server_to_client": {
+            "enqueued": 700,
+            "forwarded": 700,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.014700000065204222,
+            "mean_ms": 0.027040857143479764,
+            "max_ms": 0.12659999993047677
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 337,
+            "forwarded": 337,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.0144999999065476,
+            "mean_ms": 0.03220682493825108,
+            "max_ms": 0.2841999998963729
+          },
+          "server_to_client": {
+            "enqueued": 708,
+            "forwarded": 708,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.011799999811046291,
+            "mean_ms": 0.023462994356333765,
+            "max_ms": 0.15050000001792796
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "crossover",
+          "contact": true,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 1,
+          "responses": 85,
+          "committed_responses": 1,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "crossover",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.99999994,
+          "responses": 177,
+          "committed_responses": 2,
+          "corrections": 31,
+          "replays": 251,
+          "source_distinct": 83,
+          "correction_phases": [
+            "Startup",
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Startup",
+            "Active",
+            "Recovery",
+            "Inactive"
+          ],
+          "convergence_streak": 81
+        },
+        "defender": {
+          "role": "defender",
+          "move": "crossover",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 1,
+          "responses": 1,
+          "committed_responses": 0,
+          "corrections": 11,
+          "replays": 264,
+          "source_distinct": 167,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 81
+        }
+      },
+      "elapsed_seconds": 9.431712900000093,
+      "evidence_set": "strengthened_actual_committed_path",
+      "source_artifact": ".godot/production-contact/final-actual-crossover-0/summary.json"
+    },
+    {
+      "move": "crossover",
+      "contact": "contact",
+      "requested_delay_ms": 0,
+      "repeat": 1,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 362,
+            "forwarded": 362,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.014600000213249587,
+            "mean_ms": 0.030686740342012523,
+            "max_ms": 0.07610000011482043
+          },
+          "server_to_client": {
+            "enqueued": 704,
+            "forwarded": 704,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.011799999811046291,
+            "mean_ms": 0.018324289771695392,
+            "max_ms": 0.07770000001983135
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 362,
+            "forwarded": 362,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.014699999610456871,
+            "mean_ms": 0.03170497237490998,
+            "max_ms": 0.09319999981016736
+          },
+          "server_to_client": {
+            "enqueued": 682,
+            "forwarded": 682,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.014199999895936344,
+            "mean_ms": 0.030580938410792208,
+            "max_ms": 0.12719999995169928
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "crossover",
+          "contact": true,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 1,
+          "responses": 87,
+          "committed_responses": 2,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "crossover",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.99999994,
+          "responses": 131,
+          "committed_responses": 2,
+          "corrections": 54,
+          "replays": 247,
+          "source_distinct": 73,
+          "correction_phases": [
+            "Startup",
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Startup",
+            "Active",
+            "Recovery",
+            "Inactive"
+          ],
+          "convergence_streak": 80
+        },
+        "defender": {
+          "role": "defender",
+          "move": "crossover",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 1,
+          "responses": 1,
+          "committed_responses": 0,
+          "corrections": 17,
+          "replays": 239,
+          "source_distinct": 209,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 80
+        }
+      },
+      "elapsed_seconds": 8.623312400000032,
+      "evidence_set": "strengthened_actual_committed_path",
+      "source_artifact": ".godot/production-contact/final-actual-crossover-0/summary.json"
+    },
+    {
+      "move": "crossover",
+      "contact": "contact",
+      "requested_delay_ms": 30,
+      "repeat": 0,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 333,
+            "forwarded": 333,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.02040000001216,
+            "mean_ms": 33.387643543535575,
+            "max_ms": 43.83789999974397
+          },
+          "server_to_client": {
+            "enqueued": 706,
+            "forwarded": 706,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.025000000023283,
+            "mean_ms": 33.070661756383686,
+            "max_ms": 44.5638000001054
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 333,
+            "forwarded": 333,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.015900000307738,
+            "mean_ms": 33.19189819819883,
+            "max_ms": 45.28530000015962
+          },
+          "server_to_client": {
+            "enqueued": 709,
+            "forwarded": 709,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.03320000016174,
+            "mean_ms": 33.067066995767235,
+            "max_ms": 44.750399999884394
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "crossover",
+          "contact": true,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 1,
+          "responses": 84,
+          "committed_responses": 1,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "crossover",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.99999994,
+          "responses": 509,
+          "committed_responses": 1,
+          "corrections": 31,
+          "replays": 247,
+          "source_distinct": 187,
+          "correction_phases": [
+            "Startup",
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Startup",
+            "Inactive"
+          ],
+          "convergence_streak": 81
+        },
+        "defender": {
+          "role": "defender",
+          "move": "crossover",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 1,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 9,
+          "replays": 259,
+          "source_distinct": 475,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 80
+        }
+      },
+      "elapsed_seconds": 8.964710400000058,
+      "evidence_set": "strengthened_actual_committed_path",
+      "source_artifact": ".godot/production-contact/final-actual-crossover-30/summary.json"
+    },
+    {
+      "move": "crossover",
+      "contact": "contact",
+      "requested_delay_ms": 30,
+      "repeat": 1,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 332,
+            "forwarded": 332,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.032699999992474,
+            "mean_ms": 33.04532469879846,
+            "max_ms": 44.96489999974074
+          },
+          "server_to_client": {
+            "enqueued": 707,
+            "forwarded": 707,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.010800000127347,
+            "mean_ms": 33.095565063639924,
+            "max_ms": 44.95360000009896
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 331,
+            "forwarded": 331,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.017399999906047,
+            "mean_ms": 33.170976132930136,
+            "max_ms": 41.37119999995775
+          },
+          "server_to_client": {
+            "enqueued": 710,
+            "forwarded": 710,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.017200000202138,
+            "mean_ms": 33.044024225347115,
+            "max_ms": 44.94790000035209
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "crossover",
+          "contact": true,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 1,
+          "responses": 84,
+          "committed_responses": 1,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "crossover",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.99999994,
+          "responses": 539,
+          "committed_responses": 2,
+          "corrections": 25,
+          "replays": 248,
+          "source_distinct": 181,
+          "correction_phases": [
+            "Startup",
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Startup",
+            "Inactive"
+          ],
+          "convergence_streak": 80
+        },
+        "defender": {
+          "role": "defender",
+          "move": "crossover",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 1,
+          "responses": 1,
+          "committed_responses": 0,
+          "corrections": 10,
+          "replays": 249,
+          "source_distinct": 510,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 79
+        }
+      },
+      "elapsed_seconds": 9.019660899999963,
+      "evidence_set": "strengthened_actual_committed_path",
+      "source_artifact": ".godot/production-contact/final-actual-crossover-30/summary.json"
+    },
+    {
+      "move": "gather",
+      "contact": "contact",
+      "requested_delay_ms": 0,
+      "repeat": 0,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 333,
+            "forwarded": 333,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.013099999705445953,
+            "mean_ms": 0.032519819812038366,
+            "max_ms": 0.09920000002239249
+          },
+          "server_to_client": {
+            "enqueued": 708,
+            "forwarded": 708,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.014000000192027073,
+            "mean_ms": 0.02853545198559518,
+            "max_ms": 0.06810000013501849
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 338,
+            "forwarded": 338,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.015699999948992627,
+            "mean_ms": 0.03362810648791337,
+            "max_ms": 0.07679999998799758
+          },
+          "server_to_client": {
+            "enqueued": 709,
+            "forwarded": 709,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.010599999768601265,
+            "mean_ms": 0.02249252468718059,
+            "max_ms": 0.0731999998606625
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "gather",
+          "contact": true,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 1,
+          "responses": 77,
+          "committed_responses": 1,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "gather",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.99999994,
+          "responses": 193,
+          "committed_responses": 2,
+          "corrections": 31,
+          "replays": 267,
+          "source_distinct": 95,
+          "correction_phases": [
+            "Startup",
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Startup",
+            "Active",
+            "Recovery",
+            "Inactive"
+          ],
+          "convergence_streak": 80
+        },
+        "defender": {
+          "role": "defender",
+          "move": "gather",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 1,
+          "responses": 1,
+          "committed_responses": 0,
+          "corrections": 20,
+          "replays": 272,
+          "source_distinct": 200,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 79
+        }
+      },
+      "elapsed_seconds": 8.625148900000113,
+      "evidence_set": "strengthened_actual_committed_path",
+      "source_artifact": ".godot/production-contact/final-actual-gather-0/summary.json"
+    },
+    {
+      "move": "gather",
+      "contact": "contact",
+      "requested_delay_ms": 0,
+      "repeat": 1,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 332,
+            "forwarded": 332,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.01539999993838137,
+            "mean_ms": 0.03835963855318007,
+            "max_ms": 0.14580000015484984
+          },
+          "server_to_client": {
+            "enqueued": 702,
+            "forwarded": 702,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.01140000040322775,
+            "mean_ms": 0.02161267806555392,
+            "max_ms": 0.27380000028642826
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 331,
+            "forwarded": 331,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.017899999875226058,
+            "mean_ms": 0.03868368579639408,
+            "max_ms": 0.1378000001750479
+          },
+          "server_to_client": {
+            "enqueued": 566,
+            "forwarded": 566,
+            "discarded_at_teardown": 0,
+            "min_ms": 0.014400000054592965,
+            "mean_ms": 0.0347966431145452,
+            "max_ms": 0.283800000033807
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "gather",
+          "contact": true,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 1,
+          "responses": 80,
+          "committed_responses": 1,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "gather",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.99999994,
+          "responses": 123,
+          "committed_responses": 2,
+          "corrections": 14,
+          "replays": 113,
+          "source_distinct": 96,
+          "correction_phases": [
+            "Startup",
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Startup",
+            "Active",
+            "Recovery",
+            "Inactive"
+          ],
+          "convergence_streak": 80
+        },
+        "defender": {
+          "role": "defender",
+          "move": "gather",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 1,
+          "responses": 1,
+          "committed_responses": 0,
+          "corrections": 4,
+          "replays": 102,
+          "source_distinct": 231,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 82
+        }
+      },
+      "elapsed_seconds": 8.816835199999787,
+      "evidence_set": "strengthened_actual_committed_path",
+      "source_artifact": ".godot/production-contact/final-actual-gather-0/summary.json"
+    },
+    {
+      "move": "gather",
+      "contact": "contact",
+      "requested_delay_ms": 30,
+      "repeat": 0,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 329,
+            "forwarded": 329,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.02779999997074,
+            "mean_ms": 33.26348085104829,
+            "max_ms": 44.8577999995905
+          },
+          "server_to_client": {
+            "enqueued": 730,
+            "forwarded": 730,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.02229999992778,
+            "mean_ms": 32.63465493150138,
+            "max_ms": 44.1251000002012
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 329,
+            "forwarded": 329,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.06169999980557,
+            "mean_ms": 32.94690303951209,
+            "max_ms": 43.89639999999417
+          },
+          "server_to_client": {
+            "enqueued": 728,
+            "forwarded": 728,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.025199999727192,
+            "mean_ms": 32.6672895604367,
+            "max_ms": 44.12959999990562
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "gather",
+          "contact": true,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 1,
+          "responses": 78,
+          "committed_responses": 1,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "gather",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 0.99999994,
+          "responses": 150,
+          "committed_responses": 2,
+          "corrections": 10,
+          "replays": 49,
+          "source_distinct": 179,
+          "correction_phases": [
+            "Startup",
+            "Active",
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Startup",
+            "Active",
+            "Recovery",
+            "Inactive"
+          ],
+          "convergence_streak": 83
+        },
+        "defender": {
+          "role": "defender",
+          "move": "gather",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 1,
+          "responses": 0,
+          "committed_responses": 0,
+          "corrections": 3,
+          "replays": 49,
+          "source_distinct": 410,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 86
+        }
+      },
+      "elapsed_seconds": 9.106468400000267,
+      "evidence_set": "strengthened_actual_committed_path",
+      "source_artifact": ".godot/production-contact/final-actual-gather-30/summary.json"
+    },
+    {
+      "move": "gather",
+      "contact": "contact",
+      "requested_delay_ms": 30,
+      "repeat": 1,
+      "passed": true,
+      "error": null,
+      "relay": {
+        "driver": {
+          "client_to_server": {
+            "enqueued": 329,
+            "forwarded": 329,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.02890000016123,
+            "mean_ms": 33.50501003039998,
+            "max_ms": 44.89029999967897
+          },
+          "server_to_client": {
+            "enqueued": 730,
+            "forwarded": 730,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.01220000032845,
+            "mean_ms": 32.90693999999834,
+            "max_ms": 45.99129999996876
+          }
+        },
+        "defender": {
+          "client_to_server": {
+            "enqueued": 329,
+            "forwarded": 329,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.013799999778712,
+            "mean_ms": 33.556841337393216,
+            "max_ms": 45.30280000017228
+          },
+          "server_to_client": {
+            "enqueued": 724,
+            "forwarded": 724,
+            "discarded_at_teardown": 0,
+            "min_ms": 30.018399999789835,
+            "mean_ms": 32.959129834258164,
+            "max_ms": 45.99199999984194
+          }
+        }
+      },
+      "observations": {
+        "server": {
+          "role": "server",
+          "move": "gather",
+          "contact": true,
+          "passed": true,
+          "detail": "two client gates and authority gates",
+          "minimum_separation": 1,
+          "responses": 84,
+          "committed_responses": 1,
+          "corrections": 0,
+          "replays": 0,
+          "source_distinct": 0,
+          "correction_phases": [],
+          "replay_phases": [],
+          "convergence_streak": 0
+        },
+        "driver": {
+          "role": "driver",
+          "move": "gather",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 1,
+          "responses": 191,
+          "committed_responses": 2,
+          "corrections": 9,
+          "replays": 46,
+          "source_distinct": 227,
+          "correction_phases": [
+            "Startup",
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Startup",
+            "Inactive"
+          ],
+          "convergence_streak": 82
+        },
+        "defender": {
+          "role": "defender",
+          "move": "gather",
+          "contact": true,
+          "passed": true,
+          "detail": "contact/correction/replay/source/convergence gates",
+          "minimum_separation": 1,
+          "responses": 1,
+          "committed_responses": 0,
+          "corrections": 2,
+          "replays": 47,
+          "source_distinct": 418,
+          "correction_phases": [
+            "Inactive"
+          ],
+          "replay_phases": [
+            "Inactive"
+          ],
+          "convergence_streak": 82
+        }
+      },
+      "elapsed_seconds": 9.218072600000141,
+      "evidence_set": "strengthened_actual_committed_path",
+      "source_artifact": ".godot/production-contact/final-actual-gather-30/summary.json"
+    }
+  ],
+  "earlier_failed_premises": {
+    "source_artifact": ".godot/production-contact/final/summary.json",
+    "trial_count": 24,
+    "failed_trials": [
+      {
+        "move": "crossover",
+        "contact": "contact",
+        "requested_delay_ms": 30,
+        "repeat": 0,
+        "passed": false,
+        "observations": {
+          "driver": {
+            "role": "driver",
+            "move": "crossover",
+            "contact": true,
+            "passed": false,
+            "detail": "no contact during committed displacement",
+            "minimum_separation": 0.99999994,
+            "responses": 514,
+            "committed_responses": 0,
+            "corrections": 30,
+            "replays": 265,
+            "source_distinct": 189,
+            "correction_phases": [
+              "Startup",
+              "Inactive"
+            ],
+            "replay_phases": [
+              "Startup",
+              "Inactive"
+            ],
+            "convergence_streak": 82
+          }
+        }
+      },
+      {
+        "move": "crossover",
+        "contact": "contact",
+        "requested_delay_ms": 30,
+        "repeat": 1,
+        "passed": false,
+        "observations": {
+          "server": {
+            "role": "server",
+            "move": "crossover",
+            "contact": true,
+            "passed": false,
+            "detail": "Cannot access a disposed object.\r\nObject name: 'Hooper.Player.PlayerController'.",
+            "minimum_separation": 1,
+            "responses": 84,
+            "committed_responses": 1,
+            "corrections": 0,
+            "replays": 0,
+            "source_distinct": 0,
+            "correction_phases": [],
+            "replay_phases": [],
+            "convergence_streak": 0
+          },
+          "driver": {
+            "role": "driver",
+            "move": "crossover",
+            "contact": true,
+            "passed": false,
+            "detail": "no contact during committed displacement",
+            "minimum_separation": 0.99999994,
+            "responses": 463,
+            "committed_responses": 0,
+            "corrections": 23,
+            "replays": 247,
+            "source_distinct": 165,
+            "correction_phases": [
+              "Startup",
+              "Inactive"
+            ],
+            "replay_phases": [
+              "Startup",
+              "Inactive"
+            ],
+            "convergence_streak": 80
+          }
+        }
+      },
+      {
+        "move": "gather",
+        "contact": "contact",
+        "requested_delay_ms": 30,
+        "repeat": 0,
+        "passed": false,
+        "observations": {
+          "server": {
+            "role": "server",
+            "move": "gather",
+            "contact": true,
+            "passed": false,
+            "detail": "Cannot access a disposed object.\r\nObject name: 'Hooper.Player.PlayerController'.",
+            "minimum_separation": 1,
+            "responses": 76,
+            "committed_responses": 1,
+            "corrections": 0,
+            "replays": 0,
+            "source_distinct": 0,
+            "correction_phases": [],
+            "replay_phases": [],
+            "convergence_streak": 0
+          },
+          "driver": {
+            "role": "driver",
+            "move": "gather",
+            "contact": true,
+            "passed": false,
+            "detail": "no contact during committed displacement",
+            "minimum_separation": 0.99999994,
+            "responses": 162,
+            "committed_responses": 0,
+            "corrections": 14,
+            "replays": 70,
+            "source_distinct": 173,
+            "correction_phases": [
+              "Startup",
+              "Active",
+              "Inactive"
+            ],
+            "replay_phases": [
+              "Startup",
+              "Active",
+              "Recovery",
+              "Inactive"
+            ],
+            "convergence_streak": 84
+          }
+        }
+      },
+      {
+        "move": "gather",
+        "contact": "contact",
+        "requested_delay_ms": 30,
+        "repeat": 1,
+        "passed": false,
+        "observations": {
+          "server": {
+            "role": "server",
+            "move": "gather",
+            "contact": true,
+            "passed": false,
+            "detail": "Cannot access a disposed object.\r\nObject name: 'Hooper.Player.PlayerController'.",
+            "minimum_separation": 1,
+            "responses": 72,
+            "committed_responses": 1,
+            "corrections": 0,
+            "replays": 0,
+            "source_distinct": 0,
+            "correction_phases": [],
+            "replay_phases": [],
+            "convergence_streak": 0
+          },
+          "driver": {
+            "role": "driver",
+            "move": "gather",
+            "contact": true,
+            "passed": false,
+            "detail": "no contact during committed displacement",
+            "minimum_separation": 0.99999994,
+            "responses": 316,
+            "committed_responses": 0,
+            "corrections": 26,
+            "replays": 218,
+            "source_distinct": 192,
+            "correction_phases": [
+              "Startup",
+              "Active",
+              "Inactive"
+            ],
+            "replay_phases": [
+              "Startup",
+              "Active",
+              "Recovery",
+              "Inactive"
+            ],
+            "convergence_streak": 82
+          }
+        }
+      },
+      {
+        "move": "gather",
+        "contact": "no-contact",
+        "requested_delay_ms": 0,
+        "repeat": 1,
+        "passed": false,
+        "observations": {
+          "server": {
+            "role": "server",
+            "move": "gather",
+            "contact": false,
+            "passed": false,
+            "detail": "Cannot access a disposed object.\r\nObject name: 'Hooper.Player.PlayerController'.",
+            "minimum_separation": 0.004166484,
+            "responses": 0,
+            "committed_responses": 0,
+            "corrections": 0,
+            "replays": 0,
+            "source_distinct": 0,
+            "correction_phases": [],
+            "replay_phases": [],
+            "convergence_streak": 0
+          },
+          "defender": {
+            "role": "defender",
+            "move": "gather",
+            "contact": false,
+            "passed": false,
+            "detail": "real correction and nonempty replay required",
+            "minimum_separation": 0.14583352,
+            "responses": 0,
+            "committed_responses": 0,
+            "corrections": 0,
+            "replays": 194,
+            "source_distinct": 0,
+            "correction_phases": [],
+            "replay_phases": [
+              "Inactive"
+            ],
+            "convergence_streak": 80
+          }
+        }
+      }
+    ],
+    "interpretation": "Four delayed committed-contact trials starting 1.4 m apart narrowly missed actual contact before the existing stale-Inactive correction; final committed workloads start 1.25 m apart, still initially nonoverlapping. One baseline no-contact defender predicted perfectly and invalidated the previous requirement for a nonzero body correction on every client. Neither change adjusts production tuning, phase behavior, or tolerances."
+  }
+}

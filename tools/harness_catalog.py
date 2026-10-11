@@ -348,6 +348,24 @@ ContactKernelTest.tscn|overlap
 ContactKernelTest.tscn|coincident
 ContactKernelTest.tscn|crossing
 ContactKernelTest.tscn|dimensions
+ProductionContactTest.tscn|set-drive
+ProductionContactTest.tscn|unset-drive
+ProductionContactTest.tscn|disabled-contact
+ProductionContactTest.tscn|overlap
+ProductionContactTest.tscn|coincident
+ProductionContactTest.tscn|crossing
+ProductionContactTest.tscn|floor
+ProductionContactTest.tscn|wall
+ProductionContactTest.tscn|corner
+ProductionContactTest.tscn|startup
+ProductionContactTest.tscn|active
+ProductionContactTest.tscn|recovery
+ProductionContactTest.tscn|timeline
+ProductionContactTest.tscn|box-out
+ProductionContactTest.tscn|pickup-tie
+ProductionContactTest.tscn|solver-mask
+ProductionContactTest.tscn|immutable-crossing
+ProductionContactTest.tscn|reconcile-overlap
 """
 _ADDITIONAL_MULTIPROCESS_ROWS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
     ("net-rig-presentation-left", "tests/integration/run-net-rig-presentation.sh godot left", "NetRigPresentationTest.tscn", (".godot/harness-logs/net-rig-presentation-left-*.log",)),
@@ -356,6 +374,13 @@ _ADDITIONAL_MULTIPROCESS_ROWS: tuple[tuple[str, str, str, tuple[str, ...]], ...]
     (f"committed-replay-{move}-{contact}-{delay}ms",
      f"tests/integration/run-net-committed-replay.sh godot {move} {contact} {delay}",
      "CommittedReplayTest.tscn", (f".godot/committed-replay/catalog-{move}-{contact}-{delay}-*/**/*",))
+    for move in ("neutral", "crossover", "gather")
+    for contact in ("contact", "no-contact")
+    for delay in (0, 30)
+) + tuple(
+    (f"production-contact-{move}-{contact}-{delay}ms",
+     f"tests/integration/run-net-production-contact.sh godot {move} {contact} {delay}",
+     "NetProductionContactTest.tscn", (f".godot/production-contact/catalog-{move}-{contact}-{delay}-*/**/*",))
     for move in ("neutral", "crossover", "gather")
     for contact in ("contact", "no-contact")
     for delay in (0, 30)
@@ -406,6 +431,8 @@ def _multiprocess_cases(rows: Iterable[tuple[str, str, str, tuple[str, ...]]]) -
 
 
 _CONTROL_COMPONENTS = (
+    ("production-contact-test-set-drive", "production-contact-test-unset-drive", "production-contact-test-disabled-contact"),
+    ("production-contact-test-box-out", "production-contact-test-disabled-contact", "production-contact-test-pickup-tie"),
     ("contact-kernel-test-set-drive", "contact-kernel-test-unset-drive", "contact-kernel-test-disabled-kernel"),
     ("contact-fixture-test-contact", "contact-fixture-test-no-contact"),
     (
@@ -491,6 +518,11 @@ _CONTROL_COMPONENTS = (
     ("dedicated-game-journey-healthy", "dedicated-game-journey-discovery-disabled", "dedicated-game-journey-score-rpc-disabled"),
 ) + tuple(
     tuple(f"committed-replay-{move}-{contact}-{delay}ms"
+          for move in ("neutral", "crossover", "gather")
+          for contact in ("contact", "no-contact"))
+    for delay in (0, 30)
+) + tuple(
+    tuple(f"production-contact-{move}-{contact}-{delay}ms"
           for move in ("neutral", "crossover", "gather")
           for contact in ("contact", "no-contact"))
     for delay in (0, 30)

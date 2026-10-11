@@ -105,11 +105,14 @@ public partial class CommittedReplayTest : Node3D
             if (Math.Abs(delta - fixedDelta) > 0.000001) throw new InvalidOperationException("unexpected physics delta");
             if (_role == "server")
             {
-                _fixture.First.ReplayHarnessServer(fixedDelta);
-                _fixture.Second.ReplayHarnessServer(fixedDelta, _tick < 90 ? Vector2.Zero : Vector2.Right);
-                int opponentHits = 0;
-                for (int collision = 0; collision < _fixture.First.GetSlideCollisionCount(); collision++)
-                    if (_fixture.First.GetSlideCollision(collision).GetCollider() == _fixture.Second) opponentHits++;
+                // The paired tick uses peer 1's actual host role, which reads Input
+                // rather than the remote-input slot this instrument previously seeded.
+                // Source: https://docs.godotengine.org/en/4.7/classes/class_input.html#class-input-method-action-press
+                if (_tick == 90) Input.ActionPress("move_right", 1);
+                _fixture.First.ReplayHarnessPair(_fixture.Second, fixedDelta, _tick < 90 ? Vector2.Zero : Vector2.Right);
+                // #370 replaces the solver. Keep the instrument's contact premise tied
+                // to an actual deterministic response, rather than a now-masked slide.
+                int opponentHits = _fixture.First.ReplayContactResponse ? 1 : 0;
                 _opponentContacts += opponentHits;
                 if (_fixture.First.ReplayPhase != "Inactive") _committedContacts += opponentHits;
                 if (_tick < 90 && (_fixture.Second.Velocity.Length() > 0.00001 || _fixture.Second.GlobalPosition.Length() > 0.00001))
@@ -125,7 +128,8 @@ public partial class CommittedReplayTest : Node3D
                 }));
                 return;
             }
-            // Replay sees the current display capsule, before this frame's remote lerp.
+            // The no-contact oracle remains exact. Contact rows are diagnostic only;
+            // they do not reconstruct historical raw opponent samples (ADR-0025).
             _oracle.Second.ResetContactStateForHarness(_fixture.Second.GlobalPosition, _fixture.Second.Heading, _fixture.Second.Velocity);
             var row = _fixture.First.ReplayHarnessReconcile(_oracle.First, fixedDelta, _tick);
             if (row != null)
@@ -179,6 +183,7 @@ public partial class CommittedReplayTest : Node3D
         if (_finished) return;
         _finished = true;
         Input.ActionRelease("move_forward");
+        Input.ActionRelease("move_right");
         GD.Print($"[harness] {(success ? "PASS" : "FAIL")} committed-replay {_role}: {reason}");
         GetTree().Quit(success ? 0 : 1);
     }
