@@ -98,6 +98,16 @@ public partial class ProtectionTest : Node3D
                 // Verify the shipped mappings, not just an action name usable by ActionPress.
                 // Source: https://docs.godotengine.org/en/4.7/classes/class_inputmap.html#class-inputmap-method-action-get-events
                 // Source: https://docs.godotengine.org/en/4.7/classes/class_@globalscope.html#enum-globalscope-joyaxis
+                Require(Math.Abs(_holder.ProtectSpeed - 1f) < .0001f, "shipped Player scene overrides protected speed");
+                // #217 insurance: code-built gameplay fixtures do not see scene export overrides.
+                var shippedBall = ResourceLoader.Load<PackedScene>("res://scenes/Ball.tscn").Instantiate<BallController>();
+                try
+                {
+                    Require(Math.Abs(shippedBall.ProtectStealLoExposed - .45f) < .0001f
+                        && Math.Abs(shippedBall.ProtectStealHiExposed - .55f) < .0001f,
+                        "shipped Ball scene overrides protected exposure band");
+                }
+                finally { shippedBall.Free(); }
                 var bindings = InputMap.ActionGetEvents("move_protect");
                 Require(bindings.Any(binding => binding is InputEventJoypadMotion motion
                     && motion.Axis == JoyAxis.TriggerLeft && motion.AxisValue > 0), "LT positive-axis binding missing");
