@@ -375,6 +375,15 @@ SprintTest.tscn|steal-sprint
 SprintTest.tscn|steal-outside
 SprintTest.tscn|steal-wrong-hand
 NetSprintTest.tscn|
+ProtectionTest.tscn|speed
+ProtectionTest.tscn|gates
+ProtectionTest.tscn|steal-neutral
+ProtectionTest.tscn|steal-protect
+ProtectionTest.tscn|steal-center
+ProtectionTest.tscn|steal-wrong-hand
+ProtectionTest.tscn|held-static
+ProtectionTest.tscn|presentation
+NetProtectionTest.tscn|
 """
 _ADDITIONAL_MULTIPROCESS_ROWS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
     ("net-rig-presentation-left", "tests/integration/run-net-rig-presentation.sh godot left", "NetRigPresentationTest.tscn", (".godot/harness-logs/net-rig-presentation-left-*.log",)),
@@ -440,6 +449,7 @@ def _multiprocess_cases(rows: Iterable[tuple[str, str, str, tuple[str, ...]]]) -
 
 
 _CONTROL_COMPONENTS = (
+    ("protection-test-steal-neutral", "protection-test-steal-protect", "protection-test-steal-center", "protection-test-steal-wrong-hand"),
     ("sprint-test-steal-sprint", "sprint-test-steal-jog", "sprint-test-steal-outside", "sprint-test-steal-wrong-hand"),
     ("production-contact-test-set-drive", "production-contact-test-unset-drive", "production-contact-test-disabled-contact"),
     ("production-contact-test-box-out", "production-contact-test-disabled-contact", "production-contact-test-pickup-tie"),

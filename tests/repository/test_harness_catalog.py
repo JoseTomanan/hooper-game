@@ -65,7 +65,11 @@ class HarnessCatalogCliTests(unittest.TestCase):
             + [f'sprint-test-{scenario}' for scenario in (
                 'speed', 'turn', 'gates', 'shot', 'steal-jog', 'steal-sprint',
                 'steal-outside', 'steal-wrong-hand')]
-            + ['net-sprint-test', 'net-rig-presentation-left', 'net-rig-presentation-right']
+            + ['net-sprint-test']
+            + [f'protection-test-{scenario}' for scenario in (
+                'speed', 'gates', 'steal-neutral', 'steal-protect', 'steal-center',
+                'steal-wrong-hand', 'held-static', 'presentation')]
+            + ['net-protection-test', 'net-rig-presentation-left', 'net-rig-presentation-right']
             + [f'committed-replay-{move}-{contact}-{delay}ms'
                for move in ('neutral', 'crossover', 'gather')
                for contact in ('contact', 'no-contact')
@@ -117,6 +121,7 @@ class HarnessCatalogCliTests(unittest.TestCase):
     def test_source_declared_cross_invocation_controls_are_connected(self):
         catalog = load_catalog_module()
         components = (
+            ('protection-test-steal-neutral', 'protection-test-steal-protect', 'protection-test-steal-center', 'protection-test-steal-wrong-hand'),
             ('sprint-test-steal-sprint', 'sprint-test-steal-jog', 'sprint-test-steal-outside', 'sprint-test-steal-wrong-hand'),
             ('contact-kernel-test-set-drive', 'contact-kernel-test-unset-drive', 'contact-kernel-test-disabled-kernel'),
             ('contact-fixture-test-contact', 'contact-fixture-test-no-contact'),
@@ -275,7 +280,7 @@ class HarnessCatalogShardTests(unittest.TestCase):
                 self.assertEqual(catalog.DEFAULT_SINGLE_WEIGHT_SECONDS, weights[case.id])
             elif case.id.startswith('production-contact-'):
                 self.assertEqual(catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS, weights[case.id])
-        self.assertAlmostEqual(595.0, sum(weights.values()))
+        self.assertAlmostEqual(604.0, sum(weights.values()))
 
         base = catalog.CATALOG[0]
         new_single = replace(base, id='new-single', scenes=(catalog.SceneMetadata('res://tests/integration/Unknown.tscn'),))
@@ -483,8 +488,8 @@ class HarnessCatalogRunnerTests(unittest.TestCase):
         self.assertEqual('--harness-scenario=reconcile-overlap', popen.calls[baseline_tail + 31][0][-1])
         self.assertEqual('--harness-scenario=speed', popen.calls[baseline_tail + 32][0][-1])
         self.assertIn('NetSprintTest.tscn', ' '.join(popen.calls[baseline_tail + 40][0]))
-        self.assertEqual('left', popen.calls[baseline_tail + 41][0][-1])
-        self.assertEqual('right', popen.calls[baseline_tail + 42][0][-1])
+        self.assertEqual('left', popen.calls[baseline_tail + 50][0][-1])
+        self.assertEqual('right', popen.calls[baseline_tail + 51][0][-1])
 
     def test_run_one_shard_executes_only_that_shard_with_a_stable_run_id(self):
         shard_number = 2
