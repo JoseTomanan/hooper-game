@@ -33,6 +33,20 @@ namespace Hooper.Player;
 /// </summary>
 public static class HeadingMath
 {
+    /// <summary>Attacker-facing slides never create a movement-facing pivot.
+    /// A pre-existing plant must finish first, at the ordinary pivot rate.
+    /// The completion tick advances only that pivot, never a second yaw step.</summary>
+    public static HeadingStep StepDefensiveStance(float currentYaw, PivotState pivot,
+        Vector2 toAttacker, double delta, float stanceTurnRateDeg,
+        float ordinaryTurnRateDeg, float backTurnSlowFactor, float pivotThresholdDeg)
+    {
+        if (pivot.HasLatch)
+            return Step(currentYaw, pivot, Vector2.Zero, delta, ordinaryTurnRateDeg,
+                backTurnSlowFactor, pivotThresholdDeg);
+        return new HeadingStep(RotateToward(currentYaw, toAttacker, delta,
+            stanceTurnRateDeg, backTurnSlowFactor), PivotState.None, false);
+    }
+
     // Heading is stored and compared in radians; angles smaller than this
     // are considered "already at target" and the current yaw is returned
     // unchanged. Float epsilon prevents NaN from Atan2(0,0) and removes
