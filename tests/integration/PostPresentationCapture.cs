@@ -91,12 +91,21 @@ public partial class PostPresentationTest
 
     private void FrameCaptureCamera()
     {
-        Vector3 Position(string name) => _skeleton.ToGlobal(
-            _skeleton.GetBoneGlobalPose(_skeleton.FindBone("mixamorig_" + name)).Origin);
-        var head = Position("Head"); var feet = (Position("LeftToeBase") + Position("RightToeBase")) * .5f;
-        float height = head.DistanceTo(feet);
+        // Head/feet bounds omit raised hands during release. Include every bone,
+        // including finger tips, while retaining the same oblique camera direction.
+        // Bone global poses are skeleton-space; ToGlobal converts them to world-space.
+        // https://docs.godotengine.org/en/4.7/classes/class_skeleton3d.html#class-skeleton3d-method-get-bone-global-pose
+        float minimumY = float.PositiveInfinity, maximumY = float.NegativeInfinity;
+        for (int bone = 0; bone < _skeleton.GetBoneCount(); bone++)
+        {
+            var position = _skeleton.ToGlobal(_skeleton.GetBoneGlobalPose(bone).Origin);
+            minimumY = Math.Min(minimumY, position.Y);
+            maximumY = Math.Max(maximumY, position.Y);
+        }
+        float height = maximumY - minimumY;
         Require(height > .5f && height < 4f, $"rendered rig height invalid: {height}");
-        var center = (head + feet) * .5f;
+        var center = _player.GlobalPosition;
+        center.Y = (minimumY + maximumY) * .5f;
         _captureCamera.Size = height * 1.65f;
         _captureCamera.GlobalPosition = center + new Vector3(height * .8f, height * .15f, height * 2f);
         _captureCamera.LookAt(center);
