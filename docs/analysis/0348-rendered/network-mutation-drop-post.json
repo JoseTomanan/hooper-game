@@ -1,0 +1,61 @@
+[
+  {
+    "mutation": "drop-post",
+    "requested_delay_ms": 30,
+    "repeat": 0,
+    "passed": false,
+    "error": "Godot peer failed; inspect retained logs",
+    "relay": {
+      "driver": {
+        "client_to_server": {
+          "enqueued": 936,
+          "forwarded": 936,
+          "discarded_at_teardown": 0,
+          "min_ms": 30.052599999976337,
+          "mean_ms": 33.760225534187356,
+          "max_ms": 45.98779999992075
+        },
+        "server_to_client": {
+          "enqueued": 1930,
+          "forwarded": 1930,
+          "discarded_at_teardown": 0,
+          "min_ms": 30.00880000001871,
+          "mean_ms": 32.235372953368824,
+          "max_ms": 45.90589999997974
+        }
+      },
+      "observer": {
+        "client_to_server": {
+          "enqueued": 909,
+          "forwarded": 908,
+          "discarded_at_teardown": 1,
+          "min_ms": 30.055899999979374,
+          "mean_ms": 33.99397202643033,
+          "max_ms": 45.069799999964744
+        },
+        "server_to_client": {
+          "enqueued": 1940,
+          "forwarded": 1940,
+          "discarded_at_teardown": 0,
+          "min_ms": 30.020599999943443,
+          "mean_ms": 32.23709819587508,
+          "max_ms": 45.919900000001235
+        }
+      }
+    },
+    "observations": {
+      "server": [
+        "[post-net] READY server",
+        "[post-net] authority postTicks=80 earlyChecks=19 nonholderChecks=45 releases=1 ack=844/844"
+      ],
+      "driver": [
+        "[harness] FAIL post-net driver: independent post historical replay mismatch p=0.6444448 v=4.666667 h=0.41050673 mutation=drop-post"
+      ],
+      "observer": [
+        "[post-net] observer actualNodes startup=37 active=3 recovery=11 firstTicks=667/713/718 postPoseSamples=1463 hipsDelta=-0.060000002 armDelta=0.8882728 forearmDelta=1.05; hardwarePost=false"
+      ]
+    },
+    "elapsed_seconds": 20.49264089999997,
+    "native_logs": "C:\\Users\\The King\\AppData\\Local\\Temp\\hooper-348-network\\.godot\\post-net\\native\\b2b752a3cb29"
+  }
+]

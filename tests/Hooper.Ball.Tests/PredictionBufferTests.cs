@@ -20,6 +20,40 @@ namespace Hooper.Ball.Tests;
 /// </summary>
 public class PredictionBufferTests
 {
+    [Fact]
+    public void RejectTurnaround_PreservesHistoryAndSequencesWithoutReplayingRejectedTurn()
+    {
+        var buffer = new PredictionBuffer();
+        int seq = buffer.Record(Vector2.Right, turnaroundPhase: Hooper.Moves.MovePhase.Startup,
+            turnaroundTarget: 1f, turnaroundToken: 7);
+        buffer.Record(Vector2.Left, turnaroundPhase: Hooper.Moves.MovePhase.Startup,
+            turnaroundTarget: -1f, turnaroundToken: 12);
+        buffer.RejectTurnaround(7);
+        var frames = new List<PredictionBuffer.InputFrame>(buffer.ReplayInputs());
+        Assert.Equal(Hooper.Moves.MovePhase.Inactive, frames[0].TurnaroundPhase);
+        Assert.Equal(Vector2.Right, frames[0].Movement);
+        Assert.Equal(Hooper.Moves.MovePhase.Startup, frames[1].TurnaroundPhase);
+        Assert.Equal(2, buffer.Count);
+        buffer.Acknowledge(seq);
+        Assert.Equal(1, buffer.Count);
+    }
+    [Fact]
+    public void ConfirmTurnaroundTarget_RepairsOnlyMatchingInstanceAndRetainsHistoricalPostContext()
+    {
+        var buffer = new PredictionBuffer();
+        var rim = new Vector3(2, 3, 4);
+        buffer.Record(Vector2.Right, postHeld: true, postEligible: true, rimSample: rim);
+        buffer.Record(Vector2.Zero, turnaroundPhase: Hooper.Moves.MovePhase.Startup, turnaroundTarget: 1f, turnaroundToken: 2);
+        buffer.Record(Vector2.Zero, turnaroundPhase: Hooper.Moves.MovePhase.Startup, turnaroundTarget: -1f, turnaroundToken: 3);
+        buffer.ConfirmTurnaroundTarget(2, .7f);
+        var frames = new List<PredictionBuffer.InputFrame>(buffer.ReplayInputs());
+        Assert.True(frames[0].PostHeld && frames[0].PostEligible);
+        Assert.Equal(rim, frames[0].RimSample);
+        Assert.Equal(.7f, frames[1].TurnaroundTarget);
+        Assert.Equal(2, frames[1].TurnaroundToken);
+        Assert.Equal(-1f, frames[2].TurnaroundTarget);
+        Assert.Equal(3, frames[2].TurnaroundToken);
+    }
     // ── Record: sequence numbering ───────────────────────────────────────────
 
     [Fact]

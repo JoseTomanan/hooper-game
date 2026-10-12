@@ -1,0 +1,343 @@
+[
+  {
+    "name": "disabledpost",
+    "scenario": "entry",
+    "exit": 1,
+    "caught": true,
+    "marker": [
+      "[harness] FAIL: PostPlayTest post entry did not bounded-turn without stick input"
+    ],
+    "build_command": [
+      "dotnet",
+      "build",
+      "HOOPER GAME.csproj",
+      "--configuration",
+      "Debug",
+      "-p:IncludeIntegrationHarness=true"
+    ],
+    "run_command": [
+      "C:\\Users\\The King\\AppData\\Local\\GodotPortable\\Godot_v4.7.1-stable_mono_win64\\Godot_v4.7.1-stable_mono_win64_console.exe",
+      "--headless",
+      "--path",
+      ".",
+      "--log-file",
+      ".godot/348-mutation-disabledpost.log",
+      "res://tests/integration/PostPlayTest.tscn",
+      "--",
+      "--harness-scenario",
+      "entry"
+    ],
+    "mutation_old": "_effectivePost = postHeld && postEligible;",
+    "mutation_new": "_effectivePost = false;"
+  },
+  {
+    "name": "instantentryturn",
+    "scenario": "entry",
+    "exit": 1,
+    "caught": true,
+    "marker": [
+      "[harness] FAIL: PostPlayTest post entry did not bounded-turn without stick input"
+    ],
+    "build_command": [
+      "dotnet",
+      "build",
+      "HOOPER GAME.csproj",
+      "--configuration",
+      "Debug",
+      "-p:IncludeIntegrationHarness=true"
+    ],
+    "run_command": [
+      "C:\\Users\\The King\\AppData\\Local\\GodotPortable\\Godot_v4.7.1-stable_mono_win64\\Godot_v4.7.1-stable_mono_win64_console.exe",
+      "--headless",
+      "--path",
+      ".",
+      "--log-file",
+      ".godot/348-mutation-instantentryturn.log",
+      "res://tests/integration/PostPlayTest.tscn",
+      "--",
+      "--harness-scenario",
+      "entry"
+    ],
+    "mutation_old": "float yaw = HeadingMath.RotateToward(currentYaw, awayFromRim, delta,\n            postTurnRateDeg, backTurnSlowFactor);",
+    "mutation_new": "float yaw = MathF.Atan2(awayFromRim.X, awayFromRim.Y);"
+  },
+  {
+    "name": "erasedpivot",
+    "scenario": "pivot",
+    "exit": 1,
+    "caught": true,
+    "marker": [
+      "[harness] FAIL: PostPlayTest post redirected owed pivot"
+    ],
+    "build_command": [
+      "dotnet",
+      "build",
+      "HOOPER GAME.csproj",
+      "--configuration",
+      "Debug",
+      "-p:IncludeIntegrationHarness=true"
+    ],
+    "run_command": [
+      "C:\\Users\\The King\\AppData\\Local\\GodotPortable\\Godot_v4.7.1-stable_mono_win64\\Godot_v4.7.1-stable_mono_win64_console.exe",
+      "--headless",
+      "--path",
+      ".",
+      "--log-file",
+      ".godot/348-mutation-erasedpivot.log",
+      "res://tests/integration/PostPlayTest.tscn",
+      "--",
+      "--harness-scenario",
+      "pivot"
+    ],
+    "mutation_old": "if (pivot.HasLatch)",
+    "mutation_new": "if (pivot.HasLatch && awayFromRim.Length() < -1f)"
+  },
+  {
+    "name": "contactbypass",
+    "scenario": "contact-set",
+    "exit": 1,
+    "caught": true,
+    "marker": [
+      "[harness] FAIL: PostPlayTest post contact failed to change paired motion vs disabled control"
+    ],
+    "build_command": [
+      "dotnet",
+      "build",
+      "HOOPER GAME.csproj",
+      "--configuration",
+      "Debug",
+      "-p:IncludeIntegrationHarness=true"
+    ],
+    "run_command": [
+      "C:\\Users\\The King\\AppData\\Local\\GodotPortable\\Godot_v4.7.1-stable_mono_win64\\Godot_v4.7.1-stable_mono_win64_console.exe",
+      "--headless",
+      "--path",
+      ".",
+      "--log-file",
+      ".godot/348-mutation-contactbypass.log",
+      "res://tests/integration/PostPlayTest.tscn",
+      "--",
+      "--harness-scenario",
+      "contact-set"
+    ],
+    "mutation_old": "ContactResponse response = self is { } a && opponent is { } b\n            ? ContactMath.Resolve(a, b, delta) : default;",
+    "mutation_new": "ContactResponse response = !IsPosting && !other.IsPosting && self is { } a && opponent is { } b\n            ? ContactMath.Resolve(a, b, delta) : default;"
+  },
+  {
+    "name": "fallbackmove",
+    "scenario": "dispatch",
+    "exit": 1,
+    "caught": true,
+    "marker": [
+      "[harness] FAIL: PostPlayTest early entry dispatch began shot"
+    ],
+    "build_command": [
+      "dotnet",
+      "build",
+      "HOOPER GAME.csproj",
+      "--configuration",
+      "Debug",
+      "-p:IncludeIntegrationHarness=true"
+    ],
+    "run_command": [
+      "C:\\Users\\The King\\AppData\\Local\\GodotPortable\\Godot_v4.7.1-stable_mono_win64\\Godot_v4.7.1-stable_mono_win64_console.exe",
+      "--headless",
+      "--path",
+      ".",
+      "--log-file",
+      ".godot/348-mutation-fallbackmove.log",
+      "res://tests/integration/PostPlayTest.tscn",
+      "--",
+      "--harness-scenario",
+      "dispatch"
+    ],
+    "mutation_old": "_turnaroundToken = turnaroundToken;\n\t\t}\n\t\telse if (moveId == \"crossover\")",
+    "mutation_new": "_turnaroundToken = turnaroundToken;\n            else BeginCommittedMove(new JumpShot());\n\t\t}\n\t\telse if (moveId == \"crossover\")"
+  },
+  {
+    "name": "duplicatepulse",
+    "scenario": "turnaround",
+    "exit": 1,
+    "caught": true,
+    "marker": [
+      "[harness] FAIL: PostPlayTest release pulse count=4"
+    ],
+    "build_command": [
+      "dotnet",
+      "build",
+      "HOOPER GAME.csproj",
+      "--configuration",
+      "Debug",
+      "-p:IncludeIntegrationHarness=true"
+    ],
+    "run_command": [
+      "C:\\Users\\The King\\AppData\\Local\\GodotPortable\\Godot_v4.7.1-stable_mono_win64\\Godot_v4.7.1-stable_mono_win64_console.exe",
+      "--headless",
+      "--path",
+      ".",
+      "--log-file",
+      ".godot/348-mutation-duplicatepulse.log",
+      "res://tests/integration/PostPlayTest.tscn",
+      "--",
+      "--harness-scenario",
+      "turnaround"
+    ],
+    "mutation_old": "JumpShotReleaseResolver.ShouldRelease(_machine.JustEnteredActive, _machine.CurrentMove);",
+    "mutation_new": "JumpShotReleaseResolver.ShouldRelease(_machine.Phase == MovePhase.Active, _machine.CurrentMove);"
+  },
+  {
+    "name": "forcedfacing1",
+    "scenario": "accuracy-unsquared",
+    "exit": 1,
+    "caught": true,
+    "marker": [
+      "[harness] FAIL: PostPlayTest actual facing term differs"
+    ],
+    "build_command": [
+      "dotnet",
+      "build",
+      "HOOPER GAME.csproj",
+      "--configuration",
+      "Debug",
+      "-p:IncludeIntegrationHarness=true"
+    ],
+    "run_command": [
+      "C:\\Users\\The King\\AppData\\Local\\GodotPortable\\Godot_v4.7.1-stable_mono_win64\\Godot_v4.7.1-stable_mono_win64_console.exe",
+      "--headless",
+      "--path",
+      ".",
+      "--log-file",
+      ".godot/348-mutation-forcedfacing1.log",
+      "res://tests/integration/PostPlayTest.tscn",
+      "--",
+      "--harness-scenario",
+      "accuracy-unsquared"
+    ],
+    "mutation_old": "float facingFactor = ShotFacing.Multiplier(\n\t\t\t\tholder.Heading,\n\t\t\t\tholder.GlobalPosition,\n\t\t\t\tShotTarget,\n\t\t\t\tFacingScatterK);",
+    "mutation_new": "float facingFactor = 1f;"
+  },
+  {
+    "name": "downstreampostbonus",
+    "scenario": "accuracy-unsquared",
+    "exit": 1,
+    "caught": true,
+    "marker": [
+      "[harness] FAIL: PostPlayTest actual applied scatter target differs"
+    ],
+    "build_command": [
+      "dotnet",
+      "build",
+      "HOOPER GAME.csproj",
+      "--configuration",
+      "Debug",
+      "-p:IncludeIntegrationHarness=true"
+    ],
+    "run_command": [
+      "C:\\Users\\The King\\AppData\\Local\\GodotPortable\\Godot_v4.7.1-stable_mono_win64\\Godot_v4.7.1-stable_mono_win64_console.exe",
+      "--headless",
+      "--path",
+      ".",
+      "--log-file",
+      ".godot/348-mutation-downstreampostbonus.log",
+      "res://tests/integration/PostPlayTest.tscn",
+      "--",
+      "--harness-scenario",
+      "accuracy-unsquared"
+    ],
+    "mutation_old": "ShotScatterPerMeter, MaxShotScatter, accuracyMultiplier);",
+    "mutation_new": "ShotScatterPerMeter, MaxShotScatter, accuracyMultiplier * .5f);"
+  },
+  {
+    "name": "disablebufferconfirmtarget",
+    "scenario": "turnaround-replay",
+    "exit": 1,
+    "caught": true,
+    "marker": [
+      "[harness] FAIL: PostPlayTest confirmed target was not instance-correlated"
+    ],
+    "build_command": [
+      "dotnet",
+      "build",
+      "HOOPER GAME.csproj",
+      "--configuration",
+      "Debug",
+      "-p:IncludeIntegrationHarness=true"
+    ],
+    "run_command": [
+      "C:\\Users\\The King\\AppData\\Local\\GodotPortable\\Godot_v4.7.1-stable_mono_win64\\Godot_v4.7.1-stable_mono_win64_console.exe",
+      "--headless",
+      "--path",
+      ".",
+      "--log-file",
+      ".godot/348-mutation-disablebufferconfirmtarget.log",
+      "res://tests/integration/PostPlayTest.tscn",
+      "--",
+      "--harness-scenario",
+      "turnaround-replay"
+    ],
+    "mutation_old": "_buffer.ConfirmTurnaroundTarget(_serverTurnaroundToken, _serverMoveParam);",
+    "mutation_new": "// mutation removes buffered fixed-target repair"
+  },
+  {
+    "name": "dropbufferposthistory",
+    "scenario": "replay",
+    "exit": 1,
+    "caught": true,
+    "marker": [
+      "[harness] FAIL: PostPlayTest mixed post replay position differs"
+    ],
+    "build_command": [
+      "dotnet",
+      "build",
+      "HOOPER GAME.csproj",
+      "--configuration",
+      "Debug",
+      "-p:IncludeIntegrationHarness=true"
+    ],
+    "run_command": [
+      "C:\\Users\\The King\\AppData\\Local\\GodotPortable\\Godot_v4.7.1-stable_mono_win64\\Godot_v4.7.1-stable_mono_win64_console.exe",
+      "--headless",
+      "--path",
+      ".",
+      "--log-file",
+      ".godot/348-mutation-dropbufferposthistory.log",
+      "res://tests/integration/PostPlayTest.tscn",
+      "--",
+      "--harness-scenario",
+      "replay"
+    ],
+    "mutation_old": "input.PostureHeld && input.StanceEligible, input.PostHeld, input.PostEligible, input.RimSample);",
+    "mutation_new": "input.PostureHeld && input.StanceEligible, false, false, input.RimSample);"
+  },
+  {
+    "name": "rejectedturnreplay",
+    "scenario": "turnaround-rejected",
+    "exit": 1,
+    "caught": true,
+    "marker": [
+      "[harness] FAIL: PostPlayTest rejected historical turn rewrote restored authoritative heading"
+    ],
+    "build_command": [
+      "dotnet",
+      "build",
+      "HOOPER GAME.csproj",
+      "--configuration",
+      "Debug",
+      "-p:IncludeIntegrationHarness=true"
+    ],
+    "run_command": [
+      "C:\\Users\\The King\\AppData\\Local\\GodotPortable\\Godot_v4.7.1-stable_mono_win64\\Godot_v4.7.1-stable_mono_win64_console.exe",
+      "--headless",
+      "--path",
+      ".",
+      "--log-file",
+      ".godot/348-mutation-rejectedturnreplay.log",
+      "res://tests/integration/PostPlayTest.tscn",
+      "--",
+      "--harness-scenario",
+      "turnaround-rejected"
+    ],
+    "mutation_old": "if (_machine.CurrentMove is TurnaroundShot) _buffer.RejectTurnaround(_turnaroundToken);",
+    "mutation_new": "// mutation retains rejected historical turnaround motion"
+  }
+]

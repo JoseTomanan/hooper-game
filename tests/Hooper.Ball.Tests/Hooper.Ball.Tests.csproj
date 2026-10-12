@@ -80,6 +80,7 @@
     <Compile Include="..\..\scripts\Input\GestureResult.cs" />
     <Compile Include="..\..\scripts\Input\RightStickGestureRecognizer.cs" />
     <Compile Include="..\..\scripts\Input\JumpShot.cs" />
+    <Compile Include="..\..\scripts\Input\TurnaroundShot.cs" />
     <Compile Include="..\..\scripts\Input\JumpShotReleaseResolver.cs" />
     <!-- Layup / rim-finish committed move (issue #229, ADR-0022) -->
     <Compile Include="..\..\scripts\Input\Layup.cs" />
@@ -141,6 +142,7 @@
   <ItemGroup>
     <Compile Include="..\..\scripts\Player\MovementMath.cs" />
     <Compile Include="..\..\scripts\Player\HeadingMath.cs" />
+    <Compile Include="..\..\scripts\Player\PostMath.cs" />
     <Compile Include="..\..\scripts\Player\ContactMath.cs" />
     <Compile Include="..\..\scripts\Player\PredictionBuffer.cs" />
     <Compile Include="..\..\scripts\Player\FacingResolver.cs" />

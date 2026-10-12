@@ -1,0 +1,126 @@
+[
+  {
+    "mutation": "none",
+    "requested_delay_ms": 0,
+    "repeat": 0,
+    "passed": true,
+    "error": null,
+    "relay": {
+      "driver": {
+        "client_to_server": {
+          "enqueued": 947,
+          "forwarded": 947,
+          "discarded_at_teardown": 0,
+          "min_ms": 0.014100000043981709,
+          "mean_ms": 0.030303273482173876,
+          "max_ms": 0.1243000001522887
+        },
+        "server_to_client": {
+          "enqueued": 1943,
+          "forwarded": 1943,
+          "discarded_at_teardown": 0,
+          "min_ms": 0.010900000233959872,
+          "mean_ms": 0.02322712300354596,
+          "max_ms": 0.1502000000073167
+        }
+      },
+      "observer": {
+        "client_to_server": {
+          "enqueued": 925,
+          "forwarded": 925,
+          "discarded_at_teardown": 0,
+          "min_ms": 0.014700000065204222,
+          "mean_ms": 0.028627459453403118,
+          "max_ms": 0.1540000002933084
+        },
+        "server_to_client": {
+          "enqueued": 1948,
+          "forwarded": 1948,
+          "discarded_at_teardown": 0,
+          "min_ms": 0.007499999810534064,
+          "mean_ms": 0.02070410677253407,
+          "max_ms": 0.16770000001997687
+        }
+      }
+    },
+    "observations": {
+      "server": [
+        "[post-net] READY server",
+        "[post-net] authority postTicks=80 earlyChecks=19 nonholderChecks=45 releases=1 ack=849/849",
+        "[harness] PASS post-net server: dedicated authority and two real client gates"
+      ],
+      "driver": [
+        "[post-net] replay samples=24 heldEligible=12 releasedEligible=8 heldIneligible=4 p=0 v=0 h=0 correction=2.1170104 forcedStageCorrection=0.92229325 converged=True; latest raw opponent approximation retained",
+        "[harness] PASS post-net driver: post wire, rejection controls, turnaround release, remote phase and historical replay"
+      ],
+      "observer": [
+        "[post-net] observer actualNodes startup=46 active=4 recovery=13 firstTicks=662/709/714 postPoseSamples=1432 hipsDelta=-0.060000002 armDelta=0.8882728 forearmDelta=1.05; hardwarePost=false",
+        "[harness] PASS post-net observer: post wire, rejection controls, turnaround release, remote phase and historical replay"
+      ]
+    },
+    "elapsed_seconds": 19.41673270000001,
+    "native_logs": "C:\\Users\\The King\\AppData\\Local\\Temp\\hooper-348-network\\.godot\\post-net\\native\\dcdabf00fc56"
+  },
+  {
+    "mutation": "none",
+    "requested_delay_ms": 30,
+    "repeat": 0,
+    "passed": true,
+    "error": null,
+    "relay": {
+      "driver": {
+        "client_to_server": {
+          "enqueued": 943,
+          "forwarded": 943,
+          "discarded_at_teardown": 0,
+          "min_ms": 30.032399999981862,
+          "mean_ms": 33.09209925769542,
+          "max_ms": 45.26500000019951
+        },
+        "server_to_client": {
+          "enqueued": 1942,
+          "forwarded": 1942,
+          "discarded_at_teardown": 0,
+          "min_ms": 30.02070000002277,
+          "mean_ms": 33.14693959835361,
+          "max_ms": 45.72280000002138
+        }
+      },
+      "observer": {
+        "client_to_server": {
+          "enqueued": 918,
+          "forwarded": 918,
+          "discarded_at_teardown": 0,
+          "min_ms": 30.02600000036182,
+          "mean_ms": 31.809129302839175,
+          "max_ms": 44.19529999995575
+        },
+        "server_to_client": {
+          "enqueued": 1930,
+          "forwarded": 1930,
+          "discarded_at_teardown": 0,
+          "min_ms": 30.01380000023346,
+          "mean_ms": 33.1765604145099,
+          "max_ms": 45.76570000017455
+        }
+      }
+    },
+    "observations": {
+      "server": [
+        "[post-net] READY server",
+        "[post-net] authority postTicks=80 earlyChecks=19 nonholderChecks=45 releases=1 ack=845/845",
+        "[harness] PASS post-net server: dedicated authority and two real client gates"
+      ],
+      "driver": [
+        "[post-net] replay samples=24 heldEligible=12 releasedEligible=8 heldIneligible=4 p=0 v=0 h=0 correction=2.0989888 forcedStageCorrection=0.9013879 converged=True; latest raw opponent approximation retained",
+        "[harness] PASS post-net driver: post wire, rejection controls, turnaround release, remote phase and historical replay"
+      ],
+      "observer": [
+        "[post-net] observer actualNodes startup=28 active=3 recovery=12 firstTicks=666/712/717 postPoseSamples=1460 hipsDelta=-0.060000002 armDelta=0.8882728 forearmDelta=1.0500001; hardwarePost=false",
+        "[harness] PASS post-net observer: post wire, rejection controls, turnaround release, remote phase and historical replay"
+      ]
+    },
+    "elapsed_seconds": 19.096235499999693,
+    "native_logs": "C:\\Users\\The King\\AppData\\Local\\Temp\\hooper-348-network\\.godot\\post-net\\native\\090afec244c6"
+  }
+]

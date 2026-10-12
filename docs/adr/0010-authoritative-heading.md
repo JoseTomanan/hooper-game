@@ -387,3 +387,32 @@ channel, or clearing an owed pivot on posture entry. Rejected: a stance
 CommittedMove, defensive sprint, automatic set status or new success bonuses.
 The low/wide skeleton modifier reads effective posture and gives committed
 clips/pivots priority; it never feeds authoritative state.
+
+## Amendment 2026-10-12 — Approved post-facing exception (#348)
+
+The maintainer explicitly approved bounded post facing away from the rim in
+#348's 2026-10-11 Agent Brief. Within effective live-dribble post only, heading
+approaches the floor-plane away-from-rim target at an initial 360 degrees/s
+through the existing non-linear profile, including at zero stick input.
+Translation retains world-space input and waits until within 2 degrees of
+that target. An existing ordinary pivot completes first, without retargeting
+or a second heading step on its completion tick. Entry brakes existing
+momentum finitely; exit resumes ordinary heading/pivot rules from actual
+heading and velocity. Held post cannot erase an owed pivot or a committed
+move. A zero rim direction retains finite current heading.
+
+The distinct committed turnaround snapshots its rim-facing target at accepted
+Begin and turns during Startup at a bounded 360 degrees/s. Its shortest-arc
+exact half-turn tie chooses positive yaw; later input cannot retarget it.
+This is a narrow authoritative exception, not an independent aim channel.
+Ordinary movement, sprint and defensive stance retain their existing rules.
+Actual heading still feeds contact and the unchanged shot-facing penalty.
+See ADR-0026 for entry/exit, fixed phase data, accuracy composition and scope.
+
+Rejected: cosmetic-only rotation, instant snap, clearing a pivot on post
+entry, or a general strafing/aim channel. Server derives eligibility; the
+held request and historical eligibility/context are buffered, authoritative
+post state is restored before replay, and effective state is broadcast for
+remote display. No stale frame-counter equality gate is added. The existing
+latest-raw-opponent approximation remains; no moving-opponent history is
+claimed. Magnitudes remain provisional for #238 and feel remains #173.

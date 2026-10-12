@@ -1,0 +1,42 @@
+[
+  {
+    "mutation": "disabled-post",
+    "exit": 1,
+    "verdict": [
+      "[post-presentation] FAIL: System.InvalidOperationException: Right post hips not lower than neutral: delta=0"
+    ],
+    "log": ".godot/348-mutation-disabled-post.log"
+  },
+  {
+    "mutation": "missing-phase-gate",
+    "exit": 1,
+    "verdict": [
+      "[post-presentation] FAIL: System.InvalidOperationException: post overwrote actual turnaround startup pose"
+    ],
+    "log": ".godot/348-mutation-missing-phase-gate.log"
+  },
+  {
+    "mutation": "missing-left-leg-bend",
+    "exit": 1,
+    "verdict": [
+      "[post-presentation] FAIL: System.InvalidOperationException: Right post must flex both legs relative to neutral"
+    ],
+    "log": ".godot/348-mutation-missing-left-leg-bend.log"
+  },
+  {
+    "mutation": "missing-material-rotation",
+    "exit": 1,
+    "verdict": [
+      "[post-presentation] FAIL: System.InvalidOperationException: TurnaroundStartup missing authored rotation Skeleton3D:mixamorig_LeftUpLeg"
+    ],
+    "log": ".godot/348-mutation-missing-material-rotation.log"
+  },
+  {
+    "mutation": "one-tick-length-drift",
+    "exit": 1,
+    "verdict": [
+      "[post-presentation] FAIL: System.InvalidOperationException: TurnaroundStartup frame window mismatch"
+    ],
+    "log": ".godot/348-mutation-one-tick-length-drift.log"
+  }
+]

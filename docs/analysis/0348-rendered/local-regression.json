@@ -1,0 +1,88 @@
+{
+  "original_sweep": {
+    "passed": 383,
+    "run": 384,
+    "exit": 1,
+    "log": ".godot/348-regression-harness.log",
+    "failing_case": "net-rig-presentation-left",
+    "failure": [
+      "[net-rig] FAIL role=client scenario=left: timed out: stage=0, lastDisplay=phase=Inactive id= actual-node=Locomotion, ",
+      "sampleSent=False, sampleReceived=True, ready=True, moveBegun=False.",
+      "[net-rig] client RESULT: FAIL (exit 1)",
+      "[NetworkManager] Peer disconnected: 550487421",
+      "[NetworkManager] Despawned player for peer 550487421",
+      "[run-net-rig:left] client exit code: 1",
+      "[run-net-rig:left] FAIL: production remote rig scenario=left (rc=1)"
+    ]
+  },
+  "focused_pairs": [
+    {
+      "repeat": 1,
+      "passed": 2,
+      "run": 2,
+      "log": ".godot/348-regression-rig-focused-1.log",
+      "same_tick_observations": [
+        "[net-rig] same-tick stage=0 phase=Startup id=steal actual-node=StealStartupLeft; all65 default bone scales/hierarchy match.",
+        "[net-rig] same-tick stage=1 phase=Active id=steal actual-node=StealActiveLeft; all65 default bone scales/hierarchy match.",
+        "[net-rig] same-tick stage=2 phase=Recovery id=steal actual-node=StealRecoveryLeft; all65 default bone scales/hierarchy match.",
+        "[net-rig] same-tick stage=3 phase=Inactive id= actual-node=Locomotion; all65 default bone scales/hierarchy match.",
+        "[net-rig] same-tick stage=0 phase=Startup id=steal actual-node=StealStartupRight; all65 default bone scales/hierarchy match.",
+        "[net-rig] same-tick stage=1 phase=Active id=steal actual-node=StealActiveRight; all65 default bone scales/hierarchy match.",
+        "[net-rig] same-tick stage=2 phase=Recovery id=steal actual-node=StealRecoveryRight; all65 default bone scales/hierarchy match.",
+        "[net-rig] same-tick stage=3 phase=Inactive id= actual-node=Locomotion; all65 default bone scales/hierarchy match."
+      ],
+      "peer_exits": [
+        "[run-net-rig:left] client exit code: 0",
+        "[run-net-rig:left] server exit code: 0",
+        "[run-net-rig:right] client exit code: 0",
+        "[run-net-rig:right] server exit code: 0"
+      ]
+    },
+    {
+      "repeat": 2,
+      "passed": 2,
+      "run": 2,
+      "log": ".godot/348-regression-rig-focused-2.log",
+      "same_tick_observations": [
+        "[net-rig] same-tick stage=0 phase=Startup id=steal actual-node=StealStartupLeft; all65 default bone scales/hierarchy match.",
+        "[net-rig] same-tick stage=1 phase=Active id=steal actual-node=StealActiveLeft; all65 default bone scales/hierarchy match.",
+        "[net-rig] same-tick stage=2 phase=Recovery id=steal actual-node=StealRecoveryLeft; all65 default bone scales/hierarchy match.",
+        "[net-rig] same-tick stage=3 phase=Inactive id= actual-node=Locomotion; all65 default bone scales/hierarchy match.",
+        "[net-rig] same-tick stage=0 phase=Startup id=steal actual-node=StealStartupRight; all65 default bone scales/hierarchy match.",
+        "[net-rig] same-tick stage=1 phase=Active id=steal actual-node=StealActiveRight; all65 default bone scales/hierarchy match.",
+        "[net-rig] same-tick stage=2 phase=Recovery id=steal actual-node=StealRecoveryRight; all65 default bone scales/hierarchy match.",
+        "[net-rig] same-tick stage=3 phase=Inactive id= actual-node=Locomotion; all65 default bone scales/hierarchy match."
+      ],
+      "peer_exits": [
+        "[run-net-rig:left] client exit code: 0",
+        "[run-net-rig:left] server exit code: 0",
+        "[run-net-rig:right] client exit code: 0",
+        "[run-net-rig:right] server exit code: 0"
+      ]
+    },
+    {
+      "repeat": 3,
+      "passed": 2,
+      "run": 2,
+      "log": ".godot/348-regression-rig-focused-3.log",
+      "same_tick_observations": [
+        "[net-rig] same-tick stage=0 phase=Startup id=steal actual-node=StealStartupLeft; all65 default bone scales/hierarchy match.",
+        "[net-rig] same-tick stage=1 phase=Active id=steal actual-node=StealActiveLeft; all65 default bone scales/hierarchy match.",
+        "[net-rig] same-tick stage=2 phase=Recovery id=steal actual-node=StealRecoveryLeft; all65 default bone scales/hierarchy match.",
+        "[net-rig] same-tick stage=3 phase=Inactive id= actual-node=Locomotion; all65 default bone scales/hierarchy match.",
+        "[net-rig] same-tick stage=0 phase=Startup id=steal actual-node=StealStartupRight; all65 default bone scales/hierarchy match.",
+        "[net-rig] same-tick stage=1 phase=Active id=steal actual-node=StealActiveRight; all65 default bone scales/hierarchy match.",
+        "[net-rig] same-tick stage=2 phase=Recovery id=steal actual-node=StealRecoveryRight; all65 default bone scales/hierarchy match.",
+        "[net-rig] same-tick stage=3 phase=Inactive id= actual-node=Locomotion; all65 default bone scales/hierarchy match."
+      ],
+      "peer_exits": [
+        "[run-net-rig:left] client exit code: 0",
+        "[run-net-rig:left] server exit code: 0",
+        "[run-net-rig:right] client exit code: 0",
+        "[run-net-rig:right] server exit code: 0"
+      ]
+    }
+  ],
+  "cause": "unconfirmed; did not recur in three isolated pairs",
+  "source_assertions_or_thresholds_changed": false
+}

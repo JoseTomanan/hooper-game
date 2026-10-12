@@ -33,5 +33,5 @@ public static class JumpShotReleaseResolver
     /// entering Active never releases the ball.
     /// </returns>
     public static bool ShouldRelease(bool justEnteredActive, CommittedMove? currentMove)
-        => justEnteredActive && currentMove is JumpShot or Layup;
+        => justEnteredActive && currentMove is JumpShot or Layup or TurnaroundShot;
 }

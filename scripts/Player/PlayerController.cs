@@ -113,7 +113,7 @@ public partial class PlayerController : CharacterBody3D
 	/// <summary>Protected dribble ceiling in metres/second; provisional for #238/#173.</summary>
 	[Export] public float ProtectSpeed { get; set; } = 1.0f;
 	private bool _requestedProtect, _pendingProtectRequest, _serverProtect;
-	public bool IsProtecting => _requestedProtect && !_machine.IsActive
+	public bool IsProtecting => _requestedProtect && !IsPosting && !_machine.IsActive
 		&& IsBallHolder && GetBall()?.State == BallState.Dribbling;
 	public bool DisplayProtecting => !IsServer && !IsLocalPlayer ? _serverProtect : IsProtecting;
 	private bool _requestedSprint;
@@ -122,7 +122,7 @@ public partial class PlayerController : CharacterBody3D
 	public bool IsSprinting => ResolveSprint(_requestedSprint);
 
 	// Raw protection wins even when ineligible; holding both must never accidentally sprint.
-	private bool ResolveSprint(bool requested) => requested && !_requestedProtect && !_machine.IsActive
+	private bool ResolveSprint(bool requested) => requested && !IsPosting && !_requestedProtect && !_machine.IsActive
 		&& IsBallHolder && GetBall()?.State == BallState.Dribbling;
 
 	// ── Heading tuning (issue #80) ────────────────────────────────────────────
@@ -1554,6 +1554,7 @@ public partial class PlayerController : CharacterBody3D
         if (protectionSkeletons.Count > 0 && protectionSkeletons[0] is Skeleton3D protectionSkeleton)
         {
             protectionSkeleton.AddChild(new ProtectionPose { Name = "ProtectionPose", Player = this });
+            protectionSkeleton.AddChild(new PostPose { Name = "PostPose", Player = this });
             protectionSkeleton.AddChild(new DefensiveStancePose { Name = "DefensiveStancePose", Player = this });
         }
 
@@ -1643,6 +1644,9 @@ public partial class PlayerController : CharacterBody3D
 	/// </summary>
 	private void TickServerOwnPlayer(double delta)
 	{
+		// Held post is sampled before the shoot edge chooses its move identity.
+		// https://docs.godotengine.org/en/4.7/classes/class_input.html#class-input-method-is-action-pressed
+		_requestedPost = Input.IsActionPressed("move_post");
 		SampleMoveInput(isServer: true); // reads gesture + feint, advances machine one tick
 		// Held action, not an edge: releasing the trigger restores the ordinary pace.
 		// Source: https://docs.godotengine.org/en/4.7/classes/class_input.html#class-input-method-is-action-pressed
@@ -1657,7 +1661,8 @@ public partial class PlayerController : CharacterBody3D
 		else
 		{
 			Vector2 input = ReadInput();
-			Move(input, delta, GetContactOpponent(server: true), IsSprinting, IsProtecting, _requestedProtect && StanceEligible());
+			Move(input, delta, GetContactOpponent(server: true), IsSprinting, IsProtecting, _requestedProtect && StanceEligible(),
+				_requestedPost, PostEligible(), PostRimSample());
 			CheckAutoStartDribble(input);
 		}
 
@@ -1686,7 +1691,7 @@ public partial class PlayerController : CharacterBody3D
 		else Rpc(MethodName.ReceiveState, 0, GlobalPosition, Velocity,
 			(int)_machine.Phase, _machine.FrameInPhase, MoveIdOf(_machine.CurrentMove), MoveParamOf(_machine.CurrentMove),
 			Heading, (int)HandSide, _machine.WasRecoveryEnteredEarly, _pivot.HasLatch, _pivot.LatchedYaw,
-			IsBeaten(PhysicsTick), IsProtecting, IsInDefensiveStance);
+			IsBeaten(PhysicsTick), IsProtecting, IsInDefensiveStance, IsPosting, DisplayPostEstablished, _turnaroundToken);
 	}
 
 	/// <summary>
@@ -1703,6 +1708,7 @@ public partial class PlayerController : CharacterBody3D
 	/// </summary>
 	private void TickServerRemotePlayer(double delta)
 	{
+		_requestedPost = _pendingPostRequest;
 		_machine.Tick();
 		_requestedSprint = _pendingSprintRequest;
 		_requestedProtect = _pendingProtectRequest;
@@ -1722,7 +1728,8 @@ public partial class PlayerController : CharacterBody3D
 			TickCommittedMoveBehavior(delta, _authoritativeExitVector ?? _pendingRawStick, GetContactOpponent(server: true));
 		else
 		{
-			Move(_pendingInput, delta, GetContactOpponent(server: true), IsSprinting, IsProtecting, _requestedProtect && StanceEligible());
+			Move(_pendingInput, delta, GetContactOpponent(server: true), IsSprinting, IsProtecting, _requestedProtect && StanceEligible(),
+				_requestedPost, PostEligible(), PostRimSample());
 
 			// #224 fix: only honor drive intent from _pendingInput once a
 			// genuinely FRESH (post-award) SubmitInput has actually arrived —
@@ -1760,7 +1767,7 @@ public partial class PlayerController : CharacterBody3D
 		else Rpc(MethodName.ReceiveState, _serverAckedSeq, GlobalPosition, Velocity,
 			(int)_machine.Phase, _machine.FrameInPhase, MoveIdOf(_machine.CurrentMove), MoveParamOf(_machine.CurrentMove),
 			Heading, (int)HandSide, _machine.WasRecoveryEnteredEarly, _pivot.HasLatch, _pivot.LatchedYaw,
-			IsBeaten(PhysicsTick), IsProtecting, IsInDefensiveStance);
+			IsBeaten(PhysicsTick), IsProtecting, IsInDefensiveStance, IsPosting, DisplayPostEstablished, _turnaroundToken);
 	}
 
 	/// <summary>
@@ -1779,6 +1786,7 @@ public partial class PlayerController : CharacterBody3D
 		}
 
 		// Prediction step.
+		_requestedPost = Input.IsActionPressed("move_post");
 		SampleMoveInput(isServer: false); // reads gesture + feint, advances machine one tick, RPCs server
 
 		// During a committed move, send Vector2.Zero to the server as this
@@ -1804,7 +1812,10 @@ public partial class PlayerController : CharacterBody3D
 		// Record() assigns the seq and handles capacity eviction (see
 		// PredictionBuffer doc) — behavior-identical to the inline
 		// _seq++ / cap-check / enqueue this replaced.
-		int seq = _buffer.Record(moveInput, sprint, protect, _requestedProtect, stanceEligible);
+		int seq = _buffer.Record(moveInput, sprint, protect, _requestedProtect, stanceEligible,
+			_requestedPost, PostEligible(), PostRimSample(),
+			_machine.CurrentMove is TurnaroundShot ? _machine.Phase : MovePhase.Inactive,
+			_turnaroundTargetHeading, _machine.CurrentMove is TurnaroundShot ? _turnaroundToken : 0);
 
 		if (_machine.IsActive)
 		{
@@ -1830,7 +1841,8 @@ public partial class PlayerController : CharacterBody3D
 		}
 		else
 		{
-			Move(moveInput, delta, GetContactOpponent(server: false), sprint, protect, _requestedProtect && stanceEligible);
+			Move(moveInput, delta, GetContactOpponent(server: false), sprint, protect, _requestedProtect && stanceEligible,
+				_requestedPost, PostEligible(), PostRimSample());
 			CheckAutoStartDribble(moveInput);
 		}
 
@@ -1848,7 +1860,7 @@ public partial class PlayerController : CharacterBody3D
 		// stream rather than the moveId/moveParam one-shot RPC).
 		// Raw request only: the server resolves its own possession/commitment gates.
 		// Source: https://docs.godotengine.org/en/4.7/tutorials/networking/high_level_multiplayer.html#remote-procedure-calls
-		RpcId(1, MethodName.SubmitInput, seq, moveInput.X, moveInput.Y, rawStick.X, rawStick.Y, _requestedSprint, _requestedProtect);
+		RpcId(1, MethodName.SubmitInput, seq, moveInput.X, moveInput.Y, rawStick.X, rawStick.Y, _requestedSprint, _requestedProtect, _requestedPost);
 	}
 
 	/// <summary>
@@ -1914,7 +1926,7 @@ public partial class PlayerController : CharacterBody3D
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer,
 		 CallLocal = false,
 		 TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
-	private void SubmitInput(int seq, float inputX, float inputY, float rawStickX, float rawStickY, bool sprintRequested, bool protectRequested)
+	private void SubmitInput(int seq, float inputX, float inputY, float rawStickX, float rawStickY, bool sprintRequested, bool protectRequested, bool postRequested)
 	{
 		// Validate sender (read synchronously at top — GetRemoteSenderId() is
 		// only valid during the RPC call, never after).
@@ -1941,6 +1953,7 @@ public partial class PlayerController : CharacterBody3D
 		_pendingRawStick = new Vector2(rawStickX, rawStickY);
 		_pendingSprintRequest = sprintRequested;
 		_pendingProtectRequest = protectRequested;
+		_pendingPostRequest = postRequested;
 	}
 
 	/// <summary>
@@ -2046,6 +2059,8 @@ public partial class PlayerController : CharacterBody3D
 	/// </summary>
 	private bool BeginCommittedMove(CommittedMove move, bool clientWasAlreadyDribbling = false)
 	{
+		// Post entry is a real gate, not just a facing check: never cancel an owed pivot.
+		if (move is TurnaroundShot && !CanBeginTurnaround()) return false;
 		// #210 doubt-driven-development fix: unconditionally clear any
 		// previously-received exit vector at the START of every attempt, not
 		// only a successful one — see _authoritativeExitVector's field doc.
@@ -2144,6 +2159,12 @@ public partial class PlayerController : CharacterBody3D
 
 		if (!_machine.Begin(move)) return false;
 		_pivot = HeadingMath.PivotState.None;
+		if (move is TurnaroundShot)
+		{
+			_turnaroundTargetHeading = SnapshotTurnaroundTarget();
+			CaptureShotInitiationSpeed();
+		}
+		ClearEffectivePost();
 
 		// #193 (triple threat / dead-dribble rule): a JumpShot's gather is
 		// inherent to the shooting motion, not a separate input — so cradling
@@ -2181,7 +2202,7 @@ public partial class PlayerController : CharacterBody3D
 		// CradleForShotStartup's doc for how the server's dispatch of a
 		// REMOTE client's request is the only caller that ever supplies a
 		// meaningful value.
-		if ((move is JumpShot || move is Layup || move is DriveGather || move is EuroStep) && OwnPeerId != 0)
+		if ((move is JumpShot || move is Layup || move is TurnaroundShot || move is DriveGather || move is EuroStep) && OwnPeerId != 0)
 			GetBall()?.CradleForShotStartup(OwnPeerId, clientWasAlreadyDribbling);
 
 		return true;
@@ -2276,7 +2297,7 @@ public partial class PlayerController : CharacterBody3D
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer,
 		 CallLocal = false,
 		 TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void RequestBeginMove(string moveId, float param, bool clientWasAlreadyDribbling)
+	private void RequestBeginMove(string moveId, float param, bool clientWasAlreadyDribbling, int turnaroundToken = 0)
 	{
 		int senderId = Multiplayer.GetRemoteSenderId();
 		if (senderId.ToString() != Name)
@@ -2285,7 +2306,7 @@ public partial class PlayerController : CharacterBody3D
 			return;
 		}
 
-		ApplyRequestedMove(moveId, param, clientWasAlreadyDribbling);
+		ApplyRequestedMove(moveId, param, clientWasAlreadyDribbling, turnaroundToken);
 	}
 
 	/// <summary>
@@ -2319,9 +2340,15 @@ public partial class PlayerController : CharacterBody3D
 	/// this value comes from and CradleForShotStartup's doc for how it resolves
 	/// the cross-channel cradle race. Every other branch ignores it.
 	/// </summary>
-	private void ApplyRequestedMove(string moveId, float param, bool clientWasAlreadyDribbling)
+	private void ApplyRequestedMove(string moveId, float param, bool clientWasAlreadyDribbling, int turnaroundToken = 0)
 	{
-		if (moveId == "crossover")
+		if (moveId == "turnaround")
+		{
+			// Ignore param: the authoritative rim snapshot owns the fixed target.
+			if (CanBeginTurnaround() && BeginCommittedMove(new TurnaroundShot(SnapshotTurnaroundTarget()), clientWasAlreadyDribbling))
+				_turnaroundToken = turnaroundToken;
+		}
+		else if (moveId == "crossover")
 			// param is the body-relative flick sign (M9, #85) — the world burst
 			// direction is derived from Heading when the move reaches Active.
 			BeginCommittedMove(new Crossover(burstDirection: param));
@@ -2620,7 +2647,8 @@ public partial class PlayerController : CharacterBody3D
 		 TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
 	private void ReceiveState(int ackSeq, Vector3 pos, Vector3 vel,
 		int movePhase, int frameInPhase, string moveId, float moveParam, float heading, int handSide,
-		bool endedActiveEarly, bool pivotHasLatch, float pivotLatchedYaw, bool isBeaten, bool protect = false, bool stance = false)
+		bool endedActiveEarly, bool pivotHasLatch, float pivotLatchedYaw, bool isBeaten, bool protect = false, bool stance = false,
+		bool post = false, bool postEstablished = false, int turnaroundToken = 0)
 	{
 		_serverPos       = pos;
 		_serverVel       = vel;
@@ -2650,6 +2678,9 @@ public partial class PlayerController : CharacterBody3D
 		_serverIsBeaten  = isBeaten;
 		_serverProtect = protect;
 		_serverStance = stance;
+		_serverPost = post;
+		_serverPostEstablished = postEstablished;
+		_serverTurnaroundToken = turnaroundToken;
 		_hasNewState     = true;
 		_hasContactSnapshot = true;
 	}
@@ -2761,6 +2792,7 @@ public partial class PlayerController : CharacterBody3D
 		// milestone calls for; documented here as an accepted trade-off.
 		if (CommittedMoveMachine.ShouldForceInactive(_machine.Phase, _machine.IsActive, _serverMovePhase))
 		{
+			if (_machine.CurrentMove is TurnaroundShot) _buffer.RejectTurnaround(_turnaroundToken);
 			_machine.ForceState(MovePhase.Inactive, frameInPhase: 0, move: null);
 			// The reverted move may have been a crossover that already swapped the
 			// PREDICTED hand (M9, #83/ADR-0012). Restore the authoritative hand in
@@ -2809,6 +2841,12 @@ public partial class PlayerController : CharacterBody3D
 		}
 
 		// Step 1: prune confirmed inputs.
+		if (_serverMoveId == "turnaround" && _serverTurnaroundToken != 0)
+		{
+			_buffer.ConfirmTurnaroundTarget(_serverTurnaroundToken, _serverMoveParam);
+			if (_machine.CurrentMove is TurnaroundShot && _turnaroundToken == _serverTurnaroundToken)
+				_turnaroundTargetHeading = _serverMoveParam;
+		}
 		_buffer.Acknowledge(ackSeq);
 
 		// Step 2: remember current rendered position for divergence calculation.
@@ -2844,6 +2882,8 @@ public partial class PlayerController : CharacterBody3D
 		// now inherits rather than introduces.
 		_pivot = new HeadingMath.PivotState(_serverPivotHasLatch, _serverPivotLatchedYaw);
 		_effectiveStance = _serverStance;
+		_effectivePost = _serverPost;
+		_postEstablished = _serverPostEstablished;
 
 		// Step 3: replay unacknowledged inputs using the fixed physics timestep.
 		// The server simulated each of these at the same fixed rate, so using
@@ -2853,8 +2893,12 @@ public partial class PlayerController : CharacterBody3D
 		double fixedDelta = 1.0 / Engine.PhysicsTicksPerSecond;
 		ContactOpponent? replayOpponent = GetContactOpponent(server: false);
 		foreach (PredictionBuffer.InputFrame input in _buffer.ReplayInputs())
-			Move(input.Movement, fixedDelta, replayOpponent, input.Sprint, input.Protect,
-				input.PostureHeld && input.StanceEligible);
+		{
+			if (input.TurnaroundPhase != MovePhase.Inactive)
+				TickTurnaroundMotion(input.TurnaroundPhase, input.TurnaroundTarget, fixedDelta, replayOpponent);
+			else Move(input.Movement, fixedDelta, replayOpponent, input.Sprint, input.Protect,
+				input.PostureHeld && input.StanceEligible, input.PostHeld, input.PostEligible, input.RimSample);
+		}
 		// A fully acknowledged buffer still needs to repair a snap into the raw opponent.
 		DepenetrateAgainstContactSnapshot(replayOpponent);
 		// Observe physical correction after replay, before this tick's new prediction and
@@ -3452,26 +3496,26 @@ public partial class PlayerController : CharacterBody3D
 				if (Input.IsActionPressed("move_size_up") && Input.IsActionPressed("move_finesse"))
 				{
 					if (BeginCommittedMove(new Spin(spinDirection: flickSign)) && !isServer)
-						RpcId(1, MethodName.RequestBeginMove, "spin", flickSign, false); // #225: not a cradle-family move
+						RpcId(1, MethodName.RequestBeginMove, "spin", flickSign, false, 0); // #225: not a cradle-family move
 				}
 				else if (Input.IsActionPressed("move_size_up"))
 				{
 					if (BeginCommittedMove(new BehindTheBack(flickSign)) && !isServer)
-						RpcId(1, MethodName.RequestBeginMove, "behindtheback", flickSign, false); // #225: not a cradle-family move
+						RpcId(1, MethodName.RequestBeginMove, "behindtheback", flickSign, false, 0); // #225: not a cradle-family move
 				}
 				else if (Input.IsActionPressed("move_finesse"))
 				{
 					if (BeginCommittedMove(new BetweenTheLegs(flickSign)) && !isServer)
-						RpcId(1, MethodName.RequestBeginMove, "betweenthelegs", flickSign, false); // #225: not a cradle-family move
+						RpcId(1, MethodName.RequestBeginMove, "betweenthelegs", flickSign, false, 0); // #225: not a cradle-family move
 				}
 				else if (BeginCommittedMove(new Crossover(flickSign)) && !isServer)
 				{
-					RpcId(1, MethodName.RequestBeginMove, "crossover", flickSign, false); // #225: not a cradle-family move
+					RpcId(1, MethodName.RequestBeginMove, "crossover", flickSign, false, 0); // #225: not a cradle-family move
 				}
 			}
 			else if (BeginCommittedMove(new Hesitation()) && !isServer)
 			{
-				RpcId(1, MethodName.RequestBeginMove, "hesitation", 0f, false); // #225: not a cradle-family move
+				RpcId(1, MethodName.RequestBeginMove, "hesitation", 0f, false, 0); // #225: not a cradle-family move
 			}
 		}
 		else if (gesture.Kind == GestureKind.QuickReturn)
@@ -3493,11 +3537,11 @@ public partial class PlayerController : CharacterBody3D
 			if (HandStateResolver.IsCrossover(HandSide, flickSign))
 			{
 				if (BeginCommittedMove(new InAndOut(flickSign)) && !isServer)
-					RpcId(1, MethodName.RequestBeginMove, "inandout", flickSign, false); // #225: not a cradle-family move
+					RpcId(1, MethodName.RequestBeginMove, "inandout", flickSign, false, 0); // #225: not a cradle-family move
 			}
 			else if (BeginCommittedMove(new Hesitation()) && !isServer)
 			{
-				RpcId(1, MethodName.RequestBeginMove, "hesitation", 0f, false); // #225: not a cradle-family move
+				RpcId(1, MethodName.RequestBeginMove, "hesitation", 0f, false, 0); // #225: not a cradle-family move
 			}
 		}
 		else if (gesture.Kind == GestureKind.StepBack)
@@ -3530,7 +3574,7 @@ public partial class PlayerController : CharacterBody3D
 			// branch fires and the boolean is never read).
 			bool wasAlreadyDribbling = GetBall()?.State == BallState.Dribbling;
 			if (IsBallHolder && BeginCommittedMove(new StepBack(clientWasAlreadyDribbling: wasAlreadyDribbling)) && !isServer)
-				RpcId(1, MethodName.RequestBeginMove, "stepback", 0f, wasAlreadyDribbling); // #253: carried to StepBack's Active-entry gather — see CradleForShotStartup's doc
+				RpcId(1, MethodName.RequestBeginMove, "stepback", 0f, wasAlreadyDribbling, 0); // #253: carried to StepBack's Active-entry gather — see CradleForShotStartup's doc
 		}
 		else if (gesture.Kind == GestureKind.RetreatDribble)
 		{
@@ -3542,7 +3586,7 @@ public partial class PlayerController : CharacterBody3D
 			// dead-dribble gate, extended for this move, refuses it from
 			// Held exactly like Crossover/Hesitation/BehindTheBack).
 			if (IsBallHolder && BeginCommittedMove(new RetreatDribble()) && !isServer)
-				RpcId(1, MethodName.RequestBeginMove, "retreatdribble", 0f, false); // #225: not a cradle-family move
+				RpcId(1, MethodName.RequestBeginMove, "retreatdribble", 0f, false, 0); // #225: not a cradle-family move
 		}
 
 		// Drive-gather (M9, issue #230, ADR-0022): a discrete button, not a
@@ -3575,10 +3619,10 @@ public partial class PlayerController : CharacterBody3D
 			if (lateralSign != 0)
 			{
 				if (BeginCommittedMove(new EuroStep(lateralDirection: lateralSign)) && !isServer)
-					RpcId(1, MethodName.RequestBeginMove, "eurostep", (float)lateralSign, wasAlreadyDribblingForGather); // #225: cradle-family move
+					RpcId(1, MethodName.RequestBeginMove, "eurostep", (float)lateralSign, wasAlreadyDribblingForGather, 0); // #225: cradle-family move
 			}
 			else if (BeginCommittedMove(new DriveGather()) && !isServer)
-				RpcId(1, MethodName.RequestBeginMove, "drivegather", 0f, wasAlreadyDribblingForGather); // #225: cradle-family move
+				RpcId(1, MethodName.RequestBeginMove, "drivegather", 0f, wasAlreadyDribblingForGather, 0); // #225: cradle-family move
 		}
 
 		// Jab step (M9, issue #200): triple threat's stance bait. Its own
@@ -3591,7 +3635,7 @@ public partial class PlayerController : CharacterBody3D
 		if (Input.IsActionJustPressed("move_jab") && IsBallHolder)
 		{
 			if (BeginCommittedMove(new JabStep()) && !isServer)
-				RpcId(1, MethodName.RequestBeginMove, "jab", 0f, false); // #225: not a cradle-family move
+				RpcId(1, MethodName.RequestBeginMove, "jab", 0f, false, 0); // #225: not a cradle-family move
 		}
 
 		// Shoot: begin a JumpShot or a Layup (M7b #74; layup added #229,
@@ -3618,6 +3662,17 @@ public partial class PlayerController : CharacterBody3D
 		BallController ball = GetBall();
 		if (ball != null && Input.IsActionJustPressed(ball.ShootAction) && IsBallHolder)
 		{
+			if (IsPosting)
+			{
+				// Reject an early post shoot edge; there is no ordinary-shot fallback.
+				if (CanBeginTurnaround() && BeginCommittedMove(new TurnaroundShot(SnapshotTurnaroundTarget())))
+				{
+					_turnaroundToken = isServer ? 0 : _buffer.LastSequence + 1;
+					if (!isServer) RpcId(1, MethodName.RequestBeginMove, "turnaround", 0f, true, _turnaroundToken);
+				}
+			}
+			else
+			{
 			// Shares DefensiveResolution.DistanceXZSquared with the server's
 			// re-assertion in RequestBeginMove (issue #236) so the two ends of
 			// the same gate cannot drift apart in their arithmetic. NOT shared
@@ -3645,7 +3700,8 @@ public partial class PlayerController : CharacterBody3D
 				// types (ADR-0022: the layup feeds the same accuracy model).
 				CaptureShotInitiationSpeed();
 				if (!isServer)
-					RpcId(1, MethodName.RequestBeginMove, isLayup ? "layup" : "jumpshot", 0f, wasAlreadyDribblingForShot); // #225: cradle-family move
+					RpcId(1, MethodName.RequestBeginMove, isLayup ? "layup" : "jumpshot", 0f, wasAlreadyDribblingForShot, 0); // #225: cradle-family move
+			}
 			}
 		}
 
@@ -3677,7 +3733,7 @@ public partial class PlayerController : CharacterBody3D
 			// into target: it is the defender-relative reach side the handed Steal
 			// clips are selected by (MoveAnimResolver's TargetHandedMoves).
 			if (BeginCommittedMove(new StealMove(target, aimSign)) && !isServer)
-				RpcId(1, MethodName.RequestBeginMove, "steal", aimSign, false); // #225: not a cradle-family move
+				RpcId(1, MethodName.RequestBeginMove, "steal", aimSign, false, 0); // #225: not a cradle-family move
 		}
 
 		// Block: defensive committed move (M10, issue #98, ADR-0018 §2).
@@ -3702,7 +3758,7 @@ public partial class PlayerController : CharacterBody3D
 		if (Input.IsActionJustPressed("def_block") && !IsBallHolder)
 		{
 			if (BeginCommittedMove(new BlockMove()) && !isServer)
-				RpcId(1, MethodName.RequestBeginMove, "block", 0f, false); // #225: not a cradle-family move
+				RpcId(1, MethodName.RequestBeginMove, "block", 0f, false, 0); // #225: not a cradle-family move
 		}
 
 		// Contest: defensive committed move (M10, issue #99, ADR-0018 §2).
@@ -3717,7 +3773,7 @@ public partial class PlayerController : CharacterBody3D
 		if (Input.IsActionJustPressed("def_contest") && !IsBallHolder)
 		{
 			if (BeginCommittedMove(new ContestMove()) && !isServer)
-				RpcId(1, MethodName.RequestBeginMove, "contest", 0f, false); // #225: not a cradle-family move
+				RpcId(1, MethodName.RequestBeginMove, "contest", 0f, false, 0); // #225: not a cradle-family move
 		}
 
 		// Feint modifier (#202 closed the ambiguous-gesture path): the ONLY
@@ -3781,6 +3837,12 @@ public partial class PlayerController : CharacterBody3D
 	/// </param>
 	private void TickCommittedMoveBehavior(double delta, Vector2 exitVectorSample, ContactOpponent? opponent = null)
 	{
+		ClearEffectivePost();
+		if (_machine.CurrentMove is TurnaroundShot)
+		{
+			TickTurnaroundMotion(_machine.Phase, _turnaroundTargetHeading, delta, opponent);
+			return;
+		}
 		switch (_machine.Phase)
 		{
 			case MovePhase.Startup:
@@ -4196,7 +4258,8 @@ public partial class PlayerController : CharacterBody3D
 	/// the flip within one broadcast of the release tick, same latency as
 	/// every other DisplayMove-family cosmetic.
 	/// </summary>
-	private static float MoveParamOf(CommittedMove move) =>
+	private float MoveParamOf(CommittedMove move) =>
+		move is TurnaroundShot              ? _turnaroundTargetHeading :
 		move is Crossover crossover         ? crossover.BurstDirection :
 		move is BehindTheBack behindTheBack ? behindTheBack.BurstDirection :
 		move is BetweenTheLegs betweenLegs  ? betweenLegs.BurstDirection :
@@ -4221,8 +4284,25 @@ public partial class PlayerController : CharacterBody3D
 	/// </summary>
 	// Both pace flags are resolved by the role-aware caller. Replay passes the
 	// historically resolved bit; re-reading today's ball state here would rewrite history.
-	public void Move(Vector2 inputDir, double delta, ContactOpponent? opponent = null, bool sprint = false, bool protect = false, bool stance = false)
+	public void Move(Vector2 inputDir, double delta, ContactOpponent? opponent = null, bool sprint = false, bool protect = false, bool stance = false,
+		bool postHeld = false, bool postEligible = false, Vector3 rimSample = default)
 	{
+		_effectivePost = postHeld && postEligible;
+		if (_effectivePost)
+		{
+			_effectiveStance = false;
+			Vector3 away = GlobalPosition - rimSample;
+			var post = PostMath.Step(Heading, _pivot, new Vector2(away.X, away.Z), delta,
+				PostTurnRateDeg, MaxTurnRateDeg, BackTurnSlowFactor, PivotThresholdDeg, PostEntryToleranceDeg);
+			Heading = post.Heading.NewYaw;
+			_pivot = post.Heading.Pivot;
+			_postEstablished = post.Established;
+			Vector3 wish = post.TranslationAllowed ? new Vector3(inputDir.X, 0, inputDir.Y) : Vector3.Zero;
+			Velocity = MovementMath.ComputeVelocity(Velocity, wish, delta, PostSpeed, Accel, Decel);
+			IntegrateContactMotion(delta, opponent);
+			return;
+		}
+		_postEstablished = false;
 		stance &= opponent.HasValue;
 		sprint &= !protect && !stance;
 		_effectiveStance = stance && !_pivot.HasLatch;

@@ -1,0 +1,61 @@
+[
+  {
+    "mutation": "current-eligibility",
+    "requested_delay_ms": 30,
+    "repeat": 0,
+    "passed": false,
+    "error": "Godot peer failed; inspect retained logs",
+    "relay": {
+      "driver": {
+        "client_to_server": {
+          "enqueued": 944,
+          "forwarded": 944,
+          "discarded_at_teardown": 0,
+          "min_ms": 30.038399999966714,
+          "mean_ms": 33.19065519067639,
+          "max_ms": 45.97870000009152
+        },
+        "server_to_client": {
+          "enqueued": 1931,
+          "forwarded": 1931,
+          "discarded_at_teardown": 0,
+          "min_ms": 30.03359999991062,
+          "mean_ms": 32.69375779388864,
+          "max_ms": 46.06190000004062
+        }
+      },
+      "observer": {
+        "client_to_server": {
+          "enqueued": 913,
+          "forwarded": 913,
+          "discarded_at_teardown": 0,
+          "min_ms": 30.014399999970465,
+          "mean_ms": 32.98079868565337,
+          "max_ms": 44.08160000002681
+        },
+        "server_to_client": {
+          "enqueued": 1940,
+          "forwarded": 1940,
+          "discarded_at_teardown": 0,
+          "min_ms": 30.031199999939417,
+          "mean_ms": 32.67489412371232,
+          "max_ms": 46.05340000000524
+        }
+      }
+    },
+    "observations": {
+      "server": [
+        "[post-net] READY server",
+        "[post-net] authority postTicks=80 earlyChecks=19 nonholderChecks=45 releases=1 ack=844/844"
+      ],
+      "driver": [
+        "[harness] FAIL post-net driver: independent post historical replay mismatch p=0.6444448 v=4.666667 h=0.41050673 mutation=current-eligibility"
+      ],
+      "observer": [
+        "[post-net] observer actualNodes startup=47 active=4 recovery=20 firstTicks=666/713/717 postPoseSamples=1463 hipsDelta=-0.060000002 armDelta=0.88827294 forearmDelta=1.0500001; hardwarePost=false"
+      ]
+    },
+    "elapsed_seconds": 20.491118700000015,
+    "native_logs": "C:\\Users\\The King\\AppData\\Local\\Temp\\hooper-348-network\\.godot\\post-net\\native\\7df6032d6735"
+  }
+]
