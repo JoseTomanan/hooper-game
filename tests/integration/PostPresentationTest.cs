@@ -55,6 +55,8 @@ public partial class PostPresentationTest : Node3D
     private void Observe()
     {
         // Observe before Godot restores the underlying authored animation pose.
+        // ModificationProcessed precedes influence blending. Paired committed controls
+        // disconnect Player to prevent writes, rather than setting Influence to zero.
         // https://docs.godotengine.org/en/4.7/classes/class_skeletonmodifier3d.html#class-skeletonmodifier3d-signal-modification-processed
         Quaternion Rotation(string name) => _skeleton.GetBonePoseRotation(_skeleton.FindBone("mixamorig_" + name));
         _current = new Pose(_skeleton.GetBonePosePosition(_skeleton.FindBone("mixamorig_Hips")),
@@ -86,16 +88,16 @@ public partial class PostPresentationTest : Node3D
                 case 4: Require(Same(_neutral, _current), "post release did not restore authored pose"); Configure(true, pivot: true); break;
                 case 5:
                     Require(_player.IsPivotingInPlace && Same(_neutral, _current), "post overwrote ordinary pivot pose");
-                    Configure(true, phase: MovePhase.Startup); _modifier.Influence = 0; break;
-                case 6: _committed = _current; _modifier.Influence = 1; break;
+                    Configure(true, phase: MovePhase.Startup); _modifier.Player = null; break;
+                case 6: _committed = _current; _modifier.Player = _player; break;
                 case 7:
                     Require(Same(_committed, _current), "post overwrote actual turnaround startup pose");
-                    Configure(true, phase: MovePhase.Active); _modifier.Influence = 0; break;
-                case 8: _committed = _current; _modifier.Influence = 1; break;
+                    Configure(true, phase: MovePhase.Active); _modifier.Player = null; break;
+                case 8: _committed = _current; _modifier.Player = _player; break;
                 case 9:
                     Require(Same(_committed, _current), "post overwrote actual turnaround release pose");
-                    Configure(true, phase: MovePhase.Recovery); _modifier.Influence = 0; break;
-                case 10: _committed = _current; _modifier.Influence = 1; break;
+                    Configure(true, phase: MovePhase.Recovery); _modifier.Player = null; break;
+                case 10: _committed = _current; _modifier.Player = _player; break;
                 case 11: Require(Same(_committed, _current), "post overwrote actual turnaround recovery pose"); Configure(true); break;
                 case 12: Require(Same(_post, _current), "post failed to resume after commitment"); break;
                 case 13:
