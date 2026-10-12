@@ -395,6 +395,27 @@ DefensiveStanceTest.tscn|committed
 DefensiveStanceTest.tscn|contact-slow
 DefensiveStanceTest.tscn|contact-fast
 DefensiveStancePresentationTest.tscn|presentation
+PostPlayTest.tscn|entry
+PostPlayTest.tscn|entry-side
+PostPlayTest.tscn|entry-away
+PostPlayTest.tscn|entry-coincident
+PostPlayTest.tscn|speed
+PostPlayTest.tscn|gates
+PostPlayTest.tscn|bindings
+PostPlayTest.tscn|pivot
+PostPlayTest.tscn|dispatch
+PostPlayTest.tscn|turnaround
+PostPlayTest.tscn|accuracy
+PostPlayTest.tscn|accuracy-unsquared
+PostPlayTest.tscn|lost-payload
+PostPlayTest.tscn|turnaround-steal
+PostPlayTest.tscn|turnaround-oob
+PostPlayTest.tscn|replay
+PostPlayTest.tscn|turnaround-replay
+PostPlayTest.tscn|turnaround-rejected
+PostPlayTest.tscn|contact-set
+PostPlayTest.tscn|contact-unset
+PostPresentationTest.tscn|presentation
 """
 _ADDITIONAL_MULTIPROCESS_ROWS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
     ("net-rig-presentation-left", "tests/integration/run-net-rig-presentation.sh godot left", "NetRigPresentationTest.tscn", (".godot/harness-logs/net-rig-presentation-left-*.log",)),
@@ -417,6 +438,13 @@ _ADDITIONAL_MULTIPROCESS_ROWS: tuple[tuple[str, str, str, tuple[str, ...]], ...]
     (f"defensive-stance-{delay}ms",
      f"tests/integration/run-net-defensive-stance.sh godot {delay}",
      "NetDefensiveStanceTest.tscn", (f".godot/stance-net/catalog-{delay}-none-*/**/*",))
+    for delay in (0, 30)
+)
+
+_ADDITIONAL_MULTIPROCESS_ROWS += tuple(
+    (f"dedicated-post-play-{delay}ms",
+     f"tests/integration/run-net-post-play.sh godot {delay}",
+     "NetPostPlayTest.tscn", (f".godot/post-net/catalog-{delay}-none-*/**/*",))
     for delay in (0, 30)
 )
 
@@ -465,6 +493,9 @@ def _multiprocess_cases(rows: Iterable[tuple[str, str, str, tuple[str, ...]]]) -
 
 
 _CONTROL_COMPONENTS = (
+    ("post-play-test-accuracy", "post-play-test-accuracy-unsquared"),
+    ("post-play-test-turnaround", "post-play-test-lost-payload", "post-play-test-turnaround-steal", "post-play-test-turnaround-oob"),
+    ("post-play-test-contact-set", "post-play-test-contact-unset"),
     ("defensive-stance-test-contact-slow", "defensive-stance-test-contact-fast"),
     ("protection-test-steal-neutral", "protection-test-steal-protect", "protection-test-steal-center", "protection-test-steal-wrong-hand"),
     ("sprint-test-steal-sprint", "sprint-test-steal-jog", "sprint-test-steal-outside", "sprint-test-steal-wrong-hand"),
