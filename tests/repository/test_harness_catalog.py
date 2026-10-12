@@ -73,7 +73,13 @@ class HarnessCatalogCliTests(unittest.TestCase):
             + [f'defensive-stance-test-{scenario}' for scenario in (
                 'slides-left', 'slides-right', 'idle-facing', 'bounded-moving', 'response',
                 'gates', 'pivot', 'committed', 'contact-slow', 'contact-fast')]
-            + ['defensive-stance-presentation-test-presentation',
+            + ['defensive-stance-presentation-test-presentation']
+            + [f'post-play-test-{scenario}' for scenario in (
+                'entry', 'entry-side', 'entry-away', 'entry-coincident', 'speed', 'gates',
+                'bindings', 'pivot', 'dispatch', 'turnaround', 'accuracy', 'accuracy-unsquared',
+                'lost-payload', 'turnaround-steal', 'turnaround-oob', 'replay',
+                'turnaround-replay', 'turnaround-rejected', 'contact-set', 'contact-unset')]
+            + ['post-presentation-test-presentation',
                'net-rig-presentation-left', 'net-rig-presentation-right']
             + [f'committed-replay-{move}-{contact}-{delay}ms'
                for move in ('neutral', 'crossover', 'gather')
@@ -83,7 +89,8 @@ class HarnessCatalogCliTests(unittest.TestCase):
                for move in ('neutral', 'crossover', 'gather')
                for contact in ('contact', 'no-contact')
                for delay in (0, 30)]
-            + [f'defensive-stance-{delay}ms' for delay in (0, 30)],
+            + [f'defensive-stance-{delay}ms' for delay in (0, 30)]
+            + [f'dedicated-post-play-{delay}ms' for delay in (0, 30)],
             [line.split('\t')[0] for line in lines[baseline_tail + 1:]],
         )
 
@@ -127,6 +134,9 @@ class HarnessCatalogCliTests(unittest.TestCase):
     def test_source_declared_cross_invocation_controls_are_connected(self):
         catalog = load_catalog_module()
         components = (
+            ('post-play-test-accuracy', 'post-play-test-accuracy-unsquared'),
+            ('post-play-test-turnaround', 'post-play-test-lost-payload', 'post-play-test-turnaround-steal', 'post-play-test-turnaround-oob'),
+            ('post-play-test-contact-set', 'post-play-test-contact-unset'),
             ('protection-test-steal-neutral', 'protection-test-steal-protect', 'protection-test-steal-center', 'protection-test-steal-wrong-hand'),
             ('sprint-test-steal-sprint', 'sprint-test-steal-jog', 'sprint-test-steal-outside', 'sprint-test-steal-wrong-hand'),
             ('contact-kernel-test-set-drive', 'contact-kernel-test-unset-drive', 'contact-kernel-test-disabled-kernel'),
@@ -291,7 +301,12 @@ class HarnessCatalogShardTests(unittest.TestCase):
                 self.assertEqual(catalog.DEFAULT_SINGLE_WEIGHT_SECONDS, weights[case.id])
             elif case.id in ('defensive-stance-0ms', 'defensive-stance-30ms'):
                 self.assertEqual(catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS, weights[case.id])
-        self.assertAlmostEqual(631.0, sum(weights.values()))
+        for case in catalog.CATALOG:
+            if case.id.startswith('post-play-test-') or case.id.startswith('post-presentation-test-'):
+                self.assertEqual(catalog.DEFAULT_SINGLE_WEIGHT_SECONDS, weights[case.id])
+            elif case.id in ('dedicated-post-play-0ms', 'dedicated-post-play-30ms'):
+                self.assertEqual(catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS, weights[case.id])
+        self.assertAlmostEqual(668.0, sum(weights.values()))
 
         base = catalog.CATALOG[0]
         new_single = replace(base, id='new-single', scenes=(catalog.SceneMetadata('res://tests/integration/Unknown.tscn'),))
