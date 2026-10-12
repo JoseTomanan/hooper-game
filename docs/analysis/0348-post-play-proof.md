@@ -229,8 +229,31 @@ workspace `--log-file`.
 
 As of 2026-10-12 the final game build has zero warnings/errors; all 1,200 unit
 tests pass with five intentionally skipped characterization tests; all 61
-repository contracts pass. The final exhaustive catalog result is recorded
-after the 384-case run completes.
+repository contracts pass. Final independent code review of PR #408 at
+`cdb676a` found no high-confidence introduced defects across authoritative
+behavior, presentation, guidance, adapters, catalog and evidence.
+
+[CI run 38238887592](https://github.com/JoseTomanan/hooper-game/actions/runs/38238887592)
+at `cdb676a` passed every check, including ordinary game compilation without
+integration sources, rendered-evidence capture, and all 384 catalog cases.
+The four exhaustive shard summaries were 89/89, 88/88, 108/108 and 99/99;
+their required `integration-test` aggregate passed.
+
+The additional serial Windows run retained `.godot/348-regression-harness.log`
+and exited 1 at **383/384**. Every new post case passed. Its only failure was
+`net-rig-presentation-left`: the connected/ready client timed out at stage 0
+without observing matching Startup, then ended at Inactive/Locomotion. The
+paired right-hand case passed. No bone-default mismatch or RPC error was
+reported. This failure has not established a causal defect in post play;
+scheduling/receipt of the short sequence is a hypothesis, not a measured cause.
+Three subsequent isolated paired repetitions passed **6/6**, each recording
+both peer exit codes zero and actual same-tick Startup, Active, Recovery and
+Inactive nodes for both hands. Raw logs are
+`.godot/348-regression-rig-focused-{1,2,3}.log`; the timeout did not recur.
+The original full-sweep result remains 383/384, not a rewritten green run.
+No source, assertion or threshold was changed in response to it. A compact
+[local regression summary](0348-rendered/local-regression.json) preserves
+the failure and all paired rerun markers.
 
 ## Scope limits and tuning observations (no prescription)
 
