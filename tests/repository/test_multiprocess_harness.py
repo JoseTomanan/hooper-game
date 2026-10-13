@@ -162,6 +162,33 @@ class MultiprocessHarnessTests(unittest.TestCase):
         self.assertFalse(result.passed, result)
         self.assertEqual(9, result.peers['server'].exit_before_cleanup)
 
+    def test_readiness_follows_successful_socket_bind(self):
+        address = Path(self.temp.name) / 'port'
+        server = ("import socket,pathlib,time; time.sleep(.15); "
+                  "s=socket.socket(); s.bind(('127.0.0.1',0)); s.listen(); "
+                  f"pathlib.Path({str(address)!r}).write_text(str(s.getsockname()[1])); "
+                  "print('READY server',flush=True); s.accept(); time.sleep(30)")
+        client = ("import socket,pathlib; "
+                  f"s=socket.create_connection(('127.0.0.1',int(pathlib.Path({str(address)!r}).read_text()))); "
+                  "print('client PASS')")
+        result = self.run_control(server, client, ready_timeout=3, proof_timeout=3)
+        self.assertTrue(result.passed, result)
+        self.assertGreaterEqual(result.ready_seconds, .15)
+
+    def test_server_owned_verdict_and_two_peer_verdict_are_distinct(self):
+        server = python_peer('server', "import time; print('READY server',flush=True); time.sleep(.2); print('server PASS')", 'server PASS')
+        auxiliary_client = python_peer('client', "import time; time.sleep(30)")
+        result = run_pair(server, auxiliary_client, ready_marker='READY server',
+                          artifact_prefix=self.prefix, ready_timeout=3, proof_timeout=3, cleanup_grace=.2)
+        self.assertTrue(result.passed, result)
+        self.assertEqual(0, result.peers['server'].exit_before_cleanup)
+        self.assertIsNone(result.peers['client'].exit_before_cleanup)
+        required_client = python_peer('client', "print('server PASS')", 'client PASS')
+        result = run_pair(server, required_client, ready_marker='READY server',
+                          artifact_prefix=self.prefix, ready_timeout=3, proof_timeout=3, cleanup_grace=.2)
+        self.assertFalse(result.passed)
+        self.assertEqual('client', result.role)
+
     def test_client_launch_follows_delayed_readiness(self):
         (ROOT / '.godot').mkdir(exist_ok=True)
         with tempfile.TemporaryDirectory(dir=ROOT / '.godot') as temp:

@@ -83,6 +83,7 @@ public partial class NetStateSyncTest : Node
 
         Multiplayer.MultiplayerPeer = peer;
         // Announce only after successful creation and installation of the server peer.
+        // Source: https://docs.godotengine.org/en/4.7/classes/class_enetmultiplayerpeer.html#class-enetmultiplayerpeer-method-create-server
         if (_role != "client") GD.Print("[net-statesync] READY server");
         GD.Print($"[net-statesync] {_role} peer up; waiting…");
     }

@@ -122,11 +122,11 @@ def run_pair(server: Peer, client: Peer, *, ready_marker: str,
                 return failed
             if processes[server.role].poll() is not None:
                 return failure(server, 'readiness', 'exited before client launch')
+            if time.monotonic() >= deadline:
+                return failure(server, 'readiness', 'semantic READY timeout')
             if ready_marker in result.peers[server.role].text().splitlines():
                 result.ready_seconds = time.monotonic() - started
                 break
-            if time.monotonic() >= deadline:
-                return failure(server, 'readiness', 'semantic READY timeout')
             time.sleep(.025)
         launch(client)
         deadline = time.monotonic() + proof_timeout
