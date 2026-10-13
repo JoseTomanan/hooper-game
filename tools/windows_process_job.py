@@ -173,7 +173,7 @@ class WindowsProcessJob:
             try:
                 if process is not None:
                     process.kill()
-                    process.wait()
+                    process.wait(timeout=1)
             finally:
                 self.close()
             raise

@@ -6,6 +6,8 @@ from typing import Callable
 import subprocess
 import os
 import math
+import signal
+import threading
 import time
 import uuid
 
@@ -156,23 +158,30 @@ def run_pair(server: Peer, client: Peer, *, ready_marker: str,
         result.reason = f'launch/io error: {error}'
         return result
     finally:
-        # Collect naturally observed exits before inducing auxiliary cleanup exits.
-        for role, process in processes.items():
-            result.peers[role].exit_before_cleanup = process.poll()
-        if result.passed:
-            for peer in (server, client):
-                if observed_failure(peer, 'proof') is not None:
-                    result.passed = False
-                    break
-        cleanup_interrupt = None
+        # Defer new termination signals across finalization, including evidence
+        # reads. Raising inside finally would strand independent POSIX sessions.
+        # Source: https://docs.python.org/3/library/signal.html#signal.signal
+        cleanup_interrupt = []
+        handlers = {}
+        def defer_interrupt(signum, frame):
+            cleanup_interrupt.append(KeyboardInterrupt())
+        if threading.current_thread() is threading.main_thread():
+            for signum in (signal.SIGINT, signal.SIGTERM):
+                handlers[signum] = signal.signal(signum, defer_interrupt)
         for role, process in reversed(tuple(processes.items())):
             # Another peer's teardown can take time. Recheck at this peer's
             # actual cleanup boundary before attributing any exit to our stop.
-            result.peers[role].exit_before_cleanup = process.poll()
-            if result.passed:
-                peer = server if role == server.role else client
-                if observed_failure(peer, 'proof') is not None:
-                    result.passed = False
+            try:
+                result.peers[role].exit_before_cleanup = process.poll()
+                if result.passed:
+                    peer = server if role == server.role else client
+                    if observed_failure(peer, 'proof') is not None:
+                        result.passed = False
+            except KeyboardInterrupt as error:
+                cleanup_interrupt.append(error)
+            except OSError as error:
+                result.passed = False
+                result.role, result.phase, result.reason = role, 'cleanup', str(error)
             try:
                 if role in jobs:
                     jobs[role].close()
@@ -183,7 +192,7 @@ def run_pair(server: Peer, client: Peer, *, ready_marker: str,
                 result.passed = False
                 result.role, result.phase, result.reason = role, 'cleanup', str(error)
             except KeyboardInterrupt as error:
-                cleanup_interrupt = error
+                cleanup_interrupt.append(error)
                 # Finish this peer too, then continue cleanup of every other peer.
                 if role in jobs:
                     jobs[role].close()
@@ -199,8 +208,10 @@ def run_pair(server: Peer, client: Peer, *, ready_marker: str,
         for stream in streams:
             stream.close()
         result.elapsed_seconds = time.monotonic() - started
-        if cleanup_interrupt is not None:
-            raise cleanup_interrupt
+        for signum, handler in handlers.items():
+            signal.signal(signum, handler)
+        if cleanup_interrupt:
+            raise cleanup_interrupt[0]
 
 
 def report(result: PairResult) -> None:

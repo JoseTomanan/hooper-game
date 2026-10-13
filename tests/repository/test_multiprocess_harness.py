@@ -1,6 +1,7 @@
 """Real subprocess controls for the network harness lifecycle (#409)."""
 
 import sys
+import contextlib
 import os
 import subprocess
 import tempfile
@@ -11,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'tools'))
-from multiprocess_harness import Peer, run_pair
+from multiprocess_harness import PairResult, Peer, PeerEvidence, run_pair
 
 
 def python_peer(role, code, pass_marker=None):
@@ -188,6 +189,84 @@ class MultiprocessHarnessTests(unittest.TestCase):
                           artifact_prefix=self.prefix, ready_timeout=3, proof_timeout=3, cleanup_grace=.2)
         self.assertFalse(result.passed)
         self.assertEqual('client', result.role)
+
+    def test_interrupt_during_final_validation_still_reaps_every_peer(self):
+        result = PairResult()
+        original_text, original_popen = PeerEvidence.text, subprocess.Popen
+        processes, jobs, interrupted = [], [], []
+        def read(evidence):
+            if result.passed and not interrupted:
+                interrupted.append(True)
+                raise KeyboardInterrupt
+            return original_text(evidence)
+        def launch(*args, **kwargs):
+            process = original_popen(*args, **kwargs)
+            processes.append(process)
+            return process
+        with contextlib.ExitStack() as stack:
+            if os.name == 'nt':
+                from windows_process_job import WindowsProcessJob
+                def job():
+                    instance = WindowsProcessJob()
+                    jobs.append(instance)
+                    return instance
+                stack.enter_context(patch('windows_process_job.WindowsProcessJob', side_effect=job))
+            stack.enter_context(patch('multiprocess_harness.PairResult', return_value=result))
+            stack.enter_context(patch.object(PeerEvidence, 'text', read))
+            stack.enter_context(patch('subprocess.Popen', side_effect=launch))
+            try:
+                with self.assertRaises(KeyboardInterrupt):
+                    self.run_control("import time; print('READY server',flush=True); time.sleep(30)", ready_timeout=3)
+                self.assertTrue(interrupted, 'control must reach final validation')
+                self.assertTrue(all(p.poll() is not None for p in processes), 'interrupted finalization leaked a peer')
+            finally:
+                for instance in jobs:
+                    instance.close()
+                for process in processes:
+                    if process.poll() is None:
+                        process.kill()
+                    process.wait(timeout=3)
+
+    @unittest.skipIf(os.name == 'nt', 'POSIX signal delivery; Windows uses job containment')
+    def test_outer_termination_reaps_independent_term_ignoring_peers(self):
+        pidfiles = [Path(self.temp.name) / f'{role}.pid' for role in ('server', 'client')]
+        child_codes = [
+            "import os,pathlib,signal,time; signal.signal(signal.SIGTERM,signal.SIG_IGN); "
+            f"pathlib.Path({str(pidfile)!r}).write_text(str(os.getpid())); "
+            "print('READY server',flush=True); time.sleep(30)"
+            for pidfile in pidfiles
+        ]
+        code = (f"import sys; sys.path.insert(0,{str(ROOT / 'tools')!r}); "
+                "import signal; from pathlib import Path; from multiprocess_harness import Peer,run_pair; "
+                "from run_network_harness import interrupted; signal.signal(signal.SIGTERM,interrupted); "
+                f"server=Peer('server',lambda native:[sys.executable,'-u','-c',{child_codes[0]!r}],'server PASS',False); "
+                f"client=Peer('client',lambda native:[sys.executable,'-u','-c',{child_codes[1]!r}],'client PASS'); "
+                f"\ntry: run_pair(server,client,ready_marker='READY server',artifact_prefix=Path({str(self.prefix)!r}),ready_timeout=3)"
+                "\nexcept KeyboardInterrupt: sys.exit(130)")
+        from harness_catalog import process_group_options, terminate_process_tree
+        from test_harness_catalog import HarnessCatalogRunnerTests
+        parent = subprocess.Popen([sys.executable, '-c', code], **process_group_options())
+        try:
+            deadline = time.monotonic() + 5
+            while not all(p.exists() for p in pidfiles) and time.monotonic() < deadline:
+                time.sleep(.025)
+            self.assertTrue(all(p.exists() for p in pidfiles), 'both peer handlers must be installed')
+            started = time.monotonic()
+            import signal
+            os.kill(parent.pid, signal.SIGTERM)
+            self.assertEqual(130, parent.wait(timeout=3))
+            self.assertLess(time.monotonic() - started, 3)
+            for pidfile in pidfiles:
+                self.assertFalse(HarnessCatalogRunnerTests._pid_is_alive(int(pidfile.read_text())))
+        finally:
+            terminate_process_tree(parent, grace_seconds=.2)
+            for pidfile in pidfiles:
+                if pidfile.exists():
+                    try:
+                        import signal
+                        os.kill(int(pidfile.read_text()), signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
 
     def test_client_launch_follows_delayed_readiness(self):
         (ROOT / '.godot').mkdir(exist_ok=True)
