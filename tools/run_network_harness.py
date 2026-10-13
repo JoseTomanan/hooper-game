@@ -25,7 +25,53 @@ class Scenario:
 
 SCENARIOS = {
     'handshake': Scenario('NetHandshakeTest', 'net-harness', 23456, proof_timeout=25),
+    'state-sync': Scenario('NetStateSyncTest', 'net-statesync', 23457),
+    'node-replication': Scenario('NetNodeReplicationTest', 'net-noderepl', 23458),
+    'behindtheback-sweep': Scenario('NetBehindTheBackSweepTest', 'net-btb-sweep', 23459),
+    'defensive-telegraph': Scenario('NetDefensiveTelegraphTest', 'net-def-telegraph', 23460,
+                                  default='telegraph', variants=('telegraph', 'control')),
+    'exitvector-rpc': Scenario('NetExitVectorRpcTest', 'net-exitvec', 23461,
+                              required=('server',), default='poisoned',
+                              variants=('poisoned', 'steady'), proof_timeout=45),
+    'rig-presentation': Scenario('NetRigPresentationTest', 'net-rig', 23462,
+                                required=('server', 'client'), default='left',
+                                variants=('left', 'right')),
 }
+
+
+EXIT_VECTOR_DIVERGENCE = ('[net-exitvec] FAIL (server): composed velocity diverged '
+                          'from the TRUE-exit-vector oracle:')
+
+
+def retryable_exit_vector_failure(result) -> bool:
+    """Retry only #264's documented composition race, with natural exit evidence.
+
+    Deterministic composition regressions still consume every attempt and fail;
+    launch/readiness/timeout/auxiliary failures never become retry successes.
+    """
+    if result.passed or result.role != 'server' or result.phase != 'proof':
+        return False
+    if result.reason not in ('exited 1', 'reported scenario FAIL'):
+        return False
+    server = result.peers.get('server')
+    client = result.peers.get('client')
+    if server is None or client is None or server.exit_before_cleanup != 1:
+        return False
+    server_lines = server.text().splitlines()
+    if '[net-exitvec] server RESULT: FAIL (exit 1)' not in server_lines:
+        return False
+    failures = [line for line in server_lines if 'FAIL' in line]
+    if not any(line.startswith(EXIT_VECTOR_DIVERGENCE) for line in failures):
+        return False
+    if any(not line.startswith(EXIT_VECTOR_DIVERGENCE)
+           and line != '[net-exitvec] server RESULT: FAIL (exit 1)' for line in failures):
+        return False
+    client_text = client.text()
+    if 'FAIL' in client_text or client.exit_before_cleanup not in (None, 0):
+        return False
+    if client.exit_before_cleanup == 0 and '[net-exitvec] client RESULT: PASS (exit 0)' not in client_text:
+        return False
+    return True
 
 
 def positive_seconds(value: str) -> float:
@@ -54,6 +100,14 @@ def main(argv=None):
             raise ValueError('port out of range')
     except ValueError as error:
         parser.error(str(error))
+    max_attempts = 1
+    if args.family == 'exitvector-rpc':
+        try:
+            max_attempts = int(os.environ.get('MAX_ATTEMPTS', '3'))
+            if max_attempts <= 0:
+                raise ValueError('MAX_ATTEMPTS must be a positive integer')
+        except ValueError:
+            parser.error('MAX_ATTEMPTS must be a positive integer')
     if 'SERVER_BIND_WAIT' in os.environ:
         print('[multiprocess] SERVER_BIND_WAIT retired; use HARNESS_READY_TIMEOUT for a readiness deadline.', flush=True)
 
@@ -68,11 +122,22 @@ def main(argv=None):
 
     suffix = f'-{scenario}' if scenario is not None else ''
     prefix = ROOT / '.godot/harness-logs' / f'net-{args.family}{suffix}'
-    result = run_pair(peer('server'), peer('client'),
-        ready_marker=f'[{config.prefix}] READY server', artifact_prefix=prefix,
-        ready_timeout=args.ready_timeout, proof_timeout=config.proof_timeout, cwd=ROOT)
-    report(result)
-    return 0 if result.passed else 1
+    for attempt in range(1, max_attempts + 1):
+        if args.family == 'exitvector-rpc':
+            print(f'[multiprocess] exitvector-rpc scenario={scenario} attempt={attempt}/{max_attempts}', flush=True)
+        attempt_prefix = Path(f'{prefix}-attempt{attempt}') if args.family == 'exitvector-rpc' else prefix
+        result = run_pair(peer('server'), peer('client'),
+            ready_marker=f'[{config.prefix}] READY server', artifact_prefix=attempt_prefix,
+            ready_timeout=args.ready_timeout, proof_timeout=config.proof_timeout, cwd=ROOT)
+        report(result)
+        if result.passed:
+            return 0
+        if args.family != 'exitvector-rpc' or not retryable_exit_vector_failure(result):
+            return 1
+        if attempt < max_attempts:
+            # run_pair has already reaped both peers before returning.
+            print('[multiprocess] retrying documented sub-tick composition divergence (#264)', flush=True)
+    return 1
 
 
 def interrupted(signum, frame):

@@ -138,6 +138,30 @@ class MultiprocessHarnessTests(unittest.TestCase):
             time.sleep(.025)
         self.assertFalse(HarnessCatalogRunnerTests._pid_is_alive(child_pid))
 
+    def test_auxiliary_crash_during_other_peer_cleanup_invalidates_proof(self):
+        verdict = Path(self.temp.name) / 'client-verdict'
+        server = ("import time,pathlib; print('READY server',flush=True); "
+                  f"p=pathlib.Path({str(verdict)!r}); "
+                  "\nwhile not p.exists(): time.sleep(.01)\n"
+                  "time.sleep(.1); raise SystemExit(9)")
+        client = f"import pathlib; pathlib.Path({str(verdict)!r}).touch(); print('client PASS')"
+        if os.name == 'nt':
+            from windows_process_job import WindowsProcessJob
+            target, original = 'windows_process_job.WindowsProcessJob.close', WindowsProcessJob.close
+        else:
+            import multiprocess_harness
+            target, original = 'multiprocess_harness.terminate_process_tree', multiprocess_harness.terminate_process_tree
+        calls = []
+        def slow_first_cleanup(*args, **kwargs):
+            if not calls:
+                time.sleep(.25)
+            calls.append(True)
+            return original(*args, **kwargs)
+        with patch(target, slow_first_cleanup):
+            result = self.run_control(server, client, ready_timeout=3, proof_timeout=3)
+        self.assertFalse(result.passed, result)
+        self.assertEqual(9, result.peers['server'].exit_before_cleanup)
+
     def test_client_launch_follows_delayed_readiness(self):
         (ROOT / '.godot').mkdir(exist_ok=True)
         with tempfile.TemporaryDirectory(dir=ROOT / '.godot') as temp:

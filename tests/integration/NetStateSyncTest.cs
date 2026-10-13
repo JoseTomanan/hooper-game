@@ -82,6 +82,8 @@ public partial class NetStateSyncTest : Node
         }
 
         Multiplayer.MultiplayerPeer = peer;
+        // Announce only after successful creation and installation of the server peer.
+        if (_role != "client") GD.Print("[net-statesync] READY server");
         GD.Print($"[net-statesync] {_role} peer up; waiting…");
     }
 

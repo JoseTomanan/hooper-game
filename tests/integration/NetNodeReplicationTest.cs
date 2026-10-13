@@ -84,6 +84,9 @@ public partial class NetNodeReplicationTest : Node3D
             // The real headless authoritative-host path (ADR-0007 / #32): no local
             // player, spawns only for connecting peers.
             Multiplayer.PeerConnected += OnServerPeerConnected;
+            // Subscribe before synchronous server startup emits successful readiness.
+            // Source: https://docs.godotengine.org/en/4.7/tutorials/scripting/c_sharp/c_sharp_signals.html
+            _net.ServerStarted += port => GD.Print("[net-noderepl] READY server");
             _net.StartDedicatedServer(_port);
         }
     }

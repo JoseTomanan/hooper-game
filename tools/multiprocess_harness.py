@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Callable
 import subprocess
 import os
+import math
 import time
 import uuid
 
@@ -27,6 +28,8 @@ class PeerEvidence:
     exit_code: int | None = None
 
     def text(self) -> str:
+        if not self.stdout.exists():
+            return ''
         return self.stdout.read_text(encoding='utf-8', errors='replace')
 
 
@@ -43,7 +46,7 @@ class PairResult:
 
 def run_pair(server: Peer, client: Peer, *, ready_marker: str,
              artifact_prefix: Path, ready_timeout: float = 15,
-             proof_timeout: float = 65, cleanup_grace: float = .5,
+             proof_timeout: float = 65, cleanup_grace: float = .25,
              cwd: Path | None = None) -> PairResult:
     """Require fresh readiness, then exit-zero + role-specific proof evidence.
 
@@ -53,8 +56,8 @@ def run_pair(server: Peer, client: Peer, *, ready_marker: str,
     """
     if server.role == client.role or not any(p.required for p in (server, client)):
         raise ValueError('distinct roles and at least one proof peer are required')
-    if min(ready_timeout, proof_timeout, cleanup_grace) <= 0:
-        raise ValueError('timeouts and cleanup grace must be positive')
+    if any(not math.isfinite(v) or v <= 0 for v in (ready_timeout, proof_timeout, cleanup_grace)):
+        raise ValueError('timeouts and cleanup grace must be finite and positive')
     result = PairResult(role=server.role)
     processes = {}
     jobs = {}
@@ -94,6 +97,15 @@ def run_pair(server: Peer, client: Peer, *, ready_marker: str,
         if code is not None and code != 0:
             return failure(peer, phase, f'exited {code}')
         if 'FAIL' in text:
+            # Godot prints the verdict before Quit finishes flushing. Collect a
+            # bounded natural exit so adapters can classify documented retries;
+            # a marker from a still-running or stuck peer remains failure.
+            if code is None:
+                try:
+                    code = processes[peer.role].wait(timeout=.5)
+                except subprocess.TimeoutExpired:
+                    pass
+                evidence.exit_before_cleanup = code
             return failure(peer, phase, 'reported scenario FAIL')
         if code == 0 and peer.pass_marker not in text:
             return failure(peer, phase, 'exit zero without required PASS evidence')
@@ -152,18 +164,43 @@ def run_pair(server: Peer, client: Peer, *, ready_marker: str,
                 if observed_failure(peer, 'proof') is not None:
                     result.passed = False
                     break
+        cleanup_interrupt = None
         for role, process in reversed(tuple(processes.items())):
-            if role in jobs:
-                jobs[role].close()
-                process.wait(timeout=cleanup_grace)
-            else:
-                terminate_process_tree(process, grace_seconds=cleanup_grace)
+            # Another peer's teardown can take time. Recheck at this peer's
+            # actual cleanup boundary before attributing any exit to our stop.
+            result.peers[role].exit_before_cleanup = process.poll()
+            if result.passed:
+                peer = server if role == server.role else client
+                if observed_failure(peer, 'proof') is not None:
+                    result.passed = False
+            try:
+                if role in jobs:
+                    jobs[role].close()
+                    process.wait(timeout=cleanup_grace)
+                else:
+                    terminate_process_tree(process, grace_seconds=cleanup_grace)
+            except (OSError, subprocess.TimeoutExpired) as error:
+                result.passed = False
+                result.role, result.phase, result.reason = role, 'cleanup', str(error)
+            except KeyboardInterrupt as error:
+                cleanup_interrupt = error
+                # Finish this peer too, then continue cleanup of every other peer.
+                if role in jobs:
+                    jobs[role].close()
+                else:
+                    terminate_process_tree(process, grace_seconds=cleanup_grace)
             result.peers[role].exit_code = process.poll()
         for job in jobs.values():
-            job.close()
+            try:
+                job.close()
+            except OSError as error:
+                result.passed = False
+                result.phase, result.reason = 'cleanup', str(error)
         for stream in streams:
             stream.close()
         result.elapsed_seconds = time.monotonic() - started
+        if cleanup_interrupt is not None:
+            raise cleanup_interrupt
 
 
 def report(result: PairResult) -> None:
