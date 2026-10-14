@@ -137,8 +137,11 @@ first stopped without a catalog summary after 227 native-log cases; its cause is
 unidentified. The second restart overlapped the ordinary build during a session
 limit/pause race and encountered a missing harness class. Verification resumed
 only after an explicit harness-enabled rebuild and confirmation of no leftovers.
-The authoritative four catalog shards now run sequentially, each with unbuffered
+The authoritative four catalog shards completed sequentially, each with unbuffered
 output, unique run IDs and retained `.godot/409-exhaustive-shardN.log`/`.json`.
+The aggregate `.godot/409-exhaustive-shards-summary.json` confirms exactly 384
+unique cases, with no missing or extra cases: 382 passed. Shards 2, 3 and 4 passed
+88/88, 108/108 and 99/99 respectively. All ten migrated cases passed.
 
 Shard 1 ran all 89 selected cases: 87 passed and two failed. Neither failed family
 is migrated by #409, and their scripts, scenes and production code are unchanged:
@@ -157,5 +160,18 @@ is migrated by #409, and their scripts, scenes and production code are unchanged
 
 These failures have not been waived or silently retried. Baseline `main` at
 `3d4229f` has a [successful hosted CI run](https://github.com/JoseTomanan/hooper-game/actions/runs/38241197766).
-Remaining shard results, hosted branch CI and independent review remain required;
-compile or READY alone is never proof, and this local exhaustive gate is not green.
+The [hosted branch run at `a6ae2b6`](https://github.com/JoseTomanan/hooper-game/actions/runs/38490830866)
+passed build/unit/repository checks, rendered evidence and shards 2–4. Shard 1
+passed 88/89; its sole failure was `committed-replay-gather-contact-0ms`, another
+unchanged replay probe. Its diagnostics recorded Startup/Active/Recovery maximum
+correction of zero; the trial failed. The workflow artifact omitted that probe's
+native-log directory, so those diagnostics do not establish the exact native
+failure message or root cause. The aggregate integration check is red.
+
+Two independent final reviews of `a6ae2b6` found no high-confidence introduced
+correctness defects: one covered lifecycle/containment/cleanup, the other
+scenario contracts/readiness/proof ownership/retry policy. Focused tests passed
+in both reviews. No production, relay or scenario assertion changes were made
+to address the unrelated exhaustive failures. This final evidence-only update
+does not waive them or turn a retry into proof. Compile or READY alone is never
+proof; the local exhaustive and initial hosted integration gates are not green.
