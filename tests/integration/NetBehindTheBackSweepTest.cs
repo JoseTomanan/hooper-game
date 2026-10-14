@@ -123,6 +123,9 @@ public partial class NetBehindTheBackSweepTest : Node3D
 		{
 			Multiplayer.PeerConnected += OnServerPeerConnected;
 			// Listen-server on purpose — see the class doc's topology note.
+			// Subscribe before synchronous server startup emits successful readiness.
+			// Source: https://docs.godotengine.org/en/4.7/tutorials/scripting/c_sharp/c_sharp_signals.html
+			_net.ServerStarted += port => GD.Print("[net-btb-sweep] READY server");
 			_net.HostGame(_port);
 		}
 	}

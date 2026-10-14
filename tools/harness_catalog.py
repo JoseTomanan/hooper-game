@@ -912,7 +912,7 @@ def process_group_options(platform: str = os.name) -> dict[str, object]:
 
 
 def terminate_process_tree(process: subprocess.Popen[object], platform: str = os.name, grace_seconds: float = 3.0) -> None:
-    if process.poll() is not None:
+    if platform == "nt" and process.poll() is not None:
         return
     try:
         if platform == "nt":
@@ -920,7 +920,10 @@ def terminate_process_tree(process: subprocess.Popen[object], platform: str = os
         else:
             os.killpg(process.pid, signal.SIGTERM)
         process.wait(timeout=grace_seconds)
-        return
+        if platform == "nt":
+            return
+        # A reaped leader does not imply its group has no living descendants.
+        # Source: https://docs.python.org/3/library/os.html#os.killpg
     except (OSError, subprocess.TimeoutExpired):
         pass
     if platform == "nt":
@@ -929,6 +932,7 @@ def terminate_process_tree(process: subprocess.Popen[object], platform: str = os
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             check=False,
+            timeout=grace_seconds,
         )
     else:
         try:
@@ -939,6 +943,7 @@ def terminate_process_tree(process: subprocess.Popen[object], platform: str = os
         process.wait(timeout=grace_seconds)
     except (OSError, subprocess.TimeoutExpired):
         process.kill()
+        process.wait(timeout=grace_seconds)
 
 
 def build_command(case: HarnessCase, repo_root: Path, godot: str, bash: str, run_id: str) -> list[str]:

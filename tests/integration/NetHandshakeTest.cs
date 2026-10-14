@@ -76,6 +76,9 @@ public partial class NetHandshakeTest : Node
         }
 
         Multiplayer.MultiplayerPeer = peer;
+        // Readiness follows Error.Ok and peer installation, never the boot banner.
+        // Source: https://docs.godotengine.org/en/4.7/classes/class_enetmultiplayerpeer.html#class-enetmultiplayerpeer-method-create-server
+        if (_role == "server") GD.Print("[net-harness] READY server");
         GD.Print($"[net-harness] {_role} peer up; waiting for handshake…");
     }
 

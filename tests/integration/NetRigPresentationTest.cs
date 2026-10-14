@@ -92,6 +92,9 @@ public partial class NetRigPresentationTest : Node
         else
         {
             Multiplayer.PeerConnected += PeerConnected;
+            // Subscribe before synchronous server startup emits successful readiness.
+            // Source: https://docs.godotengine.org/en/4.7/tutorials/scripting/c_sharp/c_sharp_signals.html
+            _network.ServerStarted += port => GD.Print("[net-rig] READY server");
             _network.HostGame(_port);
         }
         GD.Print($"[net-rig] role={_role} scenario={_scenario} port={_port} booted production Main.");

@@ -150,12 +150,17 @@ by harnesses, never CI-invoked directly.)
 
 ### Integration harness — dual-instance scripts (two headless processes)
 
-Each launches the SAME `.tscn` twice via `--harness-role=server|client
---harness-port=N`, backgrounds the server, sleeps `SERVER_BIND_WAIT` (default
-6s, env-overridable) for Godot's .NET cold boot to bind the port, then runs
-the client in the foreground — **the client's exit code is the verdict**; the
-server is best-effort, killed via `trap cleanup EXIT`. Scripts are bash (Git
-Bash on Windows); each takes the godot binary as `$1` (default `godot`).
+The seven legacy runner families now delegate to `tools/run_network_harness.py`
+and `tools/multiprocess_harness.py` (#409). Each launches the SAME `.tscn` twice
+via `--harness-role=server|client --harness-port=N`. A fresh semantic server READY
+signal gates client launch; `SERVER_BIND_WAIT` is retired. Use
+`HARNESS_READY_TIMEOUT` (default 15 seconds) for a bounded readiness deadline.
+Required proof peers must exit zero and emit their role-specific PASS evidence:
+handshake/state-sync/node-replication/behind-the-back/defensive-telegraph require
+the client, exit-vector requires the server, and rig presentation requires both.
+Auxiliary peers are stopped after proof; observed natural failure is never masked
+by cleanup. Unique workspace-local stdout/native logs retain every attempt.
+Scripts remain bash (Git Bash on Windows), with the Godot binary as `$1`.
 
 | Script | Port | Scene | Proves |
 |---|---|---|---|
@@ -340,11 +345,14 @@ Keep the dense proof explanation in the harness source and issue. The catalog
 describes how to execute the proof; it must not become a second home for
 gameplay assertions or frame-math rationale.
 
-For a **multiprocess** scenario, additionally write
-`tests/integration/run-net-<name>.sh` by copying `run-net-state-sync.sh` (the
-template: server backgrounded, `SERVER_BIND_WAIT` sleep, client foreground,
-client exit code = verdict, `trap cleanup EXIT`). Register that adapter and its
-artifact globs in `_ADDITIONAL_MULTIPROCESS_ROWS`; the catalog invokes it through Bash.
+For a **two-peer multiprocess** scenario, use the thin `run-net-state-sync.sh`
+adapter and add its explicit topology/proof policy to `tools/run_network_harness.py`.
+Emit READY only after successful raw ENet bind and peer installation, or subscribe
+to `NetworkManager.ServerStarted` before production startup. Choose the required
+proof role(s) from the acceptance criterion; readiness is never a verdict.
+Register the adapter and artifact globs in `_ADDITIONAL_MULTIPROCESS_ROWS`;
+the catalog invokes it through Bash. Dedicated coordination-file and three-peer
+relay runners remain separate surfaces; #409 does not migrate those topologies.
 
 ### Step 4 — run it locally before pushing
 
@@ -490,7 +498,7 @@ dotnet build "HOOPER GAME.csproj" --configuration Debug
 
 ```bash
 # Dual-instance (bash / Git Bash, not PowerShell; client exit code = verdict)
-SERVER_BIND_WAIT=6 bash tests/integration/run-net-state-sync.sh "$GODOT"
+HARNESS_READY_TIMEOUT=15 bash tests/integration/run-net-state-sync.sh "$GODOT"
 ```
 
 ## 7. What reviewers check

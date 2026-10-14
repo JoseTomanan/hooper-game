@@ -153,6 +153,9 @@ public partial class NetExitVectorRpcTest : Node3D
 		else
 		{
 			Multiplayer.PeerConnected += OnServerPeerConnected;
+			// Subscribe before synchronous server startup emits successful readiness.
+			// Source: https://docs.godotengine.org/en/4.7/tutorials/scripting/c_sharp/c_sharp_signals.html
+			_net.ServerStarted += port => GD.Print("[net-exitvec] READY server");
 			_net.HostGame(_port);
 		}
 	}
