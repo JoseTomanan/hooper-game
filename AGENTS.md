@@ -391,8 +391,13 @@ is **gitignored** (handoffs are scratch in-flight state, not durable docs); only
 its `README.md` is tracked. Put *only* what isn't already in AGENTS.md, the ADRs,
 the issues, or the code: where you were interrupted, build/run state, anything
 verified the hard way, gotchas, and remaining `hitl` editor steps. See
-`docs/handoffs/README.md` for the full convention. At session start, check
-`docs/handoffs/` for an existing handoff before assuming a cold start.
+`docs/handoffs/README.md` for the full convention. At session start, run
+`python tools/audit_handoffs.py` before opening scratch handoffs. The compact
+report groups entries as active, stale, or unknown using bounded metadata and
+current issue states. Open active/unknown handoffs only as relevant to the task;
+stale bodies need not enter context. Use `--offline` when GitHub is unavailable
+(issue-backed entries become unknown). This audit is read-only; a stale verdict
+does not authorize deletion, rewriting, or metadata backfill.
 
 ---
 
