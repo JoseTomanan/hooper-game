@@ -290,19 +290,18 @@ processes**, diffed.
 
 ### Dual-instance scripts as a divergence instrument
 
-The `run-net-*.sh` scripts are the template: same scene, `--harness-role=server`
-and `--harness-role=client`, client exit code is the verdict. For divergence
-work you usually want both processes' logs separately — run the two
-invocations yourself in two terminals (or background one) redirecting each to
-a file:
+For the seven legacy two-peer families, `run-net-*.sh` delegates to the shared
+Python lifecycle (#409). It sequences the client from a fresh semantic READY,
+collects role-specific exit-zero/PASS proof, and retains separate stdout/native
+logs in `.godot/harness-logs/`. The scenario adapter chooses client, server, or
+both as required proof peers. Use the matching adapter to retain this policy:
 
 ```
-"$GODOT" --headless --path . res://tests/integration/<Scene>.tscn -- --harness-role=server --harness-port=24000 > /tmp/server.log 2>&1 &
-sleep 6
-"$GODOT" --headless --path . res://tests/integration/<Scene>.tscn -- --harness-role=client --harness-port=24000 > /tmp/client.log 2>&1
+HARNESS_PORT=24000 HARNESS_READY_TIMEOUT=15 bash tests/integration/run-net-state-sync.sh "$GODOT"
 ```
 
-Use a port outside 23456–23459 (those belong to the committed scripts).
+`SERVER_BIND_WAIT` is retired. Use a port outside 23456–23462, which belong to
+these committed two-peer families; inspect other adapters before picking a port.
 Topology matters: remote-DISPLAY proofs need `NetworkManager.HostGame`
 (listen-server owns player "1"), not `StartDedicatedServer` — see
 hooper-netcode-reference.
