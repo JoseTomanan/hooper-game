@@ -23,6 +23,9 @@ public partial class CrossoverContinuityCapture : Node
     private Vector3 _lastInactiveVelocity;
     private float _lastInactiveHeading;
     private int _lastInactiveTick;
+    private bool _disableCrossoverPose, _poseMutationApplied, _poseApplied, _holdMovement;
+    private float _poseMaxReachError;
+    private int _poseClampCount;
     private string _expectedHand = "";
     private string _failure = "";
     private ulong _lastPhysics;
@@ -52,6 +55,8 @@ public partial class CrossoverContinuityCapture : Node
         _origin = Read("--capture-origin", "Right");
         _commit = Read("--capture-commit", "unknown");
         _images = Read("--capture-images", "true") != "false";
+        _disableCrossoverPose = Read("--capture-disable-crossover-pose", "false") == "true";
+        _holdMovement = Read("--capture-hold-movement", "false") == "true";
         _count = int.Parse(Read("--capture-count", "1"));
         _port = int.Parse(Read("--capture-port", "23464"));
         _delayMs = int.Parse(Read("--capture-delay-ms", "0"));
@@ -59,7 +64,7 @@ public partial class CrossoverContinuityCapture : Node
         _output = Read("--capture-output", "");
         if (_output.Length == 0 || !new[] { "local", "server", "client" }.Contains(_role) ||
             !new[] { "stationary", "moving" }.Contains(_motion) || !new[] { "Left", "Right" }.Contains(_origin) ||
-            (_count != 1 && _count != 3) || _delayMs < 0 || _delayMs > 200 || (_delayMs > 0 && _role != "server") || _maxPhysicsGap < 1 || _maxPhysicsGap > 2) { Finish("invalid capture arguments"); return; }
+            (_count != 1 && _count != 3) || (_holdMovement && (_motion != "moving" || _count != 1)) || _delayMs < 0 || _delayMs > 200 || (_delayMs > 0 && _role != "server") || _maxPhysicsGap < 1 || _maxPhysicsGap > 2) { Finish("invalid capture arguments"); return; }
         _output = ProjectSettings.GlobalizePath(_output);
         if (Directory.Exists(_output) && Directory.EnumerateFileSystemEntries(_output).Any(path => Path.GetFileName(path) != "capture.avi"))
         { _output = ""; Finish("capture output must be fresh"); return; }
@@ -94,6 +99,7 @@ public partial class CrossoverContinuityCapture : Node
         // https://docs.godotengine.org/en/4.7/classes/class_renderingserver.html#signals
         RenderingServer.FramePostDraw += SampleDraw;
         Event("boot", "normal Main scene, normal spawn, unchanged camera and production animation callback");
+        if (_holdMovement) Event("fixture-variant", "hold move_right through Recovery and first 8 destination-neutral physics ticks");
     }
 
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
@@ -147,6 +153,14 @@ public partial class CrossoverContinuityCapture : Node
         if (_tick > tickLimit || _wallClock.Elapsed.TotalSeconds > 90) { Finish("capture timeout"); return; }
         var player = _players?.GetNodeOrNull<PlayerController>("1");
         if (player == null) return;
+        if (_disableCrossoverPose && !_poseMutationApplied)
+        {
+            CrossoverPose modifier = player.ContinuityCrossoverPose;
+            if (modifier == null) { Finish("disable-crossover-pose mutation requested but production modifier is missing"); return; }
+            modifier.Active = false;
+            _poseMutationApplied = true;
+            Event("diagnostic-mutation", "disabled production CrossoverPose.Active on Players/1 before measured input");
+        }
         if (_role == "client")
         {
             if (!_clientReadySent && Multiplayer.GetUniqueId() > 1)
@@ -181,13 +195,19 @@ public partial class CrossoverContinuityCapture : Node
         if (_role == "server" && !_measurementAck) return;
         ObserveCycle(player);
         if (_finished) return;
-        if (_inCycle && _motion == "moving" && !_recoveryReleased && player.DisplayMove().phase == MovePhase.Recovery)
+        if (!_holdMovement && _inCycle && _motion == "moving" && !_recoveryReleased && player.DisplayMove().phase == MovePhase.Recovery)
         {
             SetInput("move_right", false);
             _recoveryReleased = true;
         }
+        if (_holdMovement && _completed > 0 && !_recoveryReleased && _tick - _neutralTick >= 8)
+        {
+            SetInput("move_right", false);
+            _recoveryReleased = true;
+            Event("held-movement-release", "8 destination-neutral physics ticks completed");
+        }
         bool readyForGesture = !_measurementPulse ||
-            (!_inCycle && _neutralTick >= 0 && _tick - _neutralTick >= 15 && _tick - _pulseTick >= 30);
+            (!_inCycle && _neutralTick >= 0 && _tick - _neutralTick >= 36 && _tick - _pulseTick >= 30);
         if (_completed < _count && readyForGesture)
         {
             if (_motion == "moving")
@@ -206,7 +226,7 @@ public partial class CrossoverContinuityCapture : Node
             _recoveryReleased = false;
             Pulse(player);
         }
-        if (_completed == _count && _tick - _neutralTick >= 15)
+        if (_completed == _count && _tick - _neutralTick >= 36)
         {
             if (_role == "server")
             {
@@ -326,11 +346,15 @@ public partial class CrossoverContinuityCapture : Node
             originInference = "phase/hand inference; inactive value is not an origin latch",
             cameraCurrent = _camera.Current, framed, visibleMeshExists, poseFrameMatches, screen = new[] { screen.X, screen.Y },
             heading = p.Heading, velocity = Vec(p.Velocity), root = Transform(p.GlobalTransform), model = model == null ? Array.Empty<float>() : Transform(model.GlobalTransform),
-            ball = Vec(_ball.GlobalPosition), ballState = _ball.State.ToString(), dribblePhase = _ball.DribblePhaseForHarness,
+            ball = Vec(_ball.GlobalPosition), ballRadius = _ball.BallRadius, ballState = _ball.State.ToString(), dribblePhase = _ball.DribblePhaseForHarness,
+            neutralApex = _ball.State == BallState.Dribbling && !_ball.SweepActiveForHarness && p.DisplayMove().phase == MovePhase.Inactive &&
+                Math.Min(_ball.DribblePhaseForHarness, 1f - _ball.DribblePhaseForHarness) <= 0.035f,
             sweepActive = _ball.SweepActiveForHarness, sweepTicks = _ball.ContinuitySweepTicks,
             sweepDurationTicks = _ball.ContinuitySweepDurationTicks, sweepProgress = _ball.ContinuitySweepProgress,
             animation = p.ActiveAnimNodeForHarness, playbackTime = p.ContinuityPlaybackTime,
             fadingFrom = p.ContinuityFadingFrom, fadingTime = p.ContinuityFadingTime,
+            crossoverPoseApplied = _poseApplied, crossoverPoseMaxReachError = _poseMaxReachError,
+            crossoverPoseClampCount = _poseClampCount, crossoverPoseSamplePhysicsFrame = _posePhysics,
             animationCallback = p.ContinuityAnimationCallback, playbackNodeAtPoseSnapshot = _appliedAnimation, playbackTimeAtPoseSnapshot = _appliedPlaybackTime,
             fadingFromAtPoseSnapshot = _appliedFadingFrom, fadingTimeAtPoseSnapshot = _appliedFadingTime,
             playbackSnapshotMeaning = "playback state observed at skeleton signal; does not certify which clip contributed this pose", poseRotations = _finalBoneRotations, posePhysicsFrame = _posePhysics, poseRenderFrame = _poseRender, bones
@@ -358,6 +382,10 @@ public partial class CrossoverContinuityCapture : Node
         var player = _players.GetNodeOrNull<PlayerController>("1");
         if (player != null)
         {
+            var metrics = player.ContinuityCrossoverPoseMetrics;
+            _poseApplied = metrics.Applied;
+            _poseMaxReachError = metrics.MaxReachError;
+            _poseClampCount = metrics.ClampCount;
             _appliedAnimation = player.ActiveAnimNodeForHarness;
             _appliedPlaybackTime = player.ContinuityPlaybackTime;
             _appliedFadingFrom = player.ContinuityFadingFrom;
@@ -393,12 +421,12 @@ public partial class CrossoverContinuityCapture : Node
         if (!string.IsNullOrEmpty(_output) && Directory.Exists(_output))
             File.WriteAllText(Path.Combine(_output, "manifest.json"), JsonSerializer.Serialize(new
             {
-                schema = "hooper-crossover-continuity/v1", result = _failure.Length == 0 ? "captured" : "failed", failure = _failure,
+                schema = "hooper-crossover-continuity/v1", mutation = _disableCrossoverPose ? "disable-crossover-pose" : "none", mutationApplied = _poseMutationApplied, result = _failure.Length == 0 ? "captured" : "failed", failure = _failure,
                 commit = _commit, role = _role, motion = _motion, origin = _origin, requestedCycles = _count, completedCycles = _completed,
-                diagnosticServerDelayMs = _delayMs, pacingMeaning = "wall-clock-only diagnostic pacing with fixed simulation delta; no real-time latency/performance claim", fixtureInitialHostSpawnX = _fixtureSpawnX,
+                holdMovementThroughReturn = _holdMovement, diagnosticServerDelayMs = _delayMs, pacingMeaning = "wall-clock-only diagnostic pacing with fixed simulation delta; no real-time latency/performance claim", fixtureInitialHostSpawnX = _fixtureSpawnX,
                 engine = Engine.GetVersionInfo()["string"].AsString(), physicsTicksPerSecond = Engine.PhysicsTicksPerSecond,
                 commandLine = OS.GetCmdlineArgs(), userArgs = OS.GetCmdlineUserArgs(), renderer = RenderingServer.GetVideoAdapterName(), displayDriver = DisplayServer.GetName(),
-                camera = _camera == null ? Array.Empty<float>() : Transform(_camera.GlobalTransform), cameraFov = _camera?.Fov,
+                camera = _camera == null ? Array.Empty<float>() : Transform(_camera.GlobalTransform), cameraFov = _camera?.Fov, ballRadius = _ball?.BallRadius, betweenCycleNeutralTicks = 36, finalTailNeutralTicks = 36,
                 sampleTiming = (!_images && DisplayServer.GetName() == "headless" ? "HEADLESS DIAGNOSTIC _Process state only; " : "FramePostDraw state and image; ") + " SkeletonUpdated final modifier pose with its own frame stamps; production animation callback unchanged", samples = _samples, skippedPhysicsFrames = _gaps, allowedMaxPhysicsGap = _maxPhysicsGap, observedMaxPhysicsGap = _observedMaxPhysicsGap,
                 cadenceMeaning = _maxPhysicsGap == 1 ? "every physics tick rendered" : "up to two 60Hz physics ticks per rendered frame; normal real-time 30Hz display; not full physics-frame coverage", duplicateRenderedPhysicsFrames = _duplicateFrames, poseFrameMismatches = _poseFrameMismatches, events = _events,
                 verdict = "diagnostic capture only; no continuity or feel acceptance threshold"

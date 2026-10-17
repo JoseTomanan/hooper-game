@@ -31,6 +31,10 @@ def command(args, directory, role, origin, motion, count):
                "--capture-commit=" + args.commit, "--capture-port=" + str(args.port)]
     if args.headless or role == "server":
         result.append("--capture-images=false")
+    if args.disable_pose:
+        result.append("--capture-disable-crossover-pose=true")
+    if args.hold_movement:
+        result.append("--capture-hold-movement=true")
     if role == "server" and args.paced:
         # Pace wall time only; fixed-fps still supplies one 1/60 simulation
         # step per frame. This gives the native observer time to persist PNGs.
@@ -102,6 +106,8 @@ def main():
     parser.add_argument("--commit", required=True)
     parser.add_argument("--remote", action="store_true")
     parser.add_argument("--headless", action="store_true")
+    parser.add_argument("--disable-pose", action="store_true", help="negative control: disable the production pose adapter")
+    parser.add_argument("--hold-movement", action="store_true", help="moving single-cycle return with movement held")
     parser.add_argument("--compatibility", action="store_true")
     parser.add_argument("--paced", action="store_true", help="diagnostic server pacing; excludes real-time timing claims")
     parser.add_argument("--resolution", default="960x540")
@@ -110,6 +116,8 @@ def main():
     parser.add_argument("--motion", choices=("stationary", "moving"))
     parser.add_argument("--count", type=int, choices=(1, 3))
     args = parser.parse_args()
+    if args.hold_movement and (args.motion != "moving" or args.count != 1):
+        parser.error("--hold-movement requires --motion moving --count 1")
     args.output = (ROOT / args.output).resolve()
     if not args.output.is_relative_to(ROOT / ".godot"):
         parser.error("capture output must be below the workspace .godot directory")
