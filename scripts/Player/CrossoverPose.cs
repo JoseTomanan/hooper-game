@@ -16,6 +16,7 @@ public partial class CrossoverPose : SkeletonModifier3D
     private CrossoverPoseBridge _bridge;
     private Transform3D[] _lastFinal;
     private Transform3D[] _startupAnchor;
+    private Transform3D[] _recoveryAnchor;
     private MovePhase _previousPhase;
     private int _previousFrame;
     private HandSide _origin;
@@ -38,7 +39,7 @@ public partial class CrossoverPose : SkeletonModifier3D
         var chains = new List<CrossoverPoseBridge.LimbChain>();
         foreach (string side in new[] { "Left", "Right" })
         {
-            AddChain(chains, side + "UpLeg", side + "Leg", side + "Foot");
+            AddChain(chains, side + "UpLeg", side + "Leg", side + "Foot", isSupport: true);
             AddChain(chains, side + "Arm", side + "ForeArm", side + "Hand");
         }
         _bridge = new CrossoverPoseBridge(parents, chains.ToArray());
@@ -54,12 +55,13 @@ public partial class CrossoverPose : SkeletonModifier3D
         if (GodotObject.IsInstanceValid(_skeleton)) _skeleton.SkeletonUpdated -= CacheFinalPose;
     }
 
-    private void AddChain(List<CrossoverPoseBridge.LimbChain> chains, string root, string middle, string effector)
+    private void AddChain(List<CrossoverPoseBridge.LimbChain> chains, string root, string middle, string effector,
+        bool isSupport = false)
     {
         int h = _skeleton.FindBone("mixamorig_" + root);
         int k = _skeleton.FindBone("mixamorig_" + middle);
         int a = _skeleton.FindBone("mixamorig_" + effector);
-        if (h >= 0 && k >= 0 && a >= 0) chains.Add(new(h, k, a));
+        if (h >= 0 && k >= 0 && a >= 0) chains.Add(new(h, k, a, isSupport));
     }
 
     private Transform3D[] CaptureCurrent()
@@ -93,6 +95,8 @@ public partial class CrossoverPose : SkeletonModifier3D
             _bridge.ResetContinuity();
             if (display.Phase == MovePhase.Startup)
                 _startupAnchor = (Transform3D[])_lastFinal.Clone();
+            if (display.Phase == MovePhase.Recovery)
+                _recoveryAnchor = null;
         }
         _origin = origin;
         _previousPhase = display.Phase;
@@ -115,23 +119,32 @@ public partial class CrossoverPose : SkeletonModifier3D
             float smooth = progress * progress * (3f - 2f * progress);
             Transform3D[] anchor;
             float weight;
+            float? supportWeight = null;
             if (display.Phase == MovePhase.Startup)
             {
                 anchor = _startupAnchor ?? _lastFinal;
-                // Six Startup samples leave only five intervals to move from an
-                // arbitrary incoming foot position. Linear progress distributes
-                // that travel evenly instead of concentrating it in the middle.
-                weight = progress;
+                // Ease the upper-body read, while distributing an arbitrary incoming
+                // support-foot displacement evenly over the five Startup intervals.
+                weight = smooth;
+                supportWeight = progress;
             }
             else
             {
                 string destination = (origin == HandSide.Left ? HandSide.Right : HandSide.Left).ToString().ToLowerInvariant();
-                Clip neutral = GetClip("dribbleidle" + destination);
-                if (neutral == null) return;
-                anchor = Sample(neutral, 0.0);
+                // A lost ball voids the payload without cancelling the committed move.
+                // Land in the neutral family the resolver will actually select afterwards.
+                if (_recoveryAnchor == null)
+                {
+                    // Freeze this arc for the whole phase. A late steal/OOB must
+                    // not replace an almost fully weighted anchor in one frame.
+                    Clip neutral = GetClip(Player.DisplayDribbling() ? "dribbleidle" + destination : "idle");
+                    if (neutral == null) return;
+                    _recoveryAnchor = Sample(neutral, 0.0);
+                }
+                anchor = _recoveryAnchor;
                 weight = 1f - smooth;
             }
-            var bridge = _bridge.Blend(anchor, animated, weight);
+            var bridge = _bridge.Blend(anchor, animated, weight, supportWeight);
             result = bridge.Pose;
             MaxReachErrorForHarness = bridge.MaxReachError;
             ClampCountForHarness = bridge.ClampCount;

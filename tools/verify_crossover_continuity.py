@@ -7,11 +7,15 @@ They are regression bounds, not human feel acceptance.
 
 import argparse
 import json
+import math
 from pathlib import Path
 
 from analyze_crossover_continuity import body_position, distance, palm_distances
 
 LIMITS = {"Hips": .18, "LeftHand": .20, "RightHand": .20, "LeftFoot": .12, "RightFoot": .12}
+# Sub-pixel measurement deadband (0.1 mm) around the centimetre-rounded bounds.
+# This is far below the 0.3-0.6 m reproduced seams; retain raw maxima in output.
+MEASUREMENT_EPSILON = .0001
 
 
 def verify(directory):
@@ -20,7 +24,40 @@ def verify(directory):
     failures = []
     if manifest["result"] != "captured" or manifest["completedCycles"] != manifest["requestedCycles"]:
         failures.append("capture did not complete requested cycles")
-    rows = [row for row in rows if row["measuring"]]
+    rows = [dict(row,
+                 displayMove=row.get("poseDisplayMove", row["displayMove"]),
+                 displayPhase=row.get("poseDisplayPhase", row["displayPhase"]),
+                 hand=row.get("poseDisplayHand", row["hand"]))
+            for row in rows if row["measuring"]]
+    for row in rows:
+        if not row.get("poseFrameMatches", False):
+            failures.append(f"tick {row['tick']}: final pose is from another physics frame")
+        if any(not math.isfinite(value) for point in row["bones"].values() for value in point):
+            failures.append(f"tick {row['tick']}: non-finite final bone")
+        if row["displayMove"] == "crossover" and manifest.get("mutation", "none") == "none":
+            if not row.get("crossoverPoseApplied", False):
+                failures.append(f"tick {row['tick']}: crossover adapter did not contribute")
+            if row.get("crossoverPoseMaxReachError", 1) > .0001 or row.get("crossoverPoseClampCount", 1):
+                failures.append(f"tick {row['tick']}: unreachable interpolated limb target")
+    # Count actual display entries, then verify each complete phase and hand family.
+    cycles = []
+    for row in rows:
+        if row["displayMove"] != "crossover":
+            continue
+        if not cycles or row["displayPhase"] == "Startup" and cycles[-1][-1]["displayPhase"] != "Startup":
+            cycles.append([])
+        cycles[-1].append(row)
+    if len(cycles) != manifest["requestedCycles"]:
+        failures.append(f"observed {len(cycles)} display cycles, expected {manifest['requestedCycles']}")
+    for index, cycle in enumerate(cycles):
+        phases = list(dict.fromkeys(row["displayPhase"] for row in cycle))
+        if phases != ["Startup", "Active", "Recovery"]:
+            failures.append(f"cycle {index + 1}: incomplete/incorrect display phases {phases}")
+        origin = manifest["origin"] if index % 2 == 0 else ("Left" if manifest["origin"] == "Right" else "Right")
+        for row in cycle:
+            expected = origin if row["displayPhase"] == "Startup" else ("Left" if origin == "Right" else "Right")
+            if row["hand"] != expected:
+                failures.append(f"tick {row['tick']}: phase/hand family mismatch")
     action_indices = {index for index, row in enumerate(rows) if row["animation"].startswith("Crossover")}
     if not action_indices:
         failures.append("no actual crossover playback in measured window")
@@ -40,9 +77,14 @@ def verify(directory):
             key = "mixamorig_" + name
             step = distance(body_position(previous, previous["bones"][key]), body_position(current, current["bones"][key]))
             maximums[name] = max(maximums[name], step)
-            if step > limit * max(1, gap):
+            if step > limit * max(1, gap) + MEASUREMENT_EPSILON:
                 failures.append(f"tick {current['tick']} {previous['animation']} -> {current['animation']}: {name} step {step:.4f} m > {limit:.2f} m/tick across {gap} ticks")
-    return {"capture": str(directory), "result": "FAIL" if failures else "PASS", "maxStepsMeters": maximums, "failures": failures}
+    contacts = [{"tick": row["tick"], "hand": row["hand"],
+                 "centerDistanceMeters": palm_distances(row).get(row["hand"]),
+                 "ballRadiusMeters": row.get("ballRadius")}
+                for row in rows if row.get("neutralApex", False)]
+    return {"capture": str(directory), "result": "FAIL" if failures else "PASS", "maxStepsMeters": maximums,
+            "neutralApexContactMeasurements": contacts, "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed", "failures": failures}
 
 
 if __name__ == "__main__":

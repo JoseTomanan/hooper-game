@@ -6,7 +6,7 @@ namespace Hooper.Player;
 /// <summary>Pose-only endpoint interpolation. No scene, animation clock or gameplay state.</summary>
 public sealed class CrossoverPoseBridge
 {
-    public readonly record struct LimbChain(int Root, int Middle, int Effector);
+    public readonly record struct LimbChain(int Root, int Middle, int Effector, bool IsSupport = false);
     public readonly record struct Result(Transform3D[] Pose, float MaxReachError, int ClampCount);
 
     private readonly int[] _parents;
@@ -42,11 +42,14 @@ public sealed class CrossoverPoseBridge
         return globals;
     }
 
-    public Result Blend(ReadOnlySpan<Transform3D> anchor, ReadOnlySpan<Transform3D> animated, float animatedWeight)
+    public Result Blend(ReadOnlySpan<Transform3D> anchor, ReadOnlySpan<Transform3D> animated, float animatedWeight,
+        float? supportWeight = null)
     {
         if (anchor.Length != _parents.Length || animated.Length != _parents.Length)
             throw new ArgumentException("Pose and hierarchy sizes differ.");
         float weight = float.IsFinite(animatedWeight) ? Math.Clamp(animatedWeight, 0f, 1f) : 0f;
+        float support = supportWeight.HasValue && float.IsFinite(supportWeight.Value)
+            ? Math.Clamp(supportWeight.Value, 0f, 1f) : weight;
         var anchorGlobal = Forward(_parents, anchor);
         var animatedGlobal = Forward(_parents, animated);
         var desired = new Quaternion[anchor.Length];
@@ -86,7 +89,7 @@ public sealed class CrossoverPoseBridge
         float maxError = 0f;
         int clampCount = 0;
         foreach (var chain in _chains)
-            Solve(output, anchorGlobal, animatedGlobal, weight, chain, ref maxError, ref clampCount);
+            Solve(output, anchorGlobal, animatedGlobal, chain.IsSupport ? support : weight, chain, ref maxError, ref clampCount);
         return new Result(output, maxError, clampCount);
     }
 

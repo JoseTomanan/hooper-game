@@ -188,3 +188,37 @@ jobs:
           path: rendered-evidence
           if-no-files-found: warn
           retention-days: 7
+
+
+  crossover-continuity-rendered:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Set up Godot (.NET)
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.7.1
+          use-dotnet: true
+          include-templates: false
+      - name: Install software-rendering display dependencies
+        run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri mesa-utils
+      - name: Generate .NET bindings & import project
+        run: godot --headless --build-solutions --quit || exit 0
+      - name: Build game assembly
+        run: dotnet build "HOOPER GAME.csproj" --configuration Debug -p:IncludeIntegrationHarness=true
+      - name: Verify rendered local and real-remote crossover continuity
+        run: xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 python3 tools/run_crossover_regression.py --godot godot --rendered --output .godot/crossover-rendered --commit "${{ github.sha }}"
+      - name: Upload crossover traces, frames and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crossover-continuity-rendered-${{ github.run_id }}
+          path: .godot/crossover-rendered
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 7

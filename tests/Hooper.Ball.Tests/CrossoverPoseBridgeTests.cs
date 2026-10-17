@@ -47,6 +47,22 @@ public class CrossoverPoseBridgeTests
     }
 
     [Fact]
+    public void SupportPathCanStayLinearWhileBodyAndArmsEase()
+    {
+        int[] parents = [-1, 0, 1];
+        var anchor = Leg(0, -.5f, 1);
+        var animated = Leg(1, .5f, 1);
+        var a = CrossoverPoseBridge.Forward(parents, anchor);
+        var b = CrossoverPoseBridge.Forward(parents, animated);
+        var bridge = new CrossoverPoseBridge(parents, [new(0, 1, 2, IsSupport: true)]);
+        var result = bridge.Blend(anchor, animated, .104f, supportWeight: .2f);
+        var actual = CrossoverPoseBridge.Forward(parents, result.Pose)[2].Origin;
+        Assert.True(actual.DistanceTo(a[2].Origin.Lerp(b[2].Origin, .2f)) < .0001f);
+        Assert.True(actual.DistanceTo(a[2].Origin.Lerp(b[2].Origin, .104f)) > .05f);
+        Assert.Equal(0, result.ClampCount);
+    }
+
+    [Fact]
     public void UnreachableTargetRetainsFiniteBonesAndReportsResidual()
     {
         int[] parents = [-1, 0, 1, 2];

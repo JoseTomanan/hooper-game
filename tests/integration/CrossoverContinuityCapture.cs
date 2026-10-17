@@ -26,6 +26,9 @@ public partial class CrossoverContinuityCapture : Node
     private bool _disableCrossoverPose, _poseMutationApplied, _poseApplied, _holdMovement;
     private float _poseMaxReachError;
     private int _poseClampCount;
+    private string _loseBall = "none";
+    private bool _ballLost, _sawLossRecovery;
+    private int _lossRecipient;
     private string _expectedHand = "";
     private string _failure = "";
     private ulong _lastPhysics;
@@ -43,6 +46,8 @@ public partial class CrossoverContinuityCapture : Node
     private ulong _posePhysics, _poseRender;
     private string _appliedAnimation = "", _appliedFadingFrom = "";
     private double _appliedPlaybackTime, _appliedFadingTime;
+    private string _poseDisplayMove = "", _poseDisplayPhase = "Inactive", _poseDisplayHand = "";
+    private int _poseDisplayFrame;
     private readonly List<object> _events = new();
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
@@ -57,6 +62,7 @@ public partial class CrossoverContinuityCapture : Node
         _images = Read("--capture-images", "true") != "false";
         _disableCrossoverPose = Read("--capture-disable-crossover-pose", "false") == "true";
         _holdMovement = Read("--capture-hold-movement", "false") == "true";
+        _loseBall = Read("--capture-lose-ball", "none");
         _count = int.Parse(Read("--capture-count", "1"));
         _port = int.Parse(Read("--capture-port", "23464"));
         _delayMs = int.Parse(Read("--capture-delay-ms", "0"));
@@ -64,7 +70,7 @@ public partial class CrossoverContinuityCapture : Node
         _output = Read("--capture-output", "");
         if (_output.Length == 0 || !new[] { "local", "server", "client" }.Contains(_role) ||
             !new[] { "stationary", "moving" }.Contains(_motion) || !new[] { "Left", "Right" }.Contains(_origin) ||
-            (_count != 1 && _count != 3) || (_holdMovement && (_motion != "moving" || _count != 1)) || _delayMs < 0 || _delayMs > 200 || (_delayMs > 0 && _role != "server") || _maxPhysicsGap < 1 || _maxPhysicsGap > 2) { Finish("invalid capture arguments"); return; }
+            (_count != 1 && _count != 3) || !new[] { "none", "early", "late" }.Contains(_loseBall) || (_loseBall != "none" && (_role == "local" || _count != 1)) || (_holdMovement && (_motion != "moving" || _count != 1)) || _delayMs < 0 || _delayMs > 200 || (_delayMs > 0 && _role != "server") || _maxPhysicsGap < 1 || _maxPhysicsGap > 2) { Finish("invalid capture arguments"); return; }
         _output = ProjectSettings.GlobalizePath(_output);
         if (Directory.Exists(_output) && Directory.EnumerateFileSystemEntries(_output).Any(path => Path.GetFileName(path) != "capture.avi"))
         { _output = ""; Finish("capture output must be fresh"); return; }
@@ -177,7 +183,7 @@ public partial class CrossoverContinuityCapture : Node
         int elapsed = _tick - _startTick;
         if (elapsed == 15) SetInput("move_forward", true);
         if (elapsed == 25) SetInput("move_forward", false);
-        if (elapsed < 60 || _ball.State != BallState.Dribbling) return;
+        if (elapsed < 60 || (!_measuring && _ball.State != BallState.Dribbling)) return;
         if (_pulseTick >= 0 && _tick == _pulseTick + 8)
         { SetInput("aim_left", false); SetInput("aim_right", false); }
         if (!_measuring)
@@ -195,6 +201,24 @@ public partial class CrossoverContinuityCapture : Node
         if (_role == "server" && !_measurementAck) return;
         ObserveCycle(player);
         if (_finished) return;
+        if (_role == "server" && _loseBall != "none" && !_ballLost && _inCycle)
+        {
+            var display = player.AnimationDisplaySnapshot;
+            bool lossTick = _loseBall == "early" ? display.Phase == MovePhase.Active :
+                display.Phase == MovePhase.Recovery && display.FrameInPhase >= 9;
+            if (lossTick)
+            {
+                PlayerController recipient = _players.GetChildren().OfType<PlayerController>()
+                    .FirstOrDefault(candidate => candidate.Name != "1");
+                if (recipient == null || !int.TryParse(recipient.Name.ToString(), out _lossRecipient))
+                { Finish("ball-loss fixture requires a genuine connected observer player"); return; }
+                _ball.PostAwardForHarness(_lossRecipient);
+                if (_ball.StateMachine.HolderPeerId != _lossRecipient)
+                { Finish("production possession award did not transfer the ball"); return; }
+                _ballLost = true;
+                Event("ball-loss-award", $"recipient={_lossRecipient}; phase={display.Phase}; frame={display.FrameInPhase}; variant={_loseBall}; production=AwardPossession");
+            }
+        }
         if (!_holdMovement && _inCycle && _motion == "moving" && !_recoveryReleased && player.DisplayMove().phase == MovePhase.Recovery)
         {
             SetInput("move_right", false);
@@ -252,6 +276,15 @@ public partial class CrossoverContinuityCapture : Node
     private void ObserveCycle(PlayerController player)
     {
         if (!_measuring) return;
+        if (_role == "client" && _loseBall != "none" && !_ballLost && _inCycle &&
+            _ball.StateMachine.HolderPeerId != 1 && _ball.StateMachine.HolderPeerId > 0)
+        {
+            _ballLost = true;
+            _lossRecipient = _ball.StateMachine.HolderPeerId;
+            var lossDisplay = player.AnimationDisplaySnapshot;
+            Event("ball-loss-observed", $"recipient={_lossRecipient}; phase={lossDisplay.Phase}; frame={lossDisplay.FrameInPhase}; variant={_loseBall}");
+        }
+        if (_ballLost && _inCycle && player.DisplayMove().phase == MovePhase.Recovery) _sawLossRecovery = true;
         if (player.DisplayMove().phase == MovePhase.Inactive)
         {
             _lastInactiveVelocity = player.Velocity;
@@ -269,11 +302,13 @@ public partial class CrossoverContinuityCapture : Node
             if (_role != "client" && _motion == "moving" && entrySpeed < 5.9f)
             { Finish($"moving entry speed {entrySpeed:R} below 5.9"); return; }
         }
-        if (_inCycle && player.DisplayMove().phase == MovePhase.Inactive && player.HandSide.ToString() == _expectedHand &&
-            player.ActiveAnimNodeForHarness == "Dribble" + _expectedHand && !_ball.SweepActiveForHarness)
+        bool expectedNeutral = _loseBall == "none"
+            ? player.HandSide.ToString() == _expectedHand && player.ActiveAnimNodeForHarness == "Dribble" + _expectedHand
+            : _ballLost && _sawLossRecovery && !player.DisplayDribbling() && player.ActiveAnimNodeForHarness == "Locomotion";
+        if (_inCycle && player.DisplayMove().phase == MovePhase.Inactive && expectedNeutral && !_ball.SweepActiveForHarness)
         {
             _inCycle = false; _completed++; _neutralTick = _tick;
-            Event("destination-dribble", "cycle=" + _completed);
+            Event(_loseBall == "none" ? "destination-dribble" : "destination-locomotion-after-loss", "cycle=" + _completed);
         }
     }
 
@@ -346,13 +381,15 @@ public partial class CrossoverContinuityCapture : Node
             originInference = "phase/hand inference; inactive value is not an origin latch",
             cameraCurrent = _camera.Current, framed, visibleMeshExists, poseFrameMatches, screen = new[] { screen.X, screen.Y },
             heading = p.Heading, velocity = Vec(p.Velocity), root = Transform(p.GlobalTransform), model = model == null ? Array.Empty<float>() : Transform(model.GlobalTransform),
-            ball = Vec(_ball.GlobalPosition), ballRadius = _ball.BallRadius, ballState = _ball.State.ToString(), dribblePhase = _ball.DribblePhaseForHarness,
-            neutralApex = _ball.State == BallState.Dribbling && !_ball.SweepActiveForHarness && p.DisplayMove().phase == MovePhase.Inactive &&
+            ball = Vec(_ball.GlobalPosition), ballRadius = _ball.BallRadius, ballState = _ball.State.ToString(), ballHolderPeerId = _ball.StateMachine.HolderPeerId, displayDribbling = p.DisplayDribbling(), dribblePhase = _ball.DribblePhaseForHarness,
+            neutralApex = p.DisplayDribbling() && _ball.State == BallState.Dribbling && !_ball.SweepActiveForHarness && p.DisplayMove().phase == MovePhase.Inactive &&
                 Math.Min(_ball.DribblePhaseForHarness, 1f - _ball.DribblePhaseForHarness) <= 0.035f,
             sweepActive = _ball.SweepActiveForHarness, sweepTicks = _ball.ContinuitySweepTicks,
             sweepDurationTicks = _ball.ContinuitySweepDurationTicks, sweepProgress = _ball.ContinuitySweepProgress,
             animation = p.ActiveAnimNodeForHarness, playbackTime = p.ContinuityPlaybackTime,
             fadingFrom = p.ContinuityFadingFrom, fadingTime = p.ContinuityFadingTime,
+            poseDisplayMove = _poseDisplayMove, poseDisplayPhase = _poseDisplayPhase,
+            poseDisplayFrame = _poseDisplayFrame, poseDisplayHand = _poseDisplayHand,
             crossoverPoseApplied = _poseApplied, crossoverPoseMaxReachError = _poseMaxReachError,
             crossoverPoseClampCount = _poseClampCount, crossoverPoseSamplePhysicsFrame = _posePhysics,
             animationCallback = p.ContinuityAnimationCallback, playbackNodeAtPoseSnapshot = _appliedAnimation, playbackTimeAtPoseSnapshot = _appliedPlaybackTime,
@@ -382,6 +419,13 @@ public partial class CrossoverContinuityCapture : Node
         var player = _players.GetNodeOrNull<PlayerController>("1");
         if (player != null)
         {
+            // Freeze the adapter's exact display input beside the modified final pose.
+            // A remote RPC may advance live phase/hand before the later draw callback.
+            var display = player.AnimationDisplaySnapshot;
+            _poseDisplayMove = display.MoveId;
+            _poseDisplayPhase = display.Phase.ToString();
+            _poseDisplayFrame = display.FrameInPhase;
+            _poseDisplayHand = display.Hand.ToString();
             var metrics = player.ContinuityCrossoverPoseMetrics;
             _poseApplied = metrics.Applied;
             _poseMaxReachError = metrics.MaxReachError;
@@ -423,7 +467,7 @@ public partial class CrossoverContinuityCapture : Node
             {
                 schema = "hooper-crossover-continuity/v1", mutation = _disableCrossoverPose ? "disable-crossover-pose" : "none", mutationApplied = _poseMutationApplied, result = _failure.Length == 0 ? "captured" : "failed", failure = _failure,
                 commit = _commit, role = _role, motion = _motion, origin = _origin, requestedCycles = _count, completedCycles = _completed,
-                holdMovementThroughReturn = _holdMovement, diagnosticServerDelayMs = _delayMs, pacingMeaning = "wall-clock-only diagnostic pacing with fixed simulation delta; no real-time latency/performance claim", fixtureInitialHostSpawnX = _fixtureSpawnX,
+                loseBall = _loseBall, ballLossApplied = _ballLost, ballLossRecipient = _lossRecipient, holdMovementThroughReturn = _holdMovement, diagnosticServerDelayMs = _delayMs, pacingMeaning = "wall-clock-only diagnostic pacing with fixed simulation delta; no real-time latency/performance claim", fixtureInitialHostSpawnX = _fixtureSpawnX,
                 engine = Engine.GetVersionInfo()["string"].AsString(), physicsTicksPerSecond = Engine.PhysicsTicksPerSecond,
                 commandLine = OS.GetCmdlineArgs(), userArgs = OS.GetCmdlineUserArgs(), renderer = RenderingServer.GetVideoAdapterName(), displayDriver = DisplayServer.GetName(),
                 camera = _camera == null ? Array.Empty<float>() : Transform(_camera.GlobalTransform), cameraFov = _camera?.Fov, ballRadius = _ball?.BallRadius, betweenCycleNeutralTicks = 36, finalTailNeutralTicks = 36,
