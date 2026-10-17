@@ -1,0 +1,32 @@
+[
+  {
+    "file": "baseline-right-local-trace.jsonl.gz",
+    "source": ".godot\\414-baseline-local-v4\\right-stationary-1\\trace.jsonl",
+    "uncompressedSha256": "79ee4c3fc0bdbd4938c44ddd0bba71431011b983594c8eeef66ded0ad9d62870"
+  },
+  {
+    "file": "baseline-right-local-manifest.json.gz",
+    "source": ".godot\\414-baseline-local-v4\\right-stationary-1\\manifest.json",
+    "uncompressedSha256": "ea98038953c7cf56c2ed93f88c5c5a58ab020459d25e2b0723f07fe024d629c0"
+  },
+  {
+    "file": "baseline-left-local-trace.jsonl.gz",
+    "source": ".godot\\414-baseline-local-v4\\left-stationary-1\\trace.jsonl",
+    "uncompressedSha256": "f34d9f07cdaafe905094a5aa320405e891dbf7ff6ef29fef53f331d359ce4bd3"
+  },
+  {
+    "file": "baseline-left-local-manifest.json.gz",
+    "source": ".godot\\414-baseline-local-v4\\left-stationary-1\\manifest.json",
+    "uncompressedSha256": "419de9894b4c6625cc98052e9113ec8de54b851147902fc0ee221a1375b2c3df"
+  },
+  {
+    "file": "baseline-right-remote-trace.jsonl.gz",
+    "source": ".godot\\414-baseline-remote-real-b\\right-stationary-1\\trace.jsonl",
+    "uncompressedSha256": "84e265d9c15e49c0f4a3a51a30282f23069f74a7717241d4e147d16163a45372"
+  },
+  {
+    "file": "baseline-right-remote-manifest.json.gz",
+    "source": ".godot\\414-baseline-remote-real-b\\right-stationary-1\\manifest.json",
+    "uncompressedSha256": "fba81d110b181d3850e65c0fef8699ddc4f309efde06af0835521cbafe46db57"
+  }
+]

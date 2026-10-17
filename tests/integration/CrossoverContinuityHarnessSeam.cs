@@ -17,12 +17,12 @@ namespace Hooper.Player
         // https://docs.godotengine.org/en/4.7/classes/class_animationnodestatemachineplayback.html
         internal bool ContinuityIsLocalPlayer => IsLocalPlayer;
         internal CrossoverPose ContinuityCrossoverPose => FindChild("CrossoverPose", recursive: true, owned: false) as CrossoverPose;
-        internal (bool Applied, float MaxReachError, int ClampCount) ContinuityCrossoverPoseMetrics
+        internal (bool Applied, float MaxReachError, int ClampCount, int SampleFrame) ContinuityCrossoverPoseMetrics
         {
             get
             {
                 CrossoverPose pose = ContinuityCrossoverPose;
-                return pose == null ? (false, 0f, 0) : (pose.AppliedForHarness, pose.MaxReachErrorForHarness, pose.ClampCountForHarness);
+                return pose == null ? (false, 0f, 0, 0) : (pose.AppliedForHarness, pose.MaxReachErrorForHarness, pose.ClampCountForHarness, pose.SampleFrameForHarness);
             }
         }
         internal string ContinuityAnimationCallback => _animTree?.CallbackModeProcess.ToString() ?? "missing";

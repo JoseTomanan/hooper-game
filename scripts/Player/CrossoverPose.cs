@@ -19,12 +19,15 @@ public partial class CrossoverPose : SkeletonModifier3D
     private Transform3D[] _recoveryAnchor;
     private MovePhase _previousPhase;
     private int _previousFrame;
+    private int _sampleFrame;
+    private ulong _samplePhysicsFrame;
     private HandSide _origin;
     private readonly Dictionary<string, Clip> _clips = new();
 
     public bool AppliedForHarness { get; private set; }
     public float MaxReachErrorForHarness { get; private set; }
     public int ClampCountForHarness { get; private set; }
+    public int SampleFrameForHarness => _sampleFrame;
 
     private sealed record Clip(Animation Animation, int[] Rotation, int[] Position, int[] Scale);
 
@@ -85,6 +88,7 @@ public partial class CrossoverPose : SkeletonModifier3D
         if (display.MoveId != "crossover" || display.Phase == MovePhase.Inactive)
         {
             _previousPhase = MovePhase.Inactive;
+            _sampleFrame = 0;
             return;
         }
         MoveAnimState state = MoveAnimResolver.Resolve(display.Phase);
@@ -98,6 +102,21 @@ public partial class CrossoverPose : SkeletonModifier3D
             if (display.Phase == MovePhase.Recovery)
                 _recoveryAnchor = null;
         }
+        ulong physicsFrame = Engine.GetPhysicsFrames();
+        if (changed)
+            _sampleFrame = display.FrameInPhase;
+        else
+        {
+            // Unreliable snapshots can deliver several server pose increments inside
+            // fewer client physics ticks. Limit only this phase's cosmetic clock;
+            // a new authoritative phase/hand still takes effect immediately.
+            // Repeated Advance(0) evaluations in one physics tick consume no time.
+            // https://docs.godotengine.org/en/4.7/classes/class_engine.html#class-engine-method-get-physics-frames
+            ulong elapsed = physicsFrame >= _samplePhysicsFrame ? physicsFrame - _samplePhysicsFrame : 0;
+            int budget = (int)Math.Min((ulong)int.MaxValue, elapsed);
+            _sampleFrame = (int)Math.Min(display.FrameInPhase, (long)_sampleFrame + budget);
+        }
+        _samplePhysicsFrame = physicsFrame;
         _origin = origin;
         _previousPhase = display.Phase;
         _previousFrame = display.FrameInPhase;
@@ -108,7 +127,7 @@ public partial class CrossoverPose : SkeletonModifier3D
             MovePhase.Active => data.ActiveFrames,
             _ => data.RecoveryFrames
         };
-        float progress = Math.Clamp(display.FrameInPhase / (float)Math.Max(1, frames - 1), 0f, 1f);
+        float progress = Math.Clamp(_sampleFrame / (float)Math.Max(1, frames - 1), 0f, 1f);
         string name = "crossover" + display.Phase.ToString().ToLowerInvariant() + origin.ToString().ToLowerInvariant();
         Clip clip = GetClip(name);
         if (clip == null) return;

@@ -39,6 +39,17 @@ def verify(directory):
                 failures.append(f"tick {row['tick']}: crossover adapter did not contribute")
             if row.get("crossoverPoseMaxReachError", 1) > .0001 or row.get("crossoverPoseClampCount", 1):
                 failures.append(f"tick {row['tick']}: unreachable interpolated limb target")
+            sampled = row.get("crossoverPoseSampleFrame", -1)
+            if not 0 <= sampled <= row.get("poseDisplayFrame", -1):
+                failures.append(f"tick {row['tick']}: sampled pose counter is absent or ahead of received display counter")
+    for previous, current in zip(rows, rows[1:]):
+        if (manifest.get("mutation", "none") == "none" and current["displayMove"] == "crossover"
+                and previous["displayMove"] == "crossover"
+                and current["displayPhase"] == previous["displayPhase"] and current["hand"] == previous["hand"]
+                and current.get("poseDisplayFrame", 0) >= previous.get("poseDisplayFrame", 0)):
+            elapsed = current["physicsFrame"] - previous["physicsFrame"]
+            if current.get("crossoverPoseSampleFrame", 0) - previous.get("crossoverPoseSampleFrame", 0) > elapsed:
+                failures.append(f"tick {current['tick']}: pose counter compressed multiple server intervals into one display interval")
     # Count actual display entries, then verify each complete phase and hand family.
     cycles = []
     for row in rows:

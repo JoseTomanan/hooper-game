@@ -25,7 +25,7 @@ public partial class CrossoverContinuityCapture : Node
     private int _lastInactiveTick;
     private bool _disableCrossoverPose, _poseMutationApplied, _poseApplied, _holdMovement;
     private float _poseMaxReachError;
-    private int _poseClampCount;
+    private int _poseClampCount, _poseSampleFrame;
     private string _loseBall = "none";
     private bool _ballLost, _sawLossRecovery;
     private int _lossRecipient;
@@ -284,7 +284,9 @@ public partial class CrossoverContinuityCapture : Node
             var lossDisplay = player.AnimationDisplaySnapshot;
             Event("ball-loss-observed", $"recipient={_lossRecipient}; phase={lossDisplay.Phase}; frame={lossDisplay.FrameInPhase}; variant={_loseBall}");
         }
-        if (_ballLost && _inCycle && player.DisplayMove().phase == MovePhase.Recovery) _sawLossRecovery = true;
+        // Same-instance timeline proof: the possession broadcast may arrive after
+        // remote Recovery has ended. Do not require unrelated RPC edges to co-occur.
+        if (_inCycle && player.DisplayMove().phase == MovePhase.Recovery) _sawLossRecovery = true;
         if (player.DisplayMove().phase == MovePhase.Inactive)
         {
             _lastInactiveVelocity = player.Velocity;
@@ -391,7 +393,7 @@ public partial class CrossoverContinuityCapture : Node
             poseDisplayMove = _poseDisplayMove, poseDisplayPhase = _poseDisplayPhase,
             poseDisplayFrame = _poseDisplayFrame, poseDisplayHand = _poseDisplayHand,
             crossoverPoseApplied = _poseApplied, crossoverPoseMaxReachError = _poseMaxReachError,
-            crossoverPoseClampCount = _poseClampCount, crossoverPoseSamplePhysicsFrame = _posePhysics,
+            crossoverPoseClampCount = _poseClampCount, crossoverPoseSampleFrame = _poseSampleFrame, crossoverPoseSamplePhysicsFrame = _posePhysics,
             animationCallback = p.ContinuityAnimationCallback, playbackNodeAtPoseSnapshot = _appliedAnimation, playbackTimeAtPoseSnapshot = _appliedPlaybackTime,
             fadingFromAtPoseSnapshot = _appliedFadingFrom, fadingTimeAtPoseSnapshot = _appliedFadingTime,
             playbackSnapshotMeaning = "playback state observed at skeleton signal; does not certify which clip contributed this pose", poseRotations = _finalBoneRotations, posePhysicsFrame = _posePhysics, poseRenderFrame = _poseRender, bones
@@ -430,6 +432,7 @@ public partial class CrossoverContinuityCapture : Node
             _poseApplied = metrics.Applied;
             _poseMaxReachError = metrics.MaxReachError;
             _poseClampCount = metrics.ClampCount;
+            _poseSampleFrame = metrics.SampleFrame;
             _appliedAnimation = player.ActiveAnimNodeForHarness;
             _appliedPlaybackTime = player.ContinuityPlaybackTime;
             _appliedFadingFrom = player.ContinuityFadingFrom;
