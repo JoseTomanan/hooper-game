@@ -1550,13 +1550,13 @@ public partial class PlayerController : CharacterBody3D
 			}
 		}
 
-        var protectionSkeletons = FindChildren("*", nameof(Skeleton3D), recursive: true, owned: false);
-        if (protectionSkeletons.Count > 0 && protectionSkeletons[0] is Skeleton3D protectionSkeleton)
-        {
-            protectionSkeleton.AddChild(new ProtectionPose { Name = "ProtectionPose", Player = this });
-            protectionSkeleton.AddChild(new PostPose { Name = "PostPose", Player = this });
-            protectionSkeleton.AddChild(new DefensiveStancePose { Name = "DefensiveStancePose", Player = this });
-        }
+		var protectionSkeletons = FindChildren("*", nameof(Skeleton3D), recursive: true, owned: false);
+		if (protectionSkeletons.Count > 0 && protectionSkeletons[0] is Skeleton3D protectionSkeleton)
+		{
+			protectionSkeleton.AddChild(new ProtectionPose { Name = "ProtectionPose", Player = this });
+			protectionSkeleton.AddChild(new PostPose { Name = "PostPose", Player = this });
+			protectionSkeleton.AddChild(new DefensiveStancePose { Name = "DefensiveStancePose", Player = this });
+		}
 
 		_gameManager = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
 		if (_gameManager == null)
