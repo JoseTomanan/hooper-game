@@ -1,6 +1,6 @@
-[gd_resource type="BoneMap" format=3]
+[gd_resource type="BoneMap" format=3 uid="uid://dnck58caciup"]
 
-[ext_resource type="SkeletonProfile" path="res://assets/retarget/MixamoProfile.tres" id="1_x41e5"]
+[ext_resource type="SkeletonProfile" uid="uid://d0abu1ndnoeh7" path="res://assets/retarget/MixamoProfile.tres" id="1_x41e5"]
 
 [resource]
 profile = ExtResource("1_x41e5")

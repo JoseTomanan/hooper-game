@@ -40,6 +40,12 @@ assets/raw/
 
 # Godot resource UID sidecar files (auto-generated, not source)
 *.uid
+# Player.tscn's editor-saved script references must keep the same UIDs on a
+# fresh checkout; regenerating ignored script sidecars would assign new IDs.
+!scripts/Player/PlayerController.cs.uid
+!scripts/Player/PlayerRigScaler.cs.uid
+!scripts/Player/BlendRestAnchor.cs.uid
+!scripts/Systems/BlobShadow.cs.uid
 # Exception: locomotion.res is a hand-saved AnimationLibrary with no importer,
 # so Godot never regenerates its sidecar — unlike .cs/.import-backed resources.
 # Player.tscn references it by uid (#140), so this one sidecar IS the only

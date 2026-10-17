@@ -1,4 +1,4 @@
-[gd_resource type="SkeletonProfile" format=3]
+[gd_resource type="SkeletonProfile" format=3 uid="uid://d0abu1ndnoeh7"]
 
 [resource]
 root_bone = &"mixamorig_Hips"
