@@ -20,6 +20,10 @@
 export.cfg
 export_presets.cfg
 
+# Godot generates texture-import settings for documentation screenshots too.
+# These images are evidence, not game assets; keep their import sidecars local.
+/docs/**/*.import
+
 # .NET build output (generated once the C# solution exists)
 .mono/
 bin/
