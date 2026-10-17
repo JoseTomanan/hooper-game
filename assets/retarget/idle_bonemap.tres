@@ -4,6 +4,7 @@
 
 [resource]
 profile = ExtResource("1_lcbig")
+bonemap = null
 bone_map/mixamorig_Hips = &"Hips"
 bone_map/mixamorig_Spine = &"Spine"
 bone_map/mixamorig_Spine1 = &"Chest"
