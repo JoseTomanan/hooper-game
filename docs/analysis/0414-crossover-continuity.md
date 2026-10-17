@@ -32,6 +32,8 @@ authoritative hand flip or an unexpected heading turn.
 
 ![Gameplay-camera before/after comparison](evidence/0414/right-stationary-before-after.png)
 
+![Nearest-neighbour enlarged detail from those camera frames](evidence/0414/right-stationary-detail.png)
+
 ## Repair and official contracts
 
 The per-player `CrossoverPose` modifier samples the original immutable clips.
@@ -69,6 +71,11 @@ counter/hand snapshot that produced the final skeleton. A remote broadcast can
 arrive between pose evaluation and drawing: live phase plus an older applied
 hand must not be presented as one coherent pose input. Node/time observed at
 the skeleton signal also does not certify which clip contributed its bones.
+The native remote trace also exposed three server counter increments arriving
+inside two observer physics ticks. Sampling now advances at most once per
+elapsed observer physics tick within a phase. A phase change still applies
+immediately; no obsolete phase or authoritative hand is retained. Both source
+and sampled counters are recorded, and all boundary displacement checks remain.
 
 Native captures use the shipped gameplay camera, Mobile/D3D12, FramePostDraw
 PNGs and SkeletonUpdated bone positions/rotations. Headless runs explicitly
@@ -113,11 +120,56 @@ python tools/run_crossover_regression.py --godot "$env:GODOT"
 python tools/run_crossover_regression.py --godot "$env:GODOT" --rendered --native
 ```
 
-On Linux the CI rendered command uses Xvfb/Mesa and the Compatibility renderer;
-the local Windows result uses Mobile/D3D12. Renderer provenance is recorded.
-Both use the same production scenes and animation callback. Git Bash is needed
+On Linux the CI rendered command uses Xvfb/Mesa and the Compatibility renderer.
+Its first wall-clock remote attempt rendered at roughly 15 Hz and correctly
+failed coverage (22 gaps, maximum four physics ticks per draw). Hosted remote
+captures therefore use `--rendered --paced`: fixed simulation steps and a
+100 ms wall-clock delay on the diagnostic server preserve every rendered
+physics step. Both peers' manifests explicitly label that mode as paced and
+exclude real-time claims. The Windows Mobile/D3D12 remote matrix below uses
+ordinary wall-clock simulation, without pacing. Both use the same production
+scenes and animation callback. Git Bash is needed
 for the existing catalog's shell adapters on Windows; an empty WSL installation
 is not a usable substitute.
+
+## Recorded results
+
+At production/proof commit `8ee68e9`, all sixteen native captures pass: eight
+local and eight real-time remote cases. The normalized maximum per physics
+interval is hips 0.139 m, wrists 0.172/0.196 m, and ankles 0.109/0.075 m.
+Remote raw frame displacements can span two physics intervals; those raw
+maxima remain separate in the output. All normal-case IK targets are reached
+within 0.1 mm without clamping. All eight headless cases pass; disabling the
+modifier exposes real continuity failures for each origin with capture and
+phase premises intact.
+
+The 85 selected neutral-apex samples measure palm-center distances
+0.076–0.240 m with ball radius 0.12 m. The largest center-distance-minus-radius
+gap is therefore approximately 0.120 m. Reporting that gap does not certify
+skin contact or resolve #301; free-bounce frames carry no attachment assertion.
+
+The late-possession control awards the real connected observer possession at
+Recovery frame 9. Both servers' final three Recovery samples are identical at
+every bone to the no-loss controls, with zero clamping and reach error below
+0.000001 m. Observers receive the award at frame 11 and reach Locomotion; this
+does not claim continuous pose blending across arbitrary possession events.
+
+| Retained result | Artifact |
+|---|---|
+| Sixteen baseline captures and source hashes | [Baseline summary](evidence/0414/baseline-summary.json) |
+| Sixteen native GREEN captures, provenance and contact measurements | [Native summary](evidence/0414/native-green-summary.json) |
+| Eight headless GREEN cases and both expected-failure controls | [Headless/control outputs](evidence/0414/headless-and-controls.json) |
+| Late-possession phase-anchor comparison | [Control measurements](evidence/0414/late-possession-control.json) |
+| Representative complete baseline/GREEN/late-loss traces and manifests | [Trace index with SHA-256 hashes](evidence/0414/trace-index.json) — gzip files alongside it |
+
+Local validation also passes the ordinary and harness-enabled game builds,
+1,208 unit cases (five characterization cases intentionally skipped), 29
+existing animation/dribble/rig harness cases, and 98 repository contracts
+(one platform-specific skip). The first hosted run passes all four exhaustive
+catalog shards, the ordinary build/unit gate and the existing rendered-evidence
+spike; its new rendered job's cadence failure is recorded above. Final hosted
+status and downloadable full-frame captures are linked from PR #419. Review
+found no unresolved high-confidence introduced correctness defect.
 
 ## Deliberate boundaries
 

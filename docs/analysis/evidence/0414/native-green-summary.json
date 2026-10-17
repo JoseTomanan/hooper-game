@@ -1,0 +1,885 @@
+{
+  "testedCommit": "8ee68e9",
+  "realTimeRemote": true,
+  "result": "PASS",
+  "captures": [
+    {
+      "capture": ".godot\\414-clock-native-local\\left-moving-1",
+      "result": "PASS",
+      "maxStepsMeters": {
+        "Hips": 0.13885122508562908,
+        "LeftHand": 0.12046525309819252,
+        "RightHand": 0.1243260141026793,
+        "LeftFoot": 0.10897470049708927,
+        "RightFoot": 0.044289160479987606
+      },
+      "neutralApexContactMeasurements": [
+        {
+          "tick": 194,
+          "hand": "Right",
+          "centerDistanceMeters": 0.21708870109000356,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 195,
+          "hand": "Right",
+          "centerDistanceMeters": 0.2125949713439393,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 196,
+          "hand": "Right",
+          "centerDistanceMeters": 0.19032704963139102,
+          "ballRadiusMeters": 0.12
+        }
+      ],
+      "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+      "failures": [],
+      "mode": "local",
+      "case": "left-moving-1",
+      "commit": "8ee68e9",
+      "renderer": "NVIDIA GeForce RTX 3050",
+      "sampleTiming": "FramePostDraw state and image;  SkeletonUpdated final modifier pose with its own frame stamps; production animation callback unchanged",
+      "allowedMaxPhysicsGap": 1,
+      "observedMaxPhysicsGap": 1,
+      "traceSha256": "34ab2d147fafa3719819a57a3b0bbb88223b0009cf4f9d19060d53646b734088"
+    },
+    {
+      "capture": ".godot\\414-clock-native-local\\left-moving-3",
+      "result": "PASS",
+      "maxStepsMeters": {
+        "Hips": 0.13885162474674217,
+        "LeftHand": 0.12581265790977672,
+        "RightHand": 0.14946307603866424,
+        "LeftFoot": 0.10897477883996921,
+        "RightFoot": 0.0751488690592987
+      },
+      "neutralApexContactMeasurements": [
+        {
+          "tick": 194,
+          "hand": "Right",
+          "centerDistanceMeters": 0.2170886438018007,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 195,
+          "hand": "Right",
+          "centerDistanceMeters": 0.21259488910616584,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 196,
+          "hand": "Right",
+          "centerDistanceMeters": 0.19032691918752564,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 266,
+          "hand": "Left",
+          "centerDistanceMeters": 0.23130520045599398,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 267,
+          "hand": "Left",
+          "centerDistanceMeters": 0.24026128640790206,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 268,
+          "hand": "Left",
+          "centerDistanceMeters": 0.23518501155163632,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 302,
+          "hand": "Left",
+          "centerDistanceMeters": 0.19793485346185724,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 303,
+          "hand": "Left",
+          "centerDistanceMeters": 0.20016806134220536,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 304,
+          "hand": "Left",
+          "centerDistanceMeters": 0.1902824005712794,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 338,
+          "hand": "Right",
+          "centerDistanceMeters": 0.17979032682673066,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 339,
+          "hand": "Right",
+          "centerDistanceMeters": 0.20598059148782702,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 340,
+          "hand": "Right",
+          "centerDistanceMeters": 0.2110298231293212,
+          "ballRadiusMeters": 0.12
+        }
+      ],
+      "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+      "failures": [],
+      "mode": "local",
+      "case": "left-moving-3",
+      "commit": "8ee68e9",
+      "renderer": "NVIDIA GeForce RTX 3050",
+      "sampleTiming": "FramePostDraw state and image;  SkeletonUpdated final modifier pose with its own frame stamps; production animation callback unchanged",
+      "allowedMaxPhysicsGap": 1,
+      "observedMaxPhysicsGap": 1,
+      "traceSha256": "8e1fb49ff7c5f7a2b43174cb56c714b5d285e653a700fc3462882b22b7da19b1"
+    },
+    {
+      "capture": ".godot\\414-clock-native-local\\left-stationary-1",
+      "result": "PASS",
+      "maxStepsMeters": {
+        "Hips": 0.13885122508559303,
+        "LeftHand": 0.16577160659274545,
+        "RightHand": 0.13205690349665,
+        "LeftFoot": 0.057684004762298687,
+        "RightFoot": 0.07502672352775909
+      },
+      "neutralApexContactMeasurements": [
+        {
+          "tick": 158,
+          "hand": "Right",
+          "centerDistanceMeters": 0.10387489532624666,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 159,
+          "hand": "Right",
+          "centerDistanceMeters": 0.08707028937278331,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 160,
+          "hand": "Right",
+          "centerDistanceMeters": 0.0755108916853432,
+          "ballRadiusMeters": 0.12
+        }
+      ],
+      "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+      "failures": [],
+      "mode": "local",
+      "case": "left-stationary-1",
+      "commit": "8ee68e9",
+      "renderer": "NVIDIA GeForce RTX 3050",
+      "sampleTiming": "FramePostDraw state and image;  SkeletonUpdated final modifier pose with its own frame stamps; production animation callback unchanged",
+      "allowedMaxPhysicsGap": 1,
+      "observedMaxPhysicsGap": 1,
+      "traceSha256": "19bb98db87e56f9bd8c55a16f9ceb3afc6a3a4ddba99538a8d0ad78e19cc7cb8"
+    },
+    {
+      "capture": ".godot\\414-clock-native-local\\left-stationary-3",
+      "result": "PASS",
+      "maxStepsMeters": {
+        "Hips": 0.13885122508559303,
+        "LeftHand": 0.17216257596644405,
+        "RightHand": 0.1960064171435057,
+        "LeftFoot": 0.05868502778351723,
+        "RightFoot": 0.07502672352775909
+      },
+      "neutralApexContactMeasurements": [
+        {
+          "tick": 158,
+          "hand": "Right",
+          "centerDistanceMeters": 0.10387489532624666,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 159,
+          "hand": "Right",
+          "centerDistanceMeters": 0.08707028937278331,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 160,
+          "hand": "Right",
+          "centerDistanceMeters": 0.0755108916853432,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 194,
+          "hand": "Right",
+          "centerDistanceMeters": 0.1311260832973896,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 195,
+          "hand": "Right",
+          "centerDistanceMeters": 0.13190296579995123,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 230,
+          "hand": "Left",
+          "centerDistanceMeters": 0.1991130874598371,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 231,
+          "hand": "Left",
+          "centerDistanceMeters": 0.21785150172090284,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 232,
+          "hand": "Left",
+          "centerDistanceMeters": 0.22179411232907667,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 302,
+          "hand": "Right",
+          "centerDistanceMeters": 0.19032926497836747,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 303,
+          "hand": "Right",
+          "centerDistanceMeters": 0.18029676576055315,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 304,
+          "hand": "Right",
+          "centerDistanceMeters": 0.15538770920529416,
+          "ballRadiusMeters": 0.12
+        }
+      ],
+      "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+      "failures": [],
+      "mode": "local",
+      "case": "left-stationary-3",
+      "commit": "8ee68e9",
+      "renderer": "NVIDIA GeForce RTX 3050",
+      "sampleTiming": "FramePostDraw state and image;  SkeletonUpdated final modifier pose with its own frame stamps; production animation callback unchanged",
+      "allowedMaxPhysicsGap": 1,
+      "observedMaxPhysicsGap": 1,
+      "traceSha256": "0e61d983f6b42b9eb7bb60dc430693cec6b180aaa82492cf0c2cdcea9e2bba4b"
+    },
+    {
+      "capture": ".godot\\414-clock-native-local\\right-moving-1",
+      "result": "PASS",
+      "maxStepsMeters": {
+        "Hips": 0.13871425424483033,
+        "LeftHand": 0.12064892362246783,
+        "RightHand": 0.14946337864135703,
+        "LeftFoot": 0.06402563410402304,
+        "RightFoot": 0.07514876174315833
+      },
+      "neutralApexContactMeasurements": [
+        {
+          "tick": 122,
+          "hand": "Left",
+          "centerDistanceMeters": 0.23138487420439094,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 123,
+          "hand": "Left",
+          "centerDistanceMeters": 0.23416284764652734,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 124,
+          "hand": "Left",
+          "centerDistanceMeters": 0.2169851400099437,
+          "ballRadiusMeters": 0.12
+        }
+      ],
+      "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+      "failures": [],
+      "mode": "local",
+      "case": "right-moving-1",
+      "commit": "8ee68e9",
+      "renderer": "NVIDIA GeForce RTX 3050",
+      "sampleTiming": "FramePostDraw state and image;  SkeletonUpdated final modifier pose with its own frame stamps; production animation callback unchanged",
+      "allowedMaxPhysicsGap": 1,
+      "observedMaxPhysicsGap": 1,
+      "traceSha256": "567e0a4101bf1f473e68329ad2e456caaf268245c5001fb9233fc4c591563c84"
+    },
+    {
+      "capture": ".godot\\414-clock-native-local\\right-moving-3",
+      "result": "PASS",
+      "maxStepsMeters": {
+        "Hips": 0.13885162474677815,
+        "LeftHand": 0.12064864321495654,
+        "RightHand": 0.1575132967405931,
+        "LeftFoot": 0.10897476172899452,
+        "RightFoot": 0.07514875355326958
+      },
+      "neutralApexContactMeasurements": [
+        {
+          "tick": 122,
+          "hand": "Left",
+          "centerDistanceMeters": 0.23138502515241102,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 123,
+          "hand": "Left",
+          "centerDistanceMeters": 0.23416282881188355,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 124,
+          "hand": "Left",
+          "centerDistanceMeters": 0.21698517773115283,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 194,
+          "hand": "Right",
+          "centerDistanceMeters": 0.22199095402756838,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 195,
+          "hand": "Right",
+          "centerDistanceMeters": 0.23417535588779578,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 196,
+          "hand": "Right",
+          "centerDistanceMeters": 0.2321363278997995,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 230,
+          "hand": "Right",
+          "centerDistanceMeters": 0.22209782325032382,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 231,
+          "hand": "Right",
+          "centerDistanceMeters": 0.21643474162419826,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 232,
+          "hand": "Right",
+          "centerDistanceMeters": 0.1979352904751748,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 266,
+          "hand": "Left",
+          "centerDistanceMeters": 0.13095275393660652,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 267,
+          "hand": "Left",
+          "centerDistanceMeters": 0.16507482201370005,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 268,
+          "hand": "Left",
+          "centerDistanceMeters": 0.17979358308218357,
+          "ballRadiusMeters": 0.12
+        }
+      ],
+      "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+      "failures": [],
+      "mode": "local",
+      "case": "right-moving-3",
+      "commit": "8ee68e9",
+      "renderer": "NVIDIA GeForce RTX 3050",
+      "sampleTiming": "FramePostDraw state and image;  SkeletonUpdated final modifier pose with its own frame stamps; production animation callback unchanged",
+      "allowedMaxPhysicsGap": 1,
+      "observedMaxPhysicsGap": 1,
+      "traceSha256": "704f98499c34c767a923295d6eb7953a6edd89e4cbc9c1cb8ee8db1226ea0d4f"
+    },
+    {
+      "capture": ".godot\\414-clock-native-local\\right-stationary-1",
+      "result": "PASS",
+      "maxStepsMeters": {
+        "Hips": 0.13871438028137814,
+        "LeftHand": 0.1206486574328682,
+        "RightHand": 0.1910987698291521,
+        "LeftFoot": 0.05865587983509983,
+        "RightFoot": 0.05769360927864841
+      },
+      "neutralApexContactMeasurements": [
+        {
+          "tick": 86,
+          "hand": "Left",
+          "centerDistanceMeters": 0.11510985027756104,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 87,
+          "hand": "Left",
+          "centerDistanceMeters": 0.10610133075727674,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 88,
+          "hand": "Left",
+          "centerDistanceMeters": 0.10387386203310486,
+          "ballRadiusMeters": 0.12
+        }
+      ],
+      "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+      "failures": [],
+      "mode": "local",
+      "case": "right-stationary-1",
+      "commit": "8ee68e9",
+      "renderer": "NVIDIA GeForce RTX 3050",
+      "sampleTiming": "FramePostDraw state and image;  SkeletonUpdated final modifier pose with its own frame stamps; production animation callback unchanged",
+      "allowedMaxPhysicsGap": 1,
+      "observedMaxPhysicsGap": 1,
+      "traceSha256": "c1029f0861efd410d1f1845c623299759bfda8616fdd2a8b2394bde4db2822f7"
+    },
+    {
+      "capture": ".godot\\414-clock-native-local\\right-stationary-3",
+      "result": "PASS",
+      "maxStepsMeters": {
+        "Hips": 0.13885122508559303,
+        "LeftHand": 0.17216257596644405,
+        "RightHand": 0.1960064171435057,
+        "LeftFoot": 0.05868502778351723,
+        "RightFoot": 0.07500488974128552
+      },
+      "neutralApexContactMeasurements": [
+        {
+          "tick": 86,
+          "hand": "Left",
+          "centerDistanceMeters": 0.11510985027756104,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 87,
+          "hand": "Left",
+          "centerDistanceMeters": 0.10610133075727674,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 88,
+          "hand": "Left",
+          "centerDistanceMeters": 0.10387386203310486,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 122,
+          "hand": "Left",
+          "centerDistanceMeters": 0.11222465341744685,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 123,
+          "hand": "Left",
+          "centerDistanceMeters": 0.11654502051535692,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 124,
+          "hand": "Left",
+          "centerDistanceMeters": 0.13113441144059373,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 158,
+          "hand": "Right",
+          "centerDistanceMeters": 0.15863066371047435,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 159,
+          "hand": "Right",
+          "centerDistanceMeters": 0.18647150866650303,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 160,
+          "hand": "Right",
+          "centerDistanceMeters": 0.1991052166826865,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 230,
+          "hand": "Left",
+          "centerDistanceMeters": 0.21698684350101521,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 231,
+          "hand": "Left",
+          "centerDistanceMeters": 0.21260162060795773,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 232,
+          "hand": "Left",
+          "centerDistanceMeters": 0.19033455174183672,
+          "ballRadiusMeters": 0.12
+        }
+      ],
+      "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+      "failures": [],
+      "mode": "local",
+      "case": "right-stationary-3",
+      "commit": "8ee68e9",
+      "renderer": "NVIDIA GeForce RTX 3050",
+      "sampleTiming": "FramePostDraw state and image;  SkeletonUpdated final modifier pose with its own frame stamps; production animation callback unchanged",
+      "allowedMaxPhysicsGap": 1,
+      "observedMaxPhysicsGap": 1,
+      "traceSha256": "c24f79d164a537706701ff37f231af9d87b6b174d45bd0315f874a3f4cb6b011"
+    },
+    {
+      "capture": ".godot\\414-clock-native-remote\\left-moving-1",
+      "result": "PASS",
+      "maxStepsMeters": {
+        "Hips": 0.13885794117249672,
+        "LeftHand": 0.2024256298082576,
+        "RightHand": 0.2270454096132903,
+        "LeftFoot": 0.21794301962406237,
+        "RightFoot": 0.08857397047831049
+      },
+      "neutralApexContactMeasurements": [
+        {
+          "tick": 231,
+          "hand": "Right",
+          "centerDistanceMeters": 0.23845227816486209,
+          "ballRadiusMeters": 0.12
+        }
+      ],
+      "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+      "failures": [],
+      "mode": "remote",
+      "case": "left-moving-1",
+      "commit": "8ee68e9",
+      "renderer": "NVIDIA GeForce RTX 3050",
+      "sampleTiming": "FramePostDraw state and image;  SkeletonUpdated final modifier pose with its own frame stamps; production animation callback unchanged",
+      "allowedMaxPhysicsGap": 2,
+      "observedMaxPhysicsGap": 2,
+      "traceSha256": "7ae2864f857044e3a1f40626c6f051c54fc1c92a929268b5112072f58b3d464c"
+    },
+    {
+      "capture": ".godot\\414-clock-native-remote\\left-moving-3",
+      "result": "PASS",
+      "maxStepsMeters": {
+        "Hips": 0.14355270687489566,
+        "LeftHand": 0.2323329766777789,
+        "RightHand": 0.2912380227195656,
+        "LeftFoot": 0.21794329038475718,
+        "RightFoot": 0.150285240055019
+      },
+      "neutralApexContactMeasurements": [
+        {
+          "tick": 232,
+          "hand": "Right",
+          "centerDistanceMeters": 0.23845228216177805,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 304,
+          "hand": "Left",
+          "centerDistanceMeters": 0.21785145285610316,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 340,
+          "hand": "Left",
+          "centerDistanceMeters": 0.22933826442046545,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 376,
+          "hand": "Right",
+          "centerDistanceMeters": 0.13683130720049594,
+          "ballRadiusMeters": 0.12
+        }
+      ],
+      "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+      "failures": [],
+      "mode": "remote",
+      "case": "left-moving-3",
+      "commit": "8ee68e9",
+      "renderer": "NVIDIA GeForce RTX 3050",
+      "sampleTiming": "FramePostDraw state and image;  SkeletonUpdated final modifier pose with its own frame stamps; production animation callback unchanged",
+      "allowedMaxPhysicsGap": 2,
+      "observedMaxPhysicsGap": 2,
+      "traceSha256": "d3e9783ae30bd4b595ca79bcf712c625d319dd2b8b705e54dbea28bc35ebd58a"
+    },
+    {
+      "capture": ".godot\\414-clock-native-remote\\left-stationary-1",
+      "result": "PASS",
+      "maxStepsMeters": {
+        "Hips": 0.13885760302824623,
+        "LeftHand": 0.26752558890878797,
+        "RightHand": 0.2311814517850741,
+        "LeftFoot": 0.11523313546178289,
+        "RightFoot": 0.15003426364103742
+      },
+      "neutralApexContactMeasurements": [
+        {
+          "tick": 195,
+          "hand": "Right",
+          "centerDistanceMeters": 0.10788656028285497,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 231,
+          "hand": "Right",
+          "centerDistanceMeters": 0.10551302684809533,
+          "ballRadiusMeters": 0.12
+        }
+      ],
+      "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+      "failures": [],
+      "mode": "remote",
+      "case": "left-stationary-1",
+      "commit": "8ee68e9",
+      "renderer": "NVIDIA GeForce RTX 3050",
+      "sampleTiming": "FramePostDraw state and image;  SkeletonUpdated final modifier pose with its own frame stamps; production animation callback unchanged",
+      "allowedMaxPhysicsGap": 2,
+      "observedMaxPhysicsGap": 2,
+      "traceSha256": "bccf9112bdba36b7d41444238edc24ddec5dc34105eb32e73c9cbd9b55339326"
+    },
+    {
+      "capture": ".godot\\414-clock-native-remote\\left-stationary-3",
+      "result": "PASS",
+      "maxStepsMeters": {
+        "Hips": 0.14623124668014512,
+        "LeftHand": 0.2968719473653496,
+        "RightHand": 0.3859361238824554,
+        "LeftFoot": 0.11738673825719093,
+        "RightFoot": 0.15004314932117663
+      },
+      "neutralApexContactMeasurements": [
+        {
+          "tick": 196,
+          "hand": "Right",
+          "centerDistanceMeters": 0.09650373493806022,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 232,
+          "hand": "Right",
+          "centerDistanceMeters": 0.12396374387242456,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 268,
+          "hand": "Left",
+          "centerDistanceMeters": 0.18647713193450996,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 340,
+          "hand": "Right",
+          "centerDistanceMeters": 0.19689291216603333,
+          "ballRadiusMeters": 0.12
+        }
+      ],
+      "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+      "failures": [],
+      "mode": "remote",
+      "case": "left-stationary-3",
+      "commit": "8ee68e9",
+      "renderer": "NVIDIA GeForce RTX 3050",
+      "sampleTiming": "FramePostDraw state and image;  SkeletonUpdated final modifier pose with its own frame stamps; production animation callback unchanged",
+      "allowedMaxPhysicsGap": 2,
+      "observedMaxPhysicsGap": 2,
+      "traceSha256": "cd154eaed6ad4483352f0f22fb7a163627ea30b6160028f85b85b08795c405f1"
+    },
+    {
+      "capture": ".godot\\414-clock-native-remote\\right-moving-1",
+      "result": "PASS",
+      "maxStepsMeters": {
+        "Hips": 0.13919282374534467,
+        "LeftHand": 0.1670343807619847,
+        "RightHand": 0.2610871495338028,
+        "LeftFoot": 0.12804783734075806,
+        "RightFoot": 0.15028905419494298
+      },
+      "neutralApexContactMeasurements": [
+        {
+          "tick": 159,
+          "hand": "Left",
+          "centerDistanceMeters": 0.23834916862032596,
+          "ballRadiusMeters": 0.12
+        }
+      ],
+      "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+      "failures": [],
+      "mode": "remote",
+      "case": "right-moving-1",
+      "commit": "8ee68e9",
+      "renderer": "NVIDIA GeForce RTX 3050",
+      "sampleTiming": "FramePostDraw state and image;  SkeletonUpdated final modifier pose with its own frame stamps; production animation callback unchanged",
+      "allowedMaxPhysicsGap": 2,
+      "observedMaxPhysicsGap": 2,
+      "traceSha256": "4639656760d5d35f92823eb0e765aac40d7c99580a3d7d5fe4489e377f05e05d"
+    },
+    {
+      "capture": ".godot\\414-clock-native-remote\\right-moving-3",
+      "result": "PASS",
+      "maxStepsMeters": {
+        "Hips": 0.13919322442594015,
+        "LeftHand": 0.20623174361974173,
+        "RightHand": 0.2772417261302671,
+        "LeftFoot": 0.21794740692518763,
+        "RightFoot": 0.15028893434924148
+      },
+      "neutralApexContactMeasurements": [
+        {
+          "tick": 159,
+          "hand": "Left",
+          "centerDistanceMeters": 0.23834913599092017,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 231,
+          "hand": "Right",
+          "centerDistanceMeters": 0.21794473169242867,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 267,
+          "hand": "Right",
+          "centerDistanceMeters": 0.22933829272503112,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 303,
+          "hand": "Left",
+          "centerDistanceMeters": 0.13683882227105454,
+          "ballRadiusMeters": 0.12
+        }
+      ],
+      "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+      "failures": [],
+      "mode": "remote",
+      "case": "right-moving-3",
+      "commit": "8ee68e9",
+      "renderer": "NVIDIA GeForce RTX 3050",
+      "sampleTiming": "FramePostDraw state and image;  SkeletonUpdated final modifier pose with its own frame stamps; production animation callback unchanged",
+      "allowedMaxPhysicsGap": 2,
+      "observedMaxPhysicsGap": 2,
+      "traceSha256": "3c628e37f669561b3f1b15d5e2908353fdbf9679331d9c9280641440d5e46066"
+    },
+    {
+      "capture": ".godot\\414-clock-native-remote\\right-stationary-1",
+      "result": "PASS",
+      "maxStepsMeters": {
+        "Hips": 0.13919260975248252,
+        "LeftHand": 0.18235102130382946,
+        "RightHand": 0.32927743861675657,
+        "LeftFoot": 0.11735554265890905,
+        "RightFoot": 0.11533118495040787
+      },
+      "neutralApexContactMeasurements": [
+        {
+          "tick": 123,
+          "hand": "Left",
+          "centerDistanceMeters": 0.1078013087925884,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 159,
+          "hand": "Left",
+          "centerDistanceMeters": 0.1055224444517019,
+          "ballRadiusMeters": 0.12
+        }
+      ],
+      "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+      "failures": [],
+      "mode": "remote",
+      "case": "right-stationary-1",
+      "commit": "8ee68e9",
+      "renderer": "NVIDIA GeForce RTX 3050",
+      "sampleTiming": "FramePostDraw state and image;  SkeletonUpdated final modifier pose with its own frame stamps; production animation callback unchanged",
+      "allowedMaxPhysicsGap": 2,
+      "observedMaxPhysicsGap": 2,
+      "traceSha256": "b0c7cf3f267b5c50b1e70594eb3be9a7951450589502eef31ca29fee86e139d3"
+    },
+    {
+      "capture": ".godot\\414-clock-native-remote\\right-stationary-3",
+      "result": "PASS",
+      "maxStepsMeters": {
+        "Hips": 0.14355283256677243,
+        "LeftHand": 0.33578777052744185,
+        "RightHand": 0.33482140669254085,
+        "LeftFoot": 0.11738554556310707,
+        "RightFoot": 0.15005835277153404
+      },
+      "neutralApexContactMeasurements": [
+        {
+          "tick": 122,
+          "hand": "Left",
+          "centerDistanceMeters": 0.11502703064786546,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 124,
+          "hand": "Left",
+          "centerDistanceMeters": 0.1038147267549744,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 158,
+          "hand": "Left",
+          "centerDistanceMeters": 0.11222449857078501,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 160,
+          "hand": "Left",
+          "centerDistanceMeters": 0.1311341752628561,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 194,
+          "hand": "Right",
+          "centerDistanceMeters": 0.17978975445140502,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 196,
+          "hand": "Right",
+          "centerDistanceMeters": 0.2110309551976272,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 266,
+          "hand": "Left",
+          "centerDistanceMeters": 0.2169868261433644,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 268,
+          "hand": "Left",
+          "centerDistanceMeters": 0.19033467179865046,
+          "ballRadiusMeters": 0.12
+        }
+      ],
+      "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+      "failures": [],
+      "mode": "remote",
+      "case": "right-stationary-3",
+      "commit": "8ee68e9",
+      "renderer": "NVIDIA GeForce RTX 3050",
+      "sampleTiming": "FramePostDraw state and image;  SkeletonUpdated final modifier pose with its own frame stamps; production animation callback unchanged",
+      "allowedMaxPhysicsGap": 2,
+      "observedMaxPhysicsGap": 2,
+      "traceSha256": "bb0c3a3d1b990012aea0b5e0f1797016143bd24188c4455872911e5e9964b3e4"
+    }
+  ]
+}

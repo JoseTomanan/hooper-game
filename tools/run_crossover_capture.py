@@ -41,7 +41,9 @@ def command(args, directory, role, origin, motion, count):
         # Pace wall time only; fixed-fps still supplies one 1/60 simulation
         # step per frame. This gives the native observer time to persist PNGs.
         result.append("--capture-delay-ms=100")
-    if args.remote and not args.paced:
+    if args.remote and args.paced:
+        result += ["--capture-max-physics-gap=1", "--capture-remote-paced=true"]
+    elif args.remote:
         result.append("--capture-max-physics-gap=2")
     return result
 

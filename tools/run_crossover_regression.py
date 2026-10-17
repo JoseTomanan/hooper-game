@@ -24,6 +24,8 @@ def capture(args, output, *, remote=False, mutation=False, origin=None):
         command.append("--headless")
     if remote:
         command.append("--remote")
+        if args.paced:
+            command.append("--paced")
     if mutation:
         command += ["--disable-pose", "--origin", origin, "--motion", "stationary", "--count", "1"]
     # Delegate process ownership/timeout/cleanup to the existing runner. Argument
@@ -68,10 +70,13 @@ def main():
     parser.add_argument("--output", type=Path)
     parser.add_argument("--commit")
     parser.add_argument("--rendered", action="store_true")
+    parser.add_argument("--paced", action="store_true", help="pace only remote rendered captures with fixed simulation delta; no real-time timing claims")
     parser.add_argument("--native", action="store_true", help="use the project renderer for local rendered runs; CI defaults to Mesa compatibility")
     parser.add_argument("--resolution", default="480x270")
     parser.add_argument("--port", type=int, default=23464)
     args = parser.parse_args()
+    if args.paced and not args.rendered:
+        parser.error("--paced requires --rendered")
     if args.native and not args.rendered:
         parser.error("--native requires --rendered")
     if args.commit is None:
@@ -82,6 +87,7 @@ def main():
         parser.error("output must be below the workspace .godot directory")
     args.output.mkdir(parents=True, exist_ok=False)
     summary = {"mode": "rendered" if args.rendered else "headless", "commit": args.commit,
+               "remoteTiming": ("paced fixed-fps diagnostic; not real-time" if args.paced else "real-time") if args.rendered else "not run",
                "result": "FAIL", "captures": [], "negativeControls": []}
     try:
         capture(args, args.output / "local")

@@ -1,0 +1,24 @@
+[
+  {
+    "origin": "right",
+    "lastRecoveryFramesAllBoneDifferenceMeters": {
+      "9": 0.0,
+      "10": 0.0,
+      "11": 0.0
+    },
+    "maxReachError": 2.2745635e-07,
+    "clamps": 0,
+    "result": "PASS"
+  },
+  {
+    "origin": "left",
+    "lastRecoveryFramesAllBoneDifferenceMeters": {
+      "9": 0.0,
+      "10": 0.0,
+      "11": 0.0
+    },
+    "maxReachError": 2.40274e-07,
+    "clamps": 0,
+    "result": "PASS"
+  }
+]

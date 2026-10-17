@@ -28,5 +28,55 @@
     "file": "baseline-right-remote-manifest.json.gz",
     "source": ".godot\\414-baseline-remote-real-b\\right-stationary-1\\manifest.json",
     "uncompressedSha256": "fba81d110b181d3850e65c0fef8699ddc4f309efde06af0835521cbafe46db57"
+  },
+  {
+    "file": "green-right-local-trace.jsonl.gz",
+    "source": ".godot/414-clock-native-local/right-stationary-1/trace.jsonl",
+    "uncompressedSha256": "c1029f0861efd410d1f1845c623299759bfda8616fdd2a8b2394bde4db2822f7"
+  },
+  {
+    "file": "green-right-local-manifest.json.gz",
+    "source": ".godot/414-clock-native-local/right-stationary-1/manifest.json",
+    "uncompressedSha256": "49a90ec895aeb5c5a955624ad616b7424b971e0a5f117146637cfb1ad79610c4"
+  },
+  {
+    "file": "green-left-local-trace.jsonl.gz",
+    "source": ".godot/414-clock-native-local/left-stationary-1/trace.jsonl",
+    "uncompressedSha256": "19bb98db87e56f9bd8c55a16f9ceb3afc6a3a4ddba99538a8d0ad78e19cc7cb8"
+  },
+  {
+    "file": "green-left-local-manifest.json.gz",
+    "source": ".godot/414-clock-native-local/left-stationary-1/manifest.json",
+    "uncompressedSha256": "4bdb7da4e8fed400db635a7753d56f6b92df4bb56258b2f6fff6bcbf13c128ed"
+  },
+  {
+    "file": "green-right-remote-trace.jsonl.gz",
+    "source": ".godot/414-clock-native-remote/right-stationary-1/trace.jsonl",
+    "uncompressedSha256": "b0c7cf3f267b5c50b1e70594eb3be9a7951450589502eef31ca29fee86e139d3"
+  },
+  {
+    "file": "green-right-remote-manifest.json.gz",
+    "source": ".godot/414-clock-native-remote/right-stationary-1/manifest.json",
+    "uncompressedSha256": "6f5f90851258fc6c0f90ea97ad073dbe2d2048bc6bead978e3f8f2da6715e920"
+  },
+  {
+    "file": "late-loss-right-server-trace.jsonl.gz",
+    "source": ".godot/414-loss-late-v2/right-stationary-1-server/trace.jsonl",
+    "uncompressedSha256": "feadb7cf5524fef3f50fe6971ac03ad4068e1022215249f9ce2ac17ee6aa470a"
+  },
+  {
+    "file": "late-loss-right-server-manifest.json.gz",
+    "source": ".godot/414-loss-late-v2/right-stationary-1-server/manifest.json",
+    "uncompressedSha256": "de409dc3fdcf33ebc5c7d96e512107f340ff3207b6669e4ff1916605614234c2"
+  },
+  {
+    "file": "late-loss-left-server-trace.jsonl.gz",
+    "source": ".godot/414-loss-late-v2/left-stationary-1-server/trace.jsonl",
+    "uncompressedSha256": "641a86abe4ec526d7d6237c21ed817af519301c57626defdf4024ce1a6fc4606"
+  },
+  {
+    "file": "late-loss-left-server-manifest.json.gz",
+    "source": ".godot/414-loss-late-v2/left-stationary-1-server/manifest.json",
+    "uncompressedSha256": "9823233a473aa4a2de63295d7b93033190bf6c0e05c333ea0daee0258c0d7035"
   }
 ]

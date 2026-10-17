@@ -23,7 +23,7 @@ public partial class CrossoverContinuityCapture : Node
     private Vector3 _lastInactiveVelocity;
     private float _lastInactiveHeading;
     private int _lastInactiveTick;
-    private bool _disableCrossoverPose, _poseMutationApplied, _poseApplied, _holdMovement;
+    private bool _disableCrossoverPose, _poseMutationApplied, _poseApplied, _holdMovement, _remotePaced;
     private float _poseMaxReachError;
     private int _poseClampCount, _poseSampleFrame;
     private string _loseBall = "none";
@@ -56,6 +56,7 @@ public partial class CrossoverContinuityCapture : Node
         var args = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).ToArray();
         string Read(string name, string fallback) => HarnessArgs.ReadArg(args, name, fallback);
         _role = Read("--capture-role", "local");
+        _remotePaced = Read("--capture-remote-paced", "false") == "true";
         _motion = Read("--capture-motion", "stationary");
         _origin = Read("--capture-origin", "Right");
         _commit = Read("--capture-commit", "unknown");
@@ -470,7 +471,7 @@ public partial class CrossoverContinuityCapture : Node
             {
                 schema = "hooper-crossover-continuity/v1", mutation = _disableCrossoverPose ? "disable-crossover-pose" : "none", mutationApplied = _poseMutationApplied, result = _failure.Length == 0 ? "captured" : "failed", failure = _failure,
                 commit = _commit, role = _role, motion = _motion, origin = _origin, requestedCycles = _count, completedCycles = _completed,
-                loseBall = _loseBall, ballLossApplied = _ballLost, ballLossRecipient = _lossRecipient, holdMovementThroughReturn = _holdMovement, diagnosticServerDelayMs = _delayMs, pacingMeaning = "wall-clock-only diagnostic pacing with fixed simulation delta; no real-time latency/performance claim", fixtureInitialHostSpawnX = _fixtureSpawnX,
+                loseBall = _loseBall, ballLossApplied = _ballLost, ballLossRecipient = _lossRecipient, holdMovementThroughReturn = _holdMovement, remotePaced = _remotePaced, remoteTiming = _remotePaced ? "paced fixed-fps diagnostic; not real-time" : _role == "local" ? "not a remote capture" : "real-time", diagnosticServerDelayMs = _delayMs, pacingMeaning = "wall-clock-only diagnostic pacing with fixed simulation delta; no real-time latency/performance claim", fixtureInitialHostSpawnX = _fixtureSpawnX,
                 engine = Engine.GetVersionInfo()["string"].AsString(), physicsTicksPerSecond = Engine.PhysicsTicksPerSecond,
                 commandLine = OS.GetCmdlineArgs(), userArgs = OS.GetCmdlineUserArgs(), renderer = RenderingServer.GetVideoAdapterName(), displayDriver = DisplayServer.GetName(),
                 camera = _camera == null ? Array.Empty<float>() : Transform(_camera.GlobalTransform), cameraFov = _camera?.Fov, ballRadius = _ball?.BallRadius, betweenCycleNeutralTicks = 36, finalTailNeutralTicks = 36,

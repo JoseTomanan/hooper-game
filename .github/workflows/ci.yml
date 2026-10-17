@@ -211,8 +211,8 @@ jobs:
         run: godot --headless --build-solutions --quit || exit 0
       - name: Build game assembly
         run: dotnet build "HOOPER GAME.csproj" --configuration Debug -p:IncludeIntegrationHarness=true
-      - name: Verify rendered local and real-remote crossover continuity
-        run: xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 python3 tools/run_crossover_regression.py --godot godot --rendered --output .godot/crossover-rendered --commit "${{ github.sha }}"
+      - name: Verify local crossover continuity and paced remote observer diagnostics
+        run: xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 python3 tools/run_crossover_regression.py --godot godot --rendered --paced --output .godot/crossover-rendered --commit "${{ github.sha }}"
       - name: Upload crossover traces, frames and logs
         if: always()
         uses: actions/upload-artifact@v4
