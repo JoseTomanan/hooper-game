@@ -48,6 +48,7 @@ public partial class CrossoverContinuityCapture : Node
     private double _appliedPlaybackTime, _appliedFadingTime;
     private string _poseDisplayMove = "", _poseDisplayPhase = "Inactive", _poseDisplayHand = "";
     private int _poseDisplayFrame;
+    private bool _poseDisplaySimulatedLocally;
     private readonly List<object> _events = new();
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
@@ -393,6 +394,7 @@ public partial class CrossoverContinuityCapture : Node
             fadingFrom = p.ContinuityFadingFrom, fadingTime = p.ContinuityFadingTime,
             poseDisplayMove = _poseDisplayMove, poseDisplayPhase = _poseDisplayPhase,
             poseDisplayFrame = _poseDisplayFrame, poseDisplayHand = _poseDisplayHand,
+            poseDisplaySimulatedLocally = _poseDisplaySimulatedLocally,
             crossoverPoseApplied = _poseApplied, crossoverPoseMaxReachError = _poseMaxReachError,
             crossoverPoseClampCount = _poseClampCount, crossoverPoseSampleFrame = _poseSampleFrame, crossoverPoseSamplePhysicsFrame = _posePhysics,
             animationCallback = p.ContinuityAnimationCallback, playbackNodeAtPoseSnapshot = _appliedAnimation, playbackTimeAtPoseSnapshot = _appliedPlaybackTime,
@@ -428,6 +430,7 @@ public partial class CrossoverContinuityCapture : Node
             _poseDisplayMove = display.MoveId;
             _poseDisplayPhase = display.Phase.ToString();
             _poseDisplayFrame = display.FrameInPhase;
+            _poseDisplaySimulatedLocally = display.SimulatedLocally;
             _poseDisplayHand = display.Hand.ToString();
             var metrics = player.ContinuityCrossoverPoseMetrics;
             _poseApplied = metrics.Applied;

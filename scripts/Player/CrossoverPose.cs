@@ -102,24 +102,6 @@ public partial class CrossoverPose : SkeletonModifier3D
             if (display.Phase == MovePhase.Recovery)
                 _recoveryAnchor = null;
         }
-        ulong physicsFrame = Engine.GetPhysicsFrames();
-        if (changed)
-            _sampleFrame = display.FrameInPhase;
-        else
-        {
-            // Unreliable snapshots can deliver several server pose increments inside
-            // fewer client physics ticks. Limit only this phase's cosmetic clock;
-            // a new authoritative phase/hand still takes effect immediately.
-            // Repeated Advance(0) evaluations in one physics tick consume no time.
-            // https://docs.godotengine.org/en/4.7/classes/class_engine.html#class-engine-method-get-physics-frames
-            ulong elapsed = physicsFrame >= _samplePhysicsFrame ? physicsFrame - _samplePhysicsFrame : 0;
-            int budget = (int)Math.Min((ulong)int.MaxValue, elapsed);
-            _sampleFrame = (int)Math.Min(display.FrameInPhase, (long)_sampleFrame + budget);
-        }
-        _samplePhysicsFrame = physicsFrame;
-        _origin = origin;
-        _previousPhase = display.Phase;
-        _previousFrame = display.FrameInPhase;
         var data = Crossover.DefaultFrameData;
         int frames = display.Phase switch
         {
@@ -127,6 +109,20 @@ public partial class CrossoverPose : SkeletonModifier3D
             MovePhase.Active => data.ActiveFrames,
             _ => data.RecoveryFrames
         };
+        ulong physicsFrame = Engine.GetPhysicsFrames();
+        // Match an AnimationTree clip's local clock while a remote phase is held.
+        // Stale/duplicate snapshots cannot stall it and bunch the missing travel
+        // into the next update. Authority still selects every phase immediately;
+        // the display never advances into another phase on its own.
+        // Repeated Advance(0) evaluations in one physics tick consume no time.
+        // https://docs.godotengine.org/en/4.7/classes/class_engine.html#class-engine-method-get-physics-frames
+        ulong elapsed = physicsFrame >= _samplePhysicsFrame ? physicsFrame - _samplePhysicsFrame : 0;
+        _sampleFrame = CrossoverPoseClock.NextFrame(_sampleFrame, display.FrameInPhase, frames,
+            display.SimulatedLocally, changed, elapsed);
+        _samplePhysicsFrame = physicsFrame;
+        _origin = origin;
+        _previousPhase = display.Phase;
+        _previousFrame = display.FrameInPhase;
         float progress = Math.Clamp(_sampleFrame / (float)Math.Max(1, frames - 1), 0f, 1f);
         string name = "crossover" + display.Phase.ToString().ToLowerInvariant() + origin.ToString().ToLowerInvariant();
         Clip clip = GetClip(name);

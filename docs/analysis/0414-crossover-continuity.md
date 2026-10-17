@@ -72,10 +72,15 @@ arrive between pose evaluation and drawing: live phase plus an older applied
 hand must not be presented as one coherent pose input. Node/time observed at
 the skeleton signal also does not certify which clip contributed its bones.
 The native remote trace also exposed three server counter increments arriving
-inside two observer physics ticks. Sampling now advances at most once per
-elapsed observer physics tick within a phase. A phase change still applies
-immediately; no obsolete phase or authoritative hand is retained. Both source
-and sampled counters are recorded, and all boundary displacement checks remain.
+inside two observer physics ticks. The observer now runs an observed phase's
+cosmetic clock locally, as an AnimationTree clip normally does, advancing at
+most once per elapsed observer physics tick and holding at the phase endpoint.
+Duplicate snapshots therefore do not starve the clock; later bunched counters
+do not accelerate it. Locally simulated roles use their actual machine counter.
+A phase change still applies immediately; no obsolete phase or authoritative
+hand is retained. Both source and sampled counters and their role are recorded;
+all boundary displacement checks remain. Pure clock tests pin duplicates,
+bunching, same-tick evaluation, endpoint holding and immediate epoch changes.
 
 Native captures use the shipped gameplay camera, Mobile/D3D12, FramePostDraw
 PNGs and SkeletonUpdated bone positions/rotations. Headless runs explicitly
@@ -163,7 +168,7 @@ does not claim continuous pose blending across arbitrary possession events.
 | Representative complete baseline/GREEN/late-loss traces and manifests | [Trace index with SHA-256 hashes](evidence/0414/trace-index.json) — gzip files alongside it |
 
 Local validation also passes the ordinary and harness-enabled game builds,
-1,208 unit cases (five characterization cases intentionally skipped), 29
+1,216 unit cases (five characterization cases intentionally skipped), 29
 existing animation/dribble/rig harness cases, and 98 repository contracts
 (one platform-specific skip). The first hosted run passes all four exhaustive
 catalog shards, the ordinary build/unit gate and the existing rendered-evidence
@@ -185,3 +190,15 @@ separate and must stay green.
 
 Human visual rechecks remain in #173/#178; the unresolved #301 alignment item
 stays open. No editor wiring is required to run this change.
+
+Arrival-delay variation can compress an entire observed phase. For example,
+Startup counters 0, 3 and 5 arriving on consecutive observer ticks, followed by
+Active, leave fewer local animation intervals than the authored Startup needs.
+Immediate phase adoption then takes precedence over completing every cosmetic
+interval. Rendering every tick alone cannot rule that situation out. This
+repair adds neither a delayed remote-state buffer nor cross-phase smoothing;
+physical continuity under such bursts is outside the measured LAN matrix and
+is not guaranteed here. Fresh adversarial review identified this boundary;
+the accepted trade-off preserves authoritative phase/hand timing rather than
+silently extending a committed phase. The native and paced evidence does not
+constitute a variable-latency robustness result.

@@ -1002,7 +1002,8 @@ public partial class PlayerController : CharacterBody3D
 	private int _serverMoveFrameInPhase;
 
 	/// <summary>Frozen presentation input consumed by the crossover pose modifier.</summary>
-	public readonly record struct AnimationDisplayFrame(string MoveId, MovePhase Phase, int FrameInPhase, HandSide Hand);
+	public readonly record struct AnimationDisplayFrame(string MoveId, MovePhase Phase, int FrameInPhase, HandSide Hand,
+		bool SimulatedLocally);
 	public AnimationDisplayFrame AnimationDisplaySnapshot { get; private set; }
 
 	/// <summary>
@@ -3127,9 +3128,9 @@ public partial class PlayerController : CharacterBody3D
 		// must be string-based, not enum-based.
 		if (_animPlayback == null) return;
 		(MovePhase displayPhase, _) = DisplayMove();
+		bool displaySimulatedLocally = DisplayPhaseResolver.LocalMachineDrivesDisplay(IsServer, IsLocalPlayer);
 		AnimationDisplaySnapshot = new AnimationDisplayFrame(DisplayMoveId(), displayPhase,
-			DisplayPhaseResolver.LocalMachineDrivesDisplay(IsServer, IsLocalPlayer)
-				? _machine.FrameInPhase : _serverMoveFrameInPhase, HandSide);
+			displaySimulatedLocally ? _machine.FrameInPhase : _serverMoveFrameInPhase, HandSide, displaySimulatedLocally);
 		// (#243) isFadeaway only ever changes MoveAnimResolver's answer during
 		// Active (a squared-up JumpShot, every other move, and every non-Active
 		// phase ignore it) — see MoveAnimResolver.Resolve's own doc.

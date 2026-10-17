@@ -40,10 +40,14 @@ def verify(directory):
             if row.get("crossoverPoseMaxReachError", 1) > .0001 or row.get("crossoverPoseClampCount", 1):
                 failures.append(f"tick {row['tick']}: unreachable interpolated limb target")
             sampled = row.get("crossoverPoseSampleFrame", -1)
-            if not 0 <= sampled <= row.get("poseDisplayFrame", -1):
-                failures.append(f"tick {row['tick']}: sampled pose counter is absent or ahead of received display counter")
+            frames = {"Startup": 6, "Active": 3, "Recovery": 12}.get(row["displayPhase"], 0)
+            if not 0 <= sampled < frames:
+                failures.append(f"tick {row['tick']}: sampled pose counter is absent or outside its current phase")
+            if row.get("poseDisplaySimulatedLocally") and sampled != row.get("poseDisplayFrame"):
+                failures.append(f"tick {row['tick']}: locally simulated pose did not use its actual machine counter")
     for previous, current in zip(rows, rows[1:]):
         if (manifest.get("mutation", "none") == "none" and current["displayMove"] == "crossover"
+                and not current.get("poseDisplaySimulatedLocally", False)
                 and previous["displayMove"] == "crossover"
                 and current["displayPhase"] == previous["displayPhase"] and current["hand"] == previous["hand"]
                 and current.get("poseDisplayFrame", 0) >= previous.get("poseDisplayFrame", 0)):
