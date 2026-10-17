@@ -17,7 +17,8 @@ public partial class CrossoverContinuityCapture : Node
     private string _role, _output, _commit, _motion, _origin;
     private int _count, _port, _tick, _startTick = -1, _pulseTick = -1, _completed, _neutralTick = -1;
     private bool _images, _finished, _remoteReady, _clientReadySent, _preparing, _measuring, _inCycle;
-    private bool _measurementAck, _measurementPulse, _recoveryReleased;
+    private bool _measurementAck, _measurementPulse, _recoveryReleased, _finishSent, _finishAcknowledged, _clientCompletionReceived;
+    private int _finishFlushTick = -1;
     private int _driveTick = -1;
     private Vector3 _lastInactiveVelocity;
     private float _lastInactiveHeading;
@@ -25,7 +26,7 @@ public partial class CrossoverContinuityCapture : Node
     private string _expectedHand = "";
     private string _failure = "";
     private ulong _lastPhysics;
-    private int _samples, _gaps, _duplicateFrames, _poseFrameMismatches, _delayMs;
+    private int _samples, _gaps, _duplicateFrames, _poseFrameMismatches, _delayMs, _maxPhysicsGap, _observedMaxPhysicsGap;
     private float? _fixtureSpawnX;
     private readonly System.Diagnostics.Stopwatch _wallClock = System.Diagnostics.Stopwatch.StartNew();
     private StreamWriter _trace;
@@ -54,10 +55,11 @@ public partial class CrossoverContinuityCapture : Node
         _count = int.Parse(Read("--capture-count", "1"));
         _port = int.Parse(Read("--capture-port", "23464"));
         _delayMs = int.Parse(Read("--capture-delay-ms", "0"));
+        _maxPhysicsGap = int.Parse(Read("--capture-max-physics-gap", _role == "client" ? "2" : "1"));
         _output = Read("--capture-output", "");
         if (_output.Length == 0 || !new[] { "local", "server", "client" }.Contains(_role) ||
             !new[] { "stationary", "moving" }.Contains(_motion) || !new[] { "Left", "Right" }.Contains(_origin) ||
-            (_count != 1 && _count != 3) || _delayMs < 0 || _delayMs > 200 || (_delayMs > 0 && _role != "server")) { Finish("invalid capture arguments"); return; }
+            (_count != 1 && _count != 3) || _delayMs < 0 || _delayMs > 200 || (_delayMs > 0 && _role != "server") || _maxPhysicsGap < 1 || _maxPhysicsGap > 2) { Finish("invalid capture arguments"); return; }
         _output = ProjectSettings.GlobalizePath(_output);
         if (Directory.Exists(_output) && Directory.EnumerateFileSystemEntries(_output).Any(path => Path.GetFileName(path) != "capture.avi"))
         { _output = ""; Finish("capture output must be fresh"); return; }
@@ -71,6 +73,10 @@ public partial class CrossoverContinuityCapture : Node
         if (_role == "client")
         {
             Multiplayer.ConnectionFailed += () => Finish("connection failed");
+            Multiplayer.ServerDisconnected += () =>
+            {
+                if (!_finished) Finish(_clientCompletionReceived ? "" : "server disconnected before completion notification");
+            };
             _network.JoinGame("127.0.0.1", _port);
         }
         else
@@ -109,12 +115,32 @@ public partial class CrossoverContinuityCapture : Node
     }
 
     [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-    private void CaptureFinished() { if (_role == "client") Finish(_completed == _count ? "" : "remote cycles incomplete"); }
+    private void CaptureFinished()
+    {
+        if (_role != "client" || Multiplayer.GetRemoteSenderId() != 1 || _clientCompletionReceived) return;
+        if (_completed != _count) { Finish("remote cycles incomplete at completion notification"); return; }
+        _clientCompletionReceived = true;
+        _finishFlushTick = _tick;
+        RpcId(1, nameof(FinishAcknowledged));
+        Event("completion-notification", "ack queued; wait 5 client physics ticks before exit");
+    }
+
+    [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void FinishAcknowledged()
+    {
+        if (_role != "server" || Multiplayer.GetRemoteSenderId() <= 1 || !_finishSent || _finishAcknowledged) return;
+        _finishAcknowledged = true;
+        _finishFlushTick = _tick;
+        Event("completion-acknowledged", "wait 30 server physics ticks before exit");
+    }
 
     public override void _PhysicsProcess(double delta)
     {
         if (_finished) return;
         _tick++;
+        // Completion can outlive Players/1: NetworkManager removes players on disconnect.
+        if (_role == "client" && _clientCompletionReceived && _tick - _finishFlushTick >= 5)
+        { Finish(""); return; }
         // Pacing is diagnostic only. Stop both runaway simulation and stalled network sessions.
         // https://learn.microsoft.com/en-us/dotnet/api/system.diagnostics.stopwatch.startnew?view=net-8.0
         int tickLimit = _role == "local" ? 900 : 6000;
@@ -129,6 +155,7 @@ public partial class CrossoverContinuityCapture : Node
             if (player.ContinuityIsLocalPlayer) { Finish("client subject is local"); return; }
 
             ObserveCycle(player);
+            if (_clientCompletionReceived && _tick - _finishFlushTick >= 5) Finish("");
             return;
         }
         if (_role == "server" && !_remoteReady) return;
@@ -181,8 +208,17 @@ public partial class CrossoverContinuityCapture : Node
         }
         if (_completed == _count && _tick - _neutralTick >= 15)
         {
-            if (_role == "server") Rpc(nameof(CaptureFinished));
-            Finish("");
+            if (_role == "server")
+            {
+                if (!_finishSent)
+                {
+                    _finishSent = true;
+                    Rpc(nameof(CaptureFinished));
+                    Event("completion-sent", "waiting for client acknowledgment");
+                }
+                if (_finishAcknowledged && _tick - _finishFlushTick >= 30) Finish("");
+            }
+            else Finish("");
         }
     }
 
@@ -248,7 +284,12 @@ public partial class CrossoverContinuityCapture : Node
         var p = _players.GetNodeOrNull<PlayerController>("1");
         if (p == null) return;
         ulong physics = Engine.GetPhysicsFrames();
-        if (_measuring && _lastPhysics != 0 && physics > _lastPhysics + 1) _gaps++;
+        if (_measuring && _lastPhysics != 0)
+        {
+            int gap = (int)(physics - _lastPhysics);
+            _observedMaxPhysicsGap = Math.Max(_observedMaxPhysicsGap, gap);
+            if (gap > _maxPhysicsGap) _gaps++;
+        }
         if (_measuring && physics == _lastPhysics) _duplicateFrames++;
         _lastPhysics = physics;
         if (_skeleton == null)
@@ -302,6 +343,7 @@ public partial class CrossoverContinuityCapture : Node
     // https://docs.godotengine.org/en/4.7/classes/class_skeleton3d.html#signals
     private void SnapshotFinalBones()
     {
+        if (_finished || !GodotObject.IsInstanceValid(_skeleton) || !_skeleton.IsInsideTree()) return;
         var bones = new Dictionary<string, float[]>();
         var rotations = new Dictionary<string, float[]>();
         for (int i = 0; i < _skeleton.GetBoneCount(); i++)
@@ -346,7 +388,7 @@ public partial class CrossoverContinuityCapture : Node
         _failure = failure.Length > 0 ? failure : _samples == 0 ? "no trace samples" : _gaps > 0 ? "skipped physics frames during measurement" : "";
         RenderingServer.FramePostDraw -= SampleDraw;
         foreach (string action in new[] { "move_forward", "move_right", "aim_left", "aim_right" }) Input.ActionRelease(action);
-        if (_skeleton != null) _skeleton.SkeletonUpdated -= SnapshotFinalBones;
+        if (GodotObject.IsInstanceValid(_skeleton)) _skeleton.SkeletonUpdated -= SnapshotFinalBones;
         _trace?.Dispose();
         if (!string.IsNullOrEmpty(_output) && Directory.Exists(_output))
             File.WriteAllText(Path.Combine(_output, "manifest.json"), JsonSerializer.Serialize(new
@@ -357,7 +399,8 @@ public partial class CrossoverContinuityCapture : Node
                 engine = Engine.GetVersionInfo()["string"].AsString(), physicsTicksPerSecond = Engine.PhysicsTicksPerSecond,
                 commandLine = OS.GetCmdlineArgs(), userArgs = OS.GetCmdlineUserArgs(), renderer = RenderingServer.GetVideoAdapterName(), displayDriver = DisplayServer.GetName(),
                 camera = _camera == null ? Array.Empty<float>() : Transform(_camera.GlobalTransform), cameraFov = _camera?.Fov,
-                sampleTiming = (!_images && DisplayServer.GetName() == "headless" ? "HEADLESS DIAGNOSTIC _Process state only; " : "FramePostDraw state and image; ") + " SkeletonUpdated final modifier pose with its own frame stamps; production animation callback unchanged", samples = _samples, skippedPhysicsFrames = _gaps, duplicateRenderedPhysicsFrames = _duplicateFrames, poseFrameMismatches = _poseFrameMismatches, events = _events,
+                sampleTiming = (!_images && DisplayServer.GetName() == "headless" ? "HEADLESS DIAGNOSTIC _Process state only; " : "FramePostDraw state and image; ") + " SkeletonUpdated final modifier pose with its own frame stamps; production animation callback unchanged", samples = _samples, skippedPhysicsFrames = _gaps, allowedMaxPhysicsGap = _maxPhysicsGap, observedMaxPhysicsGap = _observedMaxPhysicsGap,
+                cadenceMeaning = _maxPhysicsGap == 1 ? "every physics tick rendered" : "up to two 60Hz physics ticks per rendered frame; normal real-time 30Hz display; not full physics-frame coverage", duplicateRenderedPhysicsFrames = _duplicateFrames, poseFrameMismatches = _poseFrameMismatches, events = _events,
                 verdict = "diagnostic capture only; no continuity or feel acceptance threshold"
             }, new JsonSerializerOptions(JsonOptions) { WriteIndented = true }));
         GD.Print($"[crossover-continuity] {(_failure.Length == 0 ? "CAPTURED" : "FAIL: " + _failure)} cycles={_completed} samples={_samples}");

@@ -30,7 +30,8 @@ def verify(directory):
         previous, current = rows[index - 1:index + 1]
         if current["physicsFrame"] == previous["physicsFrame"]:
             continue
-        if current["physicsFrame"] != previous["physicsFrame"] + 1:
+        gap = current["physicsFrame"] - previous["physicsFrame"]
+        if not 1 <= gap <= manifest.get("allowedMaxPhysicsGap", 1):
             failures.append(f"tick {current['tick']}: missing physics frame")
         if not current["bones"] or not previous["bones"]:
             failures.append(f"tick {current['tick']}: missing skeleton pose")
@@ -39,8 +40,8 @@ def verify(directory):
             key = "mixamorig_" + name
             step = distance(body_position(previous, previous["bones"][key]), body_position(current, current["bones"][key]))
             maximums[name] = max(maximums[name], step)
-            if step > limit:
-                failures.append(f"tick {current['tick']} {previous['animation']} -> {current['animation']}: {name} step {step:.4f} m > {limit:.2f} m")
+            if step > limit * max(1, gap):
+                failures.append(f"tick {current['tick']} {previous['animation']} -> {current['animation']}: {name} step {step:.4f} m > {limit:.2f} m/tick across {gap} ticks")
     return {"capture": str(directory), "result": "FAIL" if failures else "PASS", "maxStepsMeters": maximums, "failures": failures}
 
 

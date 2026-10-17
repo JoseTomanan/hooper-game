@@ -16,11 +16,12 @@ SCENE = "res://tests/integration/CrossoverContinuityCapture.tscn"
 
 def command(args, directory, role, origin, motion, count):
     result = [args.godot, "--path", str(ROOT), "--max-fps", "60",
-              "--disable-vsync", "--resolution", "960x540", "--log-file", str(directory) + ".godot.log"]
+              "--disable-vsync", "--resolution", args.resolution, "--log-file", str(directory) + ".godot.log"]
     # Fixed-fps disables real-time synchronization. Network peers must advance
     # with wall time; otherwise one can finish before the other connects.
     # https://docs.godotengine.org/en/4.7/tutorials/editor/command_line_tutorial.html
-    result += ["--fixed-fps", "60"]
+    if not args.remote or args.paced:
+        result += ["--fixed-fps", "60"]
     if args.headless or role == "server":
         result.append("--headless")
     elif args.compatibility:
@@ -30,10 +31,12 @@ def command(args, directory, role, origin, motion, count):
                "--capture-commit=" + args.commit, "--capture-port=" + str(args.port)]
     if args.headless or role == "server":
         result.append("--capture-images=false")
-    if role == "server":
+    if role == "server" and args.paced:
         # Pace wall time only; fixed-fps still supplies one 1/60 simulation
         # step per frame. This gives the native observer time to persist PNGs.
         result.append("--capture-delay-ms=100")
+    if args.remote and not args.paced:
+        result.append("--capture-max-physics-gap=2")
     return result
 
 
@@ -100,6 +103,8 @@ def main():
     parser.add_argument("--remote", action="store_true")
     parser.add_argument("--headless", action="store_true")
     parser.add_argument("--compatibility", action="store_true")
+    parser.add_argument("--paced", action="store_true", help="diagnostic server pacing; excludes real-time timing claims")
+    parser.add_argument("--resolution", default="960x540")
     parser.add_argument("--port", type=int, default=23464)
     parser.add_argument("--origin", choices=("Left", "Right"))
     parser.add_argument("--motion", choices=("stationary", "moving"))
