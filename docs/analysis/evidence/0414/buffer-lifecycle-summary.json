@@ -1,0 +1,165 @@
+{
+  "meaning": "Actual two-peer lifecycle run and deliberate mutation diagnostic; raw logs archived intact, including diagnostics.",
+  "runs": [
+    {
+      "kind": "final",
+      "sourceDirectory": ".godot/414-lifecycle-final",
+      "expectedPassed": true,
+      "observedRunnerSummary": {
+        "passed": true,
+        "reason": "both peers exited zero with lifecycle PASS evidence",
+        "port": 23467,
+        "peers": {
+          "server": {
+            "stdout": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-lifecycle-final\\da4b2ecd024040708ed0cd2d02bd5e22-server-stdout.log",
+            "native": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-lifecycle-final\\da4b2ecd024040708ed0cd2d02bd5e22-server-native.log",
+            "command": [
+              "C:\\Users\\The King\\AppData\\Local\\GodotPortable\\Godot_v4.7.1-stable_mono_win64\\Godot_v4.7.1-stable_mono_win64_console.exe",
+              "--headless",
+              "--path",
+              "C:\\Users\\The King\\Documents\\GitHub\\hooper-game",
+              "--log-file",
+              "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-lifecycle-final\\da4b2ecd024040708ed0cd2d02bd5e22-server-native.log",
+              "--max-fps",
+              "60",
+              "res://tests/integration/RemotePresentationLifecycleTest.tscn",
+              "--",
+              "--harness-role=server",
+              "--harness-port=23467"
+            ],
+            "exitBeforeCleanup": 0
+          },
+          "client": {
+            "stdout": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-lifecycle-final\\da4b2ecd024040708ed0cd2d02bd5e22-client-stdout.log",
+            "native": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-lifecycle-final\\da4b2ecd024040708ed0cd2d02bd5e22-client-native.log",
+            "command": [
+              "C:\\Users\\The King\\AppData\\Local\\GodotPortable\\Godot_v4.7.1-stable_mono_win64\\Godot_v4.7.1-stable_mono_win64_console.exe",
+              "--headless",
+              "--path",
+              "C:\\Users\\The King\\Documents\\GitHub\\hooper-game",
+              "--log-file",
+              "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-lifecycle-final\\da4b2ecd024040708ed0cd2d02bd5e22-client-native.log",
+              "--max-fps",
+              "60",
+              "res://tests/integration/RemotePresentationLifecycleTest.tscn",
+              "--",
+              "--harness-role=client",
+              "--harness-port=23467"
+            ],
+            "exitBeforeCleanup": 0
+          }
+        }
+      },
+      "archiveFiles": [
+        {
+          "file": "lifecycle-final-da4b2ecd024040708ed0cd2d02bd5e22-client-native.log.gz",
+          "source": ".godot/414-lifecycle-final/da4b2ecd024040708ed0cd2d02bd5e22-client-native.log",
+          "uncompressedSha256": "72e1bbd0656969af548b5b94f139a4cf99c71c4f2d67b292a97b176d44486b3d"
+        },
+        {
+          "file": "lifecycle-final-da4b2ecd024040708ed0cd2d02bd5e22-client-stdout.log.gz",
+          "source": ".godot/414-lifecycle-final/da4b2ecd024040708ed0cd2d02bd5e22-client-stdout.log",
+          "uncompressedSha256": "caa8cf25ca2e4bed0a59c1a4e091b30bd6be0fd03262601f67d013523cb55906"
+        },
+        {
+          "file": "lifecycle-final-da4b2ecd024040708ed0cd2d02bd5e22-server-native.log.gz",
+          "source": ".godot/414-lifecycle-final/da4b2ecd024040708ed0cd2d02bd5e22-server-native.log",
+          "uncompressedSha256": "e221555e158da686faacb3fd8e95a03a304ca629d4b96abb821cd8bad906996f"
+        },
+        {
+          "file": "lifecycle-final-da4b2ecd024040708ed0cd2d02bd5e22-server-stdout.log.gz",
+          "source": ".godot/414-lifecycle-final/da4b2ecd024040708ed0cd2d02bd5e22-server-stdout.log",
+          "uncompressedSha256": "d67e2a45235b86656b7c78592f3d337f335e85e216b3f5bb4374e511399159ed"
+        },
+        {
+          "file": "lifecycle-final-da4b2ecd024040708ed0cd2d02bd5e22-summary.json.gz",
+          "source": ".godot/414-lifecycle-final/da4b2ecd024040708ed0cd2d02bd5e22-summary.json",
+          "uncompressedSha256": "b5d94e90d51587b40efef343e2e40e4876b23e3d9ad7d46845a08117f33c52ea"
+        }
+      ],
+      "mutationMeaning": null,
+      "commitProvenance": "Runner summaries do not embed a commit; source log paths retained without assigning an invented revision.",
+      "diagnosticBoundary": "Raw logs contain inactive/disconnected ENet diagnostics during deliberate transport disconnect, including existing role queries reached through new presentation paths; PASS does not mean clean logs. Reconnect proves presentation reset/selection in the existing frozen match, not a lobby/session-restart implementation."
+    },
+    {
+      "kind": "mutation-early-return",
+      "sourceDirectory": ".godot/414-lifecycle-mutation-early-return",
+      "expectedPassed": false,
+      "observedRunnerSummary": {
+        "passed": false,
+        "reason": "client reported FAIL",
+        "port": 23467,
+        "peers": {
+          "server": {
+            "stdout": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-lifecycle-mutation-early-return\\ea225c1f321641bfb9a7428acd420bf3-server-stdout.log",
+            "native": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-lifecycle-mutation-early-return\\ea225c1f321641bfb9a7428acd420bf3-server-native.log",
+            "command": [
+              "C:\\Users\\The King\\AppData\\Local\\GodotPortable\\Godot_v4.7.1-stable_mono_win64\\Godot_v4.7.1-stable_mono_win64_console.exe",
+              "--headless",
+              "--path",
+              "C:\\Users\\The King\\Documents\\GitHub\\hooper-game",
+              "--log-file",
+              "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-lifecycle-mutation-early-return\\ea225c1f321641bfb9a7428acd420bf3-server-native.log",
+              "--max-fps",
+              "60",
+              "res://tests/integration/RemotePresentationLifecycleTest.tscn",
+              "--",
+              "--harness-role=server",
+              "--harness-port=23467"
+            ],
+            "exitBeforeCleanup": null
+          },
+          "client": {
+            "stdout": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-lifecycle-mutation-early-return\\ea225c1f321641bfb9a7428acd420bf3-client-stdout.log",
+            "native": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-lifecycle-mutation-early-return\\ea225c1f321641bfb9a7428acd420bf3-client-native.log",
+            "command": [
+              "C:\\Users\\The King\\AppData\\Local\\GodotPortable\\Godot_v4.7.1-stable_mono_win64\\Godot_v4.7.1-stable_mono_win64_console.exe",
+              "--headless",
+              "--path",
+              "C:\\Users\\The King\\Documents\\GitHub\\hooper-game",
+              "--log-file",
+              "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-lifecycle-mutation-early-return\\ea225c1f321641bfb9a7428acd420bf3-client-native.log",
+              "--max-fps",
+              "60",
+              "res://tests/integration/RemotePresentationLifecycleTest.tscn",
+              "--",
+              "--harness-role=client",
+              "--harness-port=23467"
+            ],
+            "exitBeforeCleanup": null
+          }
+        }
+      },
+      "archiveFiles": [
+        {
+          "file": "lifecycle-mutation-early-return-ea225c1f321641bfb9a7428acd420bf3-client-native.log.gz",
+          "source": ".godot/414-lifecycle-mutation-early-return/ea225c1f321641bfb9a7428acd420bf3-client-native.log",
+          "uncompressedSha256": "e4ef86ea5d8b3f3b6ec99645ea053b52b02020782ad6a7c5dc3bb737dc77805b"
+        },
+        {
+          "file": "lifecycle-mutation-early-return-ea225c1f321641bfb9a7428acd420bf3-client-stdout.log.gz",
+          "source": ".godot/414-lifecycle-mutation-early-return/ea225c1f321641bfb9a7428acd420bf3-client-stdout.log",
+          "uncompressedSha256": "5074f768ce2f4d660700220137d6738119cc93daa229c0919e8fc27638c1d60f"
+        },
+        {
+          "file": "lifecycle-mutation-early-return-ea225c1f321641bfb9a7428acd420bf3-server-native.log.gz",
+          "source": ".godot/414-lifecycle-mutation-early-return/ea225c1f321641bfb9a7428acd420bf3-server-native.log",
+          "uncompressedSha256": "8722d812ae631b3364ad86cc12e5f7186f7c0b0c4d2b892a6c84cc90ffe5b948"
+        },
+        {
+          "file": "lifecycle-mutation-early-return-ea225c1f321641bfb9a7428acd420bf3-server-stdout.log.gz",
+          "source": ".godot/414-lifecycle-mutation-early-return/ea225c1f321641bfb9a7428acd420bf3-server-stdout.log",
+          "uncompressedSha256": "729af114591497572501b40b4ddd837d91ba521ba1c7fc426d6d562627860383"
+        },
+        {
+          "file": "lifecycle-mutation-early-return-ea225c1f321641bfb9a7428acd420bf3-summary.json.gz",
+          "source": ".godot/414-lifecycle-mutation-early-return/ea225c1f321641bfb9a7428acd420bf3-summary.json",
+          "uncompressedSha256": "26014f3d13e1b40c8e506079573bd4f91b863560dd54b73bb5cc54026df40f7f"
+        }
+      ],
+      "mutationMeaning": "Deliberate restoration of pre-buffer Player game-over early return; expected drain-deadline failure, not a normal production failure.",
+      "commitProvenance": "Runner summaries do not embed a commit; source log paths retained without assigning an invented revision.",
+      "diagnosticBoundary": "Raw logs contain inactive/disconnected ENet diagnostics during deliberate transport disconnect, including existing role queries reached through new presentation paths; PASS does not mean clean logs. Reconnect proves presentation reset/selection in the existing frozen match, not a lobby/session-restart implementation."
+    }
+  ]
+}
