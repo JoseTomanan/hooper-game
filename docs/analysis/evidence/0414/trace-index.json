@@ -78,5 +78,15 @@
     "file": "late-loss-left-server-manifest.json.gz",
     "source": ".godot/414-loss-late-v2/left-stationary-1-server/manifest.json",
     "uncompressedSha256": "9823233a473aa4a2de63295d7b93033190bf6c0e05c333ea0daee0258c0d7035"
+  },
+  {
+    "file": "latest-late-startup-failure-trace.jsonl.gz",
+    "source": ".godot/414-final-clock-remote/right-moving-3/trace.jsonl",
+    "uncompressedSha256": "2f7a47d233f720e1f30bc94c8f8824a4a6f7357375ec47170df336d4f05a74d0"
+  },
+  {
+    "file": "latest-late-startup-failure-manifest.json.gz",
+    "source": ".godot/414-final-clock-remote/right-moving-3/manifest.json",
+    "uncompressedSha256": "b814d427b44a071f506a16af959999033abc4e159348508d2d74db6832c6dd46"
   }
 ]

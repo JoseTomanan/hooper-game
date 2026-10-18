@@ -1,10 +1,11 @@
 {
   "mode": "headless",
-  "commit": "8ee68e9421e274f57660bc62efd01e7cd08b79f3",
+  "commit": "7340f57f0e2e3e81e312dff58568b57a07202c7a",
+  "remoteTiming": "not run",
   "result": "PASS",
   "captures": [
     {
-      "capture": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-clock-headless\\local\\left-moving-1",
+      "capture": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-localclock-headless\\local\\left-moving-1",
       "result": "PASS",
       "maxStepsMeters": {
         "Hips": 0.13885122508562908,
@@ -37,7 +38,7 @@
       "failures": []
     },
     {
-      "capture": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-clock-headless\\local\\left-moving-3",
+      "capture": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-localclock-headless\\local\\left-moving-3",
       "result": "PASS",
       "maxStepsMeters": {
         "Hips": 0.13885162474674217,
@@ -124,7 +125,7 @@
       "failures": []
     },
     {
-      "capture": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-clock-headless\\local\\left-stationary-1",
+      "capture": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-localclock-headless\\local\\left-stationary-1",
       "result": "PASS",
       "maxStepsMeters": {
         "Hips": 0.13885122508559303,
@@ -157,7 +158,7 @@
       "failures": []
     },
     {
-      "capture": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-clock-headless\\local\\left-stationary-3",
+      "capture": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-localclock-headless\\local\\left-stationary-3",
       "result": "PASS",
       "maxStepsMeters": {
         "Hips": 0.13885122508559303,
@@ -238,7 +239,7 @@
       "failures": []
     },
     {
-      "capture": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-clock-headless\\local\\right-moving-1",
+      "capture": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-localclock-headless\\local\\right-moving-1",
       "result": "PASS",
       "maxStepsMeters": {
         "Hips": 0.13871425424483033,
@@ -271,7 +272,7 @@
       "failures": []
     },
     {
-      "capture": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-clock-headless\\local\\right-moving-3",
+      "capture": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-localclock-headless\\local\\right-moving-3",
       "result": "PASS",
       "maxStepsMeters": {
         "Hips": 0.13885162474677815,
@@ -358,7 +359,7 @@
       "failures": []
     },
     {
-      "capture": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-clock-headless\\local\\right-stationary-1",
+      "capture": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-localclock-headless\\local\\right-stationary-1",
       "result": "PASS",
       "maxStepsMeters": {
         "Hips": 0.13871438028137814,
@@ -391,7 +392,7 @@
       "failures": []
     },
     {
-      "capture": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-clock-headless\\local\\right-stationary-3",
+      "capture": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-localclock-headless\\local\\right-stationary-3",
       "result": "PASS",
       "maxStepsMeters": {
         "Hips": 0.13885122508559303,
@@ -480,7 +481,7 @@
   ],
   "negativeControls": [
     {
-      "capture": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-clock-headless\\mutation-right\\right-stationary-1",
+      "capture": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-localclock-headless\\mutation-right\\right-stationary-1",
       "result": "FAIL",
       "maxStepsMeters": {
         "Hips": 0.1946767287372069,
@@ -525,7 +526,7 @@
       "expectedFailure": true
     },
     {
-      "capture": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-clock-headless\\mutation-left\\left-stationary-1",
+      "capture": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-localclock-headless\\mutation-left\\left-stationary-1",
       "result": "FAIL",
       "maxStepsMeters": {
         "Hips": 0.18955408527668186,
