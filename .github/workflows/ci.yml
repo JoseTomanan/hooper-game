@@ -118,6 +118,11 @@ jobs:
             .godot/harness-logs/**
             .godot/harness-coordination/**
             .godot/dedicated-game-*/**
+            .godot/crossover-continuity/**
+            .godot/remote-presentation-lifecycle/**
+            .godot/committed-replay/**
+            .godot/production-contact/**
+            .godot/stance-net/**
           include-hidden-files: true
           if-no-files-found: warn
 
