@@ -221,8 +221,11 @@ public partial class RemotePresentationLifecycleTest : Node
             $"gateWait={_ball.ContinuityReleaseWaitTicks} resyncs={_ball.PresentationResyncCount}")) return;
         if (!ValidateFinal(remote, "game-over drained")) return;
         _oldDisplayedTick = remote.PlayerPresentationTick; _oldEpoch = _ball.PresentationEpoch; _oldLocalId = _localId;
-        Send(1, MethodName.Drained); _stage = 2;
         GD.Print($"[remote-lifecycle] client game-over lag/drain proved tick={_oldDisplayedTick} delay={_ball.ContinuityActualDelayTicks}");
+        // The reconnect proof starts a new history epoch. Discard this completed
+        // diagnostic's pending envelopes before asking the server to disconnect.
+        _ball.ConfigureContinuityPresentationDelay(0);
+        Send(1, MethodName.Drained); _stage = 2;
     }
 
     private bool ValidateFinal(PlayerController remote, string label)

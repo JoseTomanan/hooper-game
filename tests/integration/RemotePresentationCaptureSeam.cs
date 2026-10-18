@@ -26,6 +26,15 @@ public partial class BallController
     {
         _continuityDelayTicks = ticks;
         _continuityReleaseReady = releaseReady;
+        if (ticks == 0)
+        {
+            // End this diagnostic epoch before a lifecycle fixture reconnects.
+            // Retain the completed measurement, but never replay queued old-peer history.
+            _continuityDelayedFrames.Clear();
+            _continuityReleaseReady = null;
+            _continuityDelayApplied = _continuityDelayReleased = false;
+            _continuityLastDrainStamp = null;
+        }
     }
 
     partial void DeferRemotePresentationForHarness(WorldPresentationFrame frame, ref bool defer)
