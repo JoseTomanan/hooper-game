@@ -13,10 +13,10 @@ public partial class ProtectionPose : SkeletonModifier3D
         // Godot applies modifiers after AnimationMixer and restores the underlying pose.
         // Each write starts from this frame's authored rotation; no cached pose accumulates.
         // Source: https://docs.godotengine.org/en/4.7/classes/class_skeletonmodifier3d.html
-        if (Player == null || !Player.DisplayProtecting || Player.IsPivotingInPlace
+        if (Player == null || !Player.DisplayProtecting || Player.DisplayPivoting
             || Player.DisplayMove().phase != MovePhase.Inactive) return;
         var skeleton = GetSkeleton();
-        bool rightBall = Player.HandSide == HandSide.Right;
+        bool rightBall = Player.DisplayHandSide == HandSide.Right;
         string off = rightBall ? "Left" : "Right";
         float mirror = rightBall ? 1f : -1f;
         Rotate(skeleton, "mixamorig_" + off + "Arm", new Vector3(.35f, 0, .45f * mirror));

@@ -908,7 +908,7 @@ public partial class BallController : Node3D
 	/// BehindTheBack's behind-body/shielded (#194), or BetweenTheLegs's
 	/// through-the-legs (#199). Captured ONCE, at the tick the flip is
 	/// detected (see AdvanceHandSweep rule 1), from the holder's
-	/// DisplayMoveId() — never re-read mid-sweep, so a move finishing its
+	/// CurrentSimulationMoveId — never re-read mid-sweep, so a move finishing its
 	/// Active phase partway through the (shorter) sweep animation cannot flip
 	/// which path this in-flight sweep renders as. Was a bare bool
 	/// (_sweepIsBehindBody) before #199 added the third path.
@@ -1313,6 +1313,7 @@ public partial class BallController : Node3D
 
 	public override void _Ready()
 	{
+		InitializeRemotePresentation();
 		// Discoverable by the possession HUD via group lookup (#51), the same
 		// pattern ScoreHud uses to find GameManager — there is exactly one ball.
 		AddToGroup("ball");
@@ -1412,6 +1413,7 @@ public partial class BallController : Node3D
 
 	public override void _ExitTree()
 	{
+		DisposeRemotePresentation();
 		// Drop the delegate so GameManager doesn't hold a dangling reference.
 		// Same lifecycle hygiene as PossessionHud._ExitTree.
 		if (_gameManager != null && _ballMaterial != null)
@@ -1560,7 +1562,9 @@ public partial class BallController : Node3D
 				(int)StateMachine.Current, GlobalPosition, CurrentVelocity(), StateMachine.HolderPeerId, IsCleared, HasDribbled);
 		}
 
+		PublishRemotePresentation();
 		ApplySmoothCorrection();
+		ApplyRemoteBallPresentation();
 
 		// Push the possession HUD only when something actually changed (#51) —
 		// one refresh per possession/clear event, not 60 per second. Runs on
@@ -2527,7 +2531,7 @@ public partial class BallController : Node3D
 	///      correcting reverse sweep: at the exact revert tick,
 	///      _machine.CurrentMove has typically already gone null/Inactive
 	///      (ReconcileFromServer's force-Inactive branch), so
-	///      DisplayMoveId() reads "" rather than "behindtheback"/
+	///      CurrentSimulationMoveId reads "" rather than "behindtheback"/
 	///      "betweenthelegs" — the extra reverse sweep plays as a front
 	///      (Crossover-style) transit even if the reverted move was a
 	///      BehindTheBack or BetweenTheLegs. Cosmetic-only, self-correcting
@@ -2575,14 +2579,14 @@ public partial class BallController : Node3D
 			_sweepActive         = true;
 			// #194/#199: sampled ONCE, at the moment the flip is detected — see
 			// _sweepPath's doc for why this is not re-read per tick.
-			// DisplayMoveId() is the same per-role broadcast-aware resolver
+			// CurrentSimulationMoveId is the live per-role broadcast-aware resolver
 			// DisplayMove() already uses (M7b #69's gap class): the holder's
 			// OWN simulated role reads its live _machine, but the remote
 			// client's copy of the opponent has no live _machine to read and
 			// must fall back to the broadcast _serverMoveId — exactly the
 			// same role split this class's own doc above already establishes
 			// is safe for HandSide itself.
-			_sweepPath = holder?.DisplayMoveId() switch
+			_sweepPath = holder?.CurrentSimulationMoveId switch
 			{
 				"behindtheback"  => BallSweepPath.BehindBody,
 				"betweenthelegs" => BallSweepPath.ThroughLegs,

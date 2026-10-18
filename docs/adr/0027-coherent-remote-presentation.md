@@ -1,6 +1,6 @@
 # ADR-0027 — Coherent remote player and ball presentation
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-10-18
 - **Superseded-by:** —
 
@@ -20,7 +20,7 @@ the defensive read stated. This extends presentation under ADR-0002 and
 ADR-0012; it does not delay authoritative HandSide, change defensive resolution,
 add rollback or alter committed-move windows.
 
-## Proposed decision
+## Decision
 
 Render a client's remote players and non-local ball from one bounded history
 of complete server-tick presentation frames, while gameplay consumes live state.
@@ -43,7 +43,7 @@ of complete server-tick presentation frames, while gameplay consumes live state.
   On underflow, hold the complete view and refill three contiguous frames;
   never invent a phase, skip a missing frame or accelerate a phase to catch up.
 - Freeze selection once per client physics tick. All remote display reads,
-  player mesh transforms, ball mesh transforms and visual cues use that same
+  player/ball mesh transforms, posture/beaten cues and shadows use that same
   selection, even if more RPCs arrive later in the tick. Remote AnimationTree
   evaluation is manual and advances only with consumed presentation ticks;
   holding a frame must also hold neutral and non-crossover animation time.
@@ -52,8 +52,8 @@ of complete server-tick presentation frames, while gameplay consumes live state.
 - Retain at most sixteen envelopes. If the newest queued tick exceeds the
   displayed tick by more than twelve (200 ms at 60 Hz), explicitly resynchronize
   to three contiguous frames behind the newest tick. Count the reset and expose
-  it to proof. This bounds queued display lag and memory; it permits a visible
-  discontinuity after outages or sustained clock/cadence mismatch. No continuity
+  it to proof. This bounds the application history's lag and memory; it permits
+  a visible discontinuity after outages or sustained clock/cadence mismatch. No continuity
   claim includes a reset, uninitialized history or an arbitrarily stalled peer.
 - The host and client's own predicted player remain live. A ball with either
   live or historical local ownership also stays on the immediate prediction
@@ -64,6 +64,8 @@ of complete server-tick presentation frames, while gameplay consumes live state.
   snapshots, possession, move machines, reconciliation, score and HUD signals
   retain their current semantics. Display-specific accessors read history.
   The ball's live sweep code must not consume a historical DisplayMoveId.
+  Made-shot tint remains an immediate outcome cue alongside the score/HUD;
+  buffering geometry does not delay the server's announced result.
   Reconnect clears history; game-over freezes gameplay but continues draining
   presentation to the final server pose.
 
@@ -96,7 +98,7 @@ hands/motion/repetition, assert matching player/ball presentation ticks and full
 phase order/counters, and distinguish buffer holds/resets from rendering gaps.
 It must also show unchanged live hand/phase/possession and local prediction,
 hold ordinary animation time on underflow, drain after game-over, clear history
-on reconnect, and exercise faster/slower producer clocks and bounded resets.
+  on reconnect, and exercise faster/slower producer clocks and bounded resets.
 The ordinary build, full unit suite and exhaustive existing harness remain gates.
 
 ## Official API sources

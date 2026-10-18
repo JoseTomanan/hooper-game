@@ -110,14 +110,12 @@ public partial class CrossoverPose : SkeletonModifier3D
             _ => data.RecoveryFrames
         };
         ulong physicsFrame = Engine.GetPhysicsFrames();
-        // Match an AnimationTree clip's local clock while a remote phase is held.
-        // Stale/duplicate snapshots cannot stall it and bunch the missing travel
-        // into the next update. Authority still selects every phase immediately;
-        // the display never advances into another phase on its own.
-        // Repeated Advance(0) evaluations in one physics tick consume no time.
+        // Buffered remote display has the complete source timeline: sample its exact
+        // counter, including held frames. Before history initializes, preserve the
+        // legacy observed-phase clock; repeated Advance(0) calls consume no time.
         // https://docs.godotengine.org/en/4.7/classes/class_engine.html#class-engine-method-get-physics-frames
         ulong elapsed = physicsFrame >= _samplePhysicsFrame ? physicsFrame - _samplePhysicsFrame : 0;
-        _sampleFrame = CrossoverPoseClock.NextFrame(_sampleFrame, display.FrameInPhase, frames,
+        _sampleFrame = display.PresentationTick >= 0 ? display.FrameInPhase : CrossoverPoseClock.NextFrame(_sampleFrame, display.FrameInPhase, frames,
             display.SimulatedLocally, changed, elapsed);
         _samplePhysicsFrame = physicsFrame;
         _origin = origin;

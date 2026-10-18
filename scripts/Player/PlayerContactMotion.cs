@@ -119,9 +119,11 @@ public partial class PlayerController
 
     private void ApplyContactTickPresentation()
     {
+        RefreshRemotePresentation();
         ApplySmoothCorrection();
+        ApplyRemoteVisualPosition();
         ApplyCosmetics();
-        TickReboundGrabLatch();
+        if (_remotePresentation == null) TickReboundGrabLatch();
         ApplyAnimation();
         ApplyBeatenCue();
     }

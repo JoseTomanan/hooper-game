@@ -127,6 +127,7 @@
   -->
   <ItemGroup>
     <Compile Include="..\..\scripts\Networking\DedicatedServerArgs.cs" />
+    <Compile Include="..\..\scripts\Networking\RemotePresentationBuffer.cs" />
     <Compile Include="..\..\scripts\Networking\ServerBeacon.cs" />
     <Compile Include="..\..\scripts\Networking\ServerList.cs" />
   </ItemGroup>

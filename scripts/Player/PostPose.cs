@@ -10,7 +10,7 @@ public partial class PostPose : SkeletonModifier3D
 
     public override void _ProcessModificationWithDelta(double delta)
     {
-        if (Player == null || !Player.DisplayPosting || Player.IsPivotingInPlace
+        if (Player == null || !Player.DisplayPosting || Player.DisplayPivoting
             || Player.DisplayMove().phase != MovePhase.Inactive) return;
         var skeleton = GetSkeleton();
         if (skeleton == null) return;
@@ -25,7 +25,7 @@ public partial class PostPose : SkeletonModifier3D
             RotateCharacterSpace(skeleton, "mixamorig_" + side + "Leg", new Vector3(.44f, 0, 0));
             RotateCharacterSpace(skeleton, "mixamorig_" + side + "Foot", new Vector3(-.22f, 0, 0));
         }
-        bool rightBall = Player.HandSide == HandSide.Right;
+        bool rightBall = Player.DisplayHandSide == HandSide.Right;
         string off = rightBall ? "Left" : "Right";
         float mirror = rightBall ? 1f : -1f;
         RotateLocal(skeleton, "mixamorig_" + off + "Arm", new Vector3(.55f, -.15f * mirror, .65f * mirror));

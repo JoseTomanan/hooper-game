@@ -10,7 +10,7 @@ public partial class DefensiveStancePose : SkeletonModifier3D
 
     public override void _ProcessModificationWithDelta(double delta)
     {
-        if (Player == null || !Player.DisplayDefensiveStance || Player.IsPivotingInPlace
+        if (Player == null || !Player.DisplayDefensiveStance || Player.DisplayPivoting
             || Player.DisplayMove().phase != MovePhase.Inactive) return;
         var skeleton = GetSkeleton();
         if (skeleton == null) return;

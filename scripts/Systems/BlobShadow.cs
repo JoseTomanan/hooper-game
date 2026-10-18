@@ -1,4 +1,6 @@
 using Godot;
+using Hooper.Player;
+using Hooper.Ball;
 
 namespace Hooper.Systems;
 
@@ -20,6 +22,12 @@ public partial class BlobShadow : Node3D
     public override void _PhysicsProcess(double delta)
     {
         if (GetParent() is not Node3D parent) return;
-        GlobalPosition = new Vector3(parent.GlobalPosition.X, FloorY, parent.GlobalPosition.Z);
+        Vector3 position = parent switch
+        {
+            PlayerController player => player.DisplayRootPosition,
+            BallController ball => ball.RenderedWorldPosition,
+            _ => parent.GlobalPosition
+        };
+        GlobalPosition = new Vector3(position.X, FloorY, position.Z);
     }
 }

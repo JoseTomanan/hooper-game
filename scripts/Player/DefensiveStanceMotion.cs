@@ -19,8 +19,8 @@ public partial class PlayerController
 
     public bool IsInDefensiveStance => _effectiveStance && _requestedProtect
         && StanceEligible() && !_pivot.HasLatch;
-    public bool DisplayDefensiveStance => !IsServer && !IsLocalPlayer
-        ? _serverStance : IsInDefensiveStance;
+    public bool DisplayDefensiveStance => _remotePresentation?.DefensiveStance ?? (!IsServer && !IsLocalPlayer
+        ? _serverStance : IsInDefensiveStance);
 
     // Caller samples gameplay context, never cosmetic transforms. The server
     // computes eligibility independently; SubmitInput carries only the request.

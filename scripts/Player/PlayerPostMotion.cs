@@ -22,9 +22,9 @@ public partial class PlayerController
     private int _turnaroundToken, _serverTurnaroundToken;
 
     public bool IsPosting => _requestedPost && PostEligible();
-    public bool DisplayPosting => !IsServer && !IsLocalPlayer ? _serverPost : IsPosting;
-    public bool DisplayPostEstablished => !IsServer && !IsLocalPlayer
-        ? _serverPost && _serverPostEstablished : IsPosting && _postEstablished;
+    public bool DisplayPosting => _remotePresentation?.Posting ?? (!IsServer && !IsLocalPlayer ? _serverPost : IsPosting);
+    public bool DisplayPostEstablished => _remotePresentation?.PostEstablished ?? (!IsServer && !IsLocalPlayer
+        ? _serverPost && _serverPostEstablished : IsPosting && _postEstablished);
 
     private bool PostEligible() => !_machine.IsActive && IsBallHolder
         && GetBall()?.State == BallState.Dribbling && GetGameManager()?.IsGameOver != true;

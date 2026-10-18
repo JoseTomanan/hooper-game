@@ -115,7 +115,7 @@ public partial class PlayerController : CharacterBody3D
 	private bool _requestedProtect, _pendingProtectRequest, _serverProtect;
 	public bool IsProtecting => _requestedProtect && !IsPosting && !_machine.IsActive
 		&& IsBallHolder && GetBall()?.State == BallState.Dribbling;
-	public bool DisplayProtecting => !IsServer && !IsLocalPlayer ? _serverProtect : IsProtecting;
+	public bool DisplayProtecting => _remotePresentation?.Protecting ?? (!IsServer && !IsLocalPlayer ? _serverProtect : IsProtecting);
 	private bool _requestedSprint;
 	private bool _pendingSprintRequest;
 	/// <summary>Fresh effective pace, so lost possession or a commitment cannot leave exposure stale.</summary>
@@ -1003,7 +1003,7 @@ public partial class PlayerController : CharacterBody3D
 
 	/// <summary>Frozen presentation input consumed by the crossover pose modifier.</summary>
 	public readonly record struct AnimationDisplayFrame(string MoveId, MovePhase Phase, int FrameInPhase, HandSide Hand,
-		bool SimulatedLocally);
+		bool SimulatedLocally, long PresentationTick = -1);
 	public AnimationDisplayFrame AnimationDisplaySnapshot { get; private set; }
 
 	/// <summary>
@@ -1581,6 +1581,7 @@ public partial class PlayerController : CharacterBody3D
 		// Optional/null-guarded: harness-built trees (StealTurnoverTest et al.)
 		// never instance Player.tscn, so they simply have no indicator to toggle.
 		_beatenIndicator = GetNodeOrNull<Node3D>("BeatenIndicator");
+		if (_beatenIndicator != null) _beatenIndicatorRestPosition = _beatenIndicator.Position;
 	}
 
 	public override void _ExitTree()
@@ -1630,7 +1631,12 @@ public partial class PlayerController : CharacterBody3D
 		// ADR-0005) is not perceptible as "the game kept going" the way a
 		// freeze/unfreeze flicker would be. Confirmed: broadcast-driven
 		// freeze is the only correct choice here, not just the simplest one.
-		if (GetGameManager()?.IsGameOver == true) return;
+		if (GetGameManager()?.IsGameOver == true)
+		{
+			// Gameplay freezes immediately; delayed remote visuals drain to the final pose.
+			if (!IsServer && !IsLocalPlayer) ApplyContactTickPresentation();
+			return;
+		}
 
 		if (IsServer && TryTickAutomaticContactPair(delta)) return;
 
@@ -2993,7 +2999,7 @@ public partial class PlayerController : CharacterBody3D
 		// left in the codebase for historical reference; it is no longer
 		// called on this code path. _visualYaw is preserved as the field name
 		// for the lean computation below, but its value now comes from Heading.
-		_visualYaw = Heading;
+		_visualYaw = DisplayHeading;
 		(MovePhase displayPhase, float burstDir) = DisplayMove();
 		float tilt = LeanResolver.ResolveTilt(displayPhase, burstDir);
 
@@ -3096,7 +3102,7 @@ public partial class PlayerController : CharacterBody3D
 		// Locomotion blend (#68): feed horizontal speed; the Y component is
 		// vertical and irrelevant to a ground idle/run blend.
 		// Sprint reuses the fastest authored locomotion/dribble clip (no new asset).
-		float horizontalSpeed = System.MathF.Min(new Vector2(Velocity.X, Velocity.Z).Length(), MoveSpeed);
+		float horizontalSpeed = System.MathF.Min(new Vector2(DisplayVelocity.X, DisplayVelocity.Z).Length(), MoveSpeed);
 		_animTree.Set("parameters/Locomotion/blend_position", horizontalSpeed);
 		// Dribble blend (#285): the live-dribble neutral is the SAME idle↔moving
 		// speed blend on a second BlendSpace1D, so it is fed the same value. Set
@@ -3130,7 +3136,8 @@ public partial class PlayerController : CharacterBody3D
 		(MovePhase displayPhase, _) = DisplayMove();
 		bool displaySimulatedLocally = DisplayPhaseResolver.LocalMachineDrivesDisplay(IsServer, IsLocalPlayer);
 		AnimationDisplaySnapshot = new AnimationDisplayFrame(DisplayMoveId(), displayPhase,
-			displaySimulatedLocally ? _machine.FrameInPhase : _serverMoveFrameInPhase, HandSide, displaySimulatedLocally);
+			_remotePresentation?.FrameInPhase ?? (displaySimulatedLocally ? _machine.FrameInPhase : _serverMoveFrameInPhase),
+			DisplayHandSide, displaySimulatedLocally, PlayerPresentationTick);
 		// (#243) isFadeaway only ever changes MoveAnimResolver's answer during
 		// Active (a squared-up JumpShot, every other move, and every non-Active
 		// phase ignore it) — see MoveAnimResolver.Resolve's own doc.
@@ -3154,7 +3161,7 @@ public partial class PlayerController : CharacterBody3D
 		// a pivot or a fresh rebound grab still wins). It reads the single
 		// replicated ball rather than this node's machine, so it needs no
 		// per-role branch at all; see DisplayDribbling's own doc.
-		MoveAnimState generic = MoveAnimResolver.Resolve(displayPhase, DisplayFadeaway(), IsPivotingInPlace, IsPlayingReboundGrab, DisplayDribbling());
+		MoveAnimState generic = MoveAnimResolver.Resolve(displayPhase, DisplayFadeaway(), DisplayPivoting, _remotePresentation?.ReboundGrab ?? IsPlayingReboundGrab, DisplayDribbling());
 		// (#280) HandSide needs no per-role branch the way DisplayMove/
 		// DisplayMoveId do: it is server-authoritative, predicted on the owning
 		// client, and broadcast on ReceiveState (ADR-0012), so this node's copy
@@ -3168,7 +3175,8 @@ public partial class PlayerController : CharacterBody3D
 		// the current move's split rule calls for. Passing it unconditionally is
 		// safe — the resolver ignores it for every move outside
 		// TargetHandedMoves, exactly as it ignores HandSide outside HandedMoves.
-		string target = MoveAnimResolver.ResolveStateName(generic, DisplayMoveId(), HandSide, DisplayStealReachSide());
+		string target = MoveAnimResolver.ResolveStateName(generic, DisplayMoveId(), DisplayHandSide, DisplayStealReachSide());
+		if (ApplyBufferedAnimation(target)) return;
 		if (target != _currentAnimStateName)
 		{
 			bool touchesCrossover = target.StartsWith("Crossover", System.StringComparison.Ordinal)
@@ -3193,11 +3201,16 @@ public partial class PlayerController : CharacterBody3D
 	{
 		if (_beatenIndicator == null) return;
 		_beatenIndicator.Visible = DisplayBeaten();
+		if (_remotePresentation != null)
+			_beatenIndicator.Position = ToLocal(DisplayRootPosition) + _beatenIndicatorRestPosition;
+		else _beatenIndicator.Position = _beatenIndicatorRestPosition;
 	}
 
 	/// <summary>
-	/// The committed-move phase and burst direction this node should DISPLAY this
-	/// frame, resolved by role (M7b, #69). For every role this peer simulates
+	/// The committed-move phase and burst direction this node should DISPLAY.
+	/// Buffered remote copies read the shared historical presentation frame first.
+	/// Before initialization, the live fallback is resolved by role (M7b, #69).
+	/// For every role this peer simulates
 	/// (host own, server's remote copy, client own) it reads the live local
 	/// _machine; for the client's copy of the opponent — the one role that never
 	/// advances its local _machine — it reads the broadcast phase/payload instead.
@@ -3212,12 +3225,13 @@ public partial class PlayerController : CharacterBody3D
 	/// lateral lean of its own (ApplyCosmetics/LeanResolver only react to a
 	/// nonzero burst).
 	///
-	/// Public (M7b, issue #73): BallController.UpdateHandSide reads this on the
-	/// holder's node so the ball-on-hand display rides the same per-role DISPLAY
-	/// path #69 established, rather than re-deriving its own role logic.
+	/// Cosmetic-only: the live ball mini-physics reads live hand and move identity,
+	/// while its remote mesh consumes the same buffered world frame.
 	/// </summary>
 	public (MovePhase phase, float burstDir) DisplayMove()
 	{
+		if (_remotePresentation is { } historical)
+			return (historical.Phase, historical.MoveId is "crossover" or "behindtheback" or "betweenthelegs" or "inandout" ? historical.MoveParam : 0f);
 		if (DisplayPhaseResolver.LocalMachineDrivesDisplay(IsServer, IsLocalPlayer))
 			return (_machine.Phase,
 				(_machine.CurrentMove as Crossover)?.BurstDirection
@@ -3234,18 +3248,16 @@ public partial class PlayerController : CharacterBody3D
 	/// The committed-move Id this node should DISPLAY this frame — same
 	/// per-role resolution as <see cref="DisplayMove"/> (M7b, #69), but
 	/// returning the identity string instead of phase/burst. Added for
-	/// BehindTheBack (#194): BallController.AdvanceHandSweep needs to tell a
-	/// Crossover-driven hand flip apart from a BehindTheBack-driven one (the
+	/// BehindTheBack (#194) originally shared this resolver with the ball sweep.
+	/// Live mini-physics now uses CurrentSimulationMoveId to avoid historical state.
+	/// It distinguishes a Crossover hand flip from BehindTheBack (the
 	/// in-front sweep vs. the shielded behind-body path) for EVERY role,
 	/// including the remote client's copy of the opponent — which, like
 	/// DisplayMove, has no live local _machine to read (that peer's _machine
 	/// never advances for the opponent's node), so it must fall back to the
 	/// broadcast _serverMoveId exactly like DisplayMove's burstDir already does.
 	/// </summary>
-	public string DisplayMoveId() =>
-		DisplayPhaseResolver.LocalMachineDrivesDisplay(IsServer, IsLocalPlayer)
-			? MoveIdOf(_machine.CurrentMove)
-			: _serverMoveId;
+	public string DisplayMoveId() => _remotePresentation?.MoveId ?? CurrentSimulationMoveId;
 
 	/// <summary>
 	/// (Issue #243) Whether this node should DISPLAY the fadeaway/off-balance
@@ -3262,6 +3274,7 @@ public partial class PlayerController : CharacterBody3D
 	/// JumpShot specifically.
 	/// </summary>
 	public bool DisplayFadeaway() =>
+		_remotePresentation is { } p ? p.MoveId == "jumpshot" && p.MoveParam != 0f :
 		DisplayPhaseResolver.LocalMachineDrivesDisplay(IsServer, IsLocalPlayer)
 			? _machine.CurrentMove is JumpShot jumpShot && jumpShot.IsFadeaway
 			: _serverMoveId == "jumpshot" && _serverMoveParam != 0f;
@@ -3297,6 +3310,7 @@ public partial class PlayerController : CharacterBody3D
 	/// replication.
 	/// </summary>
 	public HandSide DisplayStealReachSide() =>
+		_remotePresentation is { } p ? p.MoveId == "steal" && p.MoveParam > 0 ? HandSide.Right : HandSide.Left :
 		DisplayPhaseResolver.LocalMachineDrivesDisplay(IsServer, IsLocalPlayer)
 			? (_machine.CurrentMove as StealMove)?.ReachSide ?? HandSide.Left
 			: _serverMoveId == "steal" && _serverMoveParam > 0f ? HandSide.Right : HandSide.Left;
@@ -3304,7 +3318,9 @@ public partial class PlayerController : CharacterBody3D
 	/// <summary>
 	/// (Issue #285) Whether this node should DISPLAY the live-dribble neutral
 	/// stance this frame — i.e. this player is the ball's holder AND the ball is
-	/// in <see cref="BallState.Dribbling"/>.
+	/// in <see cref="BallState.Dribbling"/>. Buffered remote copies read the ball
+	/// from the same historical world frame as the player's pose. The following
+	/// describes the live fallback used by local roles and before initialization.
 	///
 	/// Unlike <see cref="DisplayMove"/>/<see cref="DisplayMoveId"/>/
 	/// <see cref="DisplayFadeaway"/> this deliberately does NOT go through
@@ -3330,6 +3346,8 @@ public partial class PlayerController : CharacterBody3D
 	/// </summary>
 	public bool DisplayDribbling()
 	{
+		if (_remoteWorldPresentation is { } world)
+			return world.Ball.HolderPeerId == OwnPeerId && world.Ball.State == BallState.Dribbling;
 		BallController ball = GetBall();
 		return ball != null
 			&& OwnPeerId != 0
@@ -3340,6 +3358,8 @@ public partial class PlayerController : CharacterBody3D
 	/// <summary>
 	/// Whether this node should DISPLAY the whiff-punish "beaten" cue
 	/// (issue #100's blow-by lane, made visible for #102) this frame.
+	/// Buffered remote copies read the historical flag; the following role rule
+	/// describes local roles and the pre-buffer fallback.
 	///
 	/// Deliberately NOT gated by <see cref="DisplayPhaseResolver"/>'s
 	/// <c>LocalMachineDrivesDisplay</c> predicate — that predicate answers
@@ -3355,7 +3375,7 @@ public partial class PlayerController : CharacterBody3D
 	/// <see cref="IsBeaten"/> read.
 	/// </summary>
 	public bool DisplayBeaten() =>
-		BeatenDisplayResolver.Resolve(IsServer, IsBeaten(PhysicsTick), _serverIsBeaten);
+		_remotePresentation?.Beaten ?? BeatenDisplayResolver.Resolve(IsServer, IsBeaten(PhysicsTick), _serverIsBeaten);
 
 	// ── Input (unchanged from M1a) ────────────────────────────────────────────
 
