@@ -96,7 +96,7 @@ def main():
         parser.error("output must be below the workspace .godot directory")
     args.output.mkdir(parents=True, exist_ok=False)
     summary = {"mode": "rendered" if args.rendered else "headless", "commit": args.commit,
-               "remoteTiming": ("paced fixed-fps diagnostic; not real-time" if args.paced else "real-time") if args.rendered else "not run",
+               "remoteTiming": ("paced fixed-fps diagnostic; not real-time" if args.paced else "real-time") if args.rendered else "real-time headless delayed-envelope diagnostics; no rendered timing claim",
                "result": "FAIL", "captures": [], "negativeControls": []}
     try:
         capture(args, args.output / "local")
