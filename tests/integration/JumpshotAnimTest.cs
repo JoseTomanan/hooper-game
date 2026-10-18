@@ -596,7 +596,10 @@ public partial class JumpshotAnimTest : Node
         {
             _jumpshotPitchTicksObserved++;
             if (_jumpshotPitchTicksObserved > 1)
-                _jumpshotPitchDeg = MeasureBackwardPitchDegrees();
+                // Upright is an absolute claim, relative to gravity. The #415
+                // carry stance leans forward, so measuring change from that
+                // neutral pose falsely labels standing up as a backward lean.
+                _jumpshotPitchDeg = Mathf.RadToDeg(MeasureTorsoVector(_shooterSkel).AngleTo(Vector3.Up));
         }
     }
 
