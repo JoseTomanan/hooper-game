@@ -40,7 +40,7 @@ def verify(directory):
                     or manifest.get("presentationActualDelayTicks", 0) < manifest["presentationDelayTicks"]
                     or manifest.get("presentationDelayedFrames", 0) < 1):
                 failures.append("delayed-presentation fixture did not hold a genuine received Startup envelope")
-            if not any(row.get("presentationHolding") for row in rows):
+            if not manifest.get("presentationDelayUnderflowObserved", False):
                 failures.append("delayed-presentation fixture did not force buffer underflow")
             if not any(row.get("liveHand") != row["hand"] and row["displayPhase"] == "Startup"
                        and row.get("receivedPhase") in ("Active", "Recovery") for row in rows):

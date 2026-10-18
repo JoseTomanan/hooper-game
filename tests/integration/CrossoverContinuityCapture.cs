@@ -531,6 +531,7 @@ public partial class CrossoverContinuityCapture : Node
                 presentationActualDelayTicks = _ball?.ContinuityActualDelayTicks ?? 0,
                 presentationDelayedFrames = _ball?.ContinuityDelayedFrameCount ?? 0,
                 presentationDelayedStartupCounter = _ball?.ContinuityDelayedStartupCounter ?? -1,
+                presentationDelayUnderflowObserved = _ball?.ContinuityPresentationUnderflowObserved ?? false,
                 presentationResyncCount = _ball?.PresentationResyncCount ?? 0,
                 presentationEnvelopeBytes = _ball?.PresentationEnvelopeBytes ?? 0,
                 imageWriter = "FramePostDraw GPU readback; exclusive copied Images compressed by one background writer; bounded eight-frame queue drained before success",

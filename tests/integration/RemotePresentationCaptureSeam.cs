@@ -15,6 +15,7 @@ public partial class BallController
     internal int ContinuityDelayedFrameCount { get; private set; }
     internal int ContinuityActualDelayTicks { get; private set; }
     internal int ContinuityDelayedStartupCounter { get; private set; } = -1;
+    internal bool ContinuityPresentationUnderflowObserved { get; private set; }
     internal bool ContinuityPresentationDelayApplied => _continuityDelayApplied;
 
     internal void ConfigureContinuityPresentationDelay(int ticks) => _continuityDelayTicks = ticks;
@@ -45,7 +46,12 @@ public partial class BallController
     partial void FlushRemotePresentationForHarness()
     {
         if (!_continuityDelayApplied || _continuityDelayReleased
-            || Engine.GetPhysicsFrames() < _continuityDelayDeadline) return;
+            || Engine.GetPhysicsFrames() < _continuityDelayDeadline
+            || !_presentationBuffer.IsHolding || _presentationBuffer.Current == null) return;
+        // A render can span two physics ticks and miss the held tick. Latch the
+        // actual queue event, and do not release merely because wall ticks elapsed:
+        // existing queued history can otherwise absorb the entire injected delay.
+        ContinuityPresentationUnderflowObserved = true;
         ContinuityActualDelayTicks = (int)(Engine.GetPhysicsFrames() - _continuityDelayStarted);
         while (_continuityDelayedFrames.TryDequeue(out var frame)) EnqueueRemotePresentationFrame(frame);
         _continuityDelayReleased = true;
