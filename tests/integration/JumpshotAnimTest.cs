@@ -357,7 +357,7 @@ public partial class JumpshotAnimTest : Node
     private int _activeTicksObserved;
 
     // #318 live-pose readings. The baseline is captured before Begin while the
-    // actor is still in Locomotion, which avoids the state-label/pose one-tick
+    // actor is still neutral, which avoids the state-label/pose one-tick
     // lead documented above. Hips use skeleton space so the gameplay body's
     // world movement never masquerades as authored clip displacement.
     private Vector3? _rigForward;
@@ -367,6 +367,7 @@ public partial class JumpshotAnimTest : Node
     private float _fadeawayHipBackM = float.NaN;
     private int _fadeawayTicksObserved;
     private float _jumpshotPitchDeg = float.NaN;
+    private Vector3? _standingTorso;
     private int _jumpshotPitchTicksObserved;
 
     public override void _Ready()
@@ -596,10 +597,14 @@ public partial class JumpshotAnimTest : Node
         {
             _jumpshotPitchTicksObserved++;
             if (_jumpshotPitchTicksObserved > 1)
-                // Upright is an absolute claim, relative to gravity. The #415
-                // carry stance leans forward, so measuring change from that
-                // neutral pose falsely labels standing up as a backward lean.
-                _jumpshotPitchDeg = Mathf.RadToDeg(MeasureTorsoVector(_shooterSkel).AngleTo(Vector3.Up));
+            {
+                // Compare with the live off-ball standing rig. Held now has a
+                // forward carry lean; its incoming pose cannot define upright.
+                // Skeleton-space vectors remove the actors' world headings.
+                _jumpshotPitchDeg = _standingTorso is { } standing
+                    ? Mathf.RadToDeg(standing.AngleTo(MeasureTorsoVector(_shooterSkel)))
+                    : float.NaN;
+            }
         }
     }
 
@@ -617,6 +622,14 @@ public partial class JumpshotAnimTest : Node
         if (_shooterSkel == null) return;
         _rigForward = MeasureRigForward(_shooterSkel);
         _torsoBeforeMove = MeasureTorsoVector(_shooterSkel);
+        var standingSkeleton = FindSkeleton(_other);
+        _standingTorso = standingSkeleton != null &&
+                         _other.ActiveAnimNodeForHarness == "Locomotion" &&
+                         _other.Velocity.LengthSquared() < 0.0001f
+            ? MeasureTorsoVector(standingSkeleton) : null;
+        if (_standingTorso is { } reference &&
+            (!reference.IsFinite() || reference.LengthSquared() < 1e-6f))
+            _standingTorso = null;
         _hipsBeforeMove = MeasureHips(_shooterSkel);
     }
 
@@ -734,13 +747,14 @@ public partial class JumpshotAnimTest : Node
         GD.Print($"[jumpshot-anim]   squared-up live release pitch={_jumpshotPitchDeg:F2} deg over " +
                  $"{_jumpshotPitchTicksObserved} tick(s)");
         bool pass = _sawJumpshotActive && _jumpshotPitchTicksObserved >= 2 &&
-                    !float.IsNaN(_jumpshotPitchDeg) && Mathf.Abs(_jumpshotPitchDeg) <= SquaredUpPitchMaxDeg;
+                    float.IsFinite(_jumpshotPitchDeg) && Mathf.Abs(_jumpshotPitchDeg) <= SquaredUpPitchMaxDeg;
         if (pass)
             GD.Print("[jumpshot-anim] PASS control-jumpshot-active-is-upright — the squared-up release reaches " +
-                     "JumpshotActive and remains vertical, so it cannot converge with FadeawayActive.");
+                     "JumpshotActive within the standing-relative upright band, distinct from FadeawayActive.");
         else
             Fail($"control-jumpshot-active-is-upright: premise requires JumpshotActive for >=2 ticks; " +
-                 $"pitch={_jumpshotPitchDeg:F2} deg, need abs <= {SquaredUpPitchMaxDeg:F1}. This control " +
+                 $"pitch={_jumpshotPitchDeg:F2} deg, need abs <= {SquaredUpPitchMaxDeg:F1}. " +
+                 "This control " +
                  "fails if either the routing premise broke or both release clips lean back.");
         Finish(pass ? 0 : 1);
     }
