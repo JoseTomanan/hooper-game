@@ -20,6 +20,7 @@ public partial class RemotePresentationLifecycleTest : Node
     private int _port, _clientId, _localId, _oldLocalId, _stage, _tick, _startTick = -1, _pulseTick = -1;
     private int _finishTick = -1, _reconnectTick = -1, _oldEpoch;
     private int _drainDeadline = -1;
+    private long _releaseGatePhysicsFrame = -1;
     private bool _finished, _readySent, _expectedReceived, _gameOverObserved, _lagProved;
     private bool _reconnectPrepared, _disconnected, _reconnected, _finishAcknowledged;
     private long _freezeTick, _oldDisplayedTick;
@@ -163,7 +164,11 @@ public partial class RemotePresentationLifecycleTest : Node
         if (world == null || !world.Players.Any(p => p.PeerId == _localId)) return;
         if (!_readySent)
         {
-            _ball.ConfigureContinuityPresentationDelay(6);
+            // Deterministic cross-channel scheduling control: keep the real
+            // presentation queue withheld for six ticks AFTER actual underflow.
+            // This proves a receipt gate can outlive the minimum tick delay.
+            _ball.ConfigureContinuityPresentationDelay(6,
+                () => _releaseGatePhysicsFrame >= 0 && (long)Engine.GetPhysicsFrames() >= _releaseGatePhysicsFrame);
             _readySent = true;
             Send(1, MethodName.ClientReady);
             return;
@@ -175,6 +180,12 @@ public partial class RemotePresentationLifecycleTest : Node
             own.AnimationDisplaySnapshot.SimulatedLocally && own.AnimationDisplaySnapshot.PresentationTick == -1;
         if (!Require(ownRole && own.ContinuityAnimationCallback == "Physics",
             "own player acquired remote presentation delay/manual animation")) return;
+        if (!_reconnected && _stage < 2 && _ball.ContinuityPresentationUnderflowObserved)
+        {
+            if (_releaseGatePhysicsFrame < 0) _releaseGatePhysicsFrame = (long)Engine.GetPhysicsFrames() + 6;
+            if ((long)Engine.GetPhysicsFrames() < _releaseGatePhysicsFrame && !Require(_ball.ContinuityActualDelayTicks == 0,
+                "presentation released before the fixture's receipt gate opened")) return;
+        }
         if (_stage == 5)
         {
             if (remote.AnimationDisplaySnapshot.PresentationTick <= _oldDisplayedTick) return;
@@ -203,8 +214,11 @@ public partial class RemotePresentationLifecycleTest : Node
                 $"remote game-over presentation failed to drain: actualDisplayTick={remote.AnimationDisplaySnapshot.PresentationTick} finalTick={_freezeTick + 1}");
             return;
         }
-        if (!Require(_ball.ContinuityPresentationDelayApplied && _ball.ContinuityActualDelayTicks >= 6 &&
-            _ball.PresentationResyncCount == 0, "missing delayed-envelope/continuous drain premise")) return;
+        if (!Require(_ball.ContinuityPresentationDelayApplied && _ball.ContinuityActualDelayTicks >= 12 &&
+            _ball.ContinuityReleaseWaitTicks >= 5 &&
+            _ball.PresentationResyncCount == 0,
+            $"missing delayed-envelope/continuous drain premise: delay={_ball.ContinuityActualDelayTicks} " +
+            $"gateWait={_ball.ContinuityReleaseWaitTicks} resyncs={_ball.PresentationResyncCount}")) return;
         if (!ValidateFinal(remote, "game-over drained")) return;
         _oldDisplayedTick = remote.PlayerPresentationTick; _oldEpoch = _ball.PresentationEpoch; _oldLocalId = _localId;
         Send(1, MethodName.Drained); _stage = 2;

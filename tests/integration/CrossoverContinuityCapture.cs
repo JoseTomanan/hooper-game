@@ -135,7 +135,13 @@ public partial class CrossoverContinuityCapture : Node
         if (_role == "client")
         {
             _measuring = true; _inCycle = false; _completed = 0;
-            _ball.ConfigureContinuityPresentationDelay(_presentationDelayTicks);
+            _ball.ConfigureContinuityPresentationDelay(_presentationDelayTicks, () =>
+            {
+                var host = _players.GetNodeOrNull<PlayerController>("1");
+                return host != null && host.HandSide.ToString() != _origin
+                    && host.ContinuityReceivedMoveId == "crossover"
+                    && host.ContinuityReceivedPhase is MovePhase.Active or MovePhase.Recovery;
+            });
             Event("measurement-begin", "server signalled measured window");
             RpcId(1, nameof(MeasurementReady));
         }
@@ -532,6 +538,7 @@ public partial class CrossoverContinuityCapture : Node
                 presentationDelayedFrames = _ball?.ContinuityDelayedFrameCount ?? 0,
                 presentationDelayedStartupCounter = _ball?.ContinuityDelayedStartupCounter ?? -1,
                 presentationDelayUnderflowObserved = _ball?.ContinuityPresentationUnderflowObserved ?? false,
+                presentationReleaseWaitTicks = _ball?.ContinuityReleaseWaitTicks ?? 0,
                 presentationResyncCount = _ball?.PresentationResyncCount ?? 0,
                 presentationEnvelopeBytes = _ball?.PresentationEnvelopeBytes ?? 0,
                 imageWriter = "FramePostDraw GPU readback; exclusive copied Images compressed by one background writer; bounded eight-frame queue drained before success",
