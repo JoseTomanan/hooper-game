@@ -1,0 +1,24 @@
+{
+  "command": [
+    "C:\\Users\\The King\\AppData\\Local\\GodotPortable\\Godot_v4.7.1-stable_mono_win64\\Godot_v4.7.1-stable_mono_win64_console.exe",
+    "--path",
+    "C:\\Users\\The King\\Documents\\GitHub\\hooper-game",
+    "--fixed-fps",
+    "60",
+    "--max-fps",
+    "60",
+    "--disable-vsync",
+    "--resolution",
+    "960x720",
+    "--log-file",
+    "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\held415-render-882bf2a.godot.log",
+    "res://tests/integration/HeldPossessionTest.tscn",
+    "--",
+    "--harness-scenario=held",
+    "--capture-output=C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\held415-render-882bf2a",
+    "--capture-commit=882bf2a"
+  ],
+  "commit": "882bf2a",
+  "stdout": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\held415-render-882bf2a.stdout.log",
+  "native_log": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\held415-render-882bf2a.godot.log"
+}

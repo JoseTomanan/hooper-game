@@ -1,0 +1,1278 @@
+{
+  "issue": 415,
+  "commit": "882bf2a",
+  "scenario": "held",
+  "renderedEvidence": true,
+  "humanVisualAcceptance": false,
+  "engine": "4.7.1-stable (official)",
+  "displayDriver": "Windows",
+  "renderer": "NVIDIA GeForce RTX 3050",
+  "commandLine": [
+    "res://tests/integration/HeldPossessionTest.tscn"
+  ],
+  "userArgs": [
+    "--harness-scenario=held",
+    "--capture-output=C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\held415-render-882bf2a",
+    "--capture-commit=882bf2a"
+  ],
+  "captureSurface": "Main.tscn production camera reframed approximately 3.3m from holder; FramePostDraw readback; final modified skeleton snapshot",
+  "recoveryFrames": 8,
+  "neutralFrames": 8,
+  "failures": [],
+  "frames": [
+    {
+      "file": "000-fresh-idle-tick-0010.png",
+      "label": "fresh-idle",
+      "tick": 10,
+      "stage": "fresh-held",
+      "stageTick": 6,
+      "physicsFrame": 10,
+      "renderFrame": 9,
+      "move": "",
+      "phase": "Inactive",
+      "frameInPhase": 0,
+      "playbackNode": "HeldRight",
+      "boundClips": "held/idleright|held/movingright",
+      "hand": "Right",
+      "ballState": "Held",
+      "holder": 1,
+      "hasDribbled": false,
+      "inputKeys": {},
+      "speed": 0,
+      "boneWorldPositions": {
+        "mixamorig_LeftForeArm": [
+          0.23703825,
+          0.9652786,
+          7.2767873
+        ],
+        "mixamorig_LeftHand": [
+          0.27807954,
+          0.70538086,
+          7.3606005
+        ],
+        "mixamorig_RightForeArm": [
+          -0.37504923,
+          1.0416067,
+          7.0588193
+        ],
+        "mixamorig_RightHand": [
+          -0.3453575,
+          1.0591097,
+          7.3328047
+        ]
+      },
+      "posePhysicsFrame": 10,
+      "ballWorldPosition": [
+        -0.4429,
+        1,
+        7.4999957
+      ],
+      "liveBallWorldPosition": [
+        -0.4429,
+        1,
+        7.4999957
+      ],
+      "cameraWorldPosition": [
+        -1.7,
+        1.5968157,
+        9.799995
+      ],
+      "cameraTarget": [
+        0,
+        0.8968157,
+        6.9999957
+      ],
+      "width": 960,
+      "height": 720,
+      "maxBrightness": 1
+    },
+    {
+      "file": "001-stepback-recovery-tick-0446.png",
+      "label": "stepback-recovery",
+      "tick": 446,
+      "stage": "held-k-stepback",
+      "stageTick": 16,
+      "physicsFrame": 446,
+      "renderFrame": 445,
+      "move": "stepback",
+      "phase": "Recovery",
+      "frameInPhase": 0,
+      "playbackNode": "StepBackRecovery",
+      "boundClips": "locomotion/stepbackrecovery",
+      "hand": "Left",
+      "ballState": "Held",
+      "holder": 1,
+      "hasDribbled": true,
+      "inputKeys": {},
+      "speed": 8.833333,
+      "boneWorldPositions": {
+        "mixamorig_LeftForeArm": [
+          -1.3508314,
+          1.033699,
+          7.651705
+        ],
+        "mixamorig_LeftHand": [
+          -1.1736104,
+          0.823238,
+          7.6752644
+        ],
+        "mixamorig_RightForeArm": [
+          -0.6970563,
+          0.97146446,
+          7.6843257
+        ],
+        "mixamorig_RightHand": [
+          -0.92986023,
+          0.82322025,
+          7.6752653
+        ]
+      },
+      "posePhysicsFrame": 446,
+      "ballWorldPosition": [
+        -1.3984554,
+        1,
+        7.4374948
+      ],
+      "liveBallWorldPosition": [
+        -1.3984554,
+        1,
+        7.4374948
+      ],
+      "cameraWorldPosition": [
+        -2.6555557,
+        1.5983181,
+        5.137495
+      ],
+      "cameraTarget": [
+        -0.9555553,
+        0.8983181,
+        7.9374948
+      ],
+      "width": 960,
+      "height": 720,
+      "maxBrightness": 1
+    },
+    {
+      "file": "002-stepback-recovery-tick-0447.png",
+      "label": "stepback-recovery",
+      "tick": 447,
+      "stage": "held-k-stepback",
+      "stageTick": 17,
+      "physicsFrame": 447,
+      "renderFrame": 446,
+      "move": "stepback",
+      "phase": "Recovery",
+      "frameInPhase": 1,
+      "playbackNode": "StepBackRecovery",
+      "boundClips": "locomotion/stepbackrecovery",
+      "hand": "Left",
+      "ballState": "Held",
+      "holder": 1,
+      "hasDribbled": true,
+      "inputKeys": {},
+      "speed": 7.666666,
+      "boneWorldPositions": {
+        "mixamorig_LeftForeArm": [
+          -1.353522,
+          1.0445042,
+          7.7877665
+        ],
+        "mixamorig_LeftHand": [
+          -1.1722476,
+          0.8372057,
+          7.8083377
+        ],
+        "mixamorig_RightForeArm": [
+          -0.69647396,
+          0.980201,
+          7.817135
+        ],
+        "mixamorig_RightHand": [
+          -0.9322487,
+          0.83668655,
+          7.808769
+        ]
+      },
+      "posePhysicsFrame": 447,
+      "ballWorldPosition": [
+        -1.3984554,
+        1,
+        7.5652723
+      ],
+      "liveBallWorldPosition": [
+        -1.3984554,
+        1,
+        7.5652723
+      ],
+      "cameraWorldPosition": [
+        -2.6555557,
+        1.5983181,
+        5.265272
+      ],
+      "cameraTarget": [
+        -0.9555553,
+        0.8983181,
+        8.065272
+      ],
+      "width": 960,
+      "height": 720,
+      "maxBrightness": 1
+    },
+    {
+      "file": "003-stepback-recovery-tick-0448.png",
+      "label": "stepback-recovery",
+      "tick": 448,
+      "stage": "held-k-stepback",
+      "stageTick": 18,
+      "physicsFrame": 448,
+      "renderFrame": 447,
+      "move": "stepback",
+      "phase": "Recovery",
+      "frameInPhase": 2,
+      "playbackNode": "StepBackRecovery",
+      "boundClips": "locomotion/stepbackrecovery",
+      "hand": "Left",
+      "ballState": "Held",
+      "holder": 1,
+      "hasDribbled": true,
+      "inputKeys": {},
+      "speed": 6.499999,
+      "boneWorldPositions": {
+        "mixamorig_LeftForeArm": [
+          -1.3533792,
+          1.0350094,
+          7.8917212
+        ],
+        "mixamorig_LeftHand": [
+          -1.1714603,
+          0.82819915,
+          7.9115014
+        ],
+        "mixamorig_RightForeArm": [
+          -0.6993563,
+          0.9743701,
+          7.9210873
+        ],
+        "mixamorig_RightHand": [
+          -0.9331797,
+          0.8277468,
+          7.9119015
+        ]
+      },
+      "posePhysicsFrame": 448,
+      "ballWorldPosition": [
+        -1.3984554,
+        1,
+        7.673606
+      ],
+      "liveBallWorldPosition": [
+        -1.3984554,
+        1,
+        7.673606
+      ],
+      "cameraWorldPosition": [
+        -2.6555557,
+        1.5983181,
+        5.3736057
+      ],
+      "cameraTarget": [
+        -0.9555553,
+        0.8983181,
+        8.173606
+      ],
+      "width": 960,
+      "height": 720,
+      "maxBrightness": 1
+    },
+    {
+      "file": "004-stepback-recovery-tick-0449.png",
+      "label": "stepback-recovery",
+      "tick": 449,
+      "stage": "held-k-stepback",
+      "stageTick": 19,
+      "physicsFrame": 449,
+      "renderFrame": 448,
+      "move": "stepback",
+      "phase": "Recovery",
+      "frameInPhase": 3,
+      "playbackNode": "StepBackRecovery",
+      "boundClips": "locomotion/stepbackrecovery",
+      "hand": "Left",
+      "ballState": "Held",
+      "holder": 1,
+      "hasDribbled": true,
+      "inputKeys": {},
+      "speed": 5.333332,
+      "boneWorldPositions": {
+        "mixamorig_LeftForeArm": [
+          -1.3491385,
+          1.012402,
+          7.9686227
+        ],
+        "mixamorig_LeftHand": [
+          -1.1686119,
+          0.80424976,
+          7.987032
+        ],
+        "mixamorig_RightForeArm": [
+          -0.7061391,
+          0.9585287,
+          7.9986463
+        ],
+        "mixamorig_RightHand": [
+          -0.93486166,
+          0.80423266,
+          7.987033
+        ]
+      },
+      "posePhysicsFrame": 449,
+      "ballWorldPosition": [
+        -1.3984554,
+        1,
+        7.762495
+      ],
+      "liveBallWorldPosition": [
+        -1.3984554,
+        1,
+        7.762495
+      ],
+      "cameraWorldPosition": [
+        -2.6555557,
+        1.5983181,
+        5.462495
+      ],
+      "cameraTarget": [
+        -0.9555553,
+        0.8983181,
+        8.262495
+      ],
+      "width": 960,
+      "height": 720,
+      "maxBrightness": 1
+    },
+    {
+      "file": "005-stepback-recovery-tick-0450.png",
+      "label": "stepback-recovery",
+      "tick": 450,
+      "stage": "held-k-stepback",
+      "stageTick": 20,
+      "physicsFrame": 450,
+      "renderFrame": 449,
+      "move": "stepback",
+      "phase": "Recovery",
+      "frameInPhase": 4,
+      "playbackNode": "StepBackRecovery",
+      "boundClips": "locomotion/stepbackrecovery",
+      "hand": "Left",
+      "ballState": "Held",
+      "holder": 1,
+      "hasDribbled": true,
+      "inputKeys": {},
+      "speed": 4.166665,
+      "boneWorldPositions": {
+        "mixamorig_LeftForeArm": [
+          -1.3420117,
+          0.98232996,
+          8.019977
+        ],
+        "mixamorig_LeftHand": [
+          -1.165411,
+          0.770726,
+          8.037068
+        ],
+        "mixamorig_RightForeArm": [
+          -0.7162919,
+          0.93446714,
+          8.053045
+        ],
+        "mixamorig_RightHand": [
+          -0.93806714,
+          0.7707091,
+          8.037069
+        ]
+      },
+      "posePhysicsFrame": 450,
+      "ballWorldPosition": [
+        -1.3984554,
+        1,
+        7.8319397
+      ],
+      "liveBallWorldPosition": [
+        -1.3984554,
+        1,
+        7.8319397
+      ],
+      "cameraWorldPosition": [
+        -2.6555557,
+        1.5983181,
+        5.5319395
+      ],
+      "cameraTarget": [
+        -0.9555553,
+        0.8983181,
+        8.33194
+      ],
+      "width": 960,
+      "height": 720,
+      "maxBrightness": 1
+    },
+    {
+      "file": "006-stepback-recovery-tick-0451.png",
+      "label": "stepback-recovery",
+      "tick": 451,
+      "stage": "held-k-stepback",
+      "stageTick": 21,
+      "physicsFrame": 451,
+      "renderFrame": 450,
+      "move": "stepback",
+      "phase": "Recovery",
+      "frameInPhase": 5,
+      "playbackNode": "StepBackRecovery",
+      "boundClips": "locomotion/stepbackrecovery",
+      "hand": "Left",
+      "ballState": "Held",
+      "holder": 1,
+      "hasDribbled": true,
+      "inputKeys": {},
+      "speed": 2.9999983,
+      "boneWorldPositions": {
+        "mixamorig_LeftForeArm": [
+          -1.3335515,
+          0.94793844,
+          8.049456
+        ],
+        "mixamorig_LeftHand": [
+          -1.161772,
+          0.7322725,
+          8.064825
+        ],
+        "mixamorig_RightForeArm": [
+          -0.7285772,
+          0.9065074,
+          8.08631
+        ],
+        "mixamorig_RightHand": [
+          -0.941742,
+          0.73228014,
+          8.06482
+        ]
+      },
+      "posePhysicsFrame": 451,
+      "ballWorldPosition": [
+        -1.3984554,
+        1,
+        7.88194
+      ],
+      "liveBallWorldPosition": [
+        -1.3984554,
+        1,
+        7.88194
+      ],
+      "cameraWorldPosition": [
+        -2.6555557,
+        1.5983181,
+        5.5819397
+      ],
+      "cameraTarget": [
+        -0.9555553,
+        0.8983181,
+        8.38194
+      ],
+      "width": 960,
+      "height": 720,
+      "maxBrightness": 1
+    },
+    {
+      "file": "007-stepback-recovery-tick-0452.png",
+      "label": "stepback-recovery",
+      "tick": 452,
+      "stage": "held-k-stepback",
+      "stageTick": 22,
+      "physicsFrame": 452,
+      "renderFrame": 451,
+      "move": "stepback",
+      "phase": "Recovery",
+      "frameInPhase": 6,
+      "playbackNode": "StepBackRecovery",
+      "boundClips": "locomotion/stepbackrecovery",
+      "hand": "Left",
+      "ballState": "Held",
+      "holder": 1,
+      "hasDribbled": true,
+      "inputKeys": {},
+      "speed": 1.8333316,
+      "boneWorldPositions": {
+        "mixamorig_LeftForeArm": [
+          -1.3244154,
+          0.91370106,
+          8.059389
+        ],
+        "mixamorig_LeftHand": [
+          -1.1579294,
+          0.6938134,
+          8.073101
+        ],
+        "mixamorig_RightForeArm": [
+          -0.741716,
+          0.87843627,
+          8.100845
+        ],
+        "mixamorig_RightHand": [
+          -0.9452734,
+          0.693904,
+          8.073124
+        ]
+      },
+      "posePhysicsFrame": 452,
+      "ballWorldPosition": [
+        -1.3984554,
+        1,
+        7.9124956
+      ],
+      "liveBallWorldPosition": [
+        -1.3984554,
+        1,
+        7.9124956
+      ],
+      "cameraWorldPosition": [
+        -2.6555557,
+        1.5983181,
+        5.6124954
+      ],
+      "cameraTarget": [
+        -0.9555553,
+        0.8983181,
+        8.412496
+      ],
+      "width": 960,
+      "height": 720,
+      "maxBrightness": 1
+    },
+    {
+      "file": "008-stepback-recovery-tick-0453.png",
+      "label": "stepback-recovery",
+      "tick": 453,
+      "stage": "held-k-stepback",
+      "stageTick": 23,
+      "physicsFrame": 453,
+      "renderFrame": 452,
+      "move": "stepback",
+      "phase": "Recovery",
+      "frameInPhase": 7,
+      "playbackNode": "StepBackRecovery",
+      "boundClips": "locomotion/stepbackrecovery",
+      "hand": "Left",
+      "ballState": "Held",
+      "holder": 1,
+      "hasDribbled": true,
+      "inputKeys": {},
+      "speed": 0.66666484,
+      "boneWorldPositions": {
+        "mixamorig_LeftForeArm": [
+          -1.3161176,
+          0.88418573,
+          8.052573
+        ],
+        "mixamorig_LeftHand": [
+          -1.154872,
+          0.6603425,
+          8.064829
+        ],
+        "mixamorig_RightForeArm": [
+          -0.754421,
+          0.8536956,
+          8.098755
+        ],
+        "mixamorig_RightHand": [
+          -0.9486221,
+          0.6603275,
+          8.06483
+        ]
+      },
+      "posePhysicsFrame": 453,
+      "ballWorldPosition": [
+        -1.3984554,
+        1,
+        7.923607
+      ],
+      "liveBallWorldPosition": [
+        -1.3984554,
+        1,
+        7.923607
+      ],
+      "cameraWorldPosition": [
+        -2.6555557,
+        1.5983181,
+        5.6236067
+      ],
+      "cameraTarget": [
+        -0.9555553,
+        0.8983181,
+        8.423607
+      ],
+      "width": 960,
+      "height": 720,
+      "maxBrightness": 1
+    },
+    {
+      "file": "009-stepback-to-held-tick-0454.png",
+      "label": "stepback-to-held",
+      "tick": 454,
+      "stage": "held-k-stepback",
+      "stageTick": 24,
+      "physicsFrame": 454,
+      "renderFrame": 453,
+      "move": "",
+      "phase": "Inactive",
+      "frameInPhase": 0,
+      "playbackNode": "HeldLeft",
+      "boundClips": "held/idleleft|held/movingleft",
+      "hand": "Left",
+      "ballState": "Held",
+      "holder": 1,
+      "hasDribbled": true,
+      "inputKeys": {},
+      "speed": 0,
+      "boneWorldPositions": {
+        "mixamorig_LeftForeArm": [
+          -1.3102483,
+          0.86305916,
+          8.039813
+        ],
+        "mixamorig_LeftHand": [
+          -1.152619,
+          0.6366053,
+          8.051122
+        ],
+        "mixamorig_RightForeArm": [
+          -0.76449394,
+          0.83659035,
+          8.090051
+        ],
+        "mixamorig_RightHand": [
+          -0.9509005,
+          0.6366139,
+          8.051087
+        ]
+      },
+      "posePhysicsFrame": 454,
+      "ballWorldPosition": [
+        -1.3984554,
+        1,
+        7.923607
+      ],
+      "liveBallWorldPosition": [
+        -1.3984554,
+        1,
+        7.923607
+      ],
+      "cameraWorldPosition": [
+        -2.6555557,
+        1.5983181,
+        5.6236067
+      ],
+      "cameraTarget": [
+        -0.9555553,
+        0.8983181,
+        8.423607
+      ],
+      "width": 960,
+      "height": 720,
+      "maxBrightness": 1
+    },
+    {
+      "file": "010-stepback-to-held-tick-0455.png",
+      "label": "stepback-to-held",
+      "tick": 455,
+      "stage": "held-k-stepback",
+      "stageTick": 25,
+      "physicsFrame": 455,
+      "renderFrame": 454,
+      "move": "",
+      "phase": "Inactive",
+      "frameInPhase": 0,
+      "playbackNode": "HeldLeft",
+      "boundClips": "held/idleleft|held/movingleft",
+      "hand": "Left",
+      "ballState": "Held",
+      "holder": 1,
+      "hasDribbled": true,
+      "inputKeys": {},
+      "speed": 0,
+      "boneWorldPositions": {
+        "mixamorig_LeftForeArm": [
+          -1.330605,
+          1.0431082,
+          8.364783
+        ],
+        "mixamorig_LeftHand": [
+          -1.3009129,
+          1.060612,
+          8.090798
+        ],
+        "mixamorig_RightForeArm": [
+          -0.71851826,
+          0.9667818,
+          8.146815
+        ],
+        "mixamorig_RightHand": [
+          -0.6774771,
+          0.70688397,
+          8.063003
+        ]
+      },
+      "posePhysicsFrame": 455,
+      "ballWorldPosition": [
+        -1.3984554,
+        1,
+        7.923607
+      ],
+      "liveBallWorldPosition": [
+        -1.3984554,
+        1,
+        7.923607
+      ],
+      "cameraWorldPosition": [
+        -2.6555557,
+        1.5983181,
+        5.6236067
+      ],
+      "cameraTarget": [
+        -0.9555553,
+        0.8983181,
+        8.423607
+      ],
+      "width": 960,
+      "height": 720,
+      "maxBrightness": 1
+    },
+    {
+      "file": "011-stepback-to-held-tick-0456.png",
+      "label": "stepback-to-held",
+      "tick": 456,
+      "stage": "held-k-stepback",
+      "stageTick": 26,
+      "physicsFrame": 456,
+      "renderFrame": 455,
+      "move": "",
+      "phase": "Inactive",
+      "frameInPhase": 0,
+      "playbackNode": "HeldLeft",
+      "boundClips": "held/idleleft|held/movingleft",
+      "hand": "Left",
+      "ballState": "Held",
+      "holder": 1,
+      "hasDribbled": true,
+      "inputKeys": {},
+      "speed": 0,
+      "boneWorldPositions": {
+        "mixamorig_LeftForeArm": [
+          -1.330605,
+          1.0431082,
+          8.364783
+        ],
+        "mixamorig_LeftHand": [
+          -1.3009129,
+          1.060612,
+          8.090798
+        ],
+        "mixamorig_RightForeArm": [
+          -0.71851826,
+          0.9667818,
+          8.146815
+        ],
+        "mixamorig_RightHand": [
+          -0.6774771,
+          0.70688397,
+          8.063003
+        ]
+      },
+      "posePhysicsFrame": 456,
+      "ballWorldPosition": [
+        -1.3984554,
+        1,
+        7.923607
+      ],
+      "liveBallWorldPosition": [
+        -1.3984554,
+        1,
+        7.923607
+      ],
+      "cameraWorldPosition": [
+        -2.6555557,
+        1.5983181,
+        5.6236067
+      ],
+      "cameraTarget": [
+        -0.9555553,
+        0.8983181,
+        8.423607
+      ],
+      "width": 960,
+      "height": 720,
+      "maxBrightness": 1
+    },
+    {
+      "file": "012-stepback-to-held-tick-0457.png",
+      "label": "stepback-to-held",
+      "tick": 457,
+      "stage": "held-k-stepback",
+      "stageTick": 27,
+      "physicsFrame": 457,
+      "renderFrame": 456,
+      "move": "",
+      "phase": "Inactive",
+      "frameInPhase": 0,
+      "playbackNode": "HeldLeft",
+      "boundClips": "held/idleleft|held/movingleft",
+      "hand": "Left",
+      "ballState": "Held",
+      "holder": 1,
+      "hasDribbled": true,
+      "inputKeys": {},
+      "speed": 0,
+      "boneWorldPositions": {
+        "mixamorig_LeftForeArm": [
+          -1.330605,
+          1.0431082,
+          8.364783
+        ],
+        "mixamorig_LeftHand": [
+          -1.3009129,
+          1.060612,
+          8.090798
+        ],
+        "mixamorig_RightForeArm": [
+          -0.71851826,
+          0.9667818,
+          8.146815
+        ],
+        "mixamorig_RightHand": [
+          -0.6774771,
+          0.70688397,
+          8.063003
+        ]
+      },
+      "posePhysicsFrame": 457,
+      "ballWorldPosition": [
+        -1.3984554,
+        1,
+        7.923607
+      ],
+      "liveBallWorldPosition": [
+        -1.3984554,
+        1,
+        7.923607
+      ],
+      "cameraWorldPosition": [
+        -2.6555557,
+        1.5983181,
+        5.6236067
+      ],
+      "cameraTarget": [
+        -0.9555553,
+        0.8983181,
+        8.423607
+      ],
+      "width": 960,
+      "height": 720,
+      "maxBrightness": 1
+    },
+    {
+      "file": "013-stepback-to-held-tick-0458.png",
+      "label": "stepback-to-held",
+      "tick": 458,
+      "stage": "held-k-stepback",
+      "stageTick": 28,
+      "physicsFrame": 458,
+      "renderFrame": 457,
+      "move": "",
+      "phase": "Inactive",
+      "frameInPhase": 0,
+      "playbackNode": "HeldLeft",
+      "boundClips": "held/idleleft|held/movingleft",
+      "hand": "Left",
+      "ballState": "Held",
+      "holder": 1,
+      "hasDribbled": true,
+      "inputKeys": {},
+      "speed": 0,
+      "boneWorldPositions": {
+        "mixamorig_LeftForeArm": [
+          -1.330605,
+          1.0431082,
+          8.364783
+        ],
+        "mixamorig_LeftHand": [
+          -1.3009129,
+          1.060612,
+          8.090798
+        ],
+        "mixamorig_RightForeArm": [
+          -0.71851826,
+          0.9667818,
+          8.146815
+        ],
+        "mixamorig_RightHand": [
+          -0.6774771,
+          0.70688397,
+          8.063003
+        ]
+      },
+      "posePhysicsFrame": 458,
+      "ballWorldPosition": [
+        -1.3984554,
+        1,
+        7.923607
+      ],
+      "liveBallWorldPosition": [
+        -1.3984554,
+        1,
+        7.923607
+      ],
+      "cameraWorldPosition": [
+        -2.6555557,
+        1.5983181,
+        5.6236067
+      ],
+      "cameraTarget": [
+        -0.9555553,
+        0.8983181,
+        8.423607
+      ],
+      "width": 960,
+      "height": 720,
+      "maxBrightness": 1
+    },
+    {
+      "file": "014-stepback-to-held-tick-0459.png",
+      "label": "stepback-to-held",
+      "tick": 459,
+      "stage": "held-k-stepback",
+      "stageTick": 29,
+      "physicsFrame": 459,
+      "renderFrame": 458,
+      "move": "",
+      "phase": "Inactive",
+      "frameInPhase": 0,
+      "playbackNode": "HeldLeft",
+      "boundClips": "held/idleleft|held/movingleft",
+      "hand": "Left",
+      "ballState": "Held",
+      "holder": 1,
+      "hasDribbled": true,
+      "inputKeys": {},
+      "speed": 0,
+      "boneWorldPositions": {
+        "mixamorig_LeftForeArm": [
+          -1.330605,
+          1.0431082,
+          8.364783
+        ],
+        "mixamorig_LeftHand": [
+          -1.3009129,
+          1.060612,
+          8.090798
+        ],
+        "mixamorig_RightForeArm": [
+          -0.71851826,
+          0.9667818,
+          8.146815
+        ],
+        "mixamorig_RightHand": [
+          -0.6774771,
+          0.70688397,
+          8.063003
+        ]
+      },
+      "posePhysicsFrame": 459,
+      "ballWorldPosition": [
+        -1.3984554,
+        1,
+        7.923607
+      ],
+      "liveBallWorldPosition": [
+        -1.3984554,
+        1,
+        7.923607
+      ],
+      "cameraWorldPosition": [
+        -2.6555557,
+        1.5983181,
+        5.6236067
+      ],
+      "cameraTarget": [
+        -0.9555553,
+        0.8983181,
+        8.423607
+      ],
+      "width": 960,
+      "height": 720,
+      "maxBrightness": 1
+    },
+    {
+      "file": "015-stepback-to-held-tick-0460.png",
+      "label": "stepback-to-held",
+      "tick": 460,
+      "stage": "held-k-stepback",
+      "stageTick": 30,
+      "physicsFrame": 460,
+      "renderFrame": 459,
+      "move": "",
+      "phase": "Inactive",
+      "frameInPhase": 0,
+      "playbackNode": "HeldLeft",
+      "boundClips": "held/idleleft|held/movingleft",
+      "hand": "Left",
+      "ballState": "Held",
+      "holder": 1,
+      "hasDribbled": true,
+      "inputKeys": {},
+      "speed": 0,
+      "boneWorldPositions": {
+        "mixamorig_LeftForeArm": [
+          -1.330605,
+          1.0431082,
+          8.364783
+        ],
+        "mixamorig_LeftHand": [
+          -1.3009129,
+          1.060612,
+          8.090798
+        ],
+        "mixamorig_RightForeArm": [
+          -0.71851826,
+          0.9667818,
+          8.146815
+        ],
+        "mixamorig_RightHand": [
+          -0.6774771,
+          0.70688397,
+          8.063003
+        ]
+      },
+      "posePhysicsFrame": 460,
+      "ballWorldPosition": [
+        -1.3984554,
+        1,
+        7.923607
+      ],
+      "liveBallWorldPosition": [
+        -1.3984554,
+        1,
+        7.923607
+      ],
+      "cameraWorldPosition": [
+        -2.6555557,
+        1.5983181,
+        5.6236067
+      ],
+      "cameraTarget": [
+        -0.9555553,
+        0.8983181,
+        8.423607
+      ],
+      "width": 960,
+      "height": 720,
+      "maxBrightness": 1
+    },
+    {
+      "file": "016-stepback-to-held-tick-0461.png",
+      "label": "stepback-to-held",
+      "tick": 461,
+      "stage": "held-k-stepback",
+      "stageTick": 31,
+      "physicsFrame": 461,
+      "renderFrame": 460,
+      "move": "",
+      "phase": "Inactive",
+      "frameInPhase": 0,
+      "playbackNode": "HeldLeft",
+      "boundClips": "held/idleleft|held/movingleft",
+      "hand": "Left",
+      "ballState": "Held",
+      "holder": 1,
+      "hasDribbled": true,
+      "inputKeys": {},
+      "speed": 0,
+      "boneWorldPositions": {
+        "mixamorig_LeftForeArm": [
+          -1.330605,
+          1.0431082,
+          8.364783
+        ],
+        "mixamorig_LeftHand": [
+          -1.3009129,
+          1.060612,
+          8.090798
+        ],
+        "mixamorig_RightForeArm": [
+          -0.71851826,
+          0.9667818,
+          8.146815
+        ],
+        "mixamorig_RightHand": [
+          -0.6774771,
+          0.70688397,
+          8.063003
+        ]
+      },
+      "posePhysicsFrame": 461,
+      "ballWorldPosition": [
+        -1.3984554,
+        1,
+        7.923607
+      ],
+      "liveBallWorldPosition": [
+        -1.3984554,
+        1,
+        7.923607
+      ],
+      "cameraWorldPosition": [
+        -2.6555557,
+        1.5983181,
+        5.6236067
+      ],
+      "cameraTarget": [
+        -0.9555553,
+        0.8983181,
+        8.423607
+      ],
+      "width": 960,
+      "height": 720,
+      "maxBrightness": 1
+    },
+    {
+      "file": "017-spent-idle-tick-0521.png",
+      "label": "spent-idle",
+      "tick": 521,
+      "stage": "spent-idle",
+      "stageTick": 6,
+      "physicsFrame": 521,
+      "renderFrame": 520,
+      "move": "",
+      "phase": "Inactive",
+      "frameInPhase": 0,
+      "playbackNode": "HeldLeft",
+      "boundClips": "held/idleleft|held/movingleft",
+      "hand": "Left",
+      "ballState": "Held",
+      "holder": 1,
+      "hasDribbled": true,
+      "inputKeys": {},
+      "speed": 0,
+      "boneWorldPositions": {
+        "mixamorig_LeftForeArm": [
+          -1.330605,
+          1.0431082,
+          8.364783
+        ],
+        "mixamorig_LeftHand": [
+          -1.3009129,
+          1.060612,
+          8.090798
+        ],
+        "mixamorig_RightForeArm": [
+          -0.71851826,
+          0.9667818,
+          8.146815
+        ],
+        "mixamorig_RightHand": [
+          -0.6774771,
+          0.70688397,
+          8.063003
+        ]
+      },
+      "posePhysicsFrame": 521,
+      "ballWorldPosition": [
+        -1.3984554,
+        1,
+        7.923607
+      ],
+      "liveBallWorldPosition": [
+        -1.3984554,
+        1,
+        7.923607
+      ],
+      "cameraWorldPosition": [
+        -2.6555557,
+        1.5983181,
+        5.6236067
+      ],
+      "cameraTarget": [
+        -0.9555553,
+        0.8983181,
+        8.423607
+      ],
+      "width": 960,
+      "height": 720,
+      "maxBrightness": 1
+    },
+    {
+      "file": "018-spent-moving-tick-0543.png",
+      "label": "spent-moving",
+      "tick": 543,
+      "stage": "spent-moving",
+      "stageTick": 8,
+      "physicsFrame": 543,
+      "renderFrame": 542,
+      "move": "",
+      "phase": "Inactive",
+      "frameInPhase": 0,
+      "playbackNode": "HeldLeft",
+      "boundClips": "held/idleleft|held/movingleft",
+      "hand": "Left",
+      "ballState": "Held",
+      "holder": 1,
+      "hasDribbled": true,
+      "inputKeys": {},
+      "speed": 6,
+      "boneWorldPositions": {
+        "mixamorig_LeftForeArm": [
+          -1.338464,
+          1.0391672,
+          7.9135365
+        ],
+        "mixamorig_LeftHand": [
+          -1.3009132,
+          1.060612,
+          7.6407995
+        ],
+        "mixamorig_RightForeArm": [
+          -0.72700304,
+          0.96417445,
+          7.702031
+        ],
+        "mixamorig_RightHand": [
+          -0.68596196,
+          0.7042766,
+          7.618218
+        ]
+      },
+      "posePhysicsFrame": 543,
+      "ballWorldPosition": [
+        -1.3984554,
+        1,
+        7.4736075
+      ],
+      "liveBallWorldPosition": [
+        -1.3984554,
+        1,
+        7.4736075
+      ],
+      "cameraWorldPosition": [
+        -2.6555557,
+        1.5983181,
+        5.173608
+      ],
+      "cameraTarget": [
+        -0.9555553,
+        0.8983181,
+        7.9736075
+      ],
+      "width": 960,
+      "height": 720,
+      "maxBrightness": 1
+    }
+  ]
+}

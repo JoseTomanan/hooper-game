@@ -80,6 +80,14 @@ setup is required. Offensive sprint uses Shift or the right trigger while
 dribbling ([#325](https://github.com/JoseTomanan/hooper-game/issues/325), closed
 2026-10-11).
 
+On keyboard, **hold K** (downward aim) for a **StepBack**, or tap K and
+release quickly for a **RetreatDribble**. StepBack gathers the ball and spends
+the dribble: crossover and hesitation stay unavailable until a new possession;
+you can still shoot or pivot. RetreatDribble keeps the dribble live. For
+**BehindTheBack**, hold **Q** (size-up) and hold **J/L** horizontally toward the
+opposite hand. K alone is not BehindTheBack. The same quick/hold downward
+gestures and size-up modifier apply on the right stick.
+
 ### Running tests
 
 The pure, engine-free modules (ball physics, committed-move framework, score
