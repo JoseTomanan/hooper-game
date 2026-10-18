@@ -1,0 +1,101 @@
+Issue #415: selected mutation/restoration log excerpts
+Godot 4.7.1 Mono; .NET 8. Excerpts preserve the selected log lines verbatim.
+These are instrument/control results; they do not accept visual quality or feel.
+
+Reproduction (PowerShell, repository root):
+$env:GODOT = [Environment]::GetEnvironmentVariable("GODOT", "User")
+dotnet build "HOOPER GAME.csproj" --no-restore -p:IncludeIntegrationHarness=true
+python tools/harness_catalog.py run --id held-possession-test-held --godot "$env:GODOT" --bash "C:/Program Files/Git/bin/bash.exe"
+python tools/run_network_harness.py held-possession "$env:GODOT" host
+python tools/harness_catalog.py run --id jumpshot-anim-test-control-jumpshot-active-is-upright --godot "$env:GODOT" --bash "C:/Program Files/Git/bin/bash.exe"
+The upright selection includes its paired fadeaway positive control.
+
+Mutation 1: insert an unconditional return false at the start of
+PlayerController.DisplayHeld(), disabling both live and historical Held
+eligibility. Rebuild, run local Held and network host; both must fail.
+Restore the exact PlayerController.cs afterward and rebuild. The network
+failure below has Held/holder gameplay premises but actual Locomotion playback.
+
+Source: .godot/415-mutant-held-local.log
+[held-possession] assertion: settled neutral Held window consistently uses the handed carry and speed blend
+[held-possession] assertion: actual Held idle/moving playback and bound clip endpoints
+[held-possession] FAIL scenario=held errors=settled neutral Held window consistently uses the handed carry and speed blend; actual Held idle/moving playback and bound clip endpoints freshHeld=False spentIdle=False spentMoving=False
+=== FAIL held-possession-test-held (exit 1)
+RESULT: 0 passed / 1 run
+
+Source: .godot/415-mutant-held-net.log
+[multiprocess] FAIL role=server phase=proof reason=reported scenario FAIL ready_seconds=2.340330200000608 elapsed_seconds=57.488
+[net-held] FAIL role=server variant=host: timeout stage=0 arc=0 stable=0 last=tick=-1 historical=False phase=Inactive move= ball=Held/1 liveSpent=False node=Locomotion hand=Right speed=0.000 blend=0.000
+[net-held] server RESULT: FAIL (exit 1)
+
+Mutation 2: in scenes/Player.tscn, change only AnimationNodeAnimation_js279ac
+from locomotion/jumpshotactive to locomotion/fadeawayactive. Run the upright
+control and its paired fadeaway positive control. The final upright oracle
+compares the shooter torso against the same fixture's stationary off-ball
+Locomotion torso reference, retaining the 22-degree limit. Restore the exact
+Player.tscn after the mutant run. The wrong binding must fail while the
+independent fadeaway positive control continues to pass.
+
+Source: .godot/415-standing-mutant.log
+[jumpshot-anim]   fadeaway live pose: pitch=40.86 deg, hips-back=0.3844 m over 4 tick(s)
+[jumpshot-anim] RESULT: PASS (exit 0)
+[jumpshot-anim]   squared-up live release pitch=26.45 deg over 4 tick(s)
+[jumpshot-anim] FAIL: control-jumpshot-active-is-upright: premise requires JumpshotActive for >=2 ticks; pitch=26.45 deg, need abs <= 22.0, This control fails if either the routing premise broke or both release clips lean back.
+[jumpshot-anim] RESULT: FAIL (exit 1)
+=== FAIL jumpshot-anim-test-control-jumpshot-active-is-upright (exit 1)
+RESULT: 1 passed / 2 run
+
+Final restored local controls: original production source and scene binding,
+final standing-reference upright oracle, and the real-input Held fixture.
+The retained final run reports all three selected cases passing.
+
+Source: .godot/415-final-restored.log
+[jumpshot-anim]   fadeaway live pose: pitch=40.86 deg, hips-back=0.3844 m over 4 tick(s)
+[jumpshot-anim] RESULT: PASS (exit 0)
+[jumpshot-anim]   squared-up live release pitch=21.27 deg over 4 tick(s)
+[jumpshot-anim] RESULT: PASS (exit 0)
+[held-possession] PASS scenario=held errors= freshHeld=True spentIdle=True spentMoving=True
+=== PASS jumpshot-anim-test-fadeaway-leans-back (exit 0)
+=== PASS jumpshot-anim-test-control-jumpshot-active-is-upright (exit 0)
+=== PASS held-possession-test-held (exit 0)
+RESULT: 3 passed / 3 run
+
+Restored host-owned network check from the earlier mutation sequence, after
+its temporary source/binding changes were removed: the direct Python adapter
+requires both peers to exit zero with PASS.
+This predates the final upright-oracle-only refinement; that refinement
+changes the separate JumpShot animation fixture, not network gameplay.
+For historical client display, liveSpent is the latest replicated flag;
+it is independently converged rather than metadata from the printed display
+tick. Ball state/holder and actual playback/blend share the display tick.
+
+Source: .godot/415-mutants-restored-net.log
+[multiprocess] PASS role=client phase=proof reason=all required peers exited zero with PASS ready_seconds=2.18291279999994 elapsed_seconds=5.438
+
+Source: .godot/harness-logs/net-held-possession-host-dbe424f1145148db8bdd70d2a9483ce5-server-stdout.log
+[net-held] stage-proof role=server stage=2 arc=7 tick=-1 historical=False phase=Inactive move= ball=Held/1 liveSpent=True node=HeldRight hand=Right speed=0.000 blend=0.000
+[net-held] stage-proof role=server stage=3 arc=7 tick=-1 historical=False phase=Inactive move= ball=Held/1 liveSpent=True node=HeldRight hand=Right speed=6.000 blend=6.000
+[net-held] server RESULT: PASS (exit 0)
+
+Source: .godot/harness-logs/net-held-possession-host-dbe424f1145148db8bdd70d2a9483ce5-client-stdout.log
+[net-held] stage-proof role=client stage=2 arc=7 tick=118 historical=True phase=Inactive move= ball=Held/1 liveSpent=True node=HeldRight hand=Right speed=0.000 blend=0.000
+[net-held] stage-proof role=client stage=3 arc=7 tick=133 historical=True phase=Inactive move= ball=Held/1 liveSpent=True node=HeldRight hand=Right speed=6.000 blend=6.000
+[net-held] client RESULT: PASS (exit 0)
+
+Earlier normal two-role network controls, before the zero-fade transition
+repair and mutation experiments: these logs demonstrate both
+owner variants passing at that earlier implementation point. They are not
+claimed as a post-mutation restored client-owned run. Final network coverage
+is additionally in CI; no CI result is copied into these local excerpts.
+
+Source: .godot/harness-logs/net-held-possession-host-dd9a340de30e4df6901ae724c0008cdf-server-stdout.log
+[net-held] server RESULT: PASS (exit 0)
+
+Source: .godot/harness-logs/net-held-possession-host-dd9a340de30e4df6901ae724c0008cdf-client-stdout.log
+[net-held] client RESULT: PASS (exit 0)
+
+Source: .godot/harness-logs/net-held-possession-client-217efb99a88a4edc9ab949371d649bd5-server-stdout.log
+[net-held] server RESULT: PASS (exit 0)
+
+Source: .godot/harness-logs/net-held-possession-client-217efb99a88a4edc9ab949371d649bd5-client-stdout.log
+[net-held] client RESULT: PASS (exit 0)

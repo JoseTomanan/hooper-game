@@ -89,9 +89,31 @@ A trial 0.08 s crossfade queued subsequent moves behind the initial neutral fade
 and shortened the observed rebound flourish. The existing exact-duration test
 detected this; immediate transitions restore all 30 ticks. Existing neutral
 expectations and the explicit Contest graph inventory now include Held.
-The squared-up shot's upright control measures its torso against gravity:
-change relative to a forward-leaning carry is not a measurement of uprightness.
-No clip or movement threshold was widened for this adjustment.
+The squared-up shot's upright control compares its live torso to the other,
+stationary off-ball rig's standing torso in skeleton space. The incoming Held
+carry leans forward and cannot define the standing reference. The original
+22-degree limit remains: normal JumpShot reads 21.27 degrees; substituting
+FadeawayActive for its release reads 26.45 degrees and fails. Measuring only
+against gravity was insufficient: that intermediate check survived the same
+substitution (16.28 degrees). No shot clip or threshold changed.
+
+## Validation and mutation checks
+
+The game build completed without warnings or errors. All 1,230 unit tests passed
+with five existing characterization skips. Repository contracts passed 98 tests
+with one platform skip. All 389 catalog cases passed across the four shards of
+[CI run 39135715728](https://github.com/JoseTomanan/hooper-game/actions/runs/39135715728)
+(`c2d9aa8`); the rendered-evidence and crossover-continuity jobs also passed.
+After strengthening the standing-reference control (`33047ab`), the local Held
+regression and both paired shot geometry cases passed again (three of three).
+
+Disabling Held selection caused both the local regression and the host-holder
+network case to fail: the holder actually returned to Locomotion. Restoring
+selection restored the host case; CI additionally passed both holder variants. The shot-binding substitution above
+also fails the strengthened geometry control while its positive fadeaway control
+continues to pass. [Mutation and restored-run excerpts](evidence/0415/mutation-checks.txt)
+retain the interventions and measurements. These interventions were reverted; no mutant asset or
+production code is retained.
 
 ## Rendered evidence
 
