@@ -29,7 +29,30 @@ def verify(directory):
                  displayPhase=row.get("poseDisplayPhase", row["displayPhase"]),
                  hand=row.get("poseDisplayHand", row["hand"]))
             for row in rows if row["measuring"]]
+    buffered = manifest.get("presentationBuffered", False)
+    if buffered:
+        if not rows or any(row.get("posePresentationTick", -1) < 0 for row in rows):
+            failures.append("remote measurement lacks initialized presentation history")
+        if manifest.get("presentationResyncCount", 0):
+            failures.append("bounded continuity capture resynchronized its presentation timeline")
+        if manifest.get("presentationDelayTicks", 0):
+            if (not manifest.get("presentationDelayApplied")
+                    or manifest.get("presentationActualDelayTicks", 0) < manifest["presentationDelayTicks"]
+                    or manifest.get("presentationDelayedFrames", 0) < 1):
+                failures.append("delayed-presentation fixture did not hold a genuine received Startup envelope")
+            if not any(row.get("presentationHolding") for row in rows):
+                failures.append("delayed-presentation fixture did not force buffer underflow")
+            if not any(row.get("liveHand") != row["hand"] and row["displayPhase"] == "Startup"
+                       and row.get("receivedPhase") in ("Active", "Recovery") for row in rows):
+                failures.append("delayed-presentation fixture did not observe live authority ahead of historical display")
     for row in rows:
+        if buffered:
+            if row.get("animationCallback") != "Manual":
+                failures.append(f"tick {row['tick']}: remote animation does not use the source-tick clock")
+            if (row.get("posePresentationTick") != row.get("selectedPresentationTick")
+                    or (manifest.get("loseBall", "none") == "none"
+                        and row.get("ballPresentationTick") != row.get("posePresentationTick"))):
+                failures.append(f"tick {row['tick']}: player and ball do not share one presentation frame")
         if not row.get("poseFrameMatches", False):
             failures.append(f"tick {row['tick']}: final pose is from another physics frame")
         if any(not math.isfinite(value) for point in row["bones"].values() for value in point):
@@ -43,9 +66,19 @@ def verify(directory):
             frames = {"Startup": 6, "Active": 3, "Recovery": 12}.get(row["displayPhase"], 0)
             if not 0 <= sampled < frames:
                 failures.append(f"tick {row['tick']}: sampled pose counter is absent or outside its current phase")
-            if row.get("poseDisplaySimulatedLocally") and sampled != row.get("poseDisplayFrame"):
-                failures.append(f"tick {row['tick']}: locally simulated pose did not use its actual machine counter")
+            if (row.get("poseDisplaySimulatedLocally") or buffered) and sampled != row.get("poseDisplayFrame"):
+                failures.append(f"tick {row['tick']}: sampled pose did not use its actual source counter")
     for previous, current in zip(rows, rows[1:]):
+        if buffered:
+            elapsed = current["physicsFrame"] - previous["physicsFrame"]
+            source_delta = current.get("posePresentationTick", -1) - previous.get("posePresentationTick", -1)
+            if not 0 <= source_delta <= elapsed:
+                failures.append(f"tick {current['tick']}: presentation skipped or reversed its source timeline")
+            if source_delta == 0 and elapsed > 0:
+                if current["animation"] != previous["animation"] or abs(current["playbackTime"] - previous["playbackTime"]) > .000001:
+                    failures.append(f"tick {current['tick']}: held presentation advanced ordinary animation time")
+                if distance(current["ball"], previous["ball"]) > MEASUREMENT_EPSILON:
+                    failures.append(f"tick {current['tick']}: held presentation moved its ball")
         if (manifest.get("mutation", "none") == "none" and current["displayMove"] == "crossover"
                 and not current.get("poseDisplaySimulatedLocally", False)
                 and previous["displayMove"] == "crossover"

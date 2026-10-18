@@ -1,4 +1,5 @@
 using Godot;
+using Hooper.Moves;
 namespace Hooper.Ball
 {
     public partial class BallController
@@ -16,6 +17,9 @@ namespace Hooper.Player
         // Playback APIs verified against GodotSharp 4.7.1 XML and the official class reference:
         // https://docs.godotengine.org/en/4.7/classes/class_animationnodestatemachineplayback.html
         internal bool ContinuityIsLocalPlayer => IsLocalPlayer;
+        internal string ContinuityReceivedMoveId => _serverMoveId;
+        internal MovePhase ContinuityReceivedPhase => _serverMovePhase;
+        internal int ContinuityReceivedFrame => _serverMoveFrameInPhase;
         internal CrossoverPose ContinuityCrossoverPose => FindChild("CrossoverPose", recursive: true, owned: false) as CrossoverPose;
         internal (bool Applied, float MaxReachError, int ClampCount, int SampleFrame) ContinuityCrossoverPoseMetrics
         {

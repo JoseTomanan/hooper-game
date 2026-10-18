@@ -14,7 +14,7 @@ from verify_crossover_continuity import verify
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def capture(args, output, *, remote=False, mutation=False, origin=None):
+def capture(args, output, *, remote=False, mutation=False, origin=None, motion=None, count=None, presentation_delay=0):
     command = [sys.executable, str(ROOT / "tools/run_crossover_capture.py"),
                "--godot", args.godot, "--output", str(output), "--commit", args.commit,
                "--port", str(args.port), "--resolution", args.resolution]
@@ -28,6 +28,15 @@ def capture(args, output, *, remote=False, mutation=False, origin=None):
             command.append("--paced")
     if mutation:
         command += ["--disable-pose", "--origin", origin, "--motion", "stationary", "--count", "1"]
+    else:
+        if origin:
+            command += ["--origin", origin]
+        if motion:
+            command += ["--motion", motion]
+        if count:
+            command += ["--count", str(count)]
+    if presentation_delay:
+        command += ["--presentation-delay-ticks", str(presentation_delay)]
     # Delegate process ownership/timeout/cleanup to the existing runner. Argument
     # sequences preserve paths with spaces without invoking a shell.
     # https://docs.python.org/3/library/subprocess.html#subprocess.run
@@ -100,6 +109,10 @@ def main():
                 output = args.output / ("mutation-" + origin.lower())
                 capture(args, output, mutation=True, origin=origin)
                 summary["negativeControls"].append(check_mutation(output))
+        for origin in ("Right", "Left"):
+            output = args.output / ("late-presentation-" + origin.lower())
+            capture(args, output, remote=True, origin=origin, motion="stationary", count=1, presentation_delay=6)
+            summary["captures"] += check_suite(output, 1)
         summary["result"] = "PASS"
     except Exception as error:
         summary["error"] = str(error)
