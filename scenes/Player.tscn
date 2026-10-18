@@ -961,7 +961,6 @@ blend_point_1/name = &"1"
 [sub_resource type="AnimationNodeStateMachineTransition" id="tr_held415_direct"]
 advance_mode = 1
 switch_mode = 0
-xfade_time = 0.08
 
 [sub_resource type="AnimationNodeStateMachine" id="AnimationNodeStateMachine_bruh7"]
 states/Active/node = SubResource("AnimationNodeAnimation_mdl7e")
