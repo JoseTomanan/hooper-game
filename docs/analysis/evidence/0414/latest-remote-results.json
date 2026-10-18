@@ -1,0 +1,1459 @@
+{
+  "testedCommit": "7340f57",
+  "result": "PARTIAL_WITH_FAILURE",
+  "meaning": "Retains every requested case in both latest real-time remote attempts, including valid continuity failures, invalid/incomplete captures and cases not captured. Prior passing captures do not supersede these failures. INCOMPLETE denotes failed capture premises, independently of the verifier result.",
+  "counts": {
+    "PASS": 7,
+    "FAIL": 1,
+    "INCOMPLETE": 2,
+    "NOT_CAPTURED": 6
+  },
+  "captures": [
+    {
+      "capture": ".godot/414-final-clock-remote/right-stationary-1",
+      "testedCommit": "7340f57",
+      "manifest": {
+        "schema": "hooper-crossover-continuity/v1",
+        "mutation": "none",
+        "mutationApplied": false,
+        "result": "captured",
+        "failure": "",
+        "commit": "7340f57",
+        "role": "client",
+        "motion": "stationary",
+        "origin": "Right",
+        "requestedCycles": 1,
+        "completedCycles": 1,
+        "loseBall": "none",
+        "ballLossApplied": false,
+        "ballLossRecipient": 0,
+        "holdMovementThroughReturn": false,
+        "remotePaced": false,
+        "remoteTiming": "real-time",
+        "diagnosticServerDelayMs": 0,
+        "pacingMeaning": "wall-clock-only diagnostic pacing with fixed simulation delta; no real-time latency/performance claim",
+        "fixtureInitialHostSpawnX": null,
+        "engine": "4.7.1-stable (official)",
+        "physicsTicksPerSecond": 60,
+        "commandLine": [
+          "res://tests/integration/CrossoverContinuityCapture.tscn"
+        ],
+        "userArgs": [
+          "--capture-output=C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-final-clock-remote\\right-stationary-1",
+          "--capture-role=client",
+          "--capture-origin=Right",
+          "--capture-motion=stationary",
+          "--capture-count=1",
+          "--capture-commit=7340f57",
+          "--capture-port=23466",
+          "--capture-max-physics-gap=2"
+        ],
+        "renderer": "NVIDIA GeForce RTX 3050",
+        "displayDriver": "Windows",
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraFov": 75,
+        "ballRadius": 0.12,
+        "betweenCycleNeutralTicks": 36,
+        "finalTailNeutralTicks": 36,
+        "sampleTiming": "FramePostDraw state and image;  SkeletonUpdated final modifier pose with its own frame stamps; production animation callback unchanged",
+        "samples": 67,
+        "skippedPhysicsFrames": 0,
+        "allowedMaxPhysicsGap": 2,
+        "observedMaxPhysicsGap": 2,
+        "cadenceMeaning": "up to two 60Hz physics ticks per rendered frame; normal real-time 30Hz display; not full physics-frame coverage",
+        "duplicateRenderedPhysicsFrames": 0,
+        "poseFrameMismatches": 0,
+        "events": [
+          {
+            "tick": 0,
+            "kind": "boot",
+            "detail": "normal Main scene, normal spawn, unchanged camera and production animation callback"
+          },
+          {
+            "tick": 96,
+            "kind": "measurement-begin",
+            "detail": "server signalled measured window"
+          },
+          {
+            "tick": 103,
+            "kind": "recognized-crossover",
+            "detail": "destination=Left; entrySpeed=0; entryHeading=3.1415927; observedStartupSpeed=0; entrySample=last-inactive-physics-tick; entrySampleTick=102"
+          },
+          {
+            "tick": 124,
+            "kind": "destination-dribble",
+            "detail": "cycle=1"
+          },
+          {
+            "tick": 160,
+            "kind": "completion-notification",
+            "detail": "ack queued; wait 5 client physics ticks before exit"
+          }
+        ],
+        "verdict": "diagnostic capture only; no continuity or feel acceptance threshold"
+      },
+      "manifestSha256": "adcc837a55a5b73a33e9fbdd69f1ac3c02ee51bccfac9c5ec7cc302310ab0b42",
+      "traceSha256": "f9e147ff245d0dd11d57f2805566e5d5eb1f08b4a342ec122d16a9ebea4c5b1b",
+      "verification": {
+        "capture": ".godot\\414-final-clock-remote\\right-stationary-1",
+        "result": "PASS",
+        "maxStepsMeters": {
+          "Hips": 0.143552791512592,
+          "LeftHand": 0.17725086775697976,
+          "RightHand": 0.3810343638454245,
+          "LeftFoot": 0.11732940019878797,
+          "RightFoot": 0.11554883376062455
+        },
+        "neutralApexContactMeasurements": [
+          {
+            "tick": 122,
+            "hand": "Left",
+            "centerDistanceMeters": 0.10959170240303315,
+            "ballRadiusMeters": 0.12
+          },
+          {
+            "tick": 158,
+            "hand": "Left",
+            "centerDistanceMeters": 0.08587913643694232,
+            "ballRadiusMeters": 0.12
+          }
+        ],
+        "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+        "failures": []
+      },
+      "result": "PASS"
+    },
+    {
+      "capture": ".godot/414-final-clock-remote/right-stationary-3",
+      "testedCommit": "7340f57",
+      "manifest": {
+        "schema": "hooper-crossover-continuity/v1",
+        "mutation": "none",
+        "mutationApplied": false,
+        "result": "captured",
+        "failure": "",
+        "commit": "7340f57",
+        "role": "client",
+        "motion": "stationary",
+        "origin": "Right",
+        "requestedCycles": 3,
+        "completedCycles": 3,
+        "loseBall": "none",
+        "ballLossApplied": false,
+        "ballLossRecipient": 0,
+        "holdMovementThroughReturn": false,
+        "remotePaced": false,
+        "remoteTiming": "real-time",
+        "diagnosticServerDelayMs": 0,
+        "pacingMeaning": "wall-clock-only diagnostic pacing with fixed simulation delta; no real-time latency/performance claim",
+        "fixtureInitialHostSpawnX": null,
+        "engine": "4.7.1-stable (official)",
+        "physicsTicksPerSecond": 60,
+        "commandLine": [
+          "res://tests/integration/CrossoverContinuityCapture.tscn"
+        ],
+        "userArgs": [
+          "--capture-output=C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-final-clock-remote\\right-stationary-3",
+          "--capture-role=client",
+          "--capture-origin=Right",
+          "--capture-motion=stationary",
+          "--capture-count=3",
+          "--capture-commit=7340f57",
+          "--capture-port=23466",
+          "--capture-max-physics-gap=2"
+        ],
+        "renderer": "NVIDIA GeForce RTX 3050",
+        "displayDriver": "Windows",
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraFov": 75,
+        "ballRadius": 0.12,
+        "betweenCycleNeutralTicks": 36,
+        "finalTailNeutralTicks": 36,
+        "sampleTiming": "FramePostDraw state and image;  SkeletonUpdated final modifier pose with its own frame stamps; production animation callback unchanged",
+        "samples": 128,
+        "skippedPhysicsFrames": 0,
+        "allowedMaxPhysicsGap": 2,
+        "observedMaxPhysicsGap": 2,
+        "cadenceMeaning": "up to two 60Hz physics ticks per rendered frame; normal real-time 30Hz display; not full physics-frame coverage",
+        "duplicateRenderedPhysicsFrames": 0,
+        "poseFrameMismatches": 0,
+        "events": [
+          {
+            "tick": 0,
+            "kind": "boot",
+            "detail": "normal Main scene, normal spawn, unchanged camera and production animation callback"
+          },
+          {
+            "tick": 97,
+            "kind": "measurement-begin",
+            "detail": "server signalled measured window"
+          },
+          {
+            "tick": 104,
+            "kind": "recognized-crossover",
+            "detail": "destination=Left; entrySpeed=0; entryHeading=3.1415927; observedStartupSpeed=0; entrySample=last-inactive-physics-tick; entrySampleTick=103"
+          },
+          {
+            "tick": 125,
+            "kind": "destination-dribble",
+            "detail": "cycle=1"
+          },
+          {
+            "tick": 166,
+            "kind": "recognized-crossover",
+            "detail": "destination=Right; entrySpeed=0; entryHeading=3.1415927; observedStartupSpeed=0; entrySample=last-inactive-physics-tick; entrySampleTick=165"
+          },
+          {
+            "tick": 187,
+            "kind": "destination-dribble",
+            "detail": "cycle=2"
+          },
+          {
+            "tick": 226,
+            "kind": "recognized-crossover",
+            "detail": "destination=Left; entrySpeed=0; entryHeading=3.1415927; observedStartupSpeed=0; entrySample=last-inactive-physics-tick; entrySampleTick=225"
+          },
+          {
+            "tick": 247,
+            "kind": "destination-dribble",
+            "detail": "cycle=3"
+          },
+          {
+            "tick": 283,
+            "kind": "completion-notification",
+            "detail": "ack queued; wait 5 client physics ticks before exit"
+          }
+        ],
+        "verdict": "diagnostic capture only; no continuity or feel acceptance threshold"
+      },
+      "manifestSha256": "676e2fffdb5665b5b5653861d85804fdd09de3699a17e701ee980b47ac46eca6",
+      "traceSha256": "354aff4c02ce72393d686d2d66fb6aecbae8c63b72eb19148ef4a6166fc91a29",
+      "verification": {
+        "capture": ".godot\\414-final-clock-remote\\right-stationary-3",
+        "result": "PASS",
+        "maxStepsMeters": {
+          "Hips": 0.14355283380363412,
+          "LeftHand": 0.32840818373902525,
+          "RightHand": 0.38284487756774827,
+          "LeftFoot": 0.1732950147433313,
+          "RightFoot": 0.22508334915190376
+        },
+        "neutralApexContactMeasurements": [
+          {
+            "tick": 123,
+            "hand": "Left",
+            "centerDistanceMeters": 0.10959170240303315,
+            "ballRadiusMeters": 0.12
+          },
+          {
+            "tick": 159,
+            "hand": "Left",
+            "centerDistanceMeters": 0.08587913643694232,
+            "ballRadiusMeters": 0.12
+          },
+          {
+            "tick": 195,
+            "hand": "Right",
+            "centerDistanceMeters": 0.07986268676052495,
+            "ballRadiusMeters": 0.12
+          },
+          {
+            "tick": 267,
+            "hand": "Left",
+            "centerDistanceMeters": 0.2383491480062403,
+            "ballRadiusMeters": 0.12
+          }
+        ],
+        "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+        "failures": []
+      },
+      "result": "PASS"
+    },
+    {
+      "capture": ".godot/414-final-clock-remote/right-moving-1",
+      "testedCommit": "7340f57",
+      "manifest": {
+        "schema": "hooper-crossover-continuity/v1",
+        "mutation": "none",
+        "mutationApplied": false,
+        "result": "captured",
+        "failure": "",
+        "commit": "7340f57",
+        "role": "client",
+        "motion": "moving",
+        "origin": "Right",
+        "requestedCycles": 1,
+        "completedCycles": 1,
+        "loseBall": "none",
+        "ballLossApplied": false,
+        "ballLossRecipient": 0,
+        "holdMovementThroughReturn": false,
+        "remotePaced": false,
+        "remoteTiming": "real-time",
+        "diagnosticServerDelayMs": 0,
+        "pacingMeaning": "wall-clock-only diagnostic pacing with fixed simulation delta; no real-time latency/performance claim",
+        "fixtureInitialHostSpawnX": null,
+        "engine": "4.7.1-stable (official)",
+        "physicsTicksPerSecond": 60,
+        "commandLine": [
+          "res://tests/integration/CrossoverContinuityCapture.tscn"
+        ],
+        "userArgs": [
+          "--capture-output=C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-final-clock-remote\\right-moving-1",
+          "--capture-role=client",
+          "--capture-origin=Right",
+          "--capture-motion=moving",
+          "--capture-count=1",
+          "--capture-commit=7340f57",
+          "--capture-port=23466",
+          "--capture-max-physics-gap=2"
+        ],
+        "renderer": "NVIDIA GeForce RTX 3050",
+        "displayDriver": "Windows",
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraFov": 75,
+        "ballRadius": 0.12,
+        "betweenCycleNeutralTicks": 36,
+        "finalTailNeutralTicks": 36,
+        "sampleTiming": "FramePostDraw state and image;  SkeletonUpdated final modifier pose with its own frame stamps; production animation callback unchanged",
+        "samples": 75,
+        "skippedPhysicsFrames": 0,
+        "allowedMaxPhysicsGap": 2,
+        "observedMaxPhysicsGap": 2,
+        "cadenceMeaning": "up to two 60Hz physics ticks per rendered frame; normal real-time 30Hz display; not full physics-frame coverage",
+        "duplicateRenderedPhysicsFrames": 0,
+        "poseFrameMismatches": 0,
+        "events": [
+          {
+            "tick": 0,
+            "kind": "boot",
+            "detail": "normal Main scene, normal spawn, unchanged camera and production animation callback"
+          },
+          {
+            "tick": 95,
+            "kind": "measurement-begin",
+            "detail": "server signalled measured window"
+          },
+          {
+            "tick": 118,
+            "kind": "recognized-crossover",
+            "detail": "destination=Left; entrySpeed=6; entryHeading=1.5707964; observedStartupSpeed=6; entrySample=last-inactive-physics-tick; entrySampleTick=117"
+          },
+          {
+            "tick": 139,
+            "kind": "destination-dribble",
+            "detail": "cycle=1"
+          },
+          {
+            "tick": 175,
+            "kind": "completion-notification",
+            "detail": "ack queued; wait 5 client physics ticks before exit"
+          }
+        ],
+        "verdict": "diagnostic capture only; no continuity or feel acceptance threshold"
+      },
+      "manifestSha256": "98c2fc99eb0cc3b8a240a944a8a8c362e3b249421cd28fc184d1424a2f30b445",
+      "traceSha256": "893a3adda468a0be2dac3bd4995895d541a90127ec9d5ac4108c786ffd293efa",
+      "verification": {
+        "capture": ".godot\\414-final-clock-remote\\right-moving-1",
+        "result": "PASS",
+        "maxStepsMeters": {
+          "Hips": 0.14355289301685778,
+          "LeftHand": 0.15731699475883903,
+          "RightHand": 0.291237741597222,
+          "LeftFoot": 0.12804414228141586,
+          "RightFoot": 0.1502853628772117
+        },
+        "neutralApexContactMeasurements": [
+          {
+            "tick": 157,
+            "hand": "Left",
+            "centerDistanceMeters": 0.24026131376257434,
+            "ballRadiusMeters": 0.12
+          }
+        ],
+        "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+        "failures": []
+      },
+      "result": "PASS"
+    },
+    {
+      "capture": ".godot/414-final-clock-remote/right-moving-3",
+      "testedCommit": "7340f57",
+      "manifest": {
+        "schema": "hooper-crossover-continuity/v1",
+        "mutation": "none",
+        "mutationApplied": false,
+        "result": "captured",
+        "failure": "",
+        "commit": "7340f57",
+        "role": "client",
+        "motion": "moving",
+        "origin": "Right",
+        "requestedCycles": 3,
+        "completedCycles": 3,
+        "loseBall": "none",
+        "ballLossApplied": false,
+        "ballLossRecipient": 0,
+        "holdMovementThroughReturn": false,
+        "remotePaced": false,
+        "remoteTiming": "real-time",
+        "diagnosticServerDelayMs": 0,
+        "pacingMeaning": "wall-clock-only diagnostic pacing with fixed simulation delta; no real-time latency/performance claim",
+        "fixtureInitialHostSpawnX": null,
+        "engine": "4.7.1-stable (official)",
+        "physicsTicksPerSecond": 60,
+        "commandLine": [
+          "res://tests/integration/CrossoverContinuityCapture.tscn"
+        ],
+        "userArgs": [
+          "--capture-output=C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-final-clock-remote\\right-moving-3",
+          "--capture-role=client",
+          "--capture-origin=Right",
+          "--capture-motion=moving",
+          "--capture-count=3",
+          "--capture-commit=7340f57",
+          "--capture-port=23466",
+          "--capture-max-physics-gap=2"
+        ],
+        "renderer": "NVIDIA GeForce RTX 3050",
+        "displayDriver": "Windows",
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraFov": 75,
+        "ballRadius": 0.12,
+        "betweenCycleNeutralTicks": 36,
+        "finalTailNeutralTicks": 36,
+        "sampleTiming": "FramePostDraw state and image;  SkeletonUpdated final modifier pose with its own frame stamps; production animation callback unchanged",
+        "samples": 152,
+        "skippedPhysicsFrames": 0,
+        "allowedMaxPhysicsGap": 2,
+        "observedMaxPhysicsGap": 2,
+        "cadenceMeaning": "up to two 60Hz physics ticks per rendered frame; normal real-time 30Hz display; not full physics-frame coverage",
+        "duplicateRenderedPhysicsFrames": 0,
+        "poseFrameMismatches": 0,
+        "events": [
+          {
+            "tick": 0,
+            "kind": "boot",
+            "detail": "normal Main scene, normal spawn, unchanged camera and production animation callback"
+          },
+          {
+            "tick": 95,
+            "kind": "measurement-begin",
+            "detail": "server signalled measured window"
+          },
+          {
+            "tick": 118,
+            "kind": "recognized-crossover",
+            "detail": "destination=Left; entrySpeed=6; entryHeading=1.5707964; observedStartupSpeed=6; entrySample=last-inactive-physics-tick; entrySampleTick=117"
+          },
+          {
+            "tick": 139,
+            "kind": "destination-dribble",
+            "detail": "cycle=1"
+          },
+          {
+            "tick": 196,
+            "kind": "recognized-crossover",
+            "detail": "destination=Right; entrySpeed=6; entryHeading=1.5707964; observedStartupSpeed=6; entrySample=last-inactive-physics-tick; entrySampleTick=195"
+          },
+          {
+            "tick": 215,
+            "kind": "destination-dribble",
+            "detail": "cycle=2"
+          },
+          {
+            "tick": 272,
+            "kind": "recognized-crossover",
+            "detail": "destination=Left; entrySpeed=6; entryHeading=1.5707964; observedStartupSpeed=6; entrySample=last-inactive-physics-tick; entrySampleTick=271"
+          },
+          {
+            "tick": 293,
+            "kind": "destination-dribble",
+            "detail": "cycle=3"
+          },
+          {
+            "tick": 329,
+            "kind": "completion-notification",
+            "detail": "ack queued; wait 5 client physics ticks before exit"
+          }
+        ],
+        "verdict": "diagnostic capture only; no continuity or feel acceptance threshold"
+      },
+      "manifestSha256": "b814d427b44a071f506a16af959999033abc4e159348508d2d74db6832c6dd46",
+      "traceSha256": "2f7a47d233f720e1f30bc94c8f8824a4a6f7357375ec47170df336d4f05a74d0",
+      "verification": {
+        "capture": ".godot\\414-final-clock-remote\\right-moving-3",
+        "result": "FAIL",
+        "maxStepsMeters": {
+          "Hips": 0.15682242635656396,
+          "LeftHand": 0.20242544153759315,
+          "RightHand": 0.30285663490301845,
+          "LeftFoot": 0.3269127281418794,
+          "RightFoot": 0.1502852825237558
+        },
+        "neutralApexContactMeasurements": [
+          {
+            "tick": 159,
+            "hand": "Left",
+            "centerDistanceMeters": 0.23834914314701375,
+            "ballRadiusMeters": 0.12
+          },
+          {
+            "tick": 231,
+            "hand": "Right",
+            "centerDistanceMeters": 0.2341755078767469,
+            "ballRadiusMeters": 0.12
+          },
+          {
+            "tick": 267,
+            "hand": "Right",
+            "centerDistanceMeters": 0.22933830055977256,
+            "ballRadiusMeters": 0.12
+          },
+          {
+            "tick": 303,
+            "hand": "Left",
+            "centerDistanceMeters": 0.13683882227105454,
+            "ballRadiusMeters": 0.12
+          }
+        ],
+        "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+        "failures": [
+          "tick 197 DribbleLeft -> CrossoverStartupLeft: LeftFoot step 0.3269 m > 0.12 m/tick across 2 ticks"
+        ]
+      },
+      "result": "FAIL"
+    },
+    {
+      "capture": ".godot/414-final-clock-remote/left-stationary-1",
+      "testedCommit": "7340f57",
+      "manifest": {
+        "schema": "hooper-crossover-continuity/v1",
+        "mutation": "none",
+        "mutationApplied": false,
+        "result": "captured",
+        "failure": "",
+        "commit": "7340f57",
+        "role": "client",
+        "motion": "stationary",
+        "origin": "Left",
+        "requestedCycles": 1,
+        "completedCycles": 1,
+        "loseBall": "none",
+        "ballLossApplied": false,
+        "ballLossRecipient": 0,
+        "holdMovementThroughReturn": false,
+        "remotePaced": false,
+        "remoteTiming": "real-time",
+        "diagnosticServerDelayMs": 0,
+        "pacingMeaning": "wall-clock-only diagnostic pacing with fixed simulation delta; no real-time latency/performance claim",
+        "fixtureInitialHostSpawnX": null,
+        "engine": "4.7.1-stable (official)",
+        "physicsTicksPerSecond": 60,
+        "commandLine": [
+          "res://tests/integration/CrossoverContinuityCapture.tscn"
+        ],
+        "userArgs": [
+          "--capture-output=C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-final-clock-remote\\left-stationary-1",
+          "--capture-role=client",
+          "--capture-origin=Left",
+          "--capture-motion=stationary",
+          "--capture-count=1",
+          "--capture-commit=7340f57",
+          "--capture-port=23466",
+          "--capture-max-physics-gap=2"
+        ],
+        "renderer": "NVIDIA GeForce RTX 3050",
+        "displayDriver": "Windows",
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraFov": 75,
+        "ballRadius": 0.12,
+        "betweenCycleNeutralTicks": 36,
+        "finalTailNeutralTicks": 36,
+        "sampleTiming": "FramePostDraw state and image;  SkeletonUpdated final modifier pose with its own frame stamps; production animation callback unchanged",
+        "samples": 102,
+        "skippedPhysicsFrames": 0,
+        "allowedMaxPhysicsGap": 2,
+        "observedMaxPhysicsGap": 2,
+        "cadenceMeaning": "up to two 60Hz physics ticks per rendered frame; normal real-time 30Hz display; not full physics-frame coverage",
+        "duplicateRenderedPhysicsFrames": 0,
+        "poseFrameMismatches": 0,
+        "events": [
+          {
+            "tick": 0,
+            "kind": "boot",
+            "detail": "normal Main scene, normal spawn, unchanged camera and production animation callback"
+          },
+          {
+            "tick": 166,
+            "kind": "measurement-begin",
+            "detail": "server signalled measured window"
+          },
+          {
+            "tick": 173,
+            "kind": "recognized-crossover",
+            "detail": "destination=Right; entrySpeed=0; entryHeading=3.1415927; observedStartupSpeed=0; entrySample=last-inactive-physics-tick; entrySampleTick=172"
+          },
+          {
+            "tick": 194,
+            "kind": "destination-dribble",
+            "detail": "cycle=1"
+          },
+          {
+            "tick": 230,
+            "kind": "completion-notification",
+            "detail": "ack queued; wait 5 client physics ticks before exit"
+          }
+        ],
+        "verdict": "diagnostic capture only; no continuity or feel acceptance threshold"
+      },
+      "manifestSha256": "f346531262593085d79e8d0ca7ddfca50c9a09228664ac968579e177016bff3b",
+      "traceSha256": "211fe9d987930363b81e7ee862a096049f05fdcdffb413040d7ae983c1f37c34",
+      "verification": {
+        "capture": ".godot\\414-final-clock-remote\\left-stationary-1",
+        "result": "PASS",
+        "maxStepsMeters": {
+          "Hips": 0.13866901802327727,
+          "LeftHand": 0.3022176045568189,
+          "RightHand": 0.2533859156517263,
+          "LeftFoot": 0.11527464380585886,
+          "RightFoot": 0.15003145394968678
+        },
+        "neutralApexContactMeasurements": [
+          {
+            "tick": 194,
+            "hand": "Right",
+            "centerDistanceMeters": 0.10788655073937899,
+            "ballRadiusMeters": 0.12
+          },
+          {
+            "tick": 230,
+            "hand": "Right",
+            "centerDistanceMeters": 0.10551302684809533,
+            "ballRadiusMeters": 0.12
+          }
+        ],
+        "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+        "failures": []
+      },
+      "result": "PASS"
+    },
+    {
+      "capture": ".godot/414-final-clock-remote/left-stationary-3",
+      "testedCommit": "7340f57",
+      "manifest": {
+        "schema": "hooper-crossover-continuity/v1",
+        "mutation": "none",
+        "mutationApplied": false,
+        "result": "captured",
+        "failure": "",
+        "commit": "7340f57",
+        "role": "client",
+        "motion": "stationary",
+        "origin": "Left",
+        "requestedCycles": 3,
+        "completedCycles": 3,
+        "loseBall": "none",
+        "ballLossApplied": false,
+        "ballLossRecipient": 0,
+        "holdMovementThroughReturn": false,
+        "remotePaced": false,
+        "remoteTiming": "real-time",
+        "diagnosticServerDelayMs": 0,
+        "pacingMeaning": "wall-clock-only diagnostic pacing with fixed simulation delta; no real-time latency/performance claim",
+        "fixtureInitialHostSpawnX": null,
+        "engine": "4.7.1-stable (official)",
+        "physicsTicksPerSecond": 60,
+        "commandLine": [
+          "res://tests/integration/CrossoverContinuityCapture.tscn"
+        ],
+        "userArgs": [
+          "--capture-output=C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-final-clock-remote\\left-stationary-3",
+          "--capture-role=client",
+          "--capture-origin=Left",
+          "--capture-motion=stationary",
+          "--capture-count=3",
+          "--capture-commit=7340f57",
+          "--capture-port=23466",
+          "--capture-max-physics-gap=2"
+        ],
+        "renderer": "NVIDIA GeForce RTX 3050",
+        "displayDriver": "Windows",
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraFov": 75,
+        "ballRadius": 0.12,
+        "betweenCycleNeutralTicks": 36,
+        "finalTailNeutralTicks": 36,
+        "sampleTiming": "FramePostDraw state and image;  SkeletonUpdated final modifier pose with its own frame stamps; production animation callback unchanged",
+        "samples": 163,
+        "skippedPhysicsFrames": 0,
+        "allowedMaxPhysicsGap": 2,
+        "observedMaxPhysicsGap": 2,
+        "cadenceMeaning": "up to two 60Hz physics ticks per rendered frame; normal real-time 30Hz display; not full physics-frame coverage",
+        "duplicateRenderedPhysicsFrames": 0,
+        "poseFrameMismatches": 0,
+        "events": [
+          {
+            "tick": 0,
+            "kind": "boot",
+            "detail": "normal Main scene, normal spawn, unchanged camera and production animation callback"
+          },
+          {
+            "tick": 166,
+            "kind": "measurement-begin",
+            "detail": "server signalled measured window"
+          },
+          {
+            "tick": 173,
+            "kind": "recognized-crossover",
+            "detail": "destination=Right; entrySpeed=0; entryHeading=3.1415927; observedStartupSpeed=0; entrySample=last-inactive-physics-tick; entrySampleTick=172"
+          },
+          {
+            "tick": 194,
+            "kind": "destination-dribble",
+            "detail": "cycle=1"
+          },
+          {
+            "tick": 235,
+            "kind": "recognized-crossover",
+            "detail": "destination=Left; entrySpeed=0; entryHeading=3.1415927; observedStartupSpeed=0; entrySample=last-inactive-physics-tick; entrySampleTick=234"
+          },
+          {
+            "tick": 256,
+            "kind": "destination-dribble",
+            "detail": "cycle=2"
+          },
+          {
+            "tick": 295,
+            "kind": "recognized-crossover",
+            "detail": "destination=Right; entrySpeed=0; entryHeading=3.1415927; observedStartupSpeed=0; entrySample=last-inactive-physics-tick; entrySampleTick=294"
+          },
+          {
+            "tick": 316,
+            "kind": "destination-dribble",
+            "detail": "cycle=3"
+          },
+          {
+            "tick": 352,
+            "kind": "completion-notification",
+            "detail": "ack queued; wait 5 client physics ticks before exit"
+          }
+        ],
+        "verdict": "diagnostic capture only; no continuity or feel acceptance threshold"
+      },
+      "manifestSha256": "fc99f2aadd84f6113753d754be1c01e2ff34c788d48ab0b7045dd625c7e1ba50",
+      "traceSha256": "176563eb3631b5580a51f0321f8f07a433dd5a9176995deae1254d5cfb2d25c6",
+      "verification": {
+        "capture": ".godot\\414-final-clock-remote\\left-stationary-3",
+        "result": "PASS",
+        "maxStepsMeters": {
+          "Hips": 0.15682276205070642,
+          "LeftHand": 0.3311210050528798,
+          "RightHand": 0.3846023208613607,
+          "LeftFoot": 0.17607823958621613,
+          "RightFoot": 0.17330864954904598
+        },
+        "neutralApexContactMeasurements": [
+          {
+            "tick": 196,
+            "hand": "Right",
+            "centerDistanceMeters": 0.09650373992299463,
+            "ballRadiusMeters": 0.12
+          },
+          {
+            "tick": 232,
+            "hand": "Right",
+            "centerDistanceMeters": 0.12396374387242456,
+            "ballRadiusMeters": 0.12
+          },
+          {
+            "tick": 268,
+            "hand": "Left",
+            "centerDistanceMeters": 0.18647713193450996,
+            "ballRadiusMeters": 0.12
+          },
+          {
+            "tick": 340,
+            "hand": "Right",
+            "centerDistanceMeters": 0.19689291216603333,
+            "ballRadiusMeters": 0.12
+          }
+        ],
+        "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+        "failures": []
+      },
+      "result": "PASS"
+    },
+    {
+      "capture": ".godot/414-final-clock-remote/left-moving-1",
+      "testedCommit": "7340f57",
+      "manifest": {
+        "schema": "hooper-crossover-continuity/v1",
+        "mutation": "none",
+        "mutationApplied": false,
+        "result": "failed",
+        "failure": "skipped physics frames during measurement",
+        "commit": "7340f57",
+        "role": "client",
+        "motion": "moving",
+        "origin": "Left",
+        "requestedCycles": 1,
+        "completedCycles": 1,
+        "loseBall": "none",
+        "ballLossApplied": false,
+        "ballLossRecipient": 0,
+        "holdMovementThroughReturn": false,
+        "remotePaced": false,
+        "remoteTiming": "real-time",
+        "diagnosticServerDelayMs": 0,
+        "pacingMeaning": "wall-clock-only diagnostic pacing with fixed simulation delta; no real-time latency/performance claim",
+        "fixtureInitialHostSpawnX": null,
+        "engine": "4.7.1-stable (official)",
+        "physicsTicksPerSecond": 60,
+        "commandLine": [
+          "res://tests/integration/CrossoverContinuityCapture.tscn"
+        ],
+        "userArgs": [
+          "--capture-output=C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-final-clock-remote\\left-moving-1",
+          "--capture-role=client",
+          "--capture-origin=Left",
+          "--capture-motion=moving",
+          "--capture-count=1",
+          "--capture-commit=7340f57",
+          "--capture-port=23466",
+          "--capture-max-physics-gap=2"
+        ],
+        "renderer": "NVIDIA GeForce RTX 3050",
+        "displayDriver": "Windows",
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraFov": 75,
+        "ballRadius": 0.12,
+        "betweenCycleNeutralTicks": 36,
+        "finalTailNeutralTicks": 36,
+        "sampleTiming": "FramePostDraw state and image;  SkeletonUpdated final modifier pose with its own frame stamps; production animation callback unchanged",
+        "samples": 110,
+        "skippedPhysicsFrames": 1,
+        "allowedMaxPhysicsGap": 2,
+        "observedMaxPhysicsGap": 3,
+        "cadenceMeaning": "up to two 60Hz physics ticks per rendered frame; normal real-time 30Hz display; not full physics-frame coverage",
+        "duplicateRenderedPhysicsFrames": 0,
+        "poseFrameMismatches": 0,
+        "events": [
+          {
+            "tick": 0,
+            "kind": "boot",
+            "detail": "normal Main scene, normal spawn, unchanged camera and production animation callback"
+          },
+          {
+            "tick": 164,
+            "kind": "measurement-begin",
+            "detail": "server signalled measured window"
+          },
+          {
+            "tick": 187,
+            "kind": "recognized-crossover",
+            "detail": "destination=Right; entrySpeed=6; entryHeading=1.5707964; observedStartupSpeed=6; entrySample=last-inactive-physics-tick; entrySampleTick=186"
+          },
+          {
+            "tick": 208,
+            "kind": "destination-dribble",
+            "detail": "cycle=1"
+          },
+          {
+            "tick": 244,
+            "kind": "completion-notification",
+            "detail": "ack queued; wait 5 client physics ticks before exit"
+          }
+        ],
+        "verdict": "diagnostic capture only; no continuity or feel acceptance threshold"
+      },
+      "manifestSha256": "b8f47ba6a416d8707381b7a10ef7831eca79831dfcfd3db40457b084e283ee04",
+      "traceSha256": "44ea3b224feddcf3e0652178f016cc307af6b6cc47ef70ca5ce7c9655540352d",
+      "verification": {
+        "capture": ".godot\\414-final-clock-remote\\left-moving-1",
+        "result": "FAIL",
+        "maxStepsMeters": {
+          "Hips": 0.1386692197396113,
+          "LeftHand": 0.1936342755895637,
+          "RightHand": 0.2364812874886892,
+          "LeftFoot": 0.21794774311227316,
+          "RightFoot": 0.0885671677911057
+        },
+        "neutralApexContactMeasurements": [
+          {
+            "tick": 228,
+            "hand": "Right",
+            "centerDistanceMeters": 0.23845226385237522,
+            "ballRadiusMeters": 0.12
+          }
+        ],
+        "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+        "failures": [
+          "capture did not complete requested cycles"
+        ]
+      },
+      "result": "INCOMPLETE"
+    },
+    {
+      "capture": ".godot/414-final-clock-remote/left-moving-3",
+      "testedCommit": "7340f57",
+      "result": "NOT_CAPTURED",
+      "manifest": null,
+      "traceSha256": null,
+      "verification": null,
+      "meaning": "No completed client manifest retained for this requested matrix case."
+    },
+    {
+      "capture": ".godot/414-final-clock-remote-small/right-stationary-1",
+      "testedCommit": "7340f57",
+      "manifest": {
+        "schema": "hooper-crossover-continuity/v1",
+        "mutation": "none",
+        "mutationApplied": false,
+        "result": "captured",
+        "failure": "",
+        "commit": "7340f57",
+        "role": "client",
+        "motion": "stationary",
+        "origin": "Right",
+        "requestedCycles": 1,
+        "completedCycles": 1,
+        "loseBall": "none",
+        "ballLossApplied": false,
+        "ballLossRecipient": 0,
+        "holdMovementThroughReturn": false,
+        "remotePaced": false,
+        "remoteTiming": "real-time",
+        "diagnosticServerDelayMs": 0,
+        "pacingMeaning": "wall-clock-only diagnostic pacing with fixed simulation delta; no real-time latency/performance claim",
+        "fixtureInitialHostSpawnX": null,
+        "engine": "4.7.1-stable (official)",
+        "physicsTicksPerSecond": 60,
+        "commandLine": [
+          "res://tests/integration/CrossoverContinuityCapture.tscn"
+        ],
+        "userArgs": [
+          "--capture-output=C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-final-clock-remote-small\\right-stationary-1",
+          "--capture-role=client",
+          "--capture-origin=Right",
+          "--capture-motion=stationary",
+          "--capture-count=1",
+          "--capture-commit=7340f57",
+          "--capture-port=23466",
+          "--capture-max-physics-gap=2"
+        ],
+        "renderer": "NVIDIA GeForce RTX 3050",
+        "displayDriver": "Windows",
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraFov": 75,
+        "ballRadius": 0.12,
+        "betweenCycleNeutralTicks": 36,
+        "finalTailNeutralTicks": 36,
+        "sampleTiming": "FramePostDraw state and image;  SkeletonUpdated final modifier pose with its own frame stamps; production animation callback unchanged",
+        "samples": 67,
+        "skippedPhysicsFrames": 0,
+        "allowedMaxPhysicsGap": 2,
+        "observedMaxPhysicsGap": 2,
+        "cadenceMeaning": "up to two 60Hz physics ticks per rendered frame; normal real-time 30Hz display; not full physics-frame coverage",
+        "duplicateRenderedPhysicsFrames": 0,
+        "poseFrameMismatches": 0,
+        "events": [
+          {
+            "tick": 0,
+            "kind": "boot",
+            "detail": "normal Main scene, normal spawn, unchanged camera and production animation callback"
+          },
+          {
+            "tick": 94,
+            "kind": "measurement-begin",
+            "detail": "server signalled measured window"
+          },
+          {
+            "tick": 101,
+            "kind": "recognized-crossover",
+            "detail": "destination=Left; entrySpeed=0; entryHeading=3.1415927; observedStartupSpeed=0; entrySample=last-inactive-physics-tick; entrySampleTick=100"
+          },
+          {
+            "tick": 122,
+            "kind": "destination-dribble",
+            "detail": "cycle=1"
+          },
+          {
+            "tick": 158,
+            "kind": "completion-notification",
+            "detail": "ack queued; wait 5 client physics ticks before exit"
+          }
+        ],
+        "verdict": "diagnostic capture only; no continuity or feel acceptance threshold"
+      },
+      "manifestSha256": "362082514d4feceeda5855c85d3a2d3102d2c2cc1ed5e3060240537cf5278cdb",
+      "traceSha256": "769068571a6f45de104eaf9c37d807c9f18d617cfaf2f4009310419256211a82",
+      "verification": {
+        "capture": ".godot\\414-final-clock-remote-small\\right-stationary-1",
+        "result": "PASS",
+        "maxStepsMeters": {
+          "Hips": 0.14355278869577767,
+          "LeftHand": 0.1772506066800407,
+          "RightHand": 0.38103433085704563,
+          "LeftFoot": 0.11732900043350278,
+          "RightFoot": 0.11554912278502136
+        },
+        "neutralApexContactMeasurements": [
+          {
+            "tick": 120,
+            "hand": "Left",
+            "centerDistanceMeters": 0.10959169167845245,
+            "ballRadiusMeters": 0.12
+          },
+          {
+            "tick": 156,
+            "hand": "Left",
+            "centerDistanceMeters": 0.08587913643694232,
+            "ballRadiusMeters": 0.12
+          }
+        ],
+        "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+        "failures": []
+      },
+      "result": "PASS"
+    },
+    {
+      "capture": ".godot/414-final-clock-remote-small/right-stationary-3",
+      "testedCommit": "7340f57",
+      "manifest": {
+        "schema": "hooper-crossover-continuity/v1",
+        "mutation": "none",
+        "mutationApplied": false,
+        "result": "captured",
+        "failure": "",
+        "commit": "7340f57",
+        "role": "client",
+        "motion": "stationary",
+        "origin": "Right",
+        "requestedCycles": 3,
+        "completedCycles": 3,
+        "loseBall": "none",
+        "ballLossApplied": false,
+        "ballLossRecipient": 0,
+        "holdMovementThroughReturn": false,
+        "remotePaced": false,
+        "remoteTiming": "real-time",
+        "diagnosticServerDelayMs": 0,
+        "pacingMeaning": "wall-clock-only diagnostic pacing with fixed simulation delta; no real-time latency/performance claim",
+        "fixtureInitialHostSpawnX": null,
+        "engine": "4.7.1-stable (official)",
+        "physicsTicksPerSecond": 60,
+        "commandLine": [
+          "res://tests/integration/CrossoverContinuityCapture.tscn"
+        ],
+        "userArgs": [
+          "--capture-output=C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-final-clock-remote-small\\right-stationary-3",
+          "--capture-role=client",
+          "--capture-origin=Right",
+          "--capture-motion=stationary",
+          "--capture-count=3",
+          "--capture-commit=7340f57",
+          "--capture-port=23466",
+          "--capture-max-physics-gap=2"
+        ],
+        "renderer": "NVIDIA GeForce RTX 3050",
+        "displayDriver": "Windows",
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraFov": 75,
+        "ballRadius": 0.12,
+        "betweenCycleNeutralTicks": 36,
+        "finalTailNeutralTicks": 36,
+        "sampleTiming": "FramePostDraw state and image;  SkeletonUpdated final modifier pose with its own frame stamps; production animation callback unchanged",
+        "samples": 127,
+        "skippedPhysicsFrames": 0,
+        "allowedMaxPhysicsGap": 2,
+        "observedMaxPhysicsGap": 2,
+        "cadenceMeaning": "up to two 60Hz physics ticks per rendered frame; normal real-time 30Hz display; not full physics-frame coverage",
+        "duplicateRenderedPhysicsFrames": 0,
+        "poseFrameMismatches": 0,
+        "events": [
+          {
+            "tick": 0,
+            "kind": "boot",
+            "detail": "normal Main scene, normal spawn, unchanged camera and production animation callback"
+          },
+          {
+            "tick": 95,
+            "kind": "measurement-begin",
+            "detail": "server signalled measured window"
+          },
+          {
+            "tick": 102,
+            "kind": "recognized-crossover",
+            "detail": "destination=Left; entrySpeed=0; entryHeading=3.1415927; observedStartupSpeed=0; entrySample=last-inactive-physics-tick; entrySampleTick=101"
+          },
+          {
+            "tick": 123,
+            "kind": "destination-dribble",
+            "detail": "cycle=1"
+          },
+          {
+            "tick": 162,
+            "kind": "recognized-crossover",
+            "detail": "destination=Right; entrySpeed=0; entryHeading=3.1415927; observedStartupSpeed=0; entrySample=last-inactive-physics-tick; entrySampleTick=161"
+          },
+          {
+            "tick": 183,
+            "kind": "destination-dribble",
+            "detail": "cycle=2"
+          },
+          {
+            "tick": 224,
+            "kind": "recognized-crossover",
+            "detail": "destination=Left; entrySpeed=0; entryHeading=3.1415927; observedStartupSpeed=0; entrySample=last-inactive-physics-tick; entrySampleTick=223"
+          },
+          {
+            "tick": 245,
+            "kind": "destination-dribble",
+            "detail": "cycle=3"
+          },
+          {
+            "tick": 279,
+            "kind": "completion-notification",
+            "detail": "ack queued; wait 5 client physics ticks before exit"
+          }
+        ],
+        "verdict": "diagnostic capture only; no continuity or feel acceptance threshold"
+      },
+      "manifestSha256": "b56a74009b9b7d893605c3be219fe6b16327f624f923bb957525bf97166a3efe",
+      "traceSha256": "b0cb192edfc6592cf99253153edfb77eebfc1ec119e6f31b4481d0bbd9bb71a6",
+      "verification": {
+        "capture": ".godot\\414-final-clock-remote-small\\right-stationary-3",
+        "result": "PASS",
+        "maxStepsMeters": {
+          "Hips": 0.1568228032570327,
+          "LeftHand": 0.33112103034222046,
+          "RightHand": 0.38460232479045126,
+          "LeftFoot": 0.1760782398357879,
+          "RightFoot": 0.17330864995365486
+        },
+        "neutralApexContactMeasurements": [
+          {
+            "tick": 123,
+            "hand": "Left",
+            "centerDistanceMeters": 0.10780140227999135,
+            "ballRadiusMeters": 0.12
+          },
+          {
+            "tick": 159,
+            "hand": "Left",
+            "centerDistanceMeters": 0.10552250508731555,
+            "ballRadiusMeters": 0.12
+          },
+          {
+            "tick": 195,
+            "hand": "Right",
+            "centerDistanceMeters": 0.1864715840469237,
+            "ballRadiusMeters": 0.12
+          },
+          {
+            "tick": 267,
+            "hand": "Left",
+            "centerDistanceMeters": 0.22385363412380133,
+            "ballRadiusMeters": 0.12
+          }
+        ],
+        "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+        "failures": []
+      },
+      "result": "PASS"
+    },
+    {
+      "capture": ".godot/414-final-clock-remote-small/right-moving-1",
+      "testedCommit": "7340f57",
+      "manifest": {
+        "schema": "hooper-crossover-continuity/v1",
+        "mutation": "none",
+        "mutationApplied": false,
+        "result": "failed",
+        "failure": "skipped physics frames during measurement",
+        "commit": "7340f57",
+        "role": "client",
+        "motion": "moving",
+        "origin": "Right",
+        "requestedCycles": 1,
+        "completedCycles": 1,
+        "loseBall": "none",
+        "ballLossApplied": false,
+        "ballLossRecipient": 0,
+        "holdMovementThroughReturn": false,
+        "remotePaced": false,
+        "remoteTiming": "real-time",
+        "diagnosticServerDelayMs": 0,
+        "pacingMeaning": "wall-clock-only diagnostic pacing with fixed simulation delta; no real-time latency/performance claim",
+        "fixtureInitialHostSpawnX": null,
+        "engine": "4.7.1-stable (official)",
+        "physicsTicksPerSecond": 60,
+        "commandLine": [
+          "res://tests/integration/CrossoverContinuityCapture.tscn"
+        ],
+        "userArgs": [
+          "--capture-output=C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-final-clock-remote-small\\right-moving-1",
+          "--capture-role=client",
+          "--capture-origin=Right",
+          "--capture-motion=moving",
+          "--capture-count=1",
+          "--capture-commit=7340f57",
+          "--capture-port=23466",
+          "--capture-max-physics-gap=2"
+        ],
+        "renderer": "NVIDIA GeForce RTX 3050",
+        "displayDriver": "Windows",
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraFov": 75,
+        "ballRadius": 0.12,
+        "betweenCycleNeutralTicks": 36,
+        "finalTailNeutralTicks": 36,
+        "sampleTiming": "FramePostDraw state and image;  SkeletonUpdated final modifier pose with its own frame stamps; production animation callback unchanged",
+        "samples": 75,
+        "skippedPhysicsFrames": 1,
+        "allowedMaxPhysicsGap": 2,
+        "observedMaxPhysicsGap": 3,
+        "cadenceMeaning": "up to two 60Hz physics ticks per rendered frame; normal real-time 30Hz display; not full physics-frame coverage",
+        "duplicateRenderedPhysicsFrames": 0,
+        "poseFrameMismatches": 0,
+        "events": [
+          {
+            "tick": 0,
+            "kind": "boot",
+            "detail": "normal Main scene, normal spawn, unchanged camera and production animation callback"
+          },
+          {
+            "tick": 93,
+            "kind": "measurement-begin",
+            "detail": "server signalled measured window"
+          },
+          {
+            "tick": 117,
+            "kind": "recognized-crossover",
+            "detail": "destination=Left; entrySpeed=6; entryHeading=1.5707964; observedStartupSpeed=6; entrySample=last-inactive-physics-tick; entrySampleTick=116"
+          },
+          {
+            "tick": 138,
+            "kind": "destination-dribble",
+            "detail": "cycle=1"
+          },
+          {
+            "tick": 174,
+            "kind": "completion-notification",
+            "detail": "ack queued; wait 5 client physics ticks before exit"
+          }
+        ],
+        "verdict": "diagnostic capture only; no continuity or feel acceptance threshold"
+      },
+      "manifestSha256": "4c310ab967c51dc65a8d6e85e27d58945d5373dfdd488f4dd35971caee844c65",
+      "traceSha256": "629f3ba10b875ed9f0583e48d4bfb9d2310e45d16007b8726884275ef458dae0",
+      "verification": {
+        "capture": ".godot\\414-final-clock-remote-small\\right-moving-1",
+        "result": "FAIL",
+        "maxStepsMeters": {
+          "Hips": 0.14355289319334327,
+          "LeftHand": 0.1573170448698824,
+          "RightHand": 0.29118685644283465,
+          "LeftFoot": 0.13384666403502551,
+          "RightFoot": 0.14911714988119826
+        },
+        "neutralApexContactMeasurements": [
+          {
+            "tick": 154,
+            "hand": "Left",
+            "centerDistanceMeters": 0.22670221787201078,
+            "ballRadiusMeters": 0.12
+          },
+          {
+            "tick": 156,
+            "hand": "Left",
+            "centerDistanceMeters": 0.23328640389796607,
+            "ballRadiusMeters": 0.12
+          }
+        ],
+        "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+        "failures": [
+          "capture did not complete requested cycles"
+        ]
+      },
+      "result": "INCOMPLETE"
+    },
+    {
+      "capture": ".godot/414-final-clock-remote-small/right-moving-3",
+      "testedCommit": "7340f57",
+      "result": "NOT_CAPTURED",
+      "manifest": null,
+      "traceSha256": null,
+      "verification": null,
+      "meaning": "No completed client manifest retained for this requested matrix case."
+    },
+    {
+      "capture": ".godot/414-final-clock-remote-small/left-stationary-1",
+      "testedCommit": "7340f57",
+      "result": "NOT_CAPTURED",
+      "manifest": null,
+      "traceSha256": null,
+      "verification": null,
+      "meaning": "No completed client manifest retained for this requested matrix case."
+    },
+    {
+      "capture": ".godot/414-final-clock-remote-small/left-stationary-3",
+      "testedCommit": "7340f57",
+      "result": "NOT_CAPTURED",
+      "manifest": null,
+      "traceSha256": null,
+      "verification": null,
+      "meaning": "No completed client manifest retained for this requested matrix case."
+    },
+    {
+      "capture": ".godot/414-final-clock-remote-small/left-moving-1",
+      "testedCommit": "7340f57",
+      "result": "NOT_CAPTURED",
+      "manifest": null,
+      "traceSha256": null,
+      "verification": null,
+      "meaning": "No completed client manifest retained for this requested matrix case."
+    },
+    {
+      "capture": ".godot/414-final-clock-remote-small/left-moving-3",
+      "testedCommit": "7340f57",
+      "result": "NOT_CAPTURED",
+      "manifest": null,
+      "traceSha256": null,
+      "verification": null,
+      "meaning": "No completed client manifest retained for this requested matrix case."
+    }
+  ]
+}

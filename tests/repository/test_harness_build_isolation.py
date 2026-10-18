@@ -80,7 +80,7 @@ class HarnessBuildIsolationTests(unittest.TestCase):
             workflow,
         )
         self.assertEqual(
-            2,
+            3,
             workflow.count(
                 'dotnet build "HOOPER GAME.csproj" --configuration Debug '
                 '-p:IncludeIntegrationHarness=true'

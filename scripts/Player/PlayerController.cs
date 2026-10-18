@@ -999,6 +999,12 @@ public partial class PlayerController : CharacterBody3D
 	/// on the own player, display-from-broadcast only on the remote copy.
 	/// </summary>
 	private MovePhase _serverMovePhase;
+	private int _serverMoveFrameInPhase;
+
+	/// <summary>Frozen presentation input consumed by the crossover pose modifier.</summary>
+	public readonly record struct AnimationDisplayFrame(string MoveId, MovePhase Phase, int FrameInPhase, HandSide Hand,
+		bool SimulatedLocally);
+	public AnimationDisplayFrame AnimationDisplaySnapshot { get; private set; }
 
 	/// <summary>
 	/// Authoritative moveId / move payload from the latest broadcast (M7b, #69).
@@ -1556,6 +1562,11 @@ public partial class PlayerController : CharacterBody3D
 			protectionSkeleton.AddChild(new ProtectionPose { Name = "ProtectionPose", Player = this });
 			protectionSkeleton.AddChild(new PostPose { Name = "PostPose", Player = this });
 			protectionSkeleton.AddChild(new DefensiveStancePose { Name = "DefensiveStancePose", Player = this });
+			protectionSkeleton.AddChild(new CrossoverPose
+			{
+				Name = "CrossoverPose", Player = this,
+				AnimationPlayer = GetNodeOrNull<AnimationPlayer>("AnimationPlayer")
+			});
 		}
 
 		_gameManager = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
@@ -2654,6 +2665,7 @@ public partial class PlayerController : CharacterBody3D
 		_serverVel       = vel;
 		_serverAckedSeq  = ackSeq;
 		_serverMovePhase = (MovePhase)movePhase;
+		_serverMoveFrameInPhase = frameInPhase;
 		_serverMoveId    = moveId;
 		_serverMoveParam = moveParam;
 		// Authoritative ball-hand (M9, #83/ADR-0012). Same UnreliableOrdered
@@ -3116,6 +3128,9 @@ public partial class PlayerController : CharacterBody3D
 		// must be string-based, not enum-based.
 		if (_animPlayback == null) return;
 		(MovePhase displayPhase, _) = DisplayMove();
+		bool displaySimulatedLocally = DisplayPhaseResolver.LocalMachineDrivesDisplay(IsServer, IsLocalPlayer);
+		AnimationDisplaySnapshot = new AnimationDisplayFrame(DisplayMoveId(), displayPhase,
+			displaySimulatedLocally ? _machine.FrameInPhase : _serverMoveFrameInPhase, HandSide, displaySimulatedLocally);
 		// (#243) isFadeaway only ever changes MoveAnimResolver's answer during
 		// Active (a squared-up JumpShot, every other move, and every non-Active
 		// phase ignore it) — see MoveAnimResolver.Resolve's own doc.
@@ -3156,8 +3171,14 @@ public partial class PlayerController : CharacterBody3D
 		string target = MoveAnimResolver.ResolveStateName(generic, DisplayMoveId(), HandSide, DisplayStealReachSide());
 		if (target != _currentAnimStateName)
 		{
+			bool touchesCrossover = target.StartsWith("Crossover", System.StringComparison.Ordinal)
+				|| _currentAnimStateName.StartsWith("Crossover", System.StringComparison.Ordinal);
 			_animPlayback.Travel(target);
 			_currentAnimStateName = target;
+			// Evaluate the selected crossover boundary now, without advancing its clock.
+			// Otherwise Travel's destination remains one evaluation behind the display phase.
+			// https://docs.godotengine.org/en/4.7/classes/class_animationmixer.html#class-animationmixer-method-advance
+			if (touchesCrossover) _animTree.Advance(0);
 		}
 	}
 

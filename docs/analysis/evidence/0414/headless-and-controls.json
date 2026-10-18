@@ -1,0 +1,574 @@
+{
+  "mode": "headless",
+  "commit": "7340f57f0e2e3e81e312dff58568b57a07202c7a",
+  "remoteTiming": "not run",
+  "result": "PASS",
+  "captures": [
+    {
+      "capture": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-localclock-headless\\local\\left-moving-1",
+      "result": "PASS",
+      "maxStepsMeters": {
+        "Hips": 0.13885122508562908,
+        "LeftHand": 0.12046525309819252,
+        "RightHand": 0.1243260141026793,
+        "LeftFoot": 0.10897470049708927,
+        "RightFoot": 0.044289160479987606
+      },
+      "neutralApexContactMeasurements": [
+        {
+          "tick": 194,
+          "hand": "Right",
+          "centerDistanceMeters": 0.21708870109000356,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 195,
+          "hand": "Right",
+          "centerDistanceMeters": 0.2125949713439393,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 196,
+          "hand": "Right",
+          "centerDistanceMeters": 0.19032704963139102,
+          "ballRadiusMeters": 0.12
+        }
+      ],
+      "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+      "failures": []
+    },
+    {
+      "capture": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-localclock-headless\\local\\left-moving-3",
+      "result": "PASS",
+      "maxStepsMeters": {
+        "Hips": 0.13885162474674217,
+        "LeftHand": 0.12581265790977672,
+        "RightHand": 0.14946307603866424,
+        "LeftFoot": 0.10897477883996921,
+        "RightFoot": 0.0751488690592987
+      },
+      "neutralApexContactMeasurements": [
+        {
+          "tick": 194,
+          "hand": "Right",
+          "centerDistanceMeters": 0.2170886438018007,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 195,
+          "hand": "Right",
+          "centerDistanceMeters": 0.21259488910616584,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 196,
+          "hand": "Right",
+          "centerDistanceMeters": 0.19032691918752564,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 266,
+          "hand": "Left",
+          "centerDistanceMeters": 0.23130520045599398,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 267,
+          "hand": "Left",
+          "centerDistanceMeters": 0.24026128640790206,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 268,
+          "hand": "Left",
+          "centerDistanceMeters": 0.23518501155163632,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 302,
+          "hand": "Left",
+          "centerDistanceMeters": 0.19793485346185724,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 303,
+          "hand": "Left",
+          "centerDistanceMeters": 0.20016806134220536,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 304,
+          "hand": "Left",
+          "centerDistanceMeters": 0.1902824005712794,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 338,
+          "hand": "Right",
+          "centerDistanceMeters": 0.17979032682673066,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 339,
+          "hand": "Right",
+          "centerDistanceMeters": 0.20598059148782702,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 340,
+          "hand": "Right",
+          "centerDistanceMeters": 0.2110298231293212,
+          "ballRadiusMeters": 0.12
+        }
+      ],
+      "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+      "failures": []
+    },
+    {
+      "capture": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-localclock-headless\\local\\left-stationary-1",
+      "result": "PASS",
+      "maxStepsMeters": {
+        "Hips": 0.13885122508559303,
+        "LeftHand": 0.16577160659274545,
+        "RightHand": 0.13205690349665,
+        "LeftFoot": 0.057684004762298687,
+        "RightFoot": 0.07502672352775909
+      },
+      "neutralApexContactMeasurements": [
+        {
+          "tick": 158,
+          "hand": "Right",
+          "centerDistanceMeters": 0.10387489532624666,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 159,
+          "hand": "Right",
+          "centerDistanceMeters": 0.08707028937278331,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 160,
+          "hand": "Right",
+          "centerDistanceMeters": 0.0755108916853432,
+          "ballRadiusMeters": 0.12
+        }
+      ],
+      "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+      "failures": []
+    },
+    {
+      "capture": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-localclock-headless\\local\\left-stationary-3",
+      "result": "PASS",
+      "maxStepsMeters": {
+        "Hips": 0.13885122508559303,
+        "LeftHand": 0.17216257596644405,
+        "RightHand": 0.1960064171435057,
+        "LeftFoot": 0.05868502778351723,
+        "RightFoot": 0.07502672352775909
+      },
+      "neutralApexContactMeasurements": [
+        {
+          "tick": 158,
+          "hand": "Right",
+          "centerDistanceMeters": 0.10387489532624666,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 159,
+          "hand": "Right",
+          "centerDistanceMeters": 0.08707028937278331,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 160,
+          "hand": "Right",
+          "centerDistanceMeters": 0.0755108916853432,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 194,
+          "hand": "Right",
+          "centerDistanceMeters": 0.1311260832973896,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 195,
+          "hand": "Right",
+          "centerDistanceMeters": 0.13190296579995123,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 230,
+          "hand": "Left",
+          "centerDistanceMeters": 0.1991130874598371,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 231,
+          "hand": "Left",
+          "centerDistanceMeters": 0.21785150172090284,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 232,
+          "hand": "Left",
+          "centerDistanceMeters": 0.22179411232907667,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 302,
+          "hand": "Right",
+          "centerDistanceMeters": 0.19032926497836747,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 303,
+          "hand": "Right",
+          "centerDistanceMeters": 0.18029676576055315,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 304,
+          "hand": "Right",
+          "centerDistanceMeters": 0.15538770920529416,
+          "ballRadiusMeters": 0.12
+        }
+      ],
+      "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+      "failures": []
+    },
+    {
+      "capture": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-localclock-headless\\local\\right-moving-1",
+      "result": "PASS",
+      "maxStepsMeters": {
+        "Hips": 0.13871425424483033,
+        "LeftHand": 0.12064892362246783,
+        "RightHand": 0.14946337864135703,
+        "LeftFoot": 0.06402563410402304,
+        "RightFoot": 0.07514876174315833
+      },
+      "neutralApexContactMeasurements": [
+        {
+          "tick": 122,
+          "hand": "Left",
+          "centerDistanceMeters": 0.23138487420439094,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 123,
+          "hand": "Left",
+          "centerDistanceMeters": 0.23416284764652734,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 124,
+          "hand": "Left",
+          "centerDistanceMeters": 0.2169851400099437,
+          "ballRadiusMeters": 0.12
+        }
+      ],
+      "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+      "failures": []
+    },
+    {
+      "capture": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-localclock-headless\\local\\right-moving-3",
+      "result": "PASS",
+      "maxStepsMeters": {
+        "Hips": 0.13885162474677815,
+        "LeftHand": 0.12064864321495654,
+        "RightHand": 0.1575132967405931,
+        "LeftFoot": 0.10897476172899452,
+        "RightFoot": 0.07514875355326958
+      },
+      "neutralApexContactMeasurements": [
+        {
+          "tick": 122,
+          "hand": "Left",
+          "centerDistanceMeters": 0.23138502515241102,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 123,
+          "hand": "Left",
+          "centerDistanceMeters": 0.23416282881188355,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 124,
+          "hand": "Left",
+          "centerDistanceMeters": 0.21698517773115283,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 194,
+          "hand": "Right",
+          "centerDistanceMeters": 0.22199095402756838,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 195,
+          "hand": "Right",
+          "centerDistanceMeters": 0.23417535588779578,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 196,
+          "hand": "Right",
+          "centerDistanceMeters": 0.2321363278997995,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 230,
+          "hand": "Right",
+          "centerDistanceMeters": 0.22209782325032382,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 231,
+          "hand": "Right",
+          "centerDistanceMeters": 0.21643474162419826,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 232,
+          "hand": "Right",
+          "centerDistanceMeters": 0.1979352904751748,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 266,
+          "hand": "Left",
+          "centerDistanceMeters": 0.13095275393660652,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 267,
+          "hand": "Left",
+          "centerDistanceMeters": 0.16507482201370005,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 268,
+          "hand": "Left",
+          "centerDistanceMeters": 0.17979358308218357,
+          "ballRadiusMeters": 0.12
+        }
+      ],
+      "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+      "failures": []
+    },
+    {
+      "capture": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-localclock-headless\\local\\right-stationary-1",
+      "result": "PASS",
+      "maxStepsMeters": {
+        "Hips": 0.13871438028137814,
+        "LeftHand": 0.1206486574328682,
+        "RightHand": 0.1910987698291521,
+        "LeftFoot": 0.05865587983509983,
+        "RightFoot": 0.05769360927864841
+      },
+      "neutralApexContactMeasurements": [
+        {
+          "tick": 86,
+          "hand": "Left",
+          "centerDistanceMeters": 0.11510985027756104,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 87,
+          "hand": "Left",
+          "centerDistanceMeters": 0.10610133075727674,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 88,
+          "hand": "Left",
+          "centerDistanceMeters": 0.10387386203310486,
+          "ballRadiusMeters": 0.12
+        }
+      ],
+      "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+      "failures": []
+    },
+    {
+      "capture": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-localclock-headless\\local\\right-stationary-3",
+      "result": "PASS",
+      "maxStepsMeters": {
+        "Hips": 0.13885122508559303,
+        "LeftHand": 0.17216257596644405,
+        "RightHand": 0.1960064171435057,
+        "LeftFoot": 0.05868502778351723,
+        "RightFoot": 0.07500488974128552
+      },
+      "neutralApexContactMeasurements": [
+        {
+          "tick": 86,
+          "hand": "Left",
+          "centerDistanceMeters": 0.11510985027756104,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 87,
+          "hand": "Left",
+          "centerDistanceMeters": 0.10610133075727674,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 88,
+          "hand": "Left",
+          "centerDistanceMeters": 0.10387386203310486,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 122,
+          "hand": "Left",
+          "centerDistanceMeters": 0.11222465341744685,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 123,
+          "hand": "Left",
+          "centerDistanceMeters": 0.11654502051535692,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 124,
+          "hand": "Left",
+          "centerDistanceMeters": 0.13113441144059373,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 158,
+          "hand": "Right",
+          "centerDistanceMeters": 0.15863066371047435,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 159,
+          "hand": "Right",
+          "centerDistanceMeters": 0.18647150866650303,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 160,
+          "hand": "Right",
+          "centerDistanceMeters": 0.1991052166826865,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 230,
+          "hand": "Left",
+          "centerDistanceMeters": 0.21698684350101521,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 231,
+          "hand": "Left",
+          "centerDistanceMeters": 0.21260162060795773,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 232,
+          "hand": "Left",
+          "centerDistanceMeters": 0.19033455174183672,
+          "ballRadiusMeters": 0.12
+        }
+      ],
+      "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+      "failures": []
+    }
+  ],
+  "negativeControls": [
+    {
+      "capture": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-localclock-headless\\mutation-right\\right-stationary-1",
+      "result": "FAIL",
+      "maxStepsMeters": {
+        "Hips": 0.1946767287372069,
+        "LeftHand": 0.48180839304256634,
+        "RightHand": 0.6085607965093609,
+        "LeftFoot": 0.32378739515227356,
+        "RightFoot": 0.3381839964261593
+      },
+      "neutralApexContactMeasurements": [
+        {
+          "tick": 86,
+          "hand": "Left",
+          "centerDistanceMeters": 0.11510985027756104,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 87,
+          "hand": "Left",
+          "centerDistanceMeters": 0.10610133075727674,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 88,
+          "hand": "Left",
+          "centerDistanceMeters": 0.10387386203310486,
+          "ballRadiusMeters": 0.12
+        }
+      ],
+      "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+      "failures": [
+        "tick 65 DribbleRight -> CrossoverStartupRight: LeftHand step 0.2438 m > 0.20 m/tick across 1 ticks",
+        "tick 65 DribbleRight -> CrossoverStartupRight: RightHand step 0.4975 m > 0.20 m/tick across 1 ticks",
+        "tick 65 DribbleRight -> CrossoverStartupRight: LeftFoot step 0.2933 m > 0.12 m/tick across 1 ticks",
+        "tick 65 DribbleRight -> CrossoverStartupRight: RightFoot step 0.2884 m > 0.12 m/tick across 1 ticks",
+        "tick 70 CrossoverStartupRight -> CrossoverActiveRight: RightHand step 0.2193 m > 0.20 m/tick across 1 ticks",
+        "tick 85 CrossoverRecoveryRight -> DribbleLeft: Hips step 0.1947 m > 0.18 m/tick across 1 ticks",
+        "tick 85 CrossoverRecoveryRight -> DribbleLeft: LeftHand step 0.4818 m > 0.20 m/tick across 1 ticks",
+        "tick 85 CrossoverRecoveryRight -> DribbleLeft: RightHand step 0.6086 m > 0.20 m/tick across 1 ticks",
+        "tick 85 CrossoverRecoveryRight -> DribbleLeft: LeftFoot step 0.3238 m > 0.12 m/tick across 1 ticks",
+        "tick 85 CrossoverRecoveryRight -> DribbleLeft: RightFoot step 0.3382 m > 0.12 m/tick across 1 ticks"
+      ],
+      "expectedFailure": true
+    },
+    {
+      "capture": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\414-localclock-headless\\mutation-left\\left-stationary-1",
+      "result": "FAIL",
+      "maxStepsMeters": {
+        "Hips": 0.18955408527668186,
+        "LeftHand": 0.44063359945573133,
+        "RightHand": 0.5785141336540516,
+        "LeftFoot": 0.3311875853304197,
+        "RightFoot": 0.3750668712774506
+      },
+      "neutralApexContactMeasurements": [
+        {
+          "tick": 158,
+          "hand": "Right",
+          "centerDistanceMeters": 0.10387489532624666,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 159,
+          "hand": "Right",
+          "centerDistanceMeters": 0.08707028937278331,
+          "ballRadiusMeters": 0.12
+        },
+        {
+          "tick": 160,
+          "hand": "Right",
+          "centerDistanceMeters": 0.0755108916853432,
+          "ballRadiusMeters": 0.12
+        }
+      ],
+      "contactMeaning": "3D palm-center distances, including height; reported independently, no tight-contact acceptance claimed",
+      "failures": [
+        "tick 135 DribbleLeft -> CrossoverStartupLeft: Hips step 0.1896 m > 0.18 m/tick across 1 ticks",
+        "tick 135 DribbleLeft -> CrossoverStartupLeft: LeftHand step 0.4013 m > 0.20 m/tick across 1 ticks",
+        "tick 135 DribbleLeft -> CrossoverStartupLeft: RightHand step 0.3609 m > 0.20 m/tick across 1 ticks",
+        "tick 135 DribbleLeft -> CrossoverStartupLeft: LeftFoot step 0.2884 m > 0.12 m/tick across 1 ticks",
+        "tick 135 DribbleLeft -> CrossoverStartupLeft: RightFoot step 0.3751 m > 0.12 m/tick across 1 ticks",
+        "tick 140 CrossoverStartupLeft -> CrossoverActiveLeft: LeftHand step 0.2109 m > 0.20 m/tick across 1 ticks",
+        "tick 155 CrossoverRecoveryLeft -> DribbleRight: LeftHand step 0.4406 m > 0.20 m/tick across 1 ticks",
+        "tick 155 CrossoverRecoveryLeft -> DribbleRight: RightHand step 0.5785 m > 0.20 m/tick across 1 ticks",
+        "tick 155 CrossoverRecoveryLeft -> DribbleRight: LeftFoot step 0.3312 m > 0.12 m/tick across 1 ticks",
+        "tick 155 CrossoverRecoveryLeft -> DribbleRight: RightFoot step 0.2473 m > 0.12 m/tick across 1 ticks"
+      ],
+      "expectedFailure": true
+    }
+  ]
+}

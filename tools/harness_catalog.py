@@ -418,6 +418,8 @@ PostPlayTest.tscn|contact-unset
 PostPresentationTest.tscn|presentation
 """
 _ADDITIONAL_MULTIPROCESS_ROWS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
+    ("crossover-continuity", "tests/integration/run-crossover-continuity.sh godot", "CrossoverContinuityCapture.tscn", (".godot/crossover-continuity/catalog-*/**/*",)),
+
     ("net-rig-presentation-left", "tests/integration/run-net-rig-presentation.sh godot left", "NetRigPresentationTest.tscn", (".godot/harness-logs/net-rig-presentation-left-*.log",)),
     ("net-rig-presentation-right", "tests/integration/run-net-rig-presentation.sh godot right", "NetRigPresentationTest.tscn", (".godot/harness-logs/net-rig-presentation-right-*.log",)),
 ) + tuple(
