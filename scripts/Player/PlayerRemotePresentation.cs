@@ -80,8 +80,14 @@ public partial class PlayerController
         {
             if (target != _currentAnimStateName)
             {
+                bool touchesCrossover = target.StartsWith("Crossover", System.StringComparison.Ordinal)
+                    || _currentAnimStateName.StartsWith("Crossover", System.StringComparison.Ordinal);
                 _animPlayback.Travel(target);
                 _currentAnimStateName = target;
+                // Travel exposes its destination before applying that node's pose. Resolve
+                // the crossover boundary now, then consume at most one source tick below.
+                // https://docs.godotengine.org/en/4.7/classes/class_animationmixer.html#class-animationmixer-method-advance
+                if (touchesCrossover) _animTree.Advance(0);
             }
             _animTree.Advance(_remoteAnimationTick == _remoteWorldPresentation.Tick ? 0 : 1.0 / Engine.PhysicsTicksPerSecond);
         }

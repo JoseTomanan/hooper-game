@@ -14,6 +14,7 @@ public partial class BallController
     private bool _continuityDelayApplied, _continuityDelayReleased;
     internal int ContinuityDelayedFrameCount { get; private set; }
     internal int ContinuityActualDelayTicks { get; private set; }
+    internal int ContinuityDelayedStartupCounter { get; private set; } = -1;
     internal bool ContinuityPresentationDelayApplied => _continuityDelayApplied;
 
     internal void ConfigureContinuityPresentationDelay(int ticks) => _continuityDelayTicks = ticks;
@@ -23,8 +24,12 @@ public partial class BallController
         if (_continuityDelayTicks == 0 || _continuityDelayReleased) return;
         if (!_continuityDelayApplied)
         {
-            if (!frame.Players.Any(p => p.PeerId == 1 && p.MoveId == "crossover"
-                && p.Phase == MovePhase.Startup && p.FrameInPhase == 0)) return;
+            var firstStartup = frame.Players.FirstOrDefault(p => p.PeerId == 1 && p.MoveId == "crossover"
+                && p.Phase == MovePhase.Startup && p.FrameInPhase <= 1);
+            if (firstStartup == null) return;
+            // Begin is followed by the machine tick before the host publishes;
+            // the actual first snapshot normally has counter 1, not an invented 0.
+            ContinuityDelayedStartupCounter = firstStartup.FrameInPhase;
             _continuityDelayApplied = true;
             _continuityDelayStarted = Engine.GetPhysicsFrames();
             _continuityDelayDeadline = _continuityDelayStarted + (ulong)_continuityDelayTicks;

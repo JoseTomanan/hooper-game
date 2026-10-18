@@ -506,6 +506,7 @@ public partial class CrossoverContinuityCapture : Node
                 presentationDelayApplied = _ball?.ContinuityPresentationDelayApplied ?? false,
                 presentationActualDelayTicks = _ball?.ContinuityActualDelayTicks ?? 0,
                 presentationDelayedFrames = _ball?.ContinuityDelayedFrameCount ?? 0,
+                presentationDelayedStartupCounter = _ball?.ContinuityDelayedStartupCounter ?? -1,
                 presentationResyncCount = _ball?.PresentationResyncCount ?? 0,
                 presentationEnvelopeBytes = _ball?.PresentationEnvelopeBytes ?? 0,
                 engine = Engine.GetVersionInfo()["string"].AsString(), physicsTicksPerSecond = Engine.PhysicsTicksPerSecond,
