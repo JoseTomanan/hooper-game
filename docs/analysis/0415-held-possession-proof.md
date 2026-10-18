@@ -115,6 +115,38 @@ continues to pass. [Mutation and restored-run excerpts](evidence/0415/mutation-c
 retain the interventions and measurements. These interventions were reverted; no mutant asset or
 production code is retained.
 
+## CI delayed-presentation diagnosis
+
+[Run 39177047482](https://github.com/JoseTomanan/hooper-game/actions/runs/39177047482)
+failed the headless crossover continuity case in shard 2, which also failed the
+aggregate integration check. The other shards and rendered continuity job passed.
+The [selected original trace fields](evidence/0415/ci-delay-failure.json) show
+historical Startup on client ticks 95–99 while live hand remained Right and the
+last received phase remained Startup. The live Left hand arrived at tick 101,
+after historical presentation had already entered Active. The six-tick injector
+delay expired without establishing the assertion's required cross-channel overlap.
+
+The diagnostic injector now waits for actual opposite-hand gameplay receipt in
+Crossover Active/Recovery as well as the original minimum delay and genuine
+underflow. It refills the production buffer, then delivers one unchanged queued
+envelope per physics tick. Flushing an arbitrarily long gated queue as one burst
+would instead cross the production buffer's 12-tick lag cap and trigger resync.
+The continuity bounds and live-ahead-of-Startup assertion remain unchanged.
+This is a fixture scheduling repair, with no production networking changes.
+[Godot's channel documentation](https://docs.godotengine.org/en/4.7/tutorials/networking/high_level_multiplayer.html#channels)
+describes channels as independent streams; their relative arrival must be observed.
+
+The existing two-peer lifecycle test supplies a deterministic receipt gate that
+remains closed for six physics ticks after real underflow. Disabling the new gate
+check fails with `presentation released before the fixture's receipt gate opened`.
+With the gate restored, it requires at least 12 delayed ticks, observed gate wait,
+no resync, and the original final-state drain and reconnect proof. It disarms and
+clears the completed injector before disconnect so old diagnostic envelopes cannot
+contaminate the new peer epoch. All temporary mutation edits were restored.
+At `c70ed7a`, the game build passed with no warnings/errors, all 1,230 unit tests
+passed with five existing skips, and three repeated lifecycle runs passed with
+both peers required. The PR records the final continuity sweep and CI results.
+
 ## Rendered evidence
 
 The [manifest](evidence/0415/manifest.json) contains 19 native Windows Mobile/D3D12

@@ -1,0 +1,103 @@
+{
+  "sourceRun": "https://github.com/JoseTomanan/hooper-game/actions/runs/39177047482",
+  "sourceArtifact": "headless-harness-failure-39177047482-1-shard-2",
+  "sourceCapture": "late-presentation-right/right-stationary-1",
+  "sourceCommit": "371971f662a34b41bde3214edb9cad9988fe289c",
+  "meaning": "Selected unmodified timing and hand fields from the failing capture trace; not a synthetic replay or a complete geometry trace.",
+  "delay": {
+    "presentationDelayTicks": 6,
+    "presentationActualDelayTicks": 6,
+    "presentationDelayedFrames": 7,
+    "presentationDelayUnderflowObserved": true
+  },
+  "rows": [
+    {
+      "tick": 95,
+      "physicsFrame": 95,
+      "posePresentationTick": 121,
+      "poseDisplayPhase": "Startup",
+      "poseDisplayFrame": 1,
+      "poseDisplayHand": "Right",
+      "liveHand": "Right",
+      "receivedPhase": "Startup",
+      "receivedFrame": 5
+    },
+    {
+      "tick": 96,
+      "physicsFrame": 96,
+      "posePresentationTick": 122,
+      "poseDisplayPhase": "Startup",
+      "poseDisplayFrame": 2,
+      "poseDisplayHand": "Right",
+      "liveHand": "Right",
+      "receivedPhase": "Startup",
+      "receivedFrame": 5
+    },
+    {
+      "tick": 97,
+      "physicsFrame": 97,
+      "posePresentationTick": 123,
+      "poseDisplayPhase": "Startup",
+      "poseDisplayFrame": 3,
+      "poseDisplayHand": "Right",
+      "liveHand": "Right",
+      "receivedPhase": "Startup",
+      "receivedFrame": 5
+    },
+    {
+      "tick": 98,
+      "physicsFrame": 98,
+      "posePresentationTick": 124,
+      "poseDisplayPhase": "Startup",
+      "poseDisplayFrame": 4,
+      "poseDisplayHand": "Right",
+      "liveHand": "Right",
+      "receivedPhase": "Startup",
+      "receivedFrame": 5
+    },
+    {
+      "tick": 99,
+      "physicsFrame": 99,
+      "posePresentationTick": 125,
+      "poseDisplayPhase": "Startup",
+      "poseDisplayFrame": 5,
+      "poseDisplayHand": "Right",
+      "liveHand": "Right",
+      "receivedPhase": "Startup",
+      "receivedFrame": 5
+    },
+    {
+      "tick": 100,
+      "physicsFrame": 100,
+      "posePresentationTick": 126,
+      "poseDisplayPhase": "Active",
+      "poseDisplayFrame": 0,
+      "poseDisplayHand": "Left",
+      "liveHand": "Right",
+      "receivedPhase": "Recovery",
+      "receivedFrame": 4
+    },
+    {
+      "tick": 101,
+      "physicsFrame": 101,
+      "posePresentationTick": 127,
+      "poseDisplayPhase": "Active",
+      "poseDisplayFrame": 1,
+      "poseDisplayHand": "Left",
+      "liveHand": "Left",
+      "receivedPhase": "Recovery",
+      "receivedFrame": 4
+    },
+    {
+      "tick": 102,
+      "physicsFrame": 102,
+      "posePresentationTick": 128,
+      "poseDisplayPhase": "Active",
+      "poseDisplayFrame": 2,
+      "poseDisplayHand": "Left",
+      "liveHand": "Left",
+      "receivedPhase": "Recovery",
+      "receivedFrame": 4
+    }
+  ]
+}
