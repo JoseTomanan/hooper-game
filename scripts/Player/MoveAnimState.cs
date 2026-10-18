@@ -76,7 +76,7 @@ namespace Hooper.Player;
 ///
 ///                Gated on <c>BallState.Dribbling</c> specifically, NOT on
 ///                "holds the ball": a <c>Held</c> (cradled / dead-dribble)
-///                holder keeps Locomotion, because showing a live-dribble loop
+///                holder uses Held, because showing a live-dribble loop
 ///                once the dribble is dead would advertise a drive the holder
 ///                can no longer legally make — an actively FALSE read, which is
 ///                worse than no signal when the opponent's whole read is that
@@ -85,7 +85,7 @@ namespace Hooper.Player;
 ///
 ///                Precedence within Inactive: it sits directly above Locomotion
 ///                and below both flourishes, so the full order is
-///                ReboundGrab > Pivot > Dribble > Locomotion. Keeping Pivot
+///                ReboundGrab > Pivot > Dribble/Held > Locomotion. Keeping Pivot
 ///                above it preserves #242 unchanged for ball-handlers (a pivot
 ///                is a discrete footwork event; the dribble loop is a sustained
 ///                stance), and a committed move still always wins over all four.
@@ -100,4 +100,10 @@ public enum MoveAnimState
     Pivot,
     ReboundGrab,
     Dribble,
+    /// <summary>
+    /// Neutral carry/ready stance for fresh or spent-dribble Held possession.
+    /// Handed idle/moving clips retain current movement; ReboundGrab, Pivot and
+    /// every committed phase take priority. Purely cosmetic (#415).
+    /// </summary>
+    Held,
 }

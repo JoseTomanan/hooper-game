@@ -283,7 +283,7 @@ public partial class DribbleLoopTest : Node
 
     // ── Scenario: held-no-dribble (control) ─────────────────────────────────
     // The ADR-0014 design call #285 recorded, made assertable: a holder whose
-    // ball is HELD (a cradle / dead dribble) keeps Locomotion. TryStartDribble
+    // ball is HELD (a cradle / dead dribble) uses the carry stance (#415). TryStartDribble
     // is deliberately never called, so the tipoff possession stays Held.
     private void TickHeldNoDribble()
     {
@@ -316,8 +316,8 @@ public partial class DribbleLoopTest : Node
                 // while the ball really is Held on this player.
                 if (_ball.State != BallState.Held || _ball.StateMachine.HolderPeerId != _holderId)
                     _sawHeldThroughout = false;
-                if (NodeForPeer(_holderId).ActiveAnimNodeForHarness == "Locomotion")
-                    _sawLocomotionOnOther = true; // reused latch: "the holder was seen on Locomotion"
+                if (NodeForPeer(_holderId).ActiveAnimNodeForHarness == "Held" + NodeForPeer(_holderId).DisplayHandSide)
+                    _sawLocomotionOnOther = true; // reused neutral-stance latch for this isolated scenario
                 if (_frame >= _stepDeadlineFrame) VerdictHeldNoDribble();
                 return;
         }
@@ -328,11 +328,11 @@ public partial class DribbleLoopTest : Node
         bool pass = _sawHeldThroughout && _sawLocomotionOnOther;
         if (pass)
             GD.Print("[dribble-loop] PASS held-no-dribble — the holder kept a HELD ball for the whole window, " +
-                     "displayed \"Locomotion\", and never entered \"Dribble\" (the stance is gated on " +
+                     "displayed the handed Held stance, and never entered \"Dribble\" (the stance is gated on " +
                      "BallState.Dribbling, not on possession).");
         else
             Fail($"held-no-dribble: expected the ball to stay Held on the holder for the whole window AND the " +
-                 $"holder to display \"Locomotion\"; got heldThroughout={_sawHeldThroughout}, " +
+                 $"holder to display its handed Held stance; got heldThroughout={_sawHeldThroughout}, " +
                  $"sawLocomotion={_sawLocomotionOnOther}, ballState={_ball.State}, " +
                  $"holder={_ball.StateMachine.HolderPeerId}, animNode={NodeForPeer(_holderId).ActiveAnimNodeForHarness}. " +
                  "If the premise broke, 'no Dribble' proves nothing, so this fails rather than passes.");

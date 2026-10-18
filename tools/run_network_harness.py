@@ -36,6 +36,9 @@ SCENARIOS = {
     'rig-presentation': Scenario('NetRigPresentationTest', 'net-rig', 23462,
                                 required=('server', 'client'), default='left',
                                 variants=('left', 'right')),
+    'held-possession': Scenario('NetHeldPossessionTest', 'net-held', 23466,
+                               required=('server', 'client'), default='host',
+                               variants=('host', 'client')),
 }
 
 

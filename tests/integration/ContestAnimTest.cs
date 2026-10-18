@@ -889,12 +889,14 @@ public partial class ContestAnimTest : Node
     // where a missing edge is simply absent — the instrument JumpshotAnimTest's
     // header named but did not build.
     //
-    // Contest is a DEFENSIVE move, so unlike layup it asserts exactly the six
-    // standard edges and additionally asserts the ABSENCE of the Dribble-family
+    // Contest is a DEFENSIVE move, so unlike layup it retains the six standard
+    // edges and additionally asserts the ABSENCE of the Dribble-family
     // edges. That negative half is a real assertion, not decoration: those six
     // edges are one copy-paste away (they sit adjacent in the .tscn), they can
     // never fire because a defender is not dribbling, and Travel()'s pathfinder
-    // would happily route through an edge that models nothing.
+    // would happily route through an edge that models nothing. #415 additionally
+    // requires direct edges to/from both neutral Held states at every phase:
+    // ownership can change while an external event leaves a committed move running.
     private void RunEdgesCheck()
     {
         var sm = LoadStateMachine();
@@ -913,6 +915,18 @@ public partial class ContestAnimTest : Node
             ("ContestRecovery", "Locomotion"),
             ("ContestStartup", "ContestRecovery"), // feint / early-out
             ("ContestStartup", "Locomotion"),      // abort
+            ("HeldLeft", "ContestStartup"),
+            ("ContestStartup", "HeldLeft"),
+            ("HeldLeft", "ContestActive"),
+            ("ContestActive", "HeldLeft"),
+            ("HeldLeft", "ContestRecovery"),
+            ("ContestRecovery", "HeldLeft"),
+            ("HeldRight", "ContestStartup"),
+            ("ContestStartup", "HeldRight"),
+            ("HeldRight", "ContestActive"),
+            ("ContestActive", "HeldRight"),
+            ("HeldRight", "ContestRecovery"),
+            ("ContestRecovery", "HeldRight"),
         };
 
         var present = new System.Collections.Generic.HashSet<string>();
@@ -934,7 +948,7 @@ public partial class ContestAnimTest : Node
         }
 
         // The negative half: no Contest<->Dribble edge may exist, and the total
-        // count of Contest-touching edges must be exactly the six above.
+        // count of Contest-touching edges must be exactly the eighteen above.
         int contestTouching = 0;
         for (int i = 0; i < sm.GetTransitionCount(); i++)
         {
@@ -957,12 +971,12 @@ public partial class ContestAnimTest : Node
         if (contestTouching != required.Length)
         {
             Fail($"scenes/Player.tscn has {contestTouching} Contest-touching transitions, expected exactly " +
-                 $"{required.Length}. A defensive move gets the six standard edges and nothing else.");
+                 $"{required.Length}. Contest requires the six standard edges plus twelve direct Held edges and no others.");
             pass = false;
         }
 
         if (pass)
-            GD.Print($"[contest-anim] PASS contest-edges — exactly the {required.Length} standard transitions " +
+            GD.Print($"[contest-anim] PASS contest-edges — exactly the {required.Length} standard and Held transitions " +
                      "are present, and none of the Dribble-family edges an offensive move carries.");
         else
             GD.PrintErr("[contest-anim] FAIL contest-edges — see above.");

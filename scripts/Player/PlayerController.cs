@@ -3121,6 +3121,11 @@ public partial class PlayerController : CharacterBody3D
 		// crossover.
 		_animTree.Set("parameters/DribbleLeft/blend_position", horizontalSpeed);
 		_animTree.Set("parameters/DribbleRight/blend_position", horizontalSpeed);
+		// Held uses the same existing movement speed without advertising a live
+		// dribble. Feed both hands before entering, including remote history holds.
+		// https://docs.godotengine.org/en/4.7/classes/class_animationnodeblendspace1d.html
+		_animTree.Set("parameters/HeldLeft/blend_position", horizontalSpeed);
+		_animTree.Set("parameters/HeldRight/blend_position", horizontalSpeed);
 
 		// Committed-move state (#41/#69, per-move state names #277): map the
 		// DISPLAY phase to a generic anim state, then resolve THAT plus the
@@ -3161,7 +3166,7 @@ public partial class PlayerController : CharacterBody3D
 		// a pivot or a fresh rebound grab still wins). It reads the single
 		// replicated ball rather than this node's machine, so it needs no
 		// per-role branch at all; see DisplayDribbling's own doc.
-		MoveAnimState generic = MoveAnimResolver.Resolve(displayPhase, DisplayFadeaway(), DisplayPivoting, _remotePresentation?.ReboundGrab ?? IsPlayingReboundGrab, DisplayDribbling());
+		MoveAnimState generic = MoveAnimResolver.Resolve(displayPhase, DisplayFadeaway(), DisplayPivoting, _remotePresentation?.ReboundGrab ?? IsPlayingReboundGrab, DisplayDribbling(), DisplayHeld());
 		// (#280) HandSide needs no per-role branch the way DisplayMove/
 		// DisplayMoveId do: it is server-authoritative, predicted on the owning
 		// client, and broadcast on ReceiveState (ADR-0012), so this node's copy
@@ -3183,7 +3188,7 @@ public partial class PlayerController : CharacterBody3D
 				|| _currentAnimStateName.StartsWith("Crossover", System.StringComparison.Ordinal);
 			_animPlayback.Travel(target);
 			_currentAnimStateName = target;
-			// Evaluate the selected crossover boundary now, without advancing its clock.
+			// Evaluate the crossover boundary now, without advancing its clock.
 			// Otherwise Travel's destination remains one evaluation behind the display phase.
 			// https://docs.godotengine.org/en/4.7/classes/class_animationmixer.html#class-animationmixer-method-advance
 			if (touchesCrossover) _animTree.Advance(0);
@@ -3335,7 +3340,7 @@ public partial class PlayerController : CharacterBody3D
 	/// copy of whoever is dribbling, not just locally.
 	///
 	/// Gated on Dribbling specifically, not "holds the ball": a Held (cradled /
-	/// dead-dribble) holder keeps Locomotion, because a live-dribble loop on a
+	/// dead-dribble) holder uses the separate Held stance, because a live-dribble loop on a
 	/// spent dribble advertises a drive the holder can no longer legally make —
 	/// an actively FALSE read, worse than no signal (see MoveAnimState.Dribble's
 	/// doc for the full ADR-0003 reasoning). Possession itself stays visible
@@ -3353,6 +3358,21 @@ public partial class PlayerController : CharacterBody3D
 			&& OwnPeerId != 0
 			&& ball.StateMachine.HolderPeerId == OwnPeerId
 			&& ball.State == BallState.Dribbling;
+	}
+
+	/// <summary>
+	/// Neutral carry eligibility (#415). Remote possession comes from the same
+	/// frozen world frame as the player's hand, velocity and pose (ADR-0027).
+	/// Reading latest live ball state here would mix two different server ticks.
+	/// MoveAnimResolver keeps committed phases and flourishes above this stance.
+	/// </summary>
+	public bool DisplayHeld()
+	{
+		if (_remoteWorldPresentation is { } world)
+			return world.Ball.HolderPeerId == OwnPeerId && world.Ball.State == BallState.Held;
+		BallController ball = GetBall();
+		return ball != null && OwnPeerId != 0
+			&& ball.StateMachine.HolderPeerId == OwnPeerId && ball.State == BallState.Held;
 	}
 
 	/// <summary>

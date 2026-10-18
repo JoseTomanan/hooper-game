@@ -138,15 +138,15 @@ public partial class NetRigPresentationTest : Node
             if (!ValidateDefaults(host, "server throughout move/completion", out _)) return;
             if (_clientProofComplete && !_serverProofSent)
             {
-                if (!Require(host.PhaseForHarness == MovePhase.Inactive && host.ActiveAnimNodeForHarness == "Locomotion",
-                    $"server final machine/node must be Inactive/Locomotion, got {host.PhaseForHarness}/{host.ActiveAnimNodeForHarness}.")) return;
+                if (!Require(host.PhaseForHarness == MovePhase.Inactive && host.ActiveAnimNodeForHarness == "Held" + host.DisplayHandSide,
+                    $"server final machine/node must be Inactive/Held, got {host.PhaseForHarness}/{host.ActiveAnimNodeForHarness}.")) return;
                 if (!Require(RpcId(_clientPeerId, MethodName.ServerProofComplete) == Error.Ok,
                     "could not send final reliable server proof acknowledgement.")) return;
                 _serverProofSent = true;
                 // Give the reliable reply a bounded flush interval. Invariants
                 // continue running even if the client disconnects after its ACK.
                 _serverExitAt = _elapsed + 0.5;
-                GD.Print("[net-rig] server final Held/default/Inactive/Locomotion proof complete; flushing reply.");
+                GD.Print("[net-rig] server final Held/default/Inactive/carry proof complete; flushing reply.");
             }
             if (_serverProofSent && _elapsed >= _serverExitAt) Finish(0);
             return;
@@ -261,7 +261,7 @@ public partial class NetRigPresentationTest : Node
                 "remote move began before readiness acknowledgement.")) return;
             // Nodes can exist one tick before playback's initial tree update.
             // Wait for the actual baseline node; a broken tree still times out.
-            if (remote.ActiveAnimNodeForHarness != "Locomotion") return;
+            if (remote.ActiveAnimNodeForHarness != "Held" + remote.DisplayHandSide) return;
             if (!Require(RpcId(1, MethodName.ClientReady) == Error.Ok, "could not acknowledge loaded/default client rig.")) return;
             _clientReady = true;
             GD.Print("[net-rig] client default sample matches authored hierarchy/server; acknowledged ready.");
@@ -278,12 +278,12 @@ public partial class NetRigPresentationTest : Node
         // not advance stage 4 or send the completion request a second time.
         if (_stage == 4)
         {
-            Require(phase == MovePhase.Inactive && node == "Locomotion",
+            Require(phase == MovePhase.Inactive && node == "Held" + remote.DisplayHandSide,
                 $"remote final phase/node changed while awaiting acknowledgement: {_lastDisplay}.");
             return;
         }
         MovePhase expected = _stage == 0 ? MovePhase.Startup : _stage == 1 ? MovePhase.Active : _stage == 2 ? MovePhase.Recovery : MovePhase.Inactive;
-        string expectedNode = _stage < 3 ? $"Steal{expected}{(_scenario == "left" ? "Left" : "Right")}" : "Locomotion";
+        string expectedNode = _stage < 3 ? $"Steal{expected}{(_scenario == "left" ? "Left" : "Right")}" : "Held" + remote.DisplayHandSide;
         if (phase != expected || node != expectedNode || (_stage < 3 && id != "steal")) return;
         GD.Print($"[net-rig] same-tick stage={_stage} phase={phase} id={id} actual-node={node}; all65 default bone scales/hierarchy match.");
         _stage++;

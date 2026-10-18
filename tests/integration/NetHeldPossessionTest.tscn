@@ -1,0 +1,9 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://tests/integration/NetHeldPossessionTest.cs" id="1_held"]
+[ext_resource type="PackedScene" path="res://scenes/Main.tscn" id="2_main"]
+
+[node name="NetHeldPossessionTest" type="Node"]
+script = ExtResource("1_held")
+
+[node name="Main" parent="." instance=ExtResource("2_main")]

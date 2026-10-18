@@ -42,9 +42,9 @@ public static class MoveAnimResolver
     /// <paramref name="isDribbling"/> is true (issue #285) — and either can be
     /// overridden by an Inactive flourish: <see cref="MoveAnimState.Pivot"/>
     /// (issue #242) or <see cref="MoveAnimState.ReboundGrab"/> (issue #284).
-    /// Both neutral stances blend on velocity separately, inside their own
+    /// The neutral stances blend on velocity separately, inside their own
     /// BlendSpace1D. Full Inactive precedence: ReboundGrab > Pivot > Dribble >
-    /// Locomotion.
+    /// Held > Locomotion. Held and Dribble are mutually exclusive ball states.
     /// </summary>
     /// <param name="phase">Current phase of the committed-move state machine
     /// (own player) or the broadcast phase (remote copy, issue #69).</param>
@@ -84,14 +84,17 @@ public static class MoveAnimResolver
     /// offensive move's telegraph is never overwritten by the stance. Defaults
     /// to false so every pre-#285 call site is unaffected.
     /// </param>
+    /// <param name="isHeld">True only for this player's displayed Held
+    /// possession, fresh or spent. Selects neutral carry below both flourishes;
+    /// it never grants a dribble or overrides a committed phase (#415).</param>
     /// <returns>The display animation state for that phase.</returns>
-    public static MoveAnimState Resolve(MovePhase phase, bool isFadeaway = false, bool isPivotingInPlace = false, bool isPlayingReboundGrab = false, bool isDribbling = false)
+    public static MoveAnimState Resolve(MovePhase phase, bool isFadeaway = false, bool isPivotingInPlace = false, bool isPlayingReboundGrab = false, bool isDribbling = false, bool isHeld = false)
     {
         switch (phase)
         {
             case MovePhase.Inactive:
                 // Inactive precedence (grill decision + #284, extended by #285):
-                // ReboundGrab > Pivot > Dribble > Locomotion.
+                // ReboundGrab > Pivot > Dribble/Held > Locomotion.
                 //
                 // The two flourishes come first: the rebound grab is the
                 // freshest, most specific event, so its short latch out-ranks a
@@ -107,14 +110,15 @@ public static class MoveAnimResolver
                 // who turns in place. Possession stays readable during a pivot
                 // via the in-hand ball mesh (ADR-0012).
                 //
-                // All three only ever apply during Inactive: a committed move
+                // All neutral stances only apply during Inactive: a committed move
                 // (Startup/Active/Recovery) never reaches this branch, so none of
                 // them can steal the display from a move in flight — which
                 // matters most for isDribbling, since a ball-handler is dribbling
                 // for essentially every offensive committed move.
                 if (isPlayingReboundGrab) return MoveAnimState.ReboundGrab;
                 if (isPivotingInPlace) return MoveAnimState.Pivot;
-                return isDribbling ? MoveAnimState.Dribble : MoveAnimState.Locomotion;
+                if (isDribbling) return MoveAnimState.Dribble;
+                return isHeld ? MoveAnimState.Held : MoveAnimState.Locomotion;
             case MovePhase.Startup:
                 return MoveAnimState.Startup;
             case MovePhase.Active:
@@ -450,6 +454,9 @@ public static class MoveAnimResolver
         // (BallController.HandSign). The animated hand and the ball therefore
         // cannot disagree; they are the same input.
         if (generic == MoveAnimState.Dribble) return "Dribble" + ballHand;
+        // Held is another neutral stance: read the current display hand, never
+        // undo a previous move's hand swap through OriginHand (#415).
+        if (generic == MoveAnimState.Held) return "Held" + ballHand;
 
         bool phaseIsPerMoveEligible = generic is MoveAnimState.Startup or MoveAnimState.Active or MoveAnimState.Recovery;
 

@@ -275,7 +275,7 @@ public partial class ReboundGrabTest : Node
         string animNode = NodeForPeer(_holderId).ActiveAnimNodeForHarness;
         if (animNode == "ReboundGrab")
             _sawReboundGrab = true;
-        if (_sawReboundGrab && animNode == "Locomotion" && !_sawSettleAfterGrab)
+        if (_sawReboundGrab && animNode == "Held" + NodeForPeer(_holderId).DisplayHandSide && !_sawSettleAfterGrab)
         {
             _sawSettleAfterGrab = true;
             _stepDeadlineFrame = _frame + SettleMarginFrames;
@@ -395,7 +395,7 @@ public partial class ReboundGrabTest : Node
                     string animNode = NodeForPeer(_holderId).ActiveAnimNodeForHarness;
                     if (animNode == "ReboundGrab")
                         _sawReboundGrab = true;
-                    if (_sawReboundGrab && animNode == "Locomotion")
+                    if (_sawReboundGrab && animNode == "Held" + NodeForPeer(_holderId).DisplayHandSide)
                     {
                         _sawGapBetween = true;
                         _step = Step.SecondSeed;

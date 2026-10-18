@@ -46,6 +46,7 @@ class HarnessCatalogCliTests(unittest.TestCase):
         self.assertTrue(lines[baseline_tail].startswith('dedicated-game-journey-score-rpc-disabled\t'))
         self.assertEqual(
             ['animation-harness-primitives-test-primitives-discovery',
+             'held-possession-test-held',
              'animation-harness-primitives-test-primitives-resources',
              'animation-harness-primitives-test-primitives-state-clips',
              'rig-scale-harness-test-capsule-contract',
@@ -79,7 +80,8 @@ class HarnessCatalogCliTests(unittest.TestCase):
                 'bindings', 'pivot', 'dispatch', 'turnaround', 'accuracy', 'accuracy-unsquared',
                 'lost-payload', 'turnaround-steal', 'turnaround-oob', 'replay',
                 'turnaround-replay', 'turnaround-rejected', 'contact-set', 'contact-unset')]
-            + ['post-presentation-test-presentation', 'crossover-continuity', 'remote-presentation-lifecycle',
+            + ['post-presentation-test-presentation', 'net-held-possession-host', 'net-held-possession-client',
+               'crossover-continuity', 'remote-presentation-lifecycle',
                'net-rig-presentation-left', 'net-rig-presentation-right']
             + [f'committed-replay-{move}-{contact}-{delay}ms'
                for move in ('neutral', 'crossover', 'gather')
@@ -278,10 +280,12 @@ class HarnessCatalogShardTests(unittest.TestCase):
                         'animation-harness-primitives-test-primitives-resources',
                         'animation-harness-primitives-test-primitives-state-clips',
                         'rig-scale-harness-test-capsule-contract',
+                        'held-possession-test-held',
                         'contact-fixture-test-contact',
                         'contact-fixture-test-no-contact'):
             self.assertEqual(catalog.DEFAULT_SINGLE_WEIGHT_SECONDS, weights[case_id])
-        for case_id in ('crossover-continuity', 'remote-presentation-lifecycle', 'net-rig-presentation-left', 'net-rig-presentation-right'):
+        for case_id in ('crossover-continuity', 'remote-presentation-lifecycle', 'net-rig-presentation-left', 'net-rig-presentation-right',
+                        'net-held-possession-host', 'net-held-possession-client'):
             self.assertEqual(catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS, weights[case_id])
         self.assertEqual(1.0, catalog.DEFAULT_SINGLE_WEIGHT_SECONDS)
         for move in ('neutral', 'crossover', 'gather'):
@@ -306,7 +310,7 @@ class HarnessCatalogShardTests(unittest.TestCase):
                 self.assertEqual(catalog.DEFAULT_SINGLE_WEIGHT_SECONDS, weights[case.id])
             elif case.id in ('dedicated-post-play-0ms', 'dedicated-post-play-30ms'):
                 self.assertEqual(catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS, weights[case.id])
-        self.assertAlmostEqual(684.0, sum(weights.values()))
+        self.assertAlmostEqual(701.0, sum(weights.values()))
 
         base = catalog.CATALOG[0]
         new_single = replace(base, id='new-single', scenes=(catalog.SceneMetadata('res://tests/integration/Unknown.tscn'),))
