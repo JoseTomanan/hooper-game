@@ -19,6 +19,7 @@ public partial class RemotePresentationLifecycleTest : Node
     private string _role;
     private int _port, _clientId, _localId, _oldLocalId, _stage, _tick, _startTick = -1, _pulseTick = -1;
     private int _finishTick = -1, _reconnectTick = -1, _oldEpoch;
+    private int _drainDeadline = -1;
     private bool _finished, _readySent, _expectedReceived, _gameOverObserved, _lagProved;
     private bool _reconnectPrepared, _disconnected, _reconnected, _finishAcknowledged;
     private long _freezeTick, _oldDisplayedTick;
@@ -193,7 +194,15 @@ public partial class RemotePresentationLifecycleTest : Node
                 $"game-over lag premise absent: observed={_atGameOver} freeze={_freezeTick}/{_freezePhase}/{_freezeFrame}")) return;
             _lagProved = true;
         }
-        if (remote.AnimationDisplaySnapshot.PresentationTick < _freezeTick + 1) return;
+        // This bound proves the controlled LAN fixture drains its six-tick
+        // delayed envelope plus refill; it is not a production latency promise.
+        if (_drainDeadline < 0) _drainDeadline = _tick + 60;
+        if (remote.AnimationDisplaySnapshot.PresentationTick < _freezeTick + 1)
+        {
+            Require(_tick < _drainDeadline,
+                $"remote game-over presentation failed to drain: actualDisplayTick={remote.AnimationDisplaySnapshot.PresentationTick} finalTick={_freezeTick + 1}");
+            return;
+        }
         if (!Require(_ball.ContinuityPresentationDelayApplied && _ball.ContinuityActualDelayTicks >= 6 &&
             _ball.PresentationResyncCount == 0, "missing delayed-envelope/continuous drain premise")) return;
         if (!ValidateFinal(remote, "game-over drained")) return;
