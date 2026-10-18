@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Godot;
 using Hooper.Ball;
 using Hooper.Moves;
@@ -36,6 +38,9 @@ public partial class CrossoverContinuityCapture : Node
     private float? _fixtureSpawnX;
     private readonly System.Diagnostics.Stopwatch _wallClock = System.Diagnostics.Stopwatch.StartNew();
     private StreamWriter _trace;
+    private BlockingCollection<(Image Image, string Path)> _imageQueue;
+    private Task _imageWriter;
+    private readonly ConcurrentQueue<string> _imageFailures = new();
     private NetworkManager _network;
     private Node _players;
     private BallController _ball;
@@ -81,6 +86,11 @@ public partial class CrossoverContinuityCapture : Node
         { _output = ""; Finish("capture output must be fresh"); return; }
         Directory.CreateDirectory(_output);
         _trace = new StreamWriter(Path.Combine(_output, "trace.jsonl"));
+        if (_images)
+        {
+            _imageQueue = new BlockingCollection<(Image, string)>(8);
+            _imageWriter = Task.Run(WriteImages);
+        }
         var main = GetNode<Node3D>("Main");
         _network = main.GetNode<NetworkManager>("NetworkManager");
         _players = main.GetNode("Players");
@@ -372,8 +382,14 @@ public partial class CrossoverContinuityCapture : Node
             file = $"frame-{_samples:D5}.png";
             // https://docs.godotengine.org/en/4.7/classes/class_viewport.html#class-viewport-method-get-texture
             var image = GetViewport().GetTexture().GetImage();
-            if (image == null || image.IsEmpty() || image.SavePng(Path.Combine(_output, file)) != Error.Ok)
+            if (image == null || image.IsEmpty())
             { Finish("image capture failed"); return; }
+            // GetImage/readback stays on the render thread. Each copied Image is
+            // handed exclusively to one writer; no live scene or texture crosses
+            // threads. Compression/disk I/O must not manufacture network jitter.
+            // https://docs.godotengine.org/en/4.7/tutorials/performance/thread_safe_apis.html#resources
+            if (!_imageQueue.TryAdd((image, Path.Combine(_output, file))))
+            { image.Dispose(); Finish("image writer backlog exceeded eight frames"); return; }
         }
         var model = p.GetNodeOrNull<Node3D>("CharacterModel");
         Vector3 anchor = p.DisplayRootPosition + Vector3.Up;
@@ -492,6 +508,14 @@ public partial class CrossoverContinuityCapture : Node
         if (_finished) return;
         _finished = true;
         _failure = failure.Length > 0 ? failure : _samples == 0 ? "no trace samples" : _gaps > 0 ? "skipped physics frames during measurement" : "";
+        if (_imageQueue != null)
+        {
+            _imageQueue.CompleteAdding();
+            try { _imageWriter.GetAwaiter().GetResult(); }
+            catch (Exception error) { _imageFailures.Enqueue("PNG writer task: " + error.Message); }
+            if (_imageFailures.TryPeek(out string imageFailure)) _failure = imageFailure;
+            _imageQueue.Dispose();
+        }
         RenderingServer.FramePostDraw -= SampleDraw;
         foreach (string action in new[] { "move_forward", "move_right", "aim_left", "aim_right" }) Input.ActionRelease(action);
         if (GodotObject.IsInstanceValid(_skeleton)) _skeleton.SkeletonUpdated -= SnapshotFinalBones;
@@ -509,6 +533,7 @@ public partial class CrossoverContinuityCapture : Node
                 presentationDelayedStartupCounter = _ball?.ContinuityDelayedStartupCounter ?? -1,
                 presentationResyncCount = _ball?.PresentationResyncCount ?? 0,
                 presentationEnvelopeBytes = _ball?.PresentationEnvelopeBytes ?? 0,
+                imageWriter = "FramePostDraw GPU readback; exclusive copied Images compressed by one background writer; bounded eight-frame queue drained before success",
                 engine = Engine.GetVersionInfo()["string"].AsString(), physicsTicksPerSecond = Engine.PhysicsTicksPerSecond,
                 commandLine = OS.GetCmdlineArgs(), userArgs = OS.GetCmdlineUserArgs(), renderer = RenderingServer.GetVideoAdapterName(), displayDriver = DisplayServer.GetName(),
                 camera = _camera == null ? Array.Empty<float>() : Transform(_camera.GlobalTransform), cameraFov = _camera?.Fov, ballRadius = _ball?.BallRadius, betweenCycleNeutralTicks = 36, finalTailNeutralTicks = 36,
@@ -519,6 +544,19 @@ public partial class CrossoverContinuityCapture : Node
         GD.Print($"[crossover-continuity] {(_failure.Length == 0 ? "CAPTURED" : "FAIL: " + _failure)} cycles={_completed} samples={_samples}");
         GetTree().Quit(_failure.Length == 0 ? 0 : 1);
     }
+    private void WriteImages()
+    {
+        foreach (var pending in _imageQueue.GetConsumingEnumerable())
+        {
+            try
+            {
+                if (pending.Image.SavePng(pending.Path) != Error.Ok) _imageFailures.Enqueue("PNG write failed: " + pending.Path);
+            }
+            catch (Exception error) { _imageFailures.Enqueue("PNG writer: " + error.Message); }
+            finally { pending.Image.Dispose(); }
+        }
+    }
+
     private static float[] Vec(Vector3 p) => new[] { p.X, p.Y, p.Z };
     private static float[] Transform(Transform3D t) => Vec(t.Origin).Concat(Vec(t.Basis.X)).Concat(Vec(t.Basis.Y)).Concat(Vec(t.Basis.Z)).ToArray();
 }
