@@ -61,7 +61,7 @@ public partial class PivotContinuityCapture : Node
         var main = GetNode("Main"); _players = main.GetNode("Players");
         _ball = main.GetNode<BallController>("Ball"); _camera = main.GetNode<Camera3D>("Camera3D");
         var network = main.GetNode<NetworkManager>("NetworkManager");
-        int port = int.Parse(Read("--capture-port", "23466"));
+        int port = int.Parse(Read("--capture-port", "23468"));
         if (_role == "client")
         {
             Multiplayer.ConnectionFailed += () => Finish("connection failed");

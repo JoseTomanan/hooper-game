@@ -77,7 +77,7 @@ def main():
     parser.add_argument("--protection", action="store_true", help="right-held regression: hold production protection through pivot and neutral tail")
     parser.add_argument("--disable-pivot-pose", action="store_true", help="negative control: disable production PivotPose")
     parser.add_argument("--pivot-xfade", type=float, help="diagnostic only: override direct Pivot transition blend duration")
-    parser.add_argument("--port", type=int, default=23466)
+    parser.add_argument("--port", type=int, default=23468)
     args = parser.parse_args()
     if args.reset_owner_presentation and (args.remote or args.protection or args.case != "run" or args.gesture != "held"):
         parser.error("--reset-owner-presentation requires local run-held without protection")

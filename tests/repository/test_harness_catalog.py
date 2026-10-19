@@ -346,7 +346,13 @@ class HarnessCatalogShardTests(unittest.TestCase):
             for control_id in case.paired_control_ids:
                 self.assertEqual(shard_by_id[case.id], shard_by_id[control_id])
         loads = [sum(weights[case.id] for case in shard) for shard in expected_shards]
-        self.assertLess(max(loads) - min(loads), 1.0, loads)
+        # An indivisible proof case can exceed one quarter of the whole matrix.
+        # #416's 250-second case makes a sub-second spread mathematically
+        # impossible: even perfect division of the other cases leaves 16.33 s.
+        # Keep the greedy partition within one second of that lower bound.
+        unavoidable_spread = max(0, (max(weights.values()) * catalog.SHARD_COUNT - sum(weights.values()))
+                                 / (catalog.SHARD_COUNT - 1))
+        self.assertLess(max(loads) - min(loads), unavoidable_spread + 1.0, loads)
 
 
 class FakeProcess:
