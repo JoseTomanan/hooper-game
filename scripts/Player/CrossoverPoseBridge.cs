@@ -11,14 +11,16 @@ public sealed class CrossoverPoseBridge
 
     private readonly int[] _parents;
     private readonly LimbChain[] _chains;
+    private readonly bool _followAnchorPose;
     private Quaternion[] _previousAnimated;
     private Quaternion[] _anchorHemisphere;
     private bool _hasPrevious;
 
-    public CrossoverPoseBridge(int[] parents, LimbChain[] chains)
+    public CrossoverPoseBridge(int[] parents, LimbChain[] chains, bool followAnchorPose = false)
     {
         _parents = (int[])parents.Clone();
         _chains = (LimbChain[])chains.Clone();
+        _followAnchorPose = followAnchorPose;
         for (int i = 0; i < parents.Length; i++)
             if (parents[i] < -1 || parents[i] >= i)
                 throw new ArgumentException("Bones must be in parent-before-child order.", nameof(parents));
@@ -72,7 +74,14 @@ public sealed class CrossoverPoseBridge
             if (_hasPrevious)
             {
                 if (a.Dot(_previousAnimated[i]) < 0f) a = -a;
-                n = _anchorHemisphere[i];
+                if (_followAnchorPose)
+                {
+                    // A neutral-to-neutral blend has two moving authored endpoints.
+                    // Unwrap the anchor's sign over time without freezing its pose.
+                    if (n.Dot(_anchorHemisphere[i]) < 0f) n = -n;
+                    _anchorHemisphere[i] = n;
+                }
+                else n = _anchorHemisphere[i];
             }
             else
             {

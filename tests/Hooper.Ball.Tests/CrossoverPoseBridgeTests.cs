@@ -6,6 +6,19 @@ namespace Hooper.Ball.Tests;
 public class CrossoverPoseBridgeTests
 {
     [Fact]
+    public void MovingNeutralAnchorKeepsItsAuthoredRotationInTheBlend()
+    {
+        var bridge = new CrossoverPoseBridge([-1], [], followAnchorPose: true);
+        Transform3D[] idle = [Transform3D.Identity];
+        Transform3D[] moving = [Transform3D.Identity];
+        bridge.Blend(idle, moving, .5f);
+        idle[0] = new Transform3D(new Basis(Vector3.Up, Mathf.DegToRad(20)), Vector3.Zero);
+        var actual = bridge.Blend(idle, moving, .5f).Pose[0].Basis.GetRotationQuaternion();
+        var expected = new Quaternion(Vector3.Up, Mathf.DegToRad(10));
+        Assert.True(actual.AngleTo(expected) < .001f, "A moving neutral anchor must not freeze at its first pose.");
+    }
+
+    [Fact]
     public void ContactPlacementStillSolvesAtACompleteBlendEndpoint()
     {
         int[] parents = [-1, 0, 1];

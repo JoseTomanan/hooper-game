@@ -54,7 +54,7 @@ public partial class PivotPose : SkeletonModifier3D
                 _skeleton.FindBone("mixamorig_" + side + "ForeArm"), _skeleton.FindBone("mixamorig_" + side + "Hand")));
         }
         _bridge = new CrossoverPoseBridge(_parents, chains.ToArray());
-        _neutralBridge = new CrossoverPoseBridge(_parents, chains.ToArray());
+        _neutralBridge = new CrossoverPoseBridge(_parents, chains.ToArray(), followAnchorPose: true);
         Cache();
         // Snapshot the final evaluated pose, including other modifiers. Godot restores
         // their input afterwards; sampling in _Process would cache the wrong endpoint.

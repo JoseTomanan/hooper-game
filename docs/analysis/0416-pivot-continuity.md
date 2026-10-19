@@ -154,6 +154,15 @@ exactly, protection is effective, and the pivot modifier is inactive.
 `verify_pivot_context.py` reproduces these comparisons. Review cycle two found
 no additional concrete correctness defects.
 
+A final regression test exposed a separate neutral-return defect: the shared
+bridge intentionally freezes a crossover's incoming rotation, but a blend
+between two advancing neutral clips must advance both endpoints. An opt-in
+mode now preserves temporal quaternion signs while following that anchor;
+fixed-anchor committed-move bridges retain their existing behavior. The test
+failed before the fix, and all 1,232 active unit tests pass afterwards (five
+characterization cases remain intentionally skipped). A fresh review found
+no concrete defect in this correction.
+
 Compressed before/after traces with SHA-256 hashes, complete matrix summaries,
 context results and selected rendered frames are retained in `evidence/0416/`.
 The full native matrix summary explicitly labels its pre-review-correction
