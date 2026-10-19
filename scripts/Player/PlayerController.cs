@@ -1567,6 +1567,11 @@ public partial class PlayerController : CharacterBody3D
 				Name = "CrossoverPose", Player = this,
 				AnimationPlayer = GetNodeOrNull<AnimationPlayer>("AnimationPlayer")
 			});
+			protectionSkeleton.AddChild(new PivotPose
+			{
+				Name = "PivotPose", Player = this,
+				AnimationPlayer = GetNodeOrNull<AnimationPlayer>("AnimationPlayer")
+			});
 		}
 
 		_gameManager = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;

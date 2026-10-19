@@ -20,6 +20,10 @@ public partial class PlayerController
     public float DisplayHeading => _remotePresentation?.Heading ?? Heading;
     public Vector3 DisplayVelocity => _remotePresentation?.Velocity ?? Velocity;
     public Vector3 DisplayRootPosition => _remotePresentation?.Position ?? GlobalPosition;
+    internal (int Epoch, int Resync) PivotPresentationReset =>
+        (GetBall()?.PresentationEpoch ?? 0, GetBall()?.PresentationResyncCount ?? 0);
+    internal string ResolvedAnimationState => _currentAnimStateName;
+    internal double PivotAnimationTime => _animPlayback?.GetCurrentPlayPosition() ?? 0;
 
     // Live ball mini-physics must never infer a sweep path from delayed presentation.
     public string CurrentSimulationMoveId => DisplayPhaseResolver.LocalMachineDrivesDisplay(IsServer, IsLocalPlayer)

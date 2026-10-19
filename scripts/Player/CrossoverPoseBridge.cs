@@ -33,6 +33,18 @@ public sealed class CrossoverPoseBridge
 
     public void ResetContinuity() => _hasPrevious = false;
 
+    /// <summary>Place a limb endpoint after blending, including at exact blend endpoints.</summary>
+    public Result PlaceEffector(Transform3D[] pose, LimbChain chain, Vector3 target)
+    {
+        var output = (Transform3D[])pose.Clone();
+        var goals = Forward(_parents, pose);
+        goals[chain.Effector].Origin = target;
+        float error = 0f;
+        int clamps = 0;
+        Solve(output, goals, goals, 1f, chain, ref error, ref clamps);
+        return new Result(output, error, clamps);
+    }
+
     public static Transform3D[] Forward(int[] parents, ReadOnlySpan<Transform3D> locals)
     {
         if (parents.Length != locals.Length) throw new ArgumentException("Pose and hierarchy sizes differ.");

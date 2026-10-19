@@ -5,6 +5,26 @@ namespace Hooper.Ball.Tests;
 
 public class CrossoverPoseBridgeTests
 {
+    [Fact]
+    public void ContactPlacementStillSolvesAtACompleteBlendEndpoint()
+    {
+        int[] parents = [-1, 0, 1];
+        var pose = Leg(0, .4f, 1.3f);
+        var bridge = new CrossoverPoseBridge(parents, [new(0, 1, 2)]);
+        var complete = bridge.Blend(pose, pose, 1f).Pose;
+        var before = CrossoverPoseBridge.Forward(parents, complete);
+        var target = new Vector3(.4f, -1.8f, .2f);
+        var placed = bridge.PlaceEffector(complete, new(0, 1, 2), target);
+        var after = CrossoverPoseBridge.Forward(parents, placed.Pose);
+        Assert.True(after[2].Origin.DistanceTo(target) < .00001f);
+        Assert.Equal(0, placed.ClampCount);
+        Assert.True(Mathf.Abs(before[0].Origin.DistanceTo(before[1].Origin) - after[0].Origin.DistanceTo(after[1].Origin)) < .00001f);
+        Assert.True(Mathf.Abs(before[1].Origin.DistanceTo(before[2].Origin) - after[1].Origin.DistanceTo(after[2].Origin)) < .00001f);
+        Assert.True(before[2].Basis.Orthonormalized().GetRotationQuaternion()
+            .AngleTo(after[2].Basis.Orthonormalized().GetRotationQuaternion()) < .001f);
+        Assert.Equal(pose[0], complete[0]); // The immutable authored input is untouched.
+    }
+
     [Theory]
     [InlineData(0f)]
     [InlineData(1f)]
