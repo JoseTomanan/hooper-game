@@ -81,7 +81,7 @@ class HarnessCatalogCliTests(unittest.TestCase):
                 'lost-payload', 'turnaround-steal', 'turnaround-oob', 'replay',
                 'turnaround-replay', 'turnaround-rejected', 'contact-set', 'contact-unset')]
             + ['post-presentation-test-presentation', 'net-held-possession-host', 'net-held-possession-client',
-               'crossover-continuity', 'remote-presentation-lifecycle',
+               'crossover-continuity', 'pivot-continuity', 'remote-presentation-lifecycle',
                'net-rig-presentation-left', 'net-rig-presentation-right']
             + [f'committed-replay-{move}-{contact}-{delay}ms'
                for move in ('neutral', 'crossover', 'gather')
@@ -310,7 +310,8 @@ class HarnessCatalogShardTests(unittest.TestCase):
                 self.assertEqual(catalog.DEFAULT_SINGLE_WEIGHT_SECONDS, weights[case.id])
             elif case.id in ('dedicated-post-play-0ms', 'dedicated-post-play-30ms'):
                 self.assertEqual(catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS, weights[case.id])
-        self.assertAlmostEqual(701.0, sum(weights.values()))
+        self.assertEqual(250.0, weights['pivot-continuity'])
+        self.assertAlmostEqual(951.0, sum(weights.values()))
 
         base = catalog.CATALOG[0]
         new_single = replace(base, id='new-single', scenes=(catalog.SceneMetadata('res://tests/integration/Unknown.tscn'),))
