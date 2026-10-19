@@ -1,0 +1,32 @@
+[
+  {
+    "file": "before-run-trace.jsonl.gz",
+    "source": ".godot/pivot-416-committed-before/local/trace.jsonl",
+    "uncompressedSha256": "5f7d1cb8112622dc60111ef90d736ffb3272e827dd2d563eb8b9623663c55593"
+  },
+  {
+    "file": "before-run-manifest.json.gz",
+    "source": ".godot/pivot-416-committed-before/local/manifest.json",
+    "uncompressedSha256": "7001b77ce9323aa340a35a8d59f3f5ac411f9f49bb114178ca3e86e6a0af0aea"
+  },
+  {
+    "file": "after-run-trace.jsonl.gz",
+    "source": ".godot/pivot-416-committed-after/local/trace.jsonl",
+    "uncompressedSha256": "2d37a74cd40e0a587ee14164981abeb446a0a3f1a4b87fa8b5f52824451a4c6e"
+  },
+  {
+    "file": "after-run-manifest.json.gz",
+    "source": ".godot/pivot-416-committed-after/local/manifest.json",
+    "uncompressedSha256": "8cb1fdeadb7d50df1ebba439446dccda44cbe6b5b66b48637d8b522574d1dcdd"
+  },
+  {
+    "file": "after-left-remote-trace.jsonl.gz",
+    "source": ".godot/pivot-416-committed-remote-left/client/trace.jsonl",
+    "uncompressedSha256": "408c6d2950135b475fa1731ad29f3835dbd55c18c9c1c3b8a1ccdc3d91109d09"
+  },
+  {
+    "file": "after-left-remote-manifest.json.gz",
+    "source": ".godot/pivot-416-committed-remote-left/client/manifest.json",
+    "uncompressedSha256": "0164a89c1a8a8943feb5592cdec65ee9883ed21b9973404758f3a4d39b942d74"
+  }
+]

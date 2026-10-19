@@ -5,6 +5,39 @@ namespace Hooper.Ball.Tests;
 
 public class CrossoverPoseBridgeTests
 {
+    [Fact]
+    public void MovingNeutralAnchorKeepsItsAuthoredRotationInTheBlend()
+    {
+        var bridge = new CrossoverPoseBridge([-1], [], followAnchorPose: true);
+        Transform3D[] idle = [Transform3D.Identity];
+        Transform3D[] moving = [Transform3D.Identity];
+        bridge.Blend(idle, moving, .5f);
+        idle[0] = new Transform3D(new Basis(Vector3.Up, Mathf.DegToRad(20)), Vector3.Zero);
+        var actual = bridge.Blend(idle, moving, .5f).Pose[0].Basis.GetRotationQuaternion();
+        var expected = new Quaternion(Vector3.Up, Mathf.DegToRad(10));
+        Assert.True(actual.AngleTo(expected) < .001f, "A moving neutral anchor must not freeze at its first pose.");
+    }
+
+    [Fact]
+    public void ContactPlacementStillSolvesAtACompleteBlendEndpoint()
+    {
+        int[] parents = [-1, 0, 1];
+        var pose = Leg(0, .4f, 1.3f);
+        var bridge = new CrossoverPoseBridge(parents, [new(0, 1, 2)]);
+        var complete = bridge.Blend(pose, pose, 1f).Pose;
+        var before = CrossoverPoseBridge.Forward(parents, complete);
+        var target = new Vector3(.4f, -1.8f, .2f);
+        var placed = bridge.PlaceEffector(complete, new(0, 1, 2), target);
+        var after = CrossoverPoseBridge.Forward(parents, placed.Pose);
+        Assert.True(after[2].Origin.DistanceTo(target) < .00001f);
+        Assert.Equal(0, placed.ClampCount);
+        Assert.True(Mathf.Abs(before[0].Origin.DistanceTo(before[1].Origin) - after[0].Origin.DistanceTo(after[1].Origin)) < .00001f);
+        Assert.True(Mathf.Abs(before[1].Origin.DistanceTo(before[2].Origin) - after[1].Origin.DistanceTo(after[2].Origin)) < .00001f);
+        Assert.True(before[2].Basis.Orthonormalized().GetRotationQuaternion()
+            .AngleTo(after[2].Basis.Orthonormalized().GetRotationQuaternion()) < .001f);
+        Assert.Equal(pose[0], complete[0]); // The immutable authored input is untouched.
+    }
+
     [Theory]
     [InlineData(0f)]
     [InlineData(1f)]

@@ -1,0 +1,1677 @@
+{
+  "result": "PASS",
+  "commit": "bc71a6b7-prototype5",
+  "rendered": true,
+  "captures": [
+    {
+      "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\pivot-416-native-final\\local\\idle-flick\\local",
+      "failures": [],
+      "boundaries": [
+        {
+          "cycle": 1,
+          "tick": 148,
+          "entry": true,
+          "maxStep": 0.08108640130829577
+        },
+        {
+          "cycle": 1,
+          "tick": 160,
+          "entry": false,
+          "maxStep": 0.03140079034053108
+        },
+        {
+          "cycle": 2,
+          "tick": 307,
+          "entry": true,
+          "maxStep": 0.08108640130829577
+        },
+        {
+          "cycle": 2,
+          "tick": 319,
+          "entry": false,
+          "maxStep": 0.03140079034053108
+        },
+        {
+          "cycle": 3,
+          "tick": 466,
+          "entry": true,
+          "maxStep": 0.08108640130829577
+        },
+        {
+          "cycle": 3,
+          "tick": 478,
+          "entry": false,
+          "maxStep": 0.03140079034053108
+        }
+      ],
+      "maxStepMetresPerTick": 0.09299691861573967,
+      "maxWorldRotationDegreesPerTick": 18.370649751280084,
+      "maxContactErrorMetres": 1.0440306501607453e-06,
+      "maxPelvisAssistanceMetres": 0.12795259
+    },
+    {
+      "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\pivot-416-native-final\\local\\idle-held\\local",
+      "failures": [],
+      "boundaries": [
+        {
+          "cycle": 1,
+          "tick": 148,
+          "entry": true,
+          "maxStep": 0.08108640130829577
+        },
+        {
+          "cycle": 1,
+          "tick": 160,
+          "entry": false,
+          "maxStep": 0.043899141609033784
+        },
+        {
+          "cycle": 2,
+          "tick": 307,
+          "entry": true,
+          "maxStep": 0.08108640130829577
+        },
+        {
+          "cycle": 2,
+          "tick": 319,
+          "entry": false,
+          "maxStep": 0.043899141609033784
+        },
+        {
+          "cycle": 3,
+          "tick": 466,
+          "entry": true,
+          "maxStep": 0.08108640130829577
+        },
+        {
+          "cycle": 3,
+          "tick": 478,
+          "entry": false,
+          "maxStep": 0.043899141609033784
+        }
+      ],
+      "maxStepMetresPerTick": 0.22700182991104628,
+      "maxWorldRotationDegreesPerTick": 47.95104737902246,
+      "maxContactErrorMetres": 1.0440306501607453e-06,
+      "maxPelvisAssistanceMetres": 0.12795259
+    },
+    {
+      "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\pivot-416-native-final\\local\\run-flick\\local",
+      "failures": [],
+      "boundaries": [
+        {
+          "cycle": 1,
+          "tick": 148,
+          "entry": true,
+          "maxStep": 0.2076338246778389
+        },
+        {
+          "cycle": 1,
+          "tick": 160,
+          "entry": false,
+          "maxStep": 0.06334583448382482
+        },
+        {
+          "cycle": 2,
+          "tick": 307,
+          "entry": true,
+          "maxStep": 0.2076338246778389
+        },
+        {
+          "cycle": 2,
+          "tick": 319,
+          "entry": false,
+          "maxStep": 0.06334583448382482
+        },
+        {
+          "cycle": 3,
+          "tick": 466,
+          "entry": true,
+          "maxStep": 0.2076338246778389
+        },
+        {
+          "cycle": 3,
+          "tick": 478,
+          "entry": false,
+          "maxStep": 0.06334583448382482
+        }
+      ],
+      "maxStepMetresPerTick": 0.323306109587892,
+      "maxWorldRotationDegreesPerTick": 48.357857299412295,
+      "maxContactErrorMetres": 5.656854249969065e-06,
+      "maxPelvisAssistanceMetres": 0.47647327
+    },
+    {
+      "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\pivot-416-native-final\\local\\run-held\\local",
+      "failures": [],
+      "boundaries": [
+        {
+          "cycle": 1,
+          "tick": 148,
+          "entry": true,
+          "maxStep": 0.2076338246778389
+        },
+        {
+          "cycle": 1,
+          "tick": 160,
+          "entry": false,
+          "maxStep": 0.06216339052056391
+        },
+        {
+          "cycle": 2,
+          "tick": 307,
+          "entry": true,
+          "maxStep": 0.2076338246778389
+        },
+        {
+          "cycle": 2,
+          "tick": 319,
+          "entry": false,
+          "maxStep": 0.06216339052056391
+        },
+        {
+          "cycle": 3,
+          "tick": 466,
+          "entry": true,
+          "maxStep": 0.2076338246778389
+        },
+        {
+          "cycle": 3,
+          "tick": 478,
+          "entry": false,
+          "maxStep": 0.06216339052056391
+        }
+      ],
+      "maxStepMetresPerTick": 0.323306109587892,
+      "maxWorldRotationDegreesPerTick": 48.61477802302205,
+      "maxContactErrorMetres": 5.656854249969065e-06,
+      "maxPelvisAssistanceMetres": 0.47647327
+    },
+    {
+      "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\pivot-416-native-final\\local\\left-flick\\local",
+      "failures": [],
+      "boundaries": [
+        {
+          "cycle": 1,
+          "tick": 273,
+          "entry": true,
+          "maxStep": 0.21449394634334287
+        },
+        {
+          "cycle": 1,
+          "tick": 285,
+          "entry": false,
+          "maxStep": 0.07449002274240318
+        },
+        {
+          "cycle": 2,
+          "tick": 432,
+          "entry": true,
+          "maxStep": 0.21446178276392386
+        },
+        {
+          "cycle": 2,
+          "tick": 444,
+          "entry": false,
+          "maxStep": 0.07449504736350311
+        },
+        {
+          "cycle": 3,
+          "tick": 591,
+          "entry": true,
+          "maxStep": 0.21446178276392386
+        },
+        {
+          "cycle": 3,
+          "tick": 603,
+          "entry": false,
+          "maxStep": 0.07449504736350311
+        }
+      ],
+      "maxStepMetresPerTick": 0.22709975526269682,
+      "maxWorldRotationDegreesPerTick": 25.56007708980727,
+      "maxContactErrorMetres": 9.219544463880083e-07,
+      "maxPelvisAssistanceMetres": 0.06356589
+    },
+    {
+      "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\pivot-416-native-final\\local\\left-held\\local",
+      "failures": [],
+      "boundaries": [
+        {
+          "cycle": 1,
+          "tick": 273,
+          "entry": true,
+          "maxStep": 0.21449394634334287
+        },
+        {
+          "cycle": 1,
+          "tick": 285,
+          "entry": false,
+          "maxStep": 0.073131822677708
+        },
+        {
+          "cycle": 2,
+          "tick": 432,
+          "entry": true,
+          "maxStep": 0.21446178276392386
+        },
+        {
+          "cycle": 2,
+          "tick": 444,
+          "entry": false,
+          "maxStep": 0.07313762908469616
+        },
+        {
+          "cycle": 3,
+          "tick": 591,
+          "entry": true,
+          "maxStep": 0.21446178276392386
+        },
+        {
+          "cycle": 3,
+          "tick": 603,
+          "entry": false,
+          "maxStep": 0.07313762908469616
+        }
+      ],
+      "maxStepMetresPerTick": 0.22709975526269682,
+      "maxWorldRotationDegreesPerTick": 46.135304638132396,
+      "maxContactErrorMetres": 9.219544463880083e-07,
+      "maxPelvisAssistanceMetres": 0.06356589
+    },
+    {
+      "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\pivot-416-native-final\\local\\right-flick\\local",
+      "failures": [],
+      "boundaries": [
+        {
+          "cycle": 1,
+          "tick": 193,
+          "entry": true,
+          "maxStep": 0.21452386843310436
+        },
+        {
+          "cycle": 1,
+          "tick": 205,
+          "entry": false,
+          "maxStep": 0.07503788733330274
+        },
+        {
+          "cycle": 2,
+          "tick": 352,
+          "entry": true,
+          "maxStep": 0.21449310763178572
+        },
+        {
+          "cycle": 2,
+          "tick": 364,
+          "entry": false,
+          "maxStep": 0.07503668791332721
+        },
+        {
+          "cycle": 3,
+          "tick": 511,
+          "entry": true,
+          "maxStep": 0.21449310763178572
+        },
+        {
+          "cycle": 3,
+          "tick": 523,
+          "entry": false,
+          "maxStep": 0.07503668791332721
+        }
+      ],
+      "maxStepMetresPerTick": 0.22264725520859224,
+      "maxWorldRotationDegreesPerTick": 25.7541637880609,
+      "maxContactErrorMetres": 1.0198039028785217e-06,
+      "maxPelvisAssistanceMetres": 0.03163912
+    },
+    {
+      "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\pivot-416-native-final\\local\\right-held\\local",
+      "failures": [],
+      "boundaries": [
+        {
+          "cycle": 1,
+          "tick": 193,
+          "entry": true,
+          "maxStep": 0.21452386843310436
+        },
+        {
+          "cycle": 1,
+          "tick": 205,
+          "entry": false,
+          "maxStep": 0.07930126097947904
+        },
+        {
+          "cycle": 2,
+          "tick": 352,
+          "entry": true,
+          "maxStep": 0.21449310763178572
+        },
+        {
+          "cycle": 2,
+          "tick": 364,
+          "entry": false,
+          "maxStep": 0.07930048236828097
+        },
+        {
+          "cycle": 3,
+          "tick": 511,
+          "entry": true,
+          "maxStep": 0.21449310763178572
+        },
+        {
+          "cycle": 3,
+          "tick": 523,
+          "entry": false,
+          "maxStep": 0.07930048236828097
+        }
+      ],
+      "maxStepMetresPerTick": 0.22264725520859224,
+      "maxWorldRotationDegreesPerTick": 46.13550768559581,
+      "maxContactErrorMetres": 1.0198039028785217e-06,
+      "maxPelvisAssistanceMetres": 0.03163912
+    },
+    {
+      "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\pivot-416-native-final\\local\\run-forward\\local",
+      "failures": [],
+      "boundaries": [],
+      "maxStepMetresPerTick": 0.38294438147769744,
+      "maxWorldRotationDegreesPerTick": 46.79089706327231,
+      "maxContactErrorMetres": 0.0,
+      "maxPelvisAssistanceMetres": 0.0
+    },
+    {
+      "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\pivot-416-native-final\\remote\\idle-flick\\server",
+      "failures": [],
+      "boundaries": [
+        {
+          "cycle": 1,
+          "tick": 385,
+          "entry": true,
+          "maxStep": 0.08108640130829577
+        },
+        {
+          "cycle": 1,
+          "tick": 397,
+          "entry": false,
+          "maxStep": 0.03140079034053108
+        },
+        {
+          "cycle": 2,
+          "tick": 549,
+          "entry": true,
+          "maxStep": 0.08108640130829577
+        },
+        {
+          "cycle": 2,
+          "tick": 561,
+          "entry": false,
+          "maxStep": 0.03140079034053108
+        },
+        {
+          "cycle": 3,
+          "tick": 712,
+          "entry": true,
+          "maxStep": 0.08108640130829577
+        },
+        {
+          "cycle": 3,
+          "tick": 724,
+          "entry": false,
+          "maxStep": 0.03140079034053108
+        }
+      ],
+      "maxStepMetresPerTick": 0.09299691861573967,
+      "maxWorldRotationDegreesPerTick": 18.370649751280084,
+      "maxContactErrorMetres": 1.0440306501607453e-06,
+      "maxPelvisAssistanceMetres": 0.12795259
+    },
+    {
+      "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\pivot-416-native-final\\remote\\idle-flick\\client",
+      "failures": [],
+      "boundaries": [
+        {
+          "cycle": 1,
+          "tick": 184,
+          "entry": true,
+          "maxStep": 0.08108640130829577
+        },
+        {
+          "cycle": 1,
+          "tick": 196,
+          "entry": false,
+          "maxStep": 0.03140079034053108
+        },
+        {
+          "cycle": 2,
+          "tick": 348,
+          "entry": true,
+          "maxStep": 0.08108640130829577
+        },
+        {
+          "cycle": 2,
+          "tick": 360,
+          "entry": false,
+          "maxStep": 0.03140079034053108
+        },
+        {
+          "cycle": 3,
+          "tick": 511,
+          "entry": true,
+          "maxStep": 0.08108640130829577
+        },
+        {
+          "cycle": 3,
+          "tick": 523,
+          "entry": false,
+          "maxStep": 0.03140079034053108
+        }
+      ],
+      "maxStepMetresPerTick": 0.09299691861573967,
+      "maxWorldRotationDegreesPerTick": 18.370649751280084,
+      "maxContactErrorMetres": 1.0440306501607453e-06,
+      "maxPelvisAssistanceMetres": 0.12795259
+    },
+    {
+      "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\pivot-416-native-final\\remote\\idle-held\\server",
+      "failures": [],
+      "boundaries": [
+        {
+          "cycle": 1,
+          "tick": 378,
+          "entry": true,
+          "maxStep": 0.08108640130829577
+        },
+        {
+          "cycle": 1,
+          "tick": 390,
+          "entry": false,
+          "maxStep": 0.043899141609033784
+        },
+        {
+          "cycle": 2,
+          "tick": 542,
+          "entry": true,
+          "maxStep": 0.08108640130829577
+        },
+        {
+          "cycle": 2,
+          "tick": 554,
+          "entry": false,
+          "maxStep": 0.043899141609033784
+        },
+        {
+          "cycle": 3,
+          "tick": 706,
+          "entry": true,
+          "maxStep": 0.08108640130829577
+        },
+        {
+          "cycle": 3,
+          "tick": 718,
+          "entry": false,
+          "maxStep": 0.043899141609033784
+        }
+      ],
+      "maxStepMetresPerTick": 0.22700182991104628,
+      "maxWorldRotationDegreesPerTick": 47.95104737902246,
+      "maxContactErrorMetres": 1.0440306501607453e-06,
+      "maxPelvisAssistanceMetres": 0.12795259
+    },
+    {
+      "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\pivot-416-native-final\\remote\\idle-held\\client",
+      "failures": [],
+      "boundaries": [
+        {
+          "cycle": 1,
+          "tick": 182,
+          "entry": true,
+          "maxStep": 0.08108640130829577
+        },
+        {
+          "cycle": 1,
+          "tick": 194,
+          "entry": false,
+          "maxStep": 0.043899141609033784
+        },
+        {
+          "cycle": 2,
+          "tick": 346,
+          "entry": true,
+          "maxStep": 0.08108640130829577
+        },
+        {
+          "cycle": 2,
+          "tick": 358,
+          "entry": false,
+          "maxStep": 0.043899141609033784
+        },
+        {
+          "cycle": 3,
+          "tick": 510,
+          "entry": true,
+          "maxStep": 0.08108640130829577
+        },
+        {
+          "cycle": 3,
+          "tick": 522,
+          "entry": false,
+          "maxStep": 0.043899141609033784
+        }
+      ],
+      "maxStepMetresPerTick": 0.22700182991104628,
+      "maxWorldRotationDegreesPerTick": 47.95104737902246,
+      "maxContactErrorMetres": 1.0440306501607453e-06,
+      "maxPelvisAssistanceMetres": 0.12795259
+    },
+    {
+      "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\pivot-416-native-final\\remote\\run-flick\\server",
+      "failures": [],
+      "boundaries": [
+        {
+          "cycle": 1,
+          "tick": 370,
+          "entry": true,
+          "maxStep": 0.2076338246778389
+        },
+        {
+          "cycle": 1,
+          "tick": 382,
+          "entry": false,
+          "maxStep": 0.06334583448382482
+        },
+        {
+          "cycle": 2,
+          "tick": 534,
+          "entry": true,
+          "maxStep": 0.2076338246778389
+        },
+        {
+          "cycle": 2,
+          "tick": 546,
+          "entry": false,
+          "maxStep": 0.06334583448382482
+        },
+        {
+          "cycle": 3,
+          "tick": 698,
+          "entry": true,
+          "maxStep": 0.2076338246778389
+        },
+        {
+          "cycle": 3,
+          "tick": 710,
+          "entry": false,
+          "maxStep": 0.06334583448382482
+        }
+      ],
+      "maxStepMetresPerTick": 0.323306109587892,
+      "maxWorldRotationDegreesPerTick": 48.357857299412295,
+      "maxContactErrorMetres": 5.656854249969065e-06,
+      "maxPelvisAssistanceMetres": 0.47647327
+    },
+    {
+      "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\pivot-416-native-final\\remote\\run-flick\\client",
+      "failures": [],
+      "boundaries": [
+        {
+          "cycle": 1,
+          "tick": 182,
+          "entry": true,
+          "maxStep": 0.2076338246778389
+        },
+        {
+          "cycle": 1,
+          "tick": 194,
+          "entry": false,
+          "maxStep": 0.06334583448382482
+        },
+        {
+          "cycle": 2,
+          "tick": 346,
+          "entry": true,
+          "maxStep": 0.2076338246778389
+        },
+        {
+          "cycle": 2,
+          "tick": 358,
+          "entry": false,
+          "maxStep": 0.06334583448382482
+        },
+        {
+          "cycle": 3,
+          "tick": 510,
+          "entry": true,
+          "maxStep": 0.2076338246778389
+        },
+        {
+          "cycle": 3,
+          "tick": 522,
+          "entry": false,
+          "maxStep": 0.06334583448382482
+        }
+      ],
+      "maxStepMetresPerTick": 0.323306109587892,
+      "maxWorldRotationDegreesPerTick": 48.357857299412295,
+      "maxContactErrorMetres": 5.656854249969065e-06,
+      "maxPelvisAssistanceMetres": 0.47647327
+    },
+    {
+      "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\pivot-416-native-final\\remote\\run-held\\server",
+      "failures": [],
+      "boundaries": [
+        {
+          "cycle": 1,
+          "tick": 372,
+          "entry": true,
+          "maxStep": 0.2076338246778389
+        },
+        {
+          "cycle": 1,
+          "tick": 384,
+          "entry": false,
+          "maxStep": 0.06216339052056391
+        },
+        {
+          "cycle": 2,
+          "tick": 536,
+          "entry": true,
+          "maxStep": 0.2076338246778389
+        },
+        {
+          "cycle": 2,
+          "tick": 548,
+          "entry": false,
+          "maxStep": 0.06216339052056391
+        },
+        {
+          "cycle": 3,
+          "tick": 700,
+          "entry": true,
+          "maxStep": 0.2076338246778389
+        },
+        {
+          "cycle": 3,
+          "tick": 712,
+          "entry": false,
+          "maxStep": 0.06216339052056391
+        }
+      ],
+      "maxStepMetresPerTick": 0.323306109587892,
+      "maxWorldRotationDegreesPerTick": 48.61477802302205,
+      "maxContactErrorMetres": 5.656854249969065e-06,
+      "maxPelvisAssistanceMetres": 0.47647327
+    },
+    {
+      "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\pivot-416-native-final\\remote\\run-held\\client",
+      "failures": [],
+      "boundaries": [
+        {
+          "cycle": 1,
+          "tick": 183,
+          "entry": true,
+          "maxStep": 0.2076338246778389
+        },
+        {
+          "cycle": 1,
+          "tick": 195,
+          "entry": false,
+          "maxStep": 0.06216339052056391
+        },
+        {
+          "cycle": 2,
+          "tick": 347,
+          "entry": true,
+          "maxStep": 0.2076338246778389
+        },
+        {
+          "cycle": 2,
+          "tick": 359,
+          "entry": false,
+          "maxStep": 0.06216339052056391
+        },
+        {
+          "cycle": 3,
+          "tick": 511,
+          "entry": true,
+          "maxStep": 0.2076338246778389
+        },
+        {
+          "cycle": 3,
+          "tick": 523,
+          "entry": false,
+          "maxStep": 0.06216339052056391
+        }
+      ],
+      "maxStepMetresPerTick": 0.323306109587892,
+      "maxWorldRotationDegreesPerTick": 48.61477802302205,
+      "maxContactErrorMetres": 5.656854249969065e-06,
+      "maxPelvisAssistanceMetres": 0.47647327
+    },
+    {
+      "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\pivot-416-native-final\\remote\\left-flick\\server",
+      "failures": [],
+      "boundaries": [
+        {
+          "cycle": 1,
+          "tick": 497,
+          "entry": true,
+          "maxStep": 0.21449394634334287
+        },
+        {
+          "cycle": 1,
+          "tick": 509,
+          "entry": false,
+          "maxStep": 0.07449002274240318
+        },
+        {
+          "cycle": 2,
+          "tick": 659,
+          "entry": true,
+          "maxStep": 0.21446178276392386
+        },
+        {
+          "cycle": 2,
+          "tick": 671,
+          "entry": false,
+          "maxStep": 0.07449504736350311
+        },
+        {
+          "cycle": 3,
+          "tick": 823,
+          "entry": true,
+          "maxStep": 0.21446178276392386
+        },
+        {
+          "cycle": 3,
+          "tick": 835,
+          "entry": false,
+          "maxStep": 0.07449504736350311
+        }
+      ],
+      "maxStepMetresPerTick": 0.22709975526269682,
+      "maxWorldRotationDegreesPerTick": 25.56007708980727,
+      "maxContactErrorMetres": 9.219544463880083e-07,
+      "maxPelvisAssistanceMetres": 0.06356589
+    },
+    {
+      "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\pivot-416-native-final\\remote\\left-flick\\client",
+      "failures": [],
+      "boundaries": [
+        {
+          "cycle": 1,
+          "tick": 309,
+          "entry": true,
+          "maxStep": 0.21449394634334287
+        },
+        {
+          "cycle": 1,
+          "tick": 321,
+          "entry": false,
+          "maxStep": 0.07449002274240318
+        },
+        {
+          "cycle": 2,
+          "tick": 471,
+          "entry": true,
+          "maxStep": 0.21446178276392386
+        },
+        {
+          "cycle": 2,
+          "tick": 483,
+          "entry": false,
+          "maxStep": 0.07449504736350311
+        },
+        {
+          "cycle": 3,
+          "tick": 635,
+          "entry": true,
+          "maxStep": 0.21446178276392386
+        },
+        {
+          "cycle": 3,
+          "tick": 647,
+          "entry": false,
+          "maxStep": 0.07449504736350311
+        }
+      ],
+      "maxStepMetresPerTick": 0.22709975526269682,
+      "maxWorldRotationDegreesPerTick": 25.56007708980727,
+      "maxContactErrorMetres": 9.219544463880083e-07,
+      "maxPelvisAssistanceMetres": 0.06356589
+    },
+    {
+      "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\pivot-416-native-final\\remote\\left-held\\server",
+      "failures": [],
+      "boundaries": [
+        {
+          "cycle": 1,
+          "tick": 501,
+          "entry": true,
+          "maxStep": 0.21449394634334287
+        },
+        {
+          "cycle": 1,
+          "tick": 513,
+          "entry": false,
+          "maxStep": 0.073131822677708
+        },
+        {
+          "cycle": 2,
+          "tick": 665,
+          "entry": true,
+          "maxStep": 0.21446178276392386
+        },
+        {
+          "cycle": 2,
+          "tick": 677,
+          "entry": false,
+          "maxStep": 0.07313762908469616
+        },
+        {
+          "cycle": 3,
+          "tick": 829,
+          "entry": true,
+          "maxStep": 0.21446178276392386
+        },
+        {
+          "cycle": 3,
+          "tick": 841,
+          "entry": false,
+          "maxStep": 0.07313762908469616
+        }
+      ],
+      "maxStepMetresPerTick": 0.22709975526269682,
+      "maxWorldRotationDegreesPerTick": 46.135304638132396,
+      "maxContactErrorMetres": 9.219544463880083e-07,
+      "maxPelvisAssistanceMetres": 0.06356589
+    },
+    {
+      "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\pivot-416-native-final\\remote\\left-held\\client",
+      "failures": [],
+      "boundaries": [
+        {
+          "cycle": 1,
+          "tick": 307,
+          "entry": true,
+          "maxStep": 0.21449394634334287
+        },
+        {
+          "cycle": 1,
+          "tick": 319,
+          "entry": false,
+          "maxStep": 0.073131822677708
+        },
+        {
+          "cycle": 2,
+          "tick": 471,
+          "entry": true,
+          "maxStep": 0.21446178276392386
+        },
+        {
+          "cycle": 2,
+          "tick": 483,
+          "entry": false,
+          "maxStep": 0.07313762908469616
+        },
+        {
+          "cycle": 3,
+          "tick": 635,
+          "entry": true,
+          "maxStep": 0.21446178276392386
+        },
+        {
+          "cycle": 3,
+          "tick": 647,
+          "entry": false,
+          "maxStep": 0.07313762908469616
+        }
+      ],
+      "maxStepMetresPerTick": 0.22709975526269682,
+      "maxWorldRotationDegreesPerTick": 46.135304638132396,
+      "maxContactErrorMetres": 9.219544463880083e-07,
+      "maxPelvisAssistanceMetres": 0.06356589
+    },
+    {
+      "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\pivot-416-native-final\\remote\\right-flick\\server",
+      "failures": [],
+      "boundaries": [
+        {
+          "cycle": 1,
+          "tick": 416,
+          "entry": true,
+          "maxStep": 0.21452386843310436
+        },
+        {
+          "cycle": 1,
+          "tick": 428,
+          "entry": false,
+          "maxStep": 0.07503788733330274
+        },
+        {
+          "cycle": 2,
+          "tick": 580,
+          "entry": true,
+          "maxStep": 0.21449310763178572
+        },
+        {
+          "cycle": 2,
+          "tick": 592,
+          "entry": false,
+          "maxStep": 0.07503668791332721
+        },
+        {
+          "cycle": 3,
+          "tick": 743,
+          "entry": true,
+          "maxStep": 0.21449310763178572
+        },
+        {
+          "cycle": 3,
+          "tick": 755,
+          "entry": false,
+          "maxStep": 0.07503668791332721
+        }
+      ],
+      "maxStepMetresPerTick": 0.22264725520859224,
+      "maxWorldRotationDegreesPerTick": 25.7541637880609,
+      "maxContactErrorMetres": 1.0198039028785217e-06,
+      "maxPelvisAssistanceMetres": 0.03163912
+    },
+    {
+      "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\pivot-416-native-final\\remote\\right-flick\\client",
+      "failures": [],
+      "boundaries": [
+        {
+          "cycle": 1,
+          "tick": 229,
+          "entry": true,
+          "maxStep": 0.21452386843310436
+        },
+        {
+          "cycle": 1,
+          "tick": 241,
+          "entry": false,
+          "maxStep": 0.07503788733330274
+        },
+        {
+          "cycle": 2,
+          "tick": 393,
+          "entry": true,
+          "maxStep": 0.21449310763178572
+        },
+        {
+          "cycle": 2,
+          "tick": 405,
+          "entry": false,
+          "maxStep": 0.07503668791332721
+        },
+        {
+          "cycle": 3,
+          "tick": 556,
+          "entry": true,
+          "maxStep": 0.21449310763178572
+        },
+        {
+          "cycle": 3,
+          "tick": 568,
+          "entry": false,
+          "maxStep": 0.07503668791332721
+        }
+      ],
+      "maxStepMetresPerTick": 0.22264725520859224,
+      "maxWorldRotationDegreesPerTick": 25.7541637880609,
+      "maxContactErrorMetres": 1.0198039028785217e-06,
+      "maxPelvisAssistanceMetres": 0.03163912
+    },
+    {
+      "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\pivot-416-native-final\\remote\\right-held\\server",
+      "failures": [],
+      "boundaries": [
+        {
+          "cycle": 1,
+          "tick": 420,
+          "entry": true,
+          "maxStep": 0.21452386843310436
+        },
+        {
+          "cycle": 1,
+          "tick": 432,
+          "entry": false,
+          "maxStep": 0.07930126097947904
+        },
+        {
+          "cycle": 2,
+          "tick": 583,
+          "entry": true,
+          "maxStep": 0.21449310763178572
+        },
+        {
+          "cycle": 2,
+          "tick": 595,
+          "entry": false,
+          "maxStep": 0.07930048236828097
+        },
+        {
+          "cycle": 3,
+          "tick": 747,
+          "entry": true,
+          "maxStep": 0.21449310763178572
+        },
+        {
+          "cycle": 3,
+          "tick": 759,
+          "entry": false,
+          "maxStep": 0.07930048236828097
+        }
+      ],
+      "maxStepMetresPerTick": 0.22264725520859224,
+      "maxWorldRotationDegreesPerTick": 46.13550768559581,
+      "maxContactErrorMetres": 1.0198039028785217e-06,
+      "maxPelvisAssistanceMetres": 0.03163912
+    },
+    {
+      "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\pivot-416-native-final\\remote\\right-held\\client",
+      "failures": [],
+      "boundaries": [
+        {
+          "cycle": 1,
+          "tick": 228,
+          "entry": true,
+          "maxStep": 0.21452386843310436
+        },
+        {
+          "cycle": 1,
+          "tick": 240,
+          "entry": false,
+          "maxStep": 0.07930126097947904
+        },
+        {
+          "cycle": 2,
+          "tick": 391,
+          "entry": true,
+          "maxStep": 0.21449310763178572
+        },
+        {
+          "cycle": 2,
+          "tick": 403,
+          "entry": false,
+          "maxStep": 0.07930048236828097
+        },
+        {
+          "cycle": 3,
+          "tick": 555,
+          "entry": true,
+          "maxStep": 0.21449310763178572
+        },
+        {
+          "cycle": 3,
+          "tick": 567,
+          "entry": false,
+          "maxStep": 0.07930048236828097
+        }
+      ],
+      "maxStepMetresPerTick": 0.22264725520859224,
+      "maxWorldRotationDegreesPerTick": 46.13550768559581,
+      "maxContactErrorMetres": 1.0198039028785217e-06,
+      "maxPelvisAssistanceMetres": 0.03163912
+    },
+    {
+      "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\pivot-416-native-final\\remote\\run-forward\\server",
+      "failures": [],
+      "boundaries": [],
+      "maxStepMetresPerTick": 0.3825549989283508,
+      "maxWorldRotationDegreesPerTick": 46.79089706327231,
+      "maxContactErrorMetres": 0.0,
+      "maxPelvisAssistanceMetres": 0.0
+    },
+    {
+      "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\pivot-416-native-final\\remote\\run-forward\\client",
+      "failures": [],
+      "boundaries": [],
+      "maxStepMetresPerTick": 0.3825549989283508,
+      "maxWorldRotationDegreesPerTick": 46.79089706327231,
+      "maxContactErrorMetres": 0.0,
+      "maxPelvisAssistanceMetres": 0.0
+    }
+  ],
+  "negativeControls": [
+    {
+      "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\pivot-416-native-final\\negative\\run-held\\local",
+      "failures": [
+        "cycle 1: LeftFoot step 0.549851 m > 0.390000 at tick 148",
+        "cycle 1: RightFoot step 0.700128 m > 0.390000 at tick 148",
+        "cycle 1: LeftToeBase step 0.715769 m > 0.390000 at tick 148",
+        "cycle 1: RightToeBase step 0.780620 m > 0.390000 at tick 148",
+        "cycle 1: LeftToe_End step 0.794053 m > 0.390000 at tick 148",
+        "cycle 1: RightToe_End step 0.861557 m > 0.390000 at tick 148",
+        "cycle 1: mixamorig_LeftForeArm rotation 54.8139 degrees > 50.0000 at tick 148",
+        "cycle 1: mixamorig_LeftHand rotation 54.8138 degrees > 50.0000 at tick 148",
+        "cycle 1: mixamorig_LeftHandThumb1 rotation 64.5381 degrees > 50.0000 at tick 148",
+        "cycle 1: mixamorig_LeftHandThumb2 rotation 64.5382 degrees > 50.0000 at tick 148",
+        "cycle 1: mixamorig_LeftHandThumb3 rotation 64.5382 degrees > 50.0000 at tick 148",
+        "cycle 1: mixamorig_LeftHandThumb4 rotation 64.5381 degrees > 50.0000 at tick 148",
+        "cycle 1: mixamorig_LeftHandIndex1 rotation 54.8138 degrees > 50.0000 at tick 148",
+        "cycle 1: mixamorig_LeftHandIndex2 rotation 95.3276 degrees > 50.0000 at tick 148",
+        "cycle 1: mixamorig_LeftHandIndex3 rotation 95.3276 degrees > 50.0000 at tick 148",
+        "cycle 1: mixamorig_LeftHandIndex4 rotation 95.3276 degrees > 50.0000 at tick 148",
+        "cycle 1: mixamorig_LeftHandMiddle1 rotation 54.8138 degrees > 50.0000 at tick 148",
+        "cycle 1: mixamorig_LeftHandMiddle2 rotation 54.8138 degrees > 50.0000 at tick 148",
+        "cycle 1: mixamorig_LeftHandMiddle3 rotation 54.8138 degrees > 50.0000 at tick 148",
+        "cycle 1: mixamorig_LeftHandMiddle4 rotation 54.8138 degrees > 50.0000 at tick 148",
+        "cycle 1: mixamorig_LeftHandRing1 rotation 54.8138 degrees > 50.0000 at tick 148",
+        "cycle 1: mixamorig_LeftHandRing2 rotation 54.8138 degrees > 50.0000 at tick 148",
+        "cycle 1: mixamorig_LeftHandRing3 rotation 54.8138 degrees > 50.0000 at tick 148",
+        "cycle 1: mixamorig_LeftHandRing4 rotation 54.8138 degrees > 50.0000 at tick 148",
+        "cycle 1: mixamorig_LeftHandPinky1 rotation 54.8138 degrees > 50.0000 at tick 148",
+        "cycle 1: mixamorig_LeftHandPinky2 rotation 54.8138 degrees > 50.0000 at tick 148",
+        "cycle 1: mixamorig_LeftHandPinky3 rotation 54.8138 degrees > 50.0000 at tick 148",
+        "cycle 1: mixamorig_LeftHandPinky4 rotation 54.8138 degrees > 50.0000 at tick 148",
+        "cycle 1: mixamorig_LeftUpLeg rotation 65.3037 degrees > 50.0000 at tick 148",
+        "cycle 1: mixamorig_LeftLeg rotation 69.2540 degrees > 50.0000 at tick 148",
+        "cycle 1: mixamorig_LeftFoot rotation 83.1001 degrees > 50.0000 at tick 148",
+        "cycle 1: mixamorig_LeftToeBase rotation 83.1006 degrees > 50.0000 at tick 148",
+        "cycle 1: mixamorig_LeftToe_End rotation 83.1006 degrees > 50.0000 at tick 148",
+        "cycle 1: mixamorig_RightLeg rotation 172.4746 degrees > 50.0000 at tick 148",
+        "cycle 1: mixamorig_RightFoot rotation 147.6913 degrees > 50.0000 at tick 148",
+        "cycle 1: mixamorig_RightToeBase rotation 147.6913 degrees > 50.0000 at tick 148",
+        "cycle 1: mixamorig_RightToe_End rotation 147.6913 degrees > 50.0000 at tick 148",
+        "cycle 1: mixamorig_Hips rotation 155.4687 degrees > 50.0000 at tick 149",
+        "cycle 1: mixamorig_RightUpLeg rotation 164.8126 degrees > 50.0000 at tick 149",
+        "cycle 1: mixamorig_RightLeg rotation 164.7735 degrees > 50.0000 at tick 149",
+        "cycle 1: mixamorig_RightFoot rotation 164.7942 degrees > 50.0000 at tick 149",
+        "cycle 1: mixamorig_RightToeBase rotation 164.7942 degrees > 50.0000 at tick 149",
+        "cycle 1: mixamorig_RightToe_End rotation 164.7942 degrees > 50.0000 at tick 149",
+        "cycle 1: LeftFoot step 0.497894 m > 0.390000 at tick 161",
+        "cycle 1: RightFoot step 0.409197 m > 0.390000 at tick 161",
+        "cycle 1: LeftToeBase step 0.431124 m > 0.390000 at tick 161",
+        "cycle 1: RightToeBase step 0.408779 m > 0.390000 at tick 161",
+        "cycle 1: RightToe_End step 0.394535 m > 0.390000 at tick 161",
+        "cycle 1: mixamorig_Hips rotation 155.8566 degrees > 50.0000 at tick 161",
+        "cycle 1: mixamorig_LeftUpLeg rotation 54.6952 degrees > 50.0000 at tick 161",
+        "cycle 1: mixamorig_LeftLeg rotation 65.7809 degrees > 50.0000 at tick 161",
+        "cycle 1: mixamorig_LeftFoot rotation 69.4764 degrees > 50.0000 at tick 161",
+        "cycle 1: mixamorig_LeftToeBase rotation 69.4764 degrees > 50.0000 at tick 161",
+        "cycle 1: mixamorig_LeftToe_End rotation 69.4764 degrees > 50.0000 at tick 161",
+        "cycle 1: mixamorig_RightUpLeg rotation 138.2695 degrees > 50.0000 at tick 161",
+        "cycle 1: mixamorig_RightLeg rotation 118.7429 degrees > 50.0000 at tick 161",
+        "cycle 1: mixamorig_RightFoot rotation 109.4037 degrees > 50.0000 at tick 161",
+        "cycle 1: mixamorig_RightToeBase rotation 109.4037 degrees > 50.0000 at tick 161",
+        "cycle 1: mixamorig_RightToe_End rotation 109.4037 degrees > 50.0000 at tick 161",
+        "cycle 1: no identified support toe",
+        "cycle 2: LeftFoot step 0.549851 m > 0.390000 at tick 307",
+        "cycle 2: RightFoot step 0.700128 m > 0.390000 at tick 307",
+        "cycle 2: LeftToeBase step 0.715769 m > 0.390000 at tick 307",
+        "cycle 2: RightToeBase step 0.780620 m > 0.390000 at tick 307",
+        "cycle 2: LeftToe_End step 0.794053 m > 0.390000 at tick 307",
+        "cycle 2: RightToe_End step 0.861557 m > 0.390000 at tick 307",
+        "cycle 2: mixamorig_LeftForeArm rotation 54.8139 degrees > 50.0000 at tick 307",
+        "cycle 2: mixamorig_LeftHand rotation 54.8138 degrees > 50.0000 at tick 307",
+        "cycle 2: mixamorig_LeftHandThumb1 rotation 64.5381 degrees > 50.0000 at tick 307",
+        "cycle 2: mixamorig_LeftHandThumb2 rotation 64.5382 degrees > 50.0000 at tick 307",
+        "cycle 2: mixamorig_LeftHandThumb3 rotation 64.5382 degrees > 50.0000 at tick 307",
+        "cycle 2: mixamorig_LeftHandThumb4 rotation 64.5381 degrees > 50.0000 at tick 307",
+        "cycle 2: mixamorig_LeftHandIndex1 rotation 54.8138 degrees > 50.0000 at tick 307",
+        "cycle 2: mixamorig_LeftHandIndex2 rotation 95.3276 degrees > 50.0000 at tick 307",
+        "cycle 2: mixamorig_LeftHandIndex3 rotation 95.3276 degrees > 50.0000 at tick 307",
+        "cycle 2: mixamorig_LeftHandIndex4 rotation 95.3276 degrees > 50.0000 at tick 307",
+        "cycle 2: mixamorig_LeftHandMiddle1 rotation 54.8138 degrees > 50.0000 at tick 307",
+        "cycle 2: mixamorig_LeftHandMiddle2 rotation 54.8138 degrees > 50.0000 at tick 307",
+        "cycle 2: mixamorig_LeftHandMiddle3 rotation 54.8138 degrees > 50.0000 at tick 307",
+        "cycle 2: mixamorig_LeftHandMiddle4 rotation 54.8138 degrees > 50.0000 at tick 307",
+        "cycle 2: mixamorig_LeftHandRing1 rotation 54.8138 degrees > 50.0000 at tick 307",
+        "cycle 2: mixamorig_LeftHandRing2 rotation 54.8138 degrees > 50.0000 at tick 307",
+        "cycle 2: mixamorig_LeftHandRing3 rotation 54.8138 degrees > 50.0000 at tick 307",
+        "cycle 2: mixamorig_LeftHandRing4 rotation 54.8138 degrees > 50.0000 at tick 307",
+        "cycle 2: mixamorig_LeftHandPinky1 rotation 54.8138 degrees > 50.0000 at tick 307",
+        "cycle 2: mixamorig_LeftHandPinky2 rotation 54.8138 degrees > 50.0000 at tick 307",
+        "cycle 2: mixamorig_LeftHandPinky3 rotation 54.8138 degrees > 50.0000 at tick 307",
+        "cycle 2: mixamorig_LeftHandPinky4 rotation 54.8138 degrees > 50.0000 at tick 307",
+        "cycle 2: mixamorig_LeftUpLeg rotation 65.3037 degrees > 50.0000 at tick 307",
+        "cycle 2: mixamorig_LeftLeg rotation 69.2540 degrees > 50.0000 at tick 307",
+        "cycle 2: mixamorig_LeftFoot rotation 83.1001 degrees > 50.0000 at tick 307",
+        "cycle 2: mixamorig_LeftToeBase rotation 83.1006 degrees > 50.0000 at tick 307",
+        "cycle 2: mixamorig_LeftToe_End rotation 83.1006 degrees > 50.0000 at tick 307",
+        "cycle 2: mixamorig_RightLeg rotation 172.4746 degrees > 50.0000 at tick 307",
+        "cycle 2: mixamorig_RightFoot rotation 147.6913 degrees > 50.0000 at tick 307",
+        "cycle 2: mixamorig_RightToeBase rotation 147.6913 degrees > 50.0000 at tick 307",
+        "cycle 2: mixamorig_RightToe_End rotation 147.6913 degrees > 50.0000 at tick 307",
+        "cycle 2: mixamorig_Hips rotation 155.4687 degrees > 50.0000 at tick 308",
+        "cycle 2: mixamorig_RightUpLeg rotation 164.8126 degrees > 50.0000 at tick 308",
+        "cycle 2: mixamorig_RightLeg rotation 164.7735 degrees > 50.0000 at tick 308",
+        "cycle 2: mixamorig_RightFoot rotation 164.7942 degrees > 50.0000 at tick 308",
+        "cycle 2: mixamorig_RightToeBase rotation 164.7942 degrees > 50.0000 at tick 308",
+        "cycle 2: mixamorig_RightToe_End rotation 164.7942 degrees > 50.0000 at tick 308",
+        "cycle 2: LeftFoot step 0.497894 m > 0.390000 at tick 320",
+        "cycle 2: RightFoot step 0.409197 m > 0.390000 at tick 320",
+        "cycle 2: LeftToeBase step 0.431124 m > 0.390000 at tick 320",
+        "cycle 2: RightToeBase step 0.408779 m > 0.390000 at tick 320",
+        "cycle 2: RightToe_End step 0.394535 m > 0.390000 at tick 320",
+        "cycle 2: mixamorig_Hips rotation 155.8566 degrees > 50.0000 at tick 320",
+        "cycle 2: mixamorig_LeftUpLeg rotation 54.6952 degrees > 50.0000 at tick 320",
+        "cycle 2: mixamorig_LeftLeg rotation 65.7809 degrees > 50.0000 at tick 320",
+        "cycle 2: mixamorig_LeftFoot rotation 69.4764 degrees > 50.0000 at tick 320",
+        "cycle 2: mixamorig_LeftToeBase rotation 69.4764 degrees > 50.0000 at tick 320",
+        "cycle 2: mixamorig_LeftToe_End rotation 69.4764 degrees > 50.0000 at tick 320",
+        "cycle 2: mixamorig_RightUpLeg rotation 138.2695 degrees > 50.0000 at tick 320",
+        "cycle 2: mixamorig_RightLeg rotation 118.7429 degrees > 50.0000 at tick 320",
+        "cycle 2: mixamorig_RightFoot rotation 109.4037 degrees > 50.0000 at tick 320",
+        "cycle 2: mixamorig_RightToeBase rotation 109.4037 degrees > 50.0000 at tick 320",
+        "cycle 2: mixamorig_RightToe_End rotation 109.4037 degrees > 50.0000 at tick 320",
+        "cycle 2: no identified support toe",
+        "cycle 3: LeftFoot step 0.549851 m > 0.390000 at tick 466",
+        "cycle 3: RightFoot step 0.700128 m > 0.390000 at tick 466",
+        "cycle 3: LeftToeBase step 0.715769 m > 0.390000 at tick 466",
+        "cycle 3: RightToeBase step 0.780620 m > 0.390000 at tick 466",
+        "cycle 3: LeftToe_End step 0.794053 m > 0.390000 at tick 466",
+        "cycle 3: RightToe_End step 0.861557 m > 0.390000 at tick 466",
+        "cycle 3: mixamorig_LeftForeArm rotation 54.8139 degrees > 50.0000 at tick 466",
+        "cycle 3: mixamorig_LeftHand rotation 54.8138 degrees > 50.0000 at tick 466",
+        "cycle 3: mixamorig_LeftHandThumb1 rotation 64.5381 degrees > 50.0000 at tick 466",
+        "cycle 3: mixamorig_LeftHandThumb2 rotation 64.5382 degrees > 50.0000 at tick 466",
+        "cycle 3: mixamorig_LeftHandThumb3 rotation 64.5382 degrees > 50.0000 at tick 466",
+        "cycle 3: mixamorig_LeftHandThumb4 rotation 64.5381 degrees > 50.0000 at tick 466",
+        "cycle 3: mixamorig_LeftHandIndex1 rotation 54.8138 degrees > 50.0000 at tick 466",
+        "cycle 3: mixamorig_LeftHandIndex2 rotation 95.3276 degrees > 50.0000 at tick 466",
+        "cycle 3: mixamorig_LeftHandIndex3 rotation 95.3276 degrees > 50.0000 at tick 466",
+        "cycle 3: mixamorig_LeftHandIndex4 rotation 95.3276 degrees > 50.0000 at tick 466",
+        "cycle 3: mixamorig_LeftHandMiddle1 rotation 54.8138 degrees > 50.0000 at tick 466",
+        "cycle 3: mixamorig_LeftHandMiddle2 rotation 54.8138 degrees > 50.0000 at tick 466",
+        "cycle 3: mixamorig_LeftHandMiddle3 rotation 54.8138 degrees > 50.0000 at tick 466",
+        "cycle 3: mixamorig_LeftHandMiddle4 rotation 54.8138 degrees > 50.0000 at tick 466",
+        "cycle 3: mixamorig_LeftHandRing1 rotation 54.8138 degrees > 50.0000 at tick 466",
+        "cycle 3: mixamorig_LeftHandRing2 rotation 54.8138 degrees > 50.0000 at tick 466",
+        "cycle 3: mixamorig_LeftHandRing3 rotation 54.8138 degrees > 50.0000 at tick 466",
+        "cycle 3: mixamorig_LeftHandRing4 rotation 54.8138 degrees > 50.0000 at tick 466",
+        "cycle 3: mixamorig_LeftHandPinky1 rotation 54.8138 degrees > 50.0000 at tick 466",
+        "cycle 3: mixamorig_LeftHandPinky2 rotation 54.8138 degrees > 50.0000 at tick 466",
+        "cycle 3: mixamorig_LeftHandPinky3 rotation 54.8138 degrees > 50.0000 at tick 466",
+        "cycle 3: mixamorig_LeftHandPinky4 rotation 54.8138 degrees > 50.0000 at tick 466",
+        "cycle 3: mixamorig_LeftUpLeg rotation 65.3037 degrees > 50.0000 at tick 466",
+        "cycle 3: mixamorig_LeftLeg rotation 69.2540 degrees > 50.0000 at tick 466",
+        "cycle 3: mixamorig_LeftFoot rotation 83.1001 degrees > 50.0000 at tick 466",
+        "cycle 3: mixamorig_LeftToeBase rotation 83.1006 degrees > 50.0000 at tick 466",
+        "cycle 3: mixamorig_LeftToe_End rotation 83.1006 degrees > 50.0000 at tick 466",
+        "cycle 3: mixamorig_RightLeg rotation 172.4746 degrees > 50.0000 at tick 466",
+        "cycle 3: mixamorig_RightFoot rotation 147.6913 degrees > 50.0000 at tick 466",
+        "cycle 3: mixamorig_RightToeBase rotation 147.6913 degrees > 50.0000 at tick 466",
+        "cycle 3: mixamorig_RightToe_End rotation 147.6913 degrees > 50.0000 at tick 466",
+        "cycle 3: mixamorig_Hips rotation 155.4687 degrees > 50.0000 at tick 467",
+        "cycle 3: mixamorig_RightUpLeg rotation 164.8126 degrees > 50.0000 at tick 467",
+        "cycle 3: mixamorig_RightLeg rotation 164.7735 degrees > 50.0000 at tick 467",
+        "cycle 3: mixamorig_RightFoot rotation 164.7942 degrees > 50.0000 at tick 467",
+        "cycle 3: mixamorig_RightToeBase rotation 164.7942 degrees > 50.0000 at tick 467",
+        "cycle 3: mixamorig_RightToe_End rotation 164.7942 degrees > 50.0000 at tick 467",
+        "cycle 3: LeftFoot step 0.497894 m > 0.390000 at tick 479",
+        "cycle 3: RightFoot step 0.409197 m > 0.390000 at tick 479",
+        "cycle 3: LeftToeBase step 0.431124 m > 0.390000 at tick 479",
+        "cycle 3: RightToeBase step 0.408779 m > 0.390000 at tick 479",
+        "cycle 3: RightToe_End step 0.394535 m > 0.390000 at tick 479",
+        "cycle 3: mixamorig_Hips rotation 155.8566 degrees > 50.0000 at tick 479",
+        "cycle 3: mixamorig_LeftUpLeg rotation 54.6952 degrees > 50.0000 at tick 479",
+        "cycle 3: mixamorig_LeftLeg rotation 65.7809 degrees > 50.0000 at tick 479",
+        "cycle 3: mixamorig_LeftFoot rotation 69.4764 degrees > 50.0000 at tick 479",
+        "cycle 3: mixamorig_LeftToeBase rotation 69.4764 degrees > 50.0000 at tick 479",
+        "cycle 3: mixamorig_LeftToe_End rotation 69.4764 degrees > 50.0000 at tick 479",
+        "cycle 3: mixamorig_RightUpLeg rotation 138.2695 degrees > 50.0000 at tick 479",
+        "cycle 3: mixamorig_RightLeg rotation 118.7429 degrees > 50.0000 at tick 479",
+        "cycle 3: mixamorig_RightFoot rotation 109.4037 degrees > 50.0000 at tick 479",
+        "cycle 3: mixamorig_RightToeBase rotation 109.4037 degrees > 50.0000 at tick 479",
+        "cycle 3: mixamorig_RightToe_End rotation 109.4037 degrees > 50.0000 at tick 479",
+        "cycle 3: no identified support toe"
+      ],
+      "boundaries": [
+        {
+          "cycle": 1,
+          "tick": 148,
+          "entry": true,
+          "maxStep": 0.861556851806256
+        },
+        {
+          "cycle": 1,
+          "tick": 160,
+          "entry": false,
+          "maxStep": 0.040644965238636366
+        },
+        {
+          "cycle": 2,
+          "tick": 307,
+          "entry": true,
+          "maxStep": 0.861556851806256
+        },
+        {
+          "cycle": 2,
+          "tick": 319,
+          "entry": false,
+          "maxStep": 0.040644965238636366
+        },
+        {
+          "cycle": 3,
+          "tick": 466,
+          "entry": true,
+          "maxStep": 0.861556851806256
+        },
+        {
+          "cycle": 3,
+          "tick": 478,
+          "entry": false,
+          "maxStep": 0.040644965238636366
+        }
+      ],
+      "maxStepMetresPerTick": 0.861556851806256,
+      "maxWorldRotationDegreesPerTick": 172.4746370079099,
+      "maxContactErrorMetres": 0.0,
+      "maxPelvisAssistanceMetres": 0.0,
+      "expectedFailure": true
+    },
+    {
+      "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\pivot-416-native-final\\negative\\left-flick\\local",
+      "failures": [
+        "cycle 1: Hips step 0.405656 m > 0.390000 at tick 274",
+        "cycle 1: LeftHand step 0.440293 m > 0.390000 at tick 274",
+        "cycle 1: RightHand step 0.763558 m > 0.390000 at tick 274",
+        "cycle 1: RightToeBase step 0.571950 m > 0.390000 at tick 274",
+        "cycle 1: RightToe_End step 0.670995 m > 0.390000 at tick 274",
+        "cycle 1: mixamorig_Hips rotation 50.6723 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_Spine rotation 56.5876 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_Spine1 rotation 56.3491 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_LeftShoulder rotation 65.4699 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_LeftArm rotation 66.5259 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_LeftForeArm rotation 92.4315 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_LeftHand rotation 74.5298 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_LeftHandThumb1 rotation 62.5643 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_LeftHandThumb2 rotation 64.5397 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_LeftHandThumb3 rotation 67.1078 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_LeftHandThumb4 rotation 67.1078 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_LeftHandIndex2 rotation 143.4247 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_LeftHandIndex3 rotation 141.2146 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_LeftHandIndex4 rotation 141.2146 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_LeftHandMiddle1 rotation 78.2580 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_LeftHandMiddle2 rotation 69.0075 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_LeftHandMiddle3 rotation 66.5683 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_LeftHandMiddle4 rotation 66.5683 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_LeftHandRing1 rotation 76.7149 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_LeftHandRing2 rotation 72.4475 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_LeftHandRing3 rotation 72.3154 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_LeftHandRing4 rotation 72.3154 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_LeftHandPinky1 rotation 64.0994 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_LeftHandPinky2 rotation 64.0957 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_LeftHandPinky3 rotation 66.4108 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_LeftHandPinky4 rotation 66.4108 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_RightShoulder rotation 57.9058 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_RightArm rotation 54.3756 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_RightForeArm rotation 51.9574 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_RightHandThumb1 rotation 67.3707 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_RightHandThumb2 rotation 73.9559 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_RightHandThumb3 rotation 74.4137 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_RightHandThumb4 rotation 74.4137 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_RightHandIndex2 rotation 68.4064 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_RightHandIndex3 rotation 63.5567 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_RightHandIndex4 rotation 63.5567 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_RightHandMiddle2 rotation 59.8351 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_RightHandMiddle3 rotation 68.6825 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_RightHandMiddle4 rotation 68.6826 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_RightHandRing2 rotation 52.3501 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_RightHandRing3 rotation 54.9668 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_RightHandRing4 rotation 54.9668 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_LeftUpLeg rotation 78.2568 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_LeftLeg rotation 92.6954 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_RightUpLeg rotation 77.7181 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_RightLeg rotation 73.8423 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_RightFoot rotation 104.5388 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_RightToeBase rotation 105.9122 degrees > 50.0000 at tick 274",
+        "cycle 1: mixamorig_RightToe_End rotation 105.9122 degrees > 50.0000 at tick 274",
+        "cycle 1: Hips step 0.405744 m > 0.390000 at tick 286",
+        "cycle 1: LeftHand step 0.571819 m > 0.390000 at tick 286",
+        "cycle 1: RightHand step 0.667746 m > 0.390000 at tick 286",
+        "cycle 1: RightFoot step 0.414825 m > 0.390000 at tick 286",
+        "cycle 1: RightToeBase step 0.508472 m > 0.390000 at tick 286",
+        "cycle 1: RightToe_End step 0.556720 m > 0.390000 at tick 286",
+        "cycle 1: mixamorig_LeftArm rotation 54.3272 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_LeftForeArm rotation 98.8130 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_LeftHand rotation 74.2562 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_LeftHandThumb1 rotation 62.9629 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_LeftHandThumb2 rotation 60.1387 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_LeftHandThumb3 rotation 62.7459 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_LeftHandThumb4 rotation 62.7459 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_LeftHandIndex1 rotation 53.0291 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_LeftHandIndex2 rotation 135.6507 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_LeftHandIndex3 rotation 133.9523 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_LeftHandIndex4 rotation 133.9523 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_LeftHandMiddle1 rotation 76.6804 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_LeftHandMiddle2 rotation 68.4557 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_LeftHandMiddle3 rotation 66.7914 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_LeftHandMiddle4 rotation 66.7914 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_LeftHandRing1 rotation 73.2641 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_LeftHandRing2 rotation 69.3224 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_LeftHandRing3 rotation 69.6070 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_LeftHandRing4 rotation 69.6070 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_LeftHandPinky1 rotation 58.3629 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_LeftHandPinky2 rotation 58.3730 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_LeftHandPinky3 rotation 60.8140 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_LeftHandPinky4 rotation 60.8140 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_RightHandThumb2 rotation 56.5039 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_RightHandThumb3 rotation 57.8419 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_RightHandThumb4 rotation 57.8419 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_RightHandIndex2 rotation 58.9660 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_RightHandIndex3 rotation 50.2457 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_RightHandIndex4 rotation 50.2457 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_RightHandMiddle3 rotation 52.4115 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_RightHandMiddle4 rotation 52.4115 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_LeftUpLeg rotation 58.8355 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_LeftLeg rotation 87.8654 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_RightUpLeg rotation 60.9076 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_RightLeg rotation 78.4024 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_RightFoot rotation 86.2113 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_RightToeBase rotation 87.8914 degrees > 50.0000 at tick 286",
+        "cycle 1: mixamorig_RightToe_End rotation 87.8914 degrees > 50.0000 at tick 286",
+        "cycle 1: no identified support toe",
+        "cycle 2: Hips step 0.404116 m > 0.390000 at tick 433",
+        "cycle 2: LeftHand step 0.438050 m > 0.390000 at tick 433",
+        "cycle 2: RightHand step 0.750437 m > 0.390000 at tick 433",
+        "cycle 2: RightToeBase step 0.571932 m > 0.390000 at tick 433",
+        "cycle 2: RightToe_End step 0.670898 m > 0.390000 at tick 433",
+        "cycle 2: mixamorig_Spine rotation 52.8775 degrees > 50.0000 at tick 433",
+        "cycle 2: mixamorig_Spine1 rotation 52.5958 degrees > 50.0000 at tick 433",
+        "cycle 2: mixamorig_LeftShoulder rotation 59.4153 degrees > 50.0000 at tick 433",
+        "cycle 2: mixamorig_LeftForeArm rotation 52.3693 degrees > 50.0000 at tick 433",
+        "cycle 2: mixamorig_LeftHandIndex2 rotation 111.7951 degrees > 50.0000 at tick 433",
+        "cycle 2: mixamorig_LeftHandIndex3 rotation 107.7137 degrees > 50.0000 at tick 433",
+        "cycle 2: mixamorig_LeftHandIndex4 rotation 107.7137 degrees > 50.0000 at tick 433",
+        "cycle 2: mixamorig_RightShoulder rotation 54.9514 degrees > 50.0000 at tick 433",
+        "cycle 2: mixamorig_RightArm rotation 54.0452 degrees > 50.0000 at tick 433",
+        "cycle 2: mixamorig_RightForeArm rotation 51.7557 degrees > 50.0000 at tick 433",
+        "cycle 2: mixamorig_RightHandThumb1 rotation 67.5119 degrees > 50.0000 at tick 433",
+        "cycle 2: mixamorig_RightHandThumb2 rotation 73.6767 degrees > 50.0000 at tick 433",
+        "cycle 2: mixamorig_RightHandThumb3 rotation 73.6664 degrees > 50.0000 at tick 433",
+        "cycle 2: mixamorig_RightHandThumb4 rotation 73.6664 degrees > 50.0000 at tick 433",
+        "cycle 2: mixamorig_RightHandIndex2 rotation 62.3745 degrees > 50.0000 at tick 433",
+        "cycle 2: mixamorig_RightHandIndex3 rotation 59.0618 degrees > 50.0000 at tick 433",
+        "cycle 2: mixamorig_RightHandIndex4 rotation 59.0618 degrees > 50.0000 at tick 433",
+        "cycle 2: mixamorig_RightHandMiddle2 rotation 63.6761 degrees > 50.0000 at tick 433",
+        "cycle 2: mixamorig_RightHandMiddle3 rotation 71.7904 degrees > 50.0000 at tick 433",
+        "cycle 2: mixamorig_RightHandMiddle4 rotation 71.7904 degrees > 50.0000 at tick 433",
+        "cycle 2: mixamorig_RightHandRing2 rotation 55.3791 degrees > 50.0000 at tick 433",
+        "cycle 2: mixamorig_RightHandRing3 rotation 57.8246 degrees > 50.0000 at tick 433",
+        "cycle 2: mixamorig_RightHandRing4 rotation 57.8246 degrees > 50.0000 at tick 433",
+        "cycle 2: mixamorig_RightHandPinky1 rotation 50.0167 degrees > 50.0000 at tick 433",
+        "cycle 2: mixamorig_LeftUpLeg rotation 77.4728 degrees > 50.0000 at tick 433",
+        "cycle 2: mixamorig_LeftLeg rotation 92.0257 degrees > 50.0000 at tick 433",
+        "cycle 2: mixamorig_RightUpLeg rotation 78.1002 degrees > 50.0000 at tick 433",
+        "cycle 2: mixamorig_RightLeg rotation 73.8081 degrees > 50.0000 at tick 433",
+        "cycle 2: mixamorig_RightFoot rotation 104.4807 degrees > 50.0000 at tick 433",
+        "cycle 2: mixamorig_RightToeBase rotation 106.0034 degrees > 50.0000 at tick 433",
+        "cycle 2: mixamorig_RightToe_End rotation 106.0034 degrees > 50.0000 at tick 433",
+        "cycle 2: Hips step 0.405745 m > 0.390000 at tick 445",
+        "cycle 2: LeftHand step 0.571819 m > 0.390000 at tick 445",
+        "cycle 2: RightHand step 0.667746 m > 0.390000 at tick 445",
+        "cycle 2: RightFoot step 0.414825 m > 0.390000 at tick 445",
+        "cycle 2: RightToeBase step 0.508472 m > 0.390000 at tick 445",
+        "cycle 2: RightToe_End step 0.556720 m > 0.390000 at tick 445",
+        "cycle 2: mixamorig_LeftArm rotation 54.3272 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_LeftForeArm rotation 98.8130 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_LeftHand rotation 74.2562 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_LeftHandThumb1 rotation 62.9629 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_LeftHandThumb2 rotation 60.1387 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_LeftHandThumb3 rotation 62.7459 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_LeftHandThumb4 rotation 62.7459 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_LeftHandIndex1 rotation 53.0291 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_LeftHandIndex2 rotation 135.6507 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_LeftHandIndex3 rotation 133.9523 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_LeftHandIndex4 rotation 133.9523 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_LeftHandMiddle1 rotation 76.6804 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_LeftHandMiddle2 rotation 68.4557 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_LeftHandMiddle3 rotation 66.7914 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_LeftHandMiddle4 rotation 66.7914 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_LeftHandRing1 rotation 73.2641 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_LeftHandRing2 rotation 69.3224 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_LeftHandRing3 rotation 69.6070 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_LeftHandRing4 rotation 69.6070 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_LeftHandPinky1 rotation 58.3629 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_LeftHandPinky2 rotation 58.3730 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_LeftHandPinky3 rotation 60.8140 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_LeftHandPinky4 rotation 60.8140 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_RightHandThumb2 rotation 56.5039 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_RightHandThumb3 rotation 57.8419 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_RightHandThumb4 rotation 57.8419 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_RightHandIndex2 rotation 58.9660 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_RightHandIndex3 rotation 50.2457 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_RightHandIndex4 rotation 50.2457 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_RightHandMiddle3 rotation 52.4115 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_RightHandMiddle4 rotation 52.4115 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_LeftUpLeg rotation 58.8355 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_LeftLeg rotation 87.8654 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_RightUpLeg rotation 60.9076 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_RightLeg rotation 78.4024 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_RightFoot rotation 86.2113 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_RightToeBase rotation 87.8914 degrees > 50.0000 at tick 445",
+        "cycle 2: mixamorig_RightToe_End rotation 87.8914 degrees > 50.0000 at tick 445",
+        "cycle 2: no identified support toe",
+        "cycle 3: Hips step 0.404116 m > 0.390000 at tick 592",
+        "cycle 3: LeftHand step 0.438050 m > 0.390000 at tick 592",
+        "cycle 3: RightHand step 0.750437 m > 0.390000 at tick 592",
+        "cycle 3: RightToeBase step 0.571932 m > 0.390000 at tick 592",
+        "cycle 3: RightToe_End step 0.670898 m > 0.390000 at tick 592",
+        "cycle 3: mixamorig_Spine rotation 52.8775 degrees > 50.0000 at tick 592",
+        "cycle 3: mixamorig_Spine1 rotation 52.5958 degrees > 50.0000 at tick 592",
+        "cycle 3: mixamorig_LeftShoulder rotation 59.4153 degrees > 50.0000 at tick 592",
+        "cycle 3: mixamorig_LeftForeArm rotation 52.3693 degrees > 50.0000 at tick 592",
+        "cycle 3: mixamorig_LeftHandIndex2 rotation 111.7951 degrees > 50.0000 at tick 592",
+        "cycle 3: mixamorig_LeftHandIndex3 rotation 107.7137 degrees > 50.0000 at tick 592",
+        "cycle 3: mixamorig_LeftHandIndex4 rotation 107.7137 degrees > 50.0000 at tick 592",
+        "cycle 3: mixamorig_RightShoulder rotation 54.9514 degrees > 50.0000 at tick 592",
+        "cycle 3: mixamorig_RightArm rotation 54.0452 degrees > 50.0000 at tick 592",
+        "cycle 3: mixamorig_RightForeArm rotation 51.7557 degrees > 50.0000 at tick 592",
+        "cycle 3: mixamorig_RightHandThumb1 rotation 67.5119 degrees > 50.0000 at tick 592",
+        "cycle 3: mixamorig_RightHandThumb2 rotation 73.6767 degrees > 50.0000 at tick 592",
+        "cycle 3: mixamorig_RightHandThumb3 rotation 73.6664 degrees > 50.0000 at tick 592",
+        "cycle 3: mixamorig_RightHandThumb4 rotation 73.6664 degrees > 50.0000 at tick 592",
+        "cycle 3: mixamorig_RightHandIndex2 rotation 62.3745 degrees > 50.0000 at tick 592",
+        "cycle 3: mixamorig_RightHandIndex3 rotation 59.0618 degrees > 50.0000 at tick 592",
+        "cycle 3: mixamorig_RightHandIndex4 rotation 59.0618 degrees > 50.0000 at tick 592",
+        "cycle 3: mixamorig_RightHandMiddle2 rotation 63.6761 degrees > 50.0000 at tick 592",
+        "cycle 3: mixamorig_RightHandMiddle3 rotation 71.7904 degrees > 50.0000 at tick 592",
+        "cycle 3: mixamorig_RightHandMiddle4 rotation 71.7904 degrees > 50.0000 at tick 592",
+        "cycle 3: mixamorig_RightHandRing2 rotation 55.3791 degrees > 50.0000 at tick 592",
+        "cycle 3: mixamorig_RightHandRing3 rotation 57.8246 degrees > 50.0000 at tick 592",
+        "cycle 3: mixamorig_RightHandRing4 rotation 57.8246 degrees > 50.0000 at tick 592",
+        "cycle 3: mixamorig_RightHandPinky1 rotation 50.0167 degrees > 50.0000 at tick 592",
+        "cycle 3: mixamorig_LeftUpLeg rotation 77.4728 degrees > 50.0000 at tick 592",
+        "cycle 3: mixamorig_LeftLeg rotation 92.0257 degrees > 50.0000 at tick 592",
+        "cycle 3: mixamorig_RightUpLeg rotation 78.1002 degrees > 50.0000 at tick 592",
+        "cycle 3: mixamorig_RightLeg rotation 73.8081 degrees > 50.0000 at tick 592",
+        "cycle 3: mixamorig_RightFoot rotation 104.4807 degrees > 50.0000 at tick 592",
+        "cycle 3: mixamorig_RightToeBase rotation 106.0034 degrees > 50.0000 at tick 592",
+        "cycle 3: mixamorig_RightToe_End rotation 106.0034 degrees > 50.0000 at tick 592",
+        "cycle 3: Hips step 0.405745 m > 0.390000 at tick 604",
+        "cycle 3: LeftHand step 0.571819 m > 0.390000 at tick 604",
+        "cycle 3: RightHand step 0.667746 m > 0.390000 at tick 604",
+        "cycle 3: RightFoot step 0.414825 m > 0.390000 at tick 604",
+        "cycle 3: RightToeBase step 0.508472 m > 0.390000 at tick 604",
+        "cycle 3: RightToe_End step 0.556720 m > 0.390000 at tick 604",
+        "cycle 3: mixamorig_LeftArm rotation 54.3272 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_LeftForeArm rotation 98.8130 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_LeftHand rotation 74.2562 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_LeftHandThumb1 rotation 62.9629 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_LeftHandThumb2 rotation 60.1387 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_LeftHandThumb3 rotation 62.7459 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_LeftHandThumb4 rotation 62.7459 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_LeftHandIndex1 rotation 53.0291 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_LeftHandIndex2 rotation 135.6507 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_LeftHandIndex3 rotation 133.9523 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_LeftHandIndex4 rotation 133.9523 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_LeftHandMiddle1 rotation 76.6804 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_LeftHandMiddle2 rotation 68.4557 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_LeftHandMiddle3 rotation 66.7914 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_LeftHandMiddle4 rotation 66.7914 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_LeftHandRing1 rotation 73.2641 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_LeftHandRing2 rotation 69.3224 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_LeftHandRing3 rotation 69.6070 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_LeftHandRing4 rotation 69.6070 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_LeftHandPinky1 rotation 58.3629 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_LeftHandPinky2 rotation 58.3730 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_LeftHandPinky3 rotation 60.8140 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_LeftHandPinky4 rotation 60.8140 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_RightHandThumb2 rotation 56.5039 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_RightHandThumb3 rotation 57.8419 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_RightHandThumb4 rotation 57.8419 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_RightHandIndex2 rotation 58.9660 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_RightHandIndex3 rotation 50.2457 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_RightHandIndex4 rotation 50.2457 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_RightHandMiddle3 rotation 52.4115 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_RightHandMiddle4 rotation 52.4115 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_LeftUpLeg rotation 58.8355 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_LeftLeg rotation 87.8654 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_RightUpLeg rotation 60.9076 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_RightLeg rotation 78.4024 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_RightFoot rotation 86.2113 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_RightToeBase rotation 87.8914 degrees > 50.0000 at tick 604",
+        "cycle 3: mixamorig_RightToe_End rotation 87.8914 degrees > 50.0000 at tick 604",
+        "cycle 3: no identified support toe"
+      ],
+      "boundaries": [
+        {
+          "cycle": 1,
+          "tick": 273,
+          "entry": true,
+          "maxStep": 0.21448581627588753
+        },
+        {
+          "cycle": 1,
+          "tick": 285,
+          "entry": false,
+          "maxStep": 0.03485264277843076
+        },
+        {
+          "cycle": 2,
+          "tick": 432,
+          "entry": true,
+          "maxStep": 0.21440087125060836
+        },
+        {
+          "cycle": 2,
+          "tick": 444,
+          "entry": false,
+          "maxStep": 0.03485264277843076
+        },
+        {
+          "cycle": 3,
+          "tick": 591,
+          "entry": true,
+          "maxStep": 0.21440087125060836
+        },
+        {
+          "cycle": 3,
+          "tick": 603,
+          "entry": false,
+          "maxStep": 0.03485264277843076
+        }
+      ],
+      "maxStepMetresPerTick": 0.7635578313500181,
+      "maxWorldRotationDegreesPerTick": 143.42465063926238,
+      "maxContactErrorMetres": 0.0,
+      "maxPelvisAssistanceMetres": 0.0,
+      "expectedFailure": true
+    }
+  ]
+}

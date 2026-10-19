@@ -1,0 +1,122 @@
+[
+  {
+    "cell": [
+      0,
+      0
+    ],
+    "source": ".godot/pivot-416-committed-before/local/frame-000146-pose-000146.png",
+    "sha256": "5b6f4671ec0e4857b0fbc4f02079aaccb612b783d50d3c6e775ff21fe0ba8d59",
+    "crop": [
+      305,
+      260,
+      425,
+      390
+    ],
+    "resample": "nearest-neighbour"
+  },
+  {
+    "cell": [
+      1,
+      0
+    ],
+    "source": ".godot/pivot-416-committed-before/local/frame-000147-pose-000147.png",
+    "sha256": "fd4c3b4e14ec53a5bf574cf6f6db0c13a27db61e704037399c7030cdc2e232e1",
+    "crop": [
+      305,
+      260,
+      425,
+      390
+    ],
+    "resample": "nearest-neighbour"
+  },
+  {
+    "cell": [
+      2,
+      0
+    ],
+    "source": ".godot/pivot-416-committed-before/local/frame-000152-pose-000152.png",
+    "sha256": "2c1841fba496740067dfd31cea3188baaf10ab9e072ced7759523981c17d2cf5",
+    "crop": [
+      305,
+      260,
+      425,
+      390
+    ],
+    "resample": "nearest-neighbour"
+  },
+  {
+    "cell": [
+      3,
+      0
+    ],
+    "source": ".godot/pivot-416-committed-before/local/frame-000160-pose-000160.png",
+    "sha256": "198f77b5c0b318f445be69550898b639f5ced09d6ae04fd50751a4c093dc73d4",
+    "crop": [
+      305,
+      260,
+      425,
+      390
+    ],
+    "resample": "nearest-neighbour"
+  },
+  {
+    "cell": [
+      0,
+      1
+    ],
+    "source": ".godot/pivot-416-committed-after/local/frame-000146-pose-000164.png",
+    "sha256": "5b6f4671ec0e4857b0fbc4f02079aaccb612b783d50d3c6e775ff21fe0ba8d59",
+    "crop": [
+      305,
+      260,
+      425,
+      390
+    ],
+    "resample": "nearest-neighbour"
+  },
+  {
+    "cell": [
+      1,
+      1
+    ],
+    "source": ".godot/pivot-416-committed-after/local/frame-000147-pose-000166.png",
+    "sha256": "d1417dfd32ded2c722630d3cb18937da264fd72849a8e6505b9765e995de1c57",
+    "crop": [
+      305,
+      260,
+      425,
+      390
+    ],
+    "resample": "nearest-neighbour"
+  },
+  {
+    "cell": [
+      2,
+      1
+    ],
+    "source": ".godot/pivot-416-committed-after/local/frame-000152-pose-000176.png",
+    "sha256": "6dc11217a35086789e1fc2312270534456bd27c6f3fdc4ecce188325b15d3223",
+    "crop": [
+      305,
+      260,
+      425,
+      390
+    ],
+    "resample": "nearest-neighbour"
+  },
+  {
+    "cell": [
+      3,
+      1
+    ],
+    "source": ".godot/pivot-416-committed-after/local/frame-000160-pose-000192.png",
+    "sha256": "37e2c9c7e50b6da07f37bc57d7336b8564e5b4dfbae1328f5daa98c7a378760d",
+    "crop": [
+      305,
+      260,
+      425,
+      390
+    ],
+    "resample": "nearest-neighbour"
+  }
+]

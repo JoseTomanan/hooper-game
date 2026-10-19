@@ -1,0 +1,1268 @@
+[
+  {
+    "remote": false,
+    "case": "idle",
+    "gesture": "flick",
+    "role": "local",
+    "exit": 0,
+    "directory": ".godot\\pivot-416-final-headless\\local\\idle-flick\\local",
+    "failures": [],
+    "boundaries": [
+      {
+        "cycle": 1,
+        "tick": 148,
+        "entry": true,
+        "maxStep": 0.08108640130829577
+      },
+      {
+        "cycle": 1,
+        "tick": 160,
+        "entry": false,
+        "maxStep": 0.03140079034053108
+      },
+      {
+        "cycle": 2,
+        "tick": 307,
+        "entry": true,
+        "maxStep": 0.08108640130829577
+      },
+      {
+        "cycle": 2,
+        "tick": 319,
+        "entry": false,
+        "maxStep": 0.03140079034053108
+      },
+      {
+        "cycle": 3,
+        "tick": 466,
+        "entry": true,
+        "maxStep": 0.08108640130829577
+      },
+      {
+        "cycle": 3,
+        "tick": 478,
+        "entry": false,
+        "maxStep": 0.03140079034053108
+      }
+    ],
+    "maxStepMetresPerTick": 0.09299691861573967,
+    "maxWorldRotationDegreesPerTick": 18.370649751280084,
+    "maxContactErrorMetres": 1.0440306501607453e-06,
+    "maxPelvisAssistanceMetres": 0.12795259
+  },
+  {
+    "remote": false,
+    "case": "idle",
+    "gesture": "held",
+    "role": "local",
+    "exit": 0,
+    "directory": ".godot\\pivot-416-final-headless\\local\\idle-held\\local",
+    "failures": [],
+    "boundaries": [
+      {
+        "cycle": 1,
+        "tick": 148,
+        "entry": true,
+        "maxStep": 0.08108640130829577
+      },
+      {
+        "cycle": 1,
+        "tick": 160,
+        "entry": false,
+        "maxStep": 0.043899141609033784
+      },
+      {
+        "cycle": 2,
+        "tick": 307,
+        "entry": true,
+        "maxStep": 0.08108640130829577
+      },
+      {
+        "cycle": 2,
+        "tick": 319,
+        "entry": false,
+        "maxStep": 0.043899141609033784
+      },
+      {
+        "cycle": 3,
+        "tick": 466,
+        "entry": true,
+        "maxStep": 0.08108640130829577
+      },
+      {
+        "cycle": 3,
+        "tick": 478,
+        "entry": false,
+        "maxStep": 0.043899141609033784
+      }
+    ],
+    "maxStepMetresPerTick": 0.22700182991104628,
+    "maxWorldRotationDegreesPerTick": 47.95104737902246,
+    "maxContactErrorMetres": 1.0440306501607453e-06,
+    "maxPelvisAssistanceMetres": 0.12795259
+  },
+  {
+    "remote": false,
+    "case": "run",
+    "gesture": "flick",
+    "role": "local",
+    "exit": 0,
+    "directory": ".godot\\pivot-416-final-headless\\local\\run-flick\\local",
+    "failures": [],
+    "boundaries": [
+      {
+        "cycle": 1,
+        "tick": 148,
+        "entry": true,
+        "maxStep": 0.2076338246778389
+      },
+      {
+        "cycle": 1,
+        "tick": 160,
+        "entry": false,
+        "maxStep": 0.06334583448382482
+      },
+      {
+        "cycle": 2,
+        "tick": 307,
+        "entry": true,
+        "maxStep": 0.2076338246778389
+      },
+      {
+        "cycle": 2,
+        "tick": 319,
+        "entry": false,
+        "maxStep": 0.06334583448382482
+      },
+      {
+        "cycle": 3,
+        "tick": 466,
+        "entry": true,
+        "maxStep": 0.2076338246778389
+      },
+      {
+        "cycle": 3,
+        "tick": 478,
+        "entry": false,
+        "maxStep": 0.06334583448382482
+      }
+    ],
+    "maxStepMetresPerTick": 0.323306109587892,
+    "maxWorldRotationDegreesPerTick": 48.357857299412295,
+    "maxContactErrorMetres": 5.656854249969065e-06,
+    "maxPelvisAssistanceMetres": 0.47647327
+  },
+  {
+    "remote": false,
+    "case": "run",
+    "gesture": "held",
+    "role": "local",
+    "exit": 0,
+    "directory": ".godot\\pivot-416-final-headless\\local\\run-held\\local",
+    "failures": [],
+    "boundaries": [
+      {
+        "cycle": 1,
+        "tick": 148,
+        "entry": true,
+        "maxStep": 0.2076338246778389
+      },
+      {
+        "cycle": 1,
+        "tick": 160,
+        "entry": false,
+        "maxStep": 0.06216339052056391
+      },
+      {
+        "cycle": 2,
+        "tick": 307,
+        "entry": true,
+        "maxStep": 0.2076338246778389
+      },
+      {
+        "cycle": 2,
+        "tick": 319,
+        "entry": false,
+        "maxStep": 0.06216339052056391
+      },
+      {
+        "cycle": 3,
+        "tick": 466,
+        "entry": true,
+        "maxStep": 0.2076338246778389
+      },
+      {
+        "cycle": 3,
+        "tick": 478,
+        "entry": false,
+        "maxStep": 0.06216339052056391
+      }
+    ],
+    "maxStepMetresPerTick": 0.323306109587892,
+    "maxWorldRotationDegreesPerTick": 48.61477802302205,
+    "maxContactErrorMetres": 5.656854249969065e-06,
+    "maxPelvisAssistanceMetres": 0.47647327
+  },
+  {
+    "remote": false,
+    "case": "left",
+    "gesture": "flick",
+    "role": "local",
+    "exit": 0,
+    "directory": ".godot\\pivot-416-final-headless\\local\\left-flick\\local",
+    "failures": [],
+    "boundaries": [
+      {
+        "cycle": 1,
+        "tick": 273,
+        "entry": true,
+        "maxStep": 0.21449394634334287
+      },
+      {
+        "cycle": 1,
+        "tick": 285,
+        "entry": false,
+        "maxStep": 0.07449002274240318
+      },
+      {
+        "cycle": 2,
+        "tick": 432,
+        "entry": true,
+        "maxStep": 0.21446178276392386
+      },
+      {
+        "cycle": 2,
+        "tick": 444,
+        "entry": false,
+        "maxStep": 0.07449504736350311
+      },
+      {
+        "cycle": 3,
+        "tick": 591,
+        "entry": true,
+        "maxStep": 0.21446178276392386
+      },
+      {
+        "cycle": 3,
+        "tick": 603,
+        "entry": false,
+        "maxStep": 0.07449504736350311
+      }
+    ],
+    "maxStepMetresPerTick": 0.22709975526269682,
+    "maxWorldRotationDegreesPerTick": 25.56007708980727,
+    "maxContactErrorMetres": 9.219544463880083e-07,
+    "maxPelvisAssistanceMetres": 0.06356589
+  },
+  {
+    "remote": false,
+    "case": "left",
+    "gesture": "held",
+    "role": "local",
+    "exit": 0,
+    "directory": ".godot\\pivot-416-final-headless\\local\\left-held\\local",
+    "failures": [],
+    "boundaries": [
+      {
+        "cycle": 1,
+        "tick": 273,
+        "entry": true,
+        "maxStep": 0.21449394634334287
+      },
+      {
+        "cycle": 1,
+        "tick": 285,
+        "entry": false,
+        "maxStep": 0.073131822677708
+      },
+      {
+        "cycle": 2,
+        "tick": 432,
+        "entry": true,
+        "maxStep": 0.21446178276392386
+      },
+      {
+        "cycle": 2,
+        "tick": 444,
+        "entry": false,
+        "maxStep": 0.07313762908469616
+      },
+      {
+        "cycle": 3,
+        "tick": 591,
+        "entry": true,
+        "maxStep": 0.21446178276392386
+      },
+      {
+        "cycle": 3,
+        "tick": 603,
+        "entry": false,
+        "maxStep": 0.07313762908469616
+      }
+    ],
+    "maxStepMetresPerTick": 0.22709975526269682,
+    "maxWorldRotationDegreesPerTick": 46.135304638132396,
+    "maxContactErrorMetres": 9.219544463880083e-07,
+    "maxPelvisAssistanceMetres": 0.06356589
+  },
+  {
+    "remote": false,
+    "case": "right",
+    "gesture": "flick",
+    "role": "local",
+    "exit": 0,
+    "directory": ".godot\\pivot-416-final-headless\\local\\right-flick\\local",
+    "failures": [],
+    "boundaries": [
+      {
+        "cycle": 1,
+        "tick": 193,
+        "entry": true,
+        "maxStep": 0.21452386843310436
+      },
+      {
+        "cycle": 1,
+        "tick": 205,
+        "entry": false,
+        "maxStep": 0.07503788733330274
+      },
+      {
+        "cycle": 2,
+        "tick": 352,
+        "entry": true,
+        "maxStep": 0.21449310763178572
+      },
+      {
+        "cycle": 2,
+        "tick": 364,
+        "entry": false,
+        "maxStep": 0.07503668791332721
+      },
+      {
+        "cycle": 3,
+        "tick": 511,
+        "entry": true,
+        "maxStep": 0.21449310763178572
+      },
+      {
+        "cycle": 3,
+        "tick": 523,
+        "entry": false,
+        "maxStep": 0.07503668791332721
+      }
+    ],
+    "maxStepMetresPerTick": 0.22264725520859224,
+    "maxWorldRotationDegreesPerTick": 25.7541637880609,
+    "maxContactErrorMetres": 1.0198039028785217e-06,
+    "maxPelvisAssistanceMetres": 0.03163912
+  },
+  {
+    "remote": false,
+    "case": "right",
+    "gesture": "held",
+    "role": "local",
+    "exit": 0,
+    "directory": ".godot\\pivot-416-final-headless\\local\\right-held\\local",
+    "failures": [],
+    "boundaries": [
+      {
+        "cycle": 1,
+        "tick": 193,
+        "entry": true,
+        "maxStep": 0.21452386843310436
+      },
+      {
+        "cycle": 1,
+        "tick": 205,
+        "entry": false,
+        "maxStep": 0.07930126097947904
+      },
+      {
+        "cycle": 2,
+        "tick": 352,
+        "entry": true,
+        "maxStep": 0.21449310763178572
+      },
+      {
+        "cycle": 2,
+        "tick": 364,
+        "entry": false,
+        "maxStep": 0.07930048236828097
+      },
+      {
+        "cycle": 3,
+        "tick": 511,
+        "entry": true,
+        "maxStep": 0.21449310763178572
+      },
+      {
+        "cycle": 3,
+        "tick": 523,
+        "entry": false,
+        "maxStep": 0.07930048236828097
+      }
+    ],
+    "maxStepMetresPerTick": 0.22264725520859224,
+    "maxWorldRotationDegreesPerTick": 46.13550768559581,
+    "maxContactErrorMetres": 1.0198039028785217e-06,
+    "maxPelvisAssistanceMetres": 0.03163912
+  },
+  {
+    "remote": false,
+    "case": "run",
+    "gesture": "forward",
+    "role": "local",
+    "exit": 0,
+    "directory": ".godot\\pivot-416-final-headless\\local\\run-forward\\local",
+    "failures": [],
+    "boundaries": [],
+    "maxStepMetresPerTick": 0.38294438147769744,
+    "maxWorldRotationDegreesPerTick": 46.79089706327231,
+    "maxContactErrorMetres": 0.0,
+    "maxPelvisAssistanceMetres": 0.0
+  },
+  {
+    "remote": true,
+    "case": "idle",
+    "gesture": "flick",
+    "role": "server",
+    "exit": 0,
+    "directory": ".godot\\pivot-416-final-headless\\remote\\idle-flick\\server",
+    "failures": [],
+    "boundaries": [
+      {
+        "cycle": 1,
+        "tick": 208,
+        "entry": true,
+        "maxStep": 0.08108640130829577
+      },
+      {
+        "cycle": 1,
+        "tick": 220,
+        "entry": false,
+        "maxStep": 0.03140079034053108
+      },
+      {
+        "cycle": 2,
+        "tick": 370,
+        "entry": true,
+        "maxStep": 0.08108640130829577
+      },
+      {
+        "cycle": 2,
+        "tick": 382,
+        "entry": false,
+        "maxStep": 0.03140079034053108
+      },
+      {
+        "cycle": 3,
+        "tick": 532,
+        "entry": true,
+        "maxStep": 0.08108640130829577
+      },
+      {
+        "cycle": 3,
+        "tick": 544,
+        "entry": false,
+        "maxStep": 0.03140079034053108
+      }
+    ],
+    "maxStepMetresPerTick": 0.09299691861573967,
+    "maxWorldRotationDegreesPerTick": 18.370649751280084,
+    "maxContactErrorMetres": 1.0440306501607453e-06,
+    "maxPelvisAssistanceMetres": 0.12795259
+  },
+  {
+    "remote": true,
+    "case": "idle",
+    "gesture": "flick",
+    "role": "client",
+    "exit": 0,
+    "directory": ".godot\\pivot-416-final-headless\\remote\\idle-flick\\client",
+    "failures": [],
+    "boundaries": [
+      {
+        "cycle": 1,
+        "tick": 172,
+        "entry": true,
+        "maxStep": 0.08108640130829577
+      },
+      {
+        "cycle": 1,
+        "tick": 184,
+        "entry": false,
+        "maxStep": 0.03140079034053108
+      },
+      {
+        "cycle": 2,
+        "tick": 334,
+        "entry": true,
+        "maxStep": 0.08108640130829577
+      },
+      {
+        "cycle": 2,
+        "tick": 346,
+        "entry": false,
+        "maxStep": 0.03140079034053108
+      },
+      {
+        "cycle": 3,
+        "tick": 499,
+        "entry": true,
+        "maxStep": 0.08108640130829577
+      },
+      {
+        "cycle": 3,
+        "tick": 511,
+        "entry": false,
+        "maxStep": 0.03140079034053108
+      }
+    ],
+    "maxStepMetresPerTick": 0.09299691861573967,
+    "maxWorldRotationDegreesPerTick": 18.370649751280084,
+    "maxContactErrorMetres": 1.0440306501607453e-06,
+    "maxPelvisAssistanceMetres": 0.12795259
+  },
+  {
+    "remote": true,
+    "case": "idle",
+    "gesture": "held",
+    "role": "server",
+    "exit": 0,
+    "directory": ".godot\\pivot-416-final-headless\\remote\\idle-held\\server",
+    "failures": [],
+    "boundaries": [
+      {
+        "cycle": 1,
+        "tick": 209,
+        "entry": true,
+        "maxStep": 0.08108640130829577
+      },
+      {
+        "cycle": 1,
+        "tick": 221,
+        "entry": false,
+        "maxStep": 0.043899141609033784
+      },
+      {
+        "cycle": 2,
+        "tick": 371,
+        "entry": true,
+        "maxStep": 0.08108640130829577
+      },
+      {
+        "cycle": 2,
+        "tick": 383,
+        "entry": false,
+        "maxStep": 0.043899141609033784
+      },
+      {
+        "cycle": 3,
+        "tick": 533,
+        "entry": true,
+        "maxStep": 0.08108640130829577
+      },
+      {
+        "cycle": 3,
+        "tick": 545,
+        "entry": false,
+        "maxStep": 0.043899141609033784
+      }
+    ],
+    "maxStepMetresPerTick": 0.22700182991104628,
+    "maxWorldRotationDegreesPerTick": 47.95104737902246,
+    "maxContactErrorMetres": 1.0440306501607453e-06,
+    "maxPelvisAssistanceMetres": 0.12795259
+  },
+  {
+    "remote": true,
+    "case": "idle",
+    "gesture": "held",
+    "role": "client",
+    "exit": 0,
+    "directory": ".godot\\pivot-416-final-headless\\remote\\idle-held\\client",
+    "failures": [],
+    "boundaries": [
+      {
+        "cycle": 1,
+        "tick": 171,
+        "entry": true,
+        "maxStep": 0.08108640130829577
+      },
+      {
+        "cycle": 1,
+        "tick": 183,
+        "entry": false,
+        "maxStep": 0.043899141609033784
+      },
+      {
+        "cycle": 2,
+        "tick": 333,
+        "entry": true,
+        "maxStep": 0.08108640130829577
+      },
+      {
+        "cycle": 2,
+        "tick": 345,
+        "entry": false,
+        "maxStep": 0.043899141609033784
+      },
+      {
+        "cycle": 3,
+        "tick": 500,
+        "entry": true,
+        "maxStep": 0.08108640130829577
+      },
+      {
+        "cycle": 3,
+        "tick": 512,
+        "entry": false,
+        "maxStep": 0.043899141609033784
+      }
+    ],
+    "maxStepMetresPerTick": 0.22700182991104628,
+    "maxWorldRotationDegreesPerTick": 47.95104737902246,
+    "maxContactErrorMetres": 1.0440306501607453e-06,
+    "maxPelvisAssistanceMetres": 0.12795259
+  },
+  {
+    "remote": true,
+    "case": "run",
+    "gesture": "flick",
+    "role": "server",
+    "exit": 0,
+    "directory": ".godot\\pivot-416-final-headless\\remote\\run-flick\\server",
+    "failures": [],
+    "boundaries": [
+      {
+        "cycle": 1,
+        "tick": 213,
+        "entry": true,
+        "maxStep": 0.2076338246778389
+      },
+      {
+        "cycle": 1,
+        "tick": 225,
+        "entry": false,
+        "maxStep": 0.06334583448382482
+      },
+      {
+        "cycle": 2,
+        "tick": 375,
+        "entry": true,
+        "maxStep": 0.2076338246778389
+      },
+      {
+        "cycle": 2,
+        "tick": 387,
+        "entry": false,
+        "maxStep": 0.06334583448382482
+      },
+      {
+        "cycle": 3,
+        "tick": 537,
+        "entry": true,
+        "maxStep": 0.2076338246778389
+      },
+      {
+        "cycle": 3,
+        "tick": 549,
+        "entry": false,
+        "maxStep": 0.06334583448382482
+      }
+    ],
+    "maxStepMetresPerTick": 0.323306109587892,
+    "maxWorldRotationDegreesPerTick": 48.357857299412295,
+    "maxContactErrorMetres": 5.656854249969065e-06,
+    "maxPelvisAssistanceMetres": 0.47647327
+  },
+  {
+    "remote": true,
+    "case": "run",
+    "gesture": "flick",
+    "role": "client",
+    "exit": 0,
+    "directory": ".godot\\pivot-416-final-headless\\remote\\run-flick\\client",
+    "failures": [],
+    "boundaries": [
+      {
+        "cycle": 1,
+        "tick": 173,
+        "entry": true,
+        "maxStep": 0.2076338246778389
+      },
+      {
+        "cycle": 1,
+        "tick": 185,
+        "entry": false,
+        "maxStep": 0.06334583448382482
+      },
+      {
+        "cycle": 2,
+        "tick": 335,
+        "entry": true,
+        "maxStep": 0.2076338246778389
+      },
+      {
+        "cycle": 2,
+        "tick": 347,
+        "entry": false,
+        "maxStep": 0.06334583448382482
+      },
+      {
+        "cycle": 3,
+        "tick": 497,
+        "entry": true,
+        "maxStep": 0.2076338246778389
+      },
+      {
+        "cycle": 3,
+        "tick": 509,
+        "entry": false,
+        "maxStep": 0.06334583448382482
+      }
+    ],
+    "maxStepMetresPerTick": 0.323306109587892,
+    "maxWorldRotationDegreesPerTick": 48.357857299412295,
+    "maxContactErrorMetres": 5.656854249969065e-06,
+    "maxPelvisAssistanceMetres": 0.47647327
+  },
+  {
+    "remote": true,
+    "case": "run",
+    "gesture": "held",
+    "role": "server",
+    "exit": 0,
+    "directory": ".godot\\pivot-416-final-headless\\remote\\run-held\\server",
+    "failures": [],
+    "boundaries": [
+      {
+        "cycle": 1,
+        "tick": 211,
+        "entry": true,
+        "maxStep": 0.2076338246778389
+      },
+      {
+        "cycle": 1,
+        "tick": 223,
+        "entry": false,
+        "maxStep": 0.06216339052056391
+      },
+      {
+        "cycle": 2,
+        "tick": 373,
+        "entry": true,
+        "maxStep": 0.2076338246778389
+      },
+      {
+        "cycle": 2,
+        "tick": 385,
+        "entry": false,
+        "maxStep": 0.06216339052056391
+      },
+      {
+        "cycle": 3,
+        "tick": 535,
+        "entry": true,
+        "maxStep": 0.2076338246778389
+      },
+      {
+        "cycle": 3,
+        "tick": 547,
+        "entry": false,
+        "maxStep": 0.06216339052056391
+      }
+    ],
+    "maxStepMetresPerTick": 0.323306109587892,
+    "maxWorldRotationDegreesPerTick": 48.61477802302205,
+    "maxContactErrorMetres": 5.656854249969065e-06,
+    "maxPelvisAssistanceMetres": 0.47647327
+  },
+  {
+    "remote": true,
+    "case": "run",
+    "gesture": "held",
+    "role": "client",
+    "exit": 0,
+    "directory": ".godot\\pivot-416-final-headless\\remote\\run-held\\client",
+    "failures": [],
+    "boundaries": [
+      {
+        "cycle": 1,
+        "tick": 173,
+        "entry": true,
+        "maxStep": 0.2076338246778389
+      },
+      {
+        "cycle": 1,
+        "tick": 185,
+        "entry": false,
+        "maxStep": 0.06216339052056391
+      },
+      {
+        "cycle": 2,
+        "tick": 335,
+        "entry": true,
+        "maxStep": 0.2076338246778389
+      },
+      {
+        "cycle": 2,
+        "tick": 347,
+        "entry": false,
+        "maxStep": 0.06216339052056391
+      },
+      {
+        "cycle": 3,
+        "tick": 498,
+        "entry": true,
+        "maxStep": 0.2076338246778389
+      },
+      {
+        "cycle": 3,
+        "tick": 510,
+        "entry": false,
+        "maxStep": 0.06216339052056391
+      }
+    ],
+    "maxStepMetresPerTick": 0.323306109587892,
+    "maxWorldRotationDegreesPerTick": 48.61477802302205,
+    "maxContactErrorMetres": 5.656854249969065e-06,
+    "maxPelvisAssistanceMetres": 0.47647327
+  },
+  {
+    "remote": true,
+    "case": "left",
+    "gesture": "flick",
+    "role": "server",
+    "exit": 0,
+    "directory": ".godot\\pivot-416-final-headless\\remote\\left-flick\\server",
+    "failures": [],
+    "boundaries": [
+      {
+        "cycle": 1,
+        "tick": 336,
+        "entry": true,
+        "maxStep": 0.21449394634334287
+      },
+      {
+        "cycle": 1,
+        "tick": 348,
+        "entry": false,
+        "maxStep": 0.07449002274240318
+      },
+      {
+        "cycle": 2,
+        "tick": 497,
+        "entry": true,
+        "maxStep": 0.21446178276392386
+      },
+      {
+        "cycle": 2,
+        "tick": 509,
+        "entry": false,
+        "maxStep": 0.07449504736350311
+      },
+      {
+        "cycle": 3,
+        "tick": 659,
+        "entry": true,
+        "maxStep": 0.21446178276392386
+      },
+      {
+        "cycle": 3,
+        "tick": 671,
+        "entry": false,
+        "maxStep": 0.07449504736350311
+      }
+    ],
+    "maxStepMetresPerTick": 0.22709975526269682,
+    "maxWorldRotationDegreesPerTick": 25.56007708980727,
+    "maxContactErrorMetres": 9.219544463880083e-07,
+    "maxPelvisAssistanceMetres": 0.06356589
+  },
+  {
+    "remote": true,
+    "case": "left",
+    "gesture": "flick",
+    "role": "client",
+    "exit": 0,
+    "directory": ".godot\\pivot-416-final-headless\\remote\\left-flick\\client",
+    "failures": [],
+    "boundaries": [
+      {
+        "cycle": 1,
+        "tick": 297,
+        "entry": true,
+        "maxStep": 0.21449394634334287
+      },
+      {
+        "cycle": 1,
+        "tick": 309,
+        "entry": false,
+        "maxStep": 0.07449002274240318
+      },
+      {
+        "cycle": 2,
+        "tick": 458,
+        "entry": true,
+        "maxStep": 0.21446178276392386
+      },
+      {
+        "cycle": 2,
+        "tick": 470,
+        "entry": false,
+        "maxStep": 0.07449504736350311
+      },
+      {
+        "cycle": 3,
+        "tick": 625,
+        "entry": true,
+        "maxStep": 0.21446178276392386
+      },
+      {
+        "cycle": 3,
+        "tick": 637,
+        "entry": false,
+        "maxStep": 0.07449504736350311
+      }
+    ],
+    "maxStepMetresPerTick": 0.22709975526269682,
+    "maxWorldRotationDegreesPerTick": 25.56007708980727,
+    "maxContactErrorMetres": 9.219544463880083e-07,
+    "maxPelvisAssistanceMetres": 0.06356589
+  },
+  {
+    "remote": true,
+    "case": "left",
+    "gesture": "held",
+    "role": "server",
+    "exit": 0,
+    "directory": ".godot\\pivot-416-final-headless\\remote\\left-held\\server",
+    "failures": [],
+    "boundaries": [
+      {
+        "cycle": 1,
+        "tick": 332,
+        "entry": true,
+        "maxStep": 0.21449394634334287
+      },
+      {
+        "cycle": 1,
+        "tick": 344,
+        "entry": false,
+        "maxStep": 0.073131822677708
+      },
+      {
+        "cycle": 2,
+        "tick": 494,
+        "entry": true,
+        "maxStep": 0.21446178276392386
+      },
+      {
+        "cycle": 2,
+        "tick": 506,
+        "entry": false,
+        "maxStep": 0.07313762908469616
+      },
+      {
+        "cycle": 3,
+        "tick": 655,
+        "entry": true,
+        "maxStep": 0.21446178276392386
+      },
+      {
+        "cycle": 3,
+        "tick": 667,
+        "entry": false,
+        "maxStep": 0.07313762908469616
+      }
+    ],
+    "maxStepMetresPerTick": 0.22709975526269682,
+    "maxWorldRotationDegreesPerTick": 46.135304638132396,
+    "maxContactErrorMetres": 9.219544463880083e-07,
+    "maxPelvisAssistanceMetres": 0.06356589
+  },
+  {
+    "remote": true,
+    "case": "left",
+    "gesture": "held",
+    "role": "client",
+    "exit": 0,
+    "directory": ".godot\\pivot-416-final-headless\\remote\\left-held\\client",
+    "failures": [],
+    "boundaries": [
+      {
+        "cycle": 1,
+        "tick": 296,
+        "entry": true,
+        "maxStep": 0.21449394634334287
+      },
+      {
+        "cycle": 1,
+        "tick": 308,
+        "entry": false,
+        "maxStep": 0.073131822677708
+      },
+      {
+        "cycle": 2,
+        "tick": 458,
+        "entry": true,
+        "maxStep": 0.21446178276392386
+      },
+      {
+        "cycle": 2,
+        "tick": 470,
+        "entry": false,
+        "maxStep": 0.07313762908469616
+      },
+      {
+        "cycle": 3,
+        "tick": 619,
+        "entry": true,
+        "maxStep": 0.21446178276392386
+      },
+      {
+        "cycle": 3,
+        "tick": 632,
+        "entry": false,
+        "maxStep": 0.07313762908469616
+      }
+    ],
+    "maxStepMetresPerTick": 0.22709975526269682,
+    "maxWorldRotationDegreesPerTick": 46.135304638132396,
+    "maxContactErrorMetres": 9.219544463880083e-07,
+    "maxPelvisAssistanceMetres": 0.06356589
+  },
+  {
+    "remote": true,
+    "case": "right",
+    "gesture": "flick",
+    "role": "server",
+    "exit": 0,
+    "directory": ".godot\\pivot-416-final-headless\\remote\\right-flick\\server",
+    "failures": [],
+    "boundaries": [
+      {
+        "cycle": 1,
+        "tick": 252,
+        "entry": true,
+        "maxStep": 0.21452386843310436
+      },
+      {
+        "cycle": 1,
+        "tick": 264,
+        "entry": false,
+        "maxStep": 0.07503788733330274
+      },
+      {
+        "cycle": 2,
+        "tick": 414,
+        "entry": true,
+        "maxStep": 0.21449310763178572
+      },
+      {
+        "cycle": 2,
+        "tick": 426,
+        "entry": false,
+        "maxStep": 0.07503668791332721
+      },
+      {
+        "cycle": 3,
+        "tick": 576,
+        "entry": true,
+        "maxStep": 0.21449310763178572
+      },
+      {
+        "cycle": 3,
+        "tick": 588,
+        "entry": false,
+        "maxStep": 0.07503668791332721
+      }
+    ],
+    "maxStepMetresPerTick": 0.22264725520859224,
+    "maxWorldRotationDegreesPerTick": 25.7541637880609,
+    "maxContactErrorMetres": 1.0198039028785217e-06,
+    "maxPelvisAssistanceMetres": 0.03163912
+  },
+  {
+    "remote": true,
+    "case": "right",
+    "gesture": "flick",
+    "role": "client",
+    "exit": 0,
+    "directory": ".godot\\pivot-416-final-headless\\remote\\right-flick\\client",
+    "failures": [],
+    "boundaries": [
+      {
+        "cycle": 1,
+        "tick": 218,
+        "entry": true,
+        "maxStep": 0.21452386843310436
+      },
+      {
+        "cycle": 1,
+        "tick": 230,
+        "entry": false,
+        "maxStep": 0.07503788733330274
+      },
+      {
+        "cycle": 2,
+        "tick": 380,
+        "entry": true,
+        "maxStep": 0.21449310763178572
+      },
+      {
+        "cycle": 2,
+        "tick": 392,
+        "entry": false,
+        "maxStep": 0.07503668791332721
+      },
+      {
+        "cycle": 3,
+        "tick": 542,
+        "entry": true,
+        "maxStep": 0.21449310763178572
+      },
+      {
+        "cycle": 3,
+        "tick": 554,
+        "entry": false,
+        "maxStep": 0.07503668791332721
+      }
+    ],
+    "maxStepMetresPerTick": 0.22264725520859224,
+    "maxWorldRotationDegreesPerTick": 25.7541637880609,
+    "maxContactErrorMetres": 1.0198039028785217e-06,
+    "maxPelvisAssistanceMetres": 0.03163912
+  },
+  {
+    "remote": true,
+    "case": "right",
+    "gesture": "held",
+    "role": "server",
+    "exit": 0,
+    "directory": ".godot\\pivot-416-final-headless\\remote\\right-held\\server",
+    "failures": [],
+    "boundaries": [
+      {
+        "cycle": 1,
+        "tick": 253,
+        "entry": true,
+        "maxStep": 0.21452386843310436
+      },
+      {
+        "cycle": 1,
+        "tick": 265,
+        "entry": false,
+        "maxStep": 0.07930126097947904
+      },
+      {
+        "cycle": 2,
+        "tick": 414,
+        "entry": true,
+        "maxStep": 0.21449310763178572
+      },
+      {
+        "cycle": 2,
+        "tick": 426,
+        "entry": false,
+        "maxStep": 0.07930048236828097
+      },
+      {
+        "cycle": 3,
+        "tick": 575,
+        "entry": true,
+        "maxStep": 0.21449310763178572
+      },
+      {
+        "cycle": 3,
+        "tick": 587,
+        "entry": false,
+        "maxStep": 0.07930048236828097
+      }
+    ],
+    "maxStepMetresPerTick": 0.22264725520859224,
+    "maxWorldRotationDegreesPerTick": 46.13550768559581,
+    "maxContactErrorMetres": 1.0198039028785217e-06,
+    "maxPelvisAssistanceMetres": 0.03163912
+  },
+  {
+    "remote": true,
+    "case": "right",
+    "gesture": "held",
+    "role": "client",
+    "exit": 0,
+    "directory": ".godot\\pivot-416-final-headless\\remote\\right-held\\client",
+    "failures": [],
+    "boundaries": [
+      {
+        "cycle": 1,
+        "tick": 219,
+        "entry": true,
+        "maxStep": 0.21452386843310436
+      },
+      {
+        "cycle": 1,
+        "tick": 231,
+        "entry": false,
+        "maxStep": 0.07930126097947904
+      },
+      {
+        "cycle": 2,
+        "tick": 380,
+        "entry": true,
+        "maxStep": 0.21449310763178572
+      },
+      {
+        "cycle": 2,
+        "tick": 392,
+        "entry": false,
+        "maxStep": 0.07930048236828097
+      },
+      {
+        "cycle": 3,
+        "tick": 541,
+        "entry": true,
+        "maxStep": 0.21449310763178572
+      },
+      {
+        "cycle": 3,
+        "tick": 553,
+        "entry": false,
+        "maxStep": 0.07930048236828097
+      }
+    ],
+    "maxStepMetresPerTick": 0.22264725520859224,
+    "maxWorldRotationDegreesPerTick": 46.13550768559581,
+    "maxContactErrorMetres": 1.0198039028785217e-06,
+    "maxPelvisAssistanceMetres": 0.03163912
+  },
+  {
+    "remote": true,
+    "case": "run",
+    "gesture": "forward",
+    "role": "server",
+    "exit": 0,
+    "directory": ".godot\\pivot-416-final-headless\\remote\\run-forward\\server",
+    "failures": [],
+    "boundaries": [],
+    "maxStepMetresPerTick": 0.38290466145151497,
+    "maxWorldRotationDegreesPerTick": 46.79089706327231,
+    "maxContactErrorMetres": 0.0,
+    "maxPelvisAssistanceMetres": 0.0
+  },
+  {
+    "remote": true,
+    "case": "run",
+    "gesture": "forward",
+    "role": "client",
+    "exit": 0,
+    "directory": ".godot\\pivot-416-final-headless\\remote\\run-forward\\client",
+    "failures": [],
+    "boundaries": [],
+    "maxStepMetresPerTick": 0.38290466145151497,
+    "maxWorldRotationDegreesPerTick": 46.79089706327231,
+    "maxContactErrorMetres": 0.0,
+    "maxPelvisAssistanceMetres": 0.0
+  }
+]
