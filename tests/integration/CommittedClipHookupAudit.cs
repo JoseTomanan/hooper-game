@@ -39,8 +39,9 @@ public partial class CommittedClipHookupAudit : Node
             string requested = HarnessArgs.ReadArg(OS.GetCmdlineUserArgs(), "--audit-output", ".godot/committed-clip-hookup-audit.json");
             _commit = HarnessArgs.ReadArg(OS.GetCmdlineUserArgs(), "--audit-commit", "unknown");
             string allowed = Path.GetFullPath(ProjectSettings.GlobalizePath("res://.godot")) + Path.DirectorySeparatorChar;
-            _output = Path.GetFullPath(ProjectSettings.GlobalizePath(requested.StartsWith("res://", StringComparison.Ordinal) ? requested : "res://" + requested));
-            if (!_output.StartsWith(allowed, StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("--audit-output must be a file below .godot");
+            string candidate = Path.GetFullPath(ProjectSettings.GlobalizePath(requested.StartsWith("res://", StringComparison.Ordinal) ? requested : "res://" + requested));
+            if (!candidate.StartsWith(allowed, StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("--audit-output must be a file below .godot");
+            _output = candidate;
 
             var player = GD.Load<PackedScene>("res://scenes/Player.tscn").Instantiate<PlayerController>();
             player.Name = "1";

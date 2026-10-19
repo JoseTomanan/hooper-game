@@ -15,7 +15,8 @@ def analyze(directory):
     rows = [json.loads(line) for line in (directory / 'trace.jsonl').read_text(encoding='utf-8-sig').splitlines()]
     measured = [r for r in rows if r['measuring']]
     move = manifest['move']
-    action = [r for r in measured if r['poseDisplayMove'] == move and r['poseDisplayPhase'] != 'Inactive']
+    action = ([r for r in measured if r['poseDisplayPhase'] == 'Inactive'] if move == 'idle'
+              else [r for r in measured if r['poseDisplayMove'] == move and r['poseDisplayPhase'] != 'Inactive'])
     phases = {}
     for row in action:
         phase = row['poseDisplayPhase']
@@ -36,7 +37,7 @@ def analyze(directory):
         excursions[bone] = max((distance(a, b) for a in points for b in points), default=0)
     sweep = [r for r in action if r['sweepActive']]
     return dict(directory=str(directory), move=move, role=manifest['role'], origin=manifest['origin'], motion=manifest['motion'],
-                result=manifest['result'], completedCycles=manifest['completedCycles'], measuringSamples=len(measured),
+                result=manifest['result'], completedCycles=manifest['completedCycles'], measuringSamples=len(measured), actionSamples=len(action),
                 phases=phases, bodySpaceMaximumExcursionMetres=excursions,
                 sweepSamples=len(sweep), behindBodySweepSamples=sum(body_position(r, r['ball'])[2] > 0 for r in sweep),
                 poseFrameMismatches=sum(not r['poseFrameMatches'] for r in measured),
