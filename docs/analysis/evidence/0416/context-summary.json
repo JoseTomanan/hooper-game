@@ -1,0 +1,23 @@
+{
+  "failures": [],
+  "ownerReset": {
+    "rowsFirst": 312,
+    "rowsSecond": 312,
+    "bonePairs": 20280,
+    "maxWorldPositionErrorMetres": 0.0,
+    "maxLocalRotationAngleDegrees": 2.4148365394514667e-06,
+    "maxHemisphereQuaternionComponentError": 0.0,
+    "resetEvents": 3,
+    "differentStateFields": []
+  },
+  "protectionHandoff": {
+    "rowsFirst": 15,
+    "rowsSecond": 15,
+    "bonePairs": 975,
+    "maxWorldPositionErrorMetres": 0.0,
+    "maxLocalRotationAngleDegrees": 2.4148365394514667e-06,
+    "maxHemisphereQuaternionComponentError": 0.0
+  },
+  "positionToleranceMetres": 1e-05,
+  "rotationToleranceDegrees": 0.1
+}
