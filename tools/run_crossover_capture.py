@@ -27,7 +27,7 @@ def command(args, directory, role, origin, motion, count):
     elif args.compatibility:
         result += ["--rendering-method", "gl_compatibility", "--rendering-driver", "opengl3"]
     result += [SCENE, "--", "--capture-output=" + str(directory), "--capture-role=" + role,
-               "--capture-origin=" + origin, "--capture-motion=" + motion, "--capture-count=" + str(count),
+               "--capture-move=" + args.move, "--capture-origin=" + origin, "--capture-motion=" + motion, "--capture-count=" + str(count),
                "--capture-commit=" + args.commit, "--capture-port=" + str(args.port)]
     if args.headless or role == "server":
         result.append("--capture-images=false")
@@ -110,6 +110,7 @@ def main():
     parser.add_argument("--godot", default=os.environ.get("GODOT", "godot"))
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--commit", required=True)
+    parser.add_argument("--move", choices=("crossover", "behindtheback"), default="crossover")
     parser.add_argument("--remote", action="store_true")
     parser.add_argument("--headless", action="store_true")
     parser.add_argument("--disable-pose", action="store_true", help="negative control: disable the production pose adapter")
