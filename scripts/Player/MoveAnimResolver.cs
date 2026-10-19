@@ -157,17 +157,11 @@ public static class MoveAnimResolver
     /// lands (#311 removed drivegather from it; #310 removed spin, and #307
     /// removed hesitation before that).
     ///
-    /// That fallback is a SAFETY NET, not a destination. It used to be
-    /// described here as a settled placeholder-art decision; issue #296
-    /// established it is an active defect for any move that keeps it, because
-    /// the shared states play <c>locomotion/idle</c> for BOTH Startup and
-    /// Recovery (pixel-identical, so an opponent cannot tell "committing" from
-    /// "in the punish window") and a looping <c>locomotion/run</c> for Active —
-    /// an outright false read, and the ADR-0003 primary anti-goal surfacing in
-    /// the display layer. #276 (batch 1) and #302 (batch 2) are migrating moves
-    /// OUT of it one at a time, so this table GROWS and the fallback set
-    /// shrinks. ADR-0020's low-spec fidelity ceiling caps how much clip work
-    /// each move deserves; it never argued for leaving a move unclipped.
+    /// The fallback is a safety net for unknown move IDs. #296's generic clip
+    /// repair shipped: the bare phase states now use the authored one-shot
+    /// locomotion/genericstartup, genericactive and genericrecovery resources.
+    /// All currently shipped committed moves have explicit per-move bindings;
+    /// the synthetic unknown-move harness deliberately exercises the safety net.
     ///
     /// Rebound is intentionally absent too: it isn't a committed move (no
     /// MovePhase arc), so it never reaches this table at all.
