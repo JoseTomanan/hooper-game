@@ -50,7 +50,7 @@ public partial class CrossoverContinuityCapture : Node
     private Dictionary<string, float[]> _finalBones = new();
     private Dictionary<string, float[]> _finalBoneRotations = new();
     private ulong _posePhysics, _poseRender;
-    private string _appliedAnimation = "", _appliedFadingFrom = "";
+    private string _appliedAnimation = "", _appliedFadingFrom = "", _appliedClip = "";
     private double _appliedPlaybackTime, _appliedFadingTime;
     private string _poseDisplayMove = "", _poseDisplayPhase = "Inactive", _poseDisplayHand = "";
     private int _poseDisplayFrame;
@@ -80,7 +80,7 @@ public partial class CrossoverContinuityCapture : Node
         _presentationDelayTicks = int.Parse(Read("--capture-presentation-delay-ticks", "0"));
         _maxPhysicsGap = int.Parse(Read("--capture-max-physics-gap", _role == "client" ? "2" : "1"));
         _output = Read("--capture-output", "");
-        if (!new[] { "crossover", "behindtheback" }.Contains(_move) || _output.Length == 0 || !new[] { "local", "server", "client" }.Contains(_role) ||
+        if (!new[] { "crossover", "behindtheback", "hesitation", "stepback", "idle" }.Contains(_move) || _output.Length == 0 || !new[] { "local", "server", "client" }.Contains(_role) ||
             !new[] { "stationary", "moving" }.Contains(_motion) || !new[] { "Left", "Right" }.Contains(_origin) ||
             (_count != 1 && _count != 3) || !new[] { "none", "early", "late" }.Contains(_loseBall) || (_loseBall != "none" && (_role == "local" || _count != 1)) || (_holdMovement && (_motion != "moving" || _count != 1)) || _delayMs < 0 || _delayMs > 200 || (_delayMs > 0 && _role != "server") || (_presentationDelayTicks != 0 && (_presentationDelayTicks != 6 || _role != "client" || _count != 1)) || _maxPhysicsGap < 1 || _maxPhysicsGap > 2) { Finish("invalid capture arguments"); return; }
         _output = ProjectSettings.GlobalizePath(_output);
@@ -214,7 +214,7 @@ public partial class CrossoverContinuityCapture : Node
         if (elapsed == 25) SetInput("move_forward", false);
         if (elapsed < 60 || (!_measuring && _ball.State != BallState.Dribbling)) return;
         if (_pulseTick >= 0 && _tick == _pulseTick + 8)
-        { SetInput("aim_left", false); SetInput("aim_right", false); }
+        { SetInput("aim_left", false); SetInput("aim_right", false); SetInput("aim_down", false); SetInput("move_size_up", false); }
         if (!_measuring)
         {
             if (player.HandSide.ToString() != _origin && !_preparing)
@@ -298,9 +298,11 @@ public partial class CrossoverContinuityCapture : Node
     private void Pulse(PlayerController player)
     {
         _pulseTick = _tick;
-        if (_move == "behindtheback" && _measuring) SetInput("move_size_up", true);
-        _expectedHand = player.HandSide == HandSide.Right ? "Left" : "Right";
-        SetInput(_expectedHand == "Left" ? "aim_left" : "aim_right", true);
+        if (_measuring && _move == "idle") { _expectedHand = player.HandSide.ToString(); _inCycle = true; return; }
+        if (_measuring && _move is "behindtheback" or "hesitation") SetInput("move_size_up", true);
+        bool swap = !_measuring || _move is "crossover" or "behindtheback";
+        _expectedHand = swap ? (player.HandSide == HandSide.Right ? "Left" : "Right") : player.HandSide.ToString();
+        SetInput(_measuring && _move == "stepback" ? "aim_down" : _expectedHand == "Left" ? "aim_left" : "aim_right", true);
     }
 
     private void ObserveCycle(PlayerController player)
@@ -327,17 +329,21 @@ public partial class CrossoverContinuityCapture : Node
         {
             _inCycle = true;
             // Inferred from Startup's current hand; remote observation may first see Active.
-            if (_role == "client") _expectedHand = player.DisplayMove().phase == MovePhase.Startup
+            if (_role == "client") _expectedHand = _move is "hesitation" or "stepback" ? player.DisplayHandSide.ToString() : player.DisplayMove().phase == MovePhase.Startup
                 ? (player.DisplayHandSide == HandSide.Right ? "Left" : "Right") : player.DisplayHandSide.ToString();
             float entrySpeed = new Vector2(_lastInactiveVelocity.X, _lastInactiveVelocity.Z).Length();
             Event("recognized-" + _move, $"destination={_expectedHand}; entrySpeed={entrySpeed:R}; entryHeading={_lastInactiveHeading:R}; observedStartupSpeed={player.DisplayVelocity.Length():R}; entrySample=last-inactive-physics-tick; entrySampleTick={_lastInactiveTick}");
             if (_role != "client" && _motion == "moving" && entrySpeed < 5.9f)
             { Finish($"moving entry speed {entrySpeed:R} below 5.9"); return; }
         }
-        bool expectedNeutral = _loseBall == "none"
+        if (_role == "client" && _move == "idle" && !_inCycle && _completed == 0)
+        { _inCycle = true; _pulseTick = _tick; _expectedHand = player.DisplayHandSide.ToString(); }
+        bool expectedNeutral = _move == "stepback"
+            ? _ball.State == BallState.Held && player.ActiveAnimNodeForHarness == "Held" + _expectedHand
+            : _loseBall == "none"
             ? player.DisplayHandSide.ToString() == _expectedHand && player.ActiveAnimNodeForHarness == "Dribble" + _expectedHand
             : _ballLost && _sawLossRecovery && !player.DisplayDribbling() && player.ActiveAnimNodeForHarness == "Locomotion";
-        if (_inCycle && player.DisplayMove().phase == MovePhase.Inactive && expectedNeutral && !_ball.SweepActiveForHarness)
+        if (_inCycle && (_move != "idle" || _tick - _pulseTick >= 20) && player.DisplayMove().phase == MovePhase.Inactive && expectedNeutral && !_ball.SweepActiveForHarness)
         {
             _inCycle = false; _completed++; _neutralTick = _tick;
             Event(_loseBall == "none" ? "destination-dribble" : "destination-locomotion-after-loss", "cycle=" + _completed);
@@ -448,7 +454,7 @@ public partial class CrossoverContinuityCapture : Node
             presentationHolding = _ball.PresentationHolding, presentationResyncCount = _ball.PresentationResyncCount,
             crossoverPoseApplied = _poseApplied, crossoverPoseMaxReachError = _poseMaxReachError,
             crossoverPoseClampCount = _poseClampCount, crossoverPoseSampleFrame = _poseSampleFrame, crossoverPoseSamplePhysicsFrame = _posePhysics,
-            animationCallback = p.ContinuityAnimationCallback, playbackNodeAtPoseSnapshot = _appliedAnimation, playbackTimeAtPoseSnapshot = _appliedPlaybackTime,
+            animationCallback = p.ContinuityAnimationCallback, playbackNodeAtPoseSnapshot = _appliedAnimation, resolvedClipAtPoseSnapshot = _appliedClip, playbackTimeAtPoseSnapshot = _appliedPlaybackTime,
             fadingFromAtPoseSnapshot = _appliedFadingFrom, fadingTimeAtPoseSnapshot = _appliedFadingTime,
             playbackSnapshotMeaning = "playback state observed at skeleton signal; does not certify which clip contributed this pose", poseRotations = _finalBoneRotations, posePhysicsFrame = _posePhysics, poseRenderFrame = _poseRender, bones
         };
@@ -490,6 +496,7 @@ public partial class CrossoverContinuityCapture : Node
             _poseClampCount = metrics.ClampCount;
             _poseSampleFrame = metrics.SampleFrame;
             _appliedAnimation = player.ActiveAnimNodeForHarness;
+            _appliedClip = ResolvedClip(player);
             _appliedPlaybackTime = player.ContinuityPlaybackTime;
             _appliedFadingFrom = player.ContinuityFadingFrom;
             _appliedFadingTime = player.ContinuityFadingTime;
@@ -536,7 +543,7 @@ public partial class CrossoverContinuityCapture : Node
             _imageQueue.Dispose();
         }
         RenderingServer.FramePostDraw -= SampleDraw;
-        foreach (string action in new[] { "move_forward", "move_right", "aim_left", "aim_right", "move_size_up" }) Input.ActionRelease(action);
+        foreach (string action in new[] { "move_forward", "move_right", "aim_left", "aim_right", "aim_down", "move_size_up" }) Input.ActionRelease(action);
         if (GodotObject.IsInstanceValid(_skeleton)) _skeleton.SkeletonUpdated -= SnapshotFinalBones;
         _trace?.Dispose();
         if (!string.IsNullOrEmpty(_output) && Directory.Exists(_output))

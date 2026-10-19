@@ -110,7 +110,7 @@ def main():
     parser.add_argument("--godot", default=os.environ.get("GODOT", "godot"))
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--commit", required=True)
-    parser.add_argument("--move", choices=("crossover", "behindtheback"), default="crossover")
+    parser.add_argument("--move", choices=("crossover", "behindtheback", "hesitation", "stepback", "idle"), default="crossover")
     parser.add_argument("--remote", action="store_true")
     parser.add_argument("--headless", action="store_true")
     parser.add_argument("--disable-pose", action="store_true", help="negative control: disable the production pose adapter")
@@ -126,6 +126,12 @@ def main():
     parser.add_argument("--motion", choices=("stationary", "moving"))
     parser.add_argument("--count", type=int, choices=(1, 3))
     args = parser.parse_args()
+    if args.move != "crossover" and (args.disable_pose or args.lose_ball != "none" or args.presentation_delay_ticks or args.hold_movement):
+        parser.error("crossover-specific variants require --move crossover")
+    if args.move in ("hesitation", "stepback", "idle") and args.count != 1:
+        parser.error("identity controls require --count 1")
+    if args.headless and args.paced:
+        parser.error("--paced requires a rendered observer; headless fixed-fps can outrun the diagnostic server")
     if args.hold_movement and (args.motion != "moving" or args.count != 1):
         parser.error("--hold-movement requires --motion moving --count 1")
     if args.lose_ball != "none" and (not args.remote or args.count != 1):
