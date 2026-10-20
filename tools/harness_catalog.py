@@ -417,6 +417,7 @@ PostPlayTest.tscn|turnaround-rejected
 PostPlayTest.tscn|contact-set
 PostPlayTest.tscn|contact-unset
 PostPresentationTest.tscn|presentation
+CommittedClipHookupAudit.tscn|
 """
 _ADDITIONAL_MULTIPROCESS_ROWS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
     ("net-held-possession-host", "tests/integration/run-net-held-possession.sh godot host", "NetHeldPossessionTest.tscn", (".godot/harness-logs/net-held-possession-host-*.log",)),

@@ -1,0 +1,1244 @@
+[
+  {
+    "directory": ".godot\\btb417-final-local\\left-moving-1",
+    "move": "behindtheback",
+    "role": "local",
+    "origin": "Left",
+    "motion": "moving",
+    "result": "captured",
+    "completedCycles": 1,
+    "measuringSamples": 75,
+    "actionSamples": 18,
+    "phases": {
+      "Startup": {
+        "samples": 5,
+        "clips": [
+          "locomotion/behindthebackstartupleft"
+        ],
+        "states": [
+          "BehindTheBackStartupLeft"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.05000000074505806
+        ]
+      },
+      "Active": {
+        "samples": 3,
+        "clips": [
+          "locomotion/behindthebackactiveleft"
+        ],
+        "states": [
+          "BehindTheBackActiveLeft"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.01666666753590107
+        ]
+      },
+      "Recovery": {
+        "samples": 10,
+        "clips": [
+          "locomotion/behindthebackrecoveryleft"
+        ],
+        "states": [
+          "BehindTheBackRecoveryLeft"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.13333334028720856
+        ]
+      }
+    },
+    "bodySpaceMaximumExcursionMetres": {
+      "Hips": 0.2193559934662507,
+      "Spine": 0.25045205682591726,
+      "LeftHand": 0.527398544235171,
+      "RightHand": 0.5383893720007206,
+      "LeftFoot": 0.9003975117375601,
+      "RightFoot": 0.46005255666518347
+    },
+    "sweepSamples": 7,
+    "behindBodySweepSamples": 3,
+    "poseFrameMismatches": 0,
+    "playerBallTickMismatches": null,
+    "observedMoves": [
+      "",
+      "behindtheback"
+    ],
+    "observedMaxPhysicsGap": 1,
+    "rendered": true,
+    "meaning": "Motion and hookup measurements only; no static-standing reproduction, repair or feel verdict inferred",
+    "archive": "local-left-moving-1"
+  },
+  {
+    "directory": ".godot\\btb417-final-local\\left-stationary-1",
+    "move": "behindtheback",
+    "role": "local",
+    "origin": "Left",
+    "motion": "stationary",
+    "result": "captured",
+    "completedCycles": 1,
+    "measuringSamples": 59,
+    "actionSamples": 18,
+    "phases": {
+      "Startup": {
+        "samples": 5,
+        "clips": [
+          "locomotion/behindthebackstartupleft"
+        ],
+        "states": [
+          "BehindTheBackStartupLeft"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.05000000074505806
+        ]
+      },
+      "Active": {
+        "samples": 3,
+        "clips": [
+          "locomotion/behindthebackactiveleft"
+        ],
+        "states": [
+          "BehindTheBackActiveLeft"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.01666666753590107
+        ]
+      },
+      "Recovery": {
+        "samples": 10,
+        "clips": [
+          "locomotion/behindthebackrecoveryleft"
+        ],
+        "states": [
+          "BehindTheBackRecoveryLeft"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.13333334028720856
+        ]
+      }
+    },
+    "bodySpaceMaximumExcursionMetres": {
+      "Hips": 0.21329103356415471,
+      "Spine": 0.24359985620088861,
+      "LeftHand": 0.6167109347712141,
+      "RightHand": 0.5518563132627164,
+      "LeftFoot": 0.3833994465278404,
+      "RightFoot": 0.4259781486132979
+    },
+    "sweepSamples": 7,
+    "behindBodySweepSamples": 3,
+    "poseFrameMismatches": 0,
+    "playerBallTickMismatches": null,
+    "observedMoves": [
+      "",
+      "behindtheback"
+    ],
+    "observedMaxPhysicsGap": 1,
+    "rendered": true,
+    "meaning": "Motion and hookup measurements only; no static-standing reproduction, repair or feel verdict inferred",
+    "archive": "local-left-stationary-1"
+  },
+  {
+    "directory": ".godot\\btb417-final-local\\right-moving-1",
+    "move": "behindtheback",
+    "role": "local",
+    "origin": "Right",
+    "motion": "moving",
+    "result": "captured",
+    "completedCycles": 1,
+    "measuringSamples": 75,
+    "actionSamples": 18,
+    "phases": {
+      "Startup": {
+        "samples": 5,
+        "clips": [
+          "locomotion/behindthebackstartupright"
+        ],
+        "states": [
+          "BehindTheBackStartupRight"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.05000000074505806
+        ]
+      },
+      "Active": {
+        "samples": 3,
+        "clips": [
+          "locomotion/behindthebackactiveright"
+        ],
+        "states": [
+          "BehindTheBackActiveRight"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.01666666753590107
+        ]
+      },
+      "Recovery": {
+        "samples": 10,
+        "clips": [
+          "locomotion/behindthebackrecoveryright"
+        ],
+        "states": [
+          "BehindTheBackRecoveryRight"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.13333334028720856
+        ]
+      }
+    },
+    "bodySpaceMaximumExcursionMetres": {
+      "Hips": 0.18080175198776172,
+      "Spine": 0.19987617708011773,
+      "LeftHand": 0.46925695237068105,
+      "RightHand": 0.7108864531784529,
+      "LeftFoot": 0.6473869448060459,
+      "RightFoot": 0.8435362907053443
+    },
+    "sweepSamples": 7,
+    "behindBodySweepSamples": 3,
+    "poseFrameMismatches": 0,
+    "playerBallTickMismatches": null,
+    "observedMoves": [
+      "",
+      "behindtheback"
+    ],
+    "observedMaxPhysicsGap": 1,
+    "rendered": true,
+    "meaning": "Motion and hookup measurements only; no static-standing reproduction, repair or feel verdict inferred",
+    "archive": "local-right-moving-1"
+  },
+  {
+    "directory": ".godot\\btb417-final-local\\right-stationary-1",
+    "move": "behindtheback",
+    "role": "local",
+    "origin": "Right",
+    "motion": "stationary",
+    "result": "captured",
+    "completedCycles": 1,
+    "measuringSamples": 59,
+    "actionSamples": 18,
+    "phases": {
+      "Startup": {
+        "samples": 5,
+        "clips": [
+          "locomotion/behindthebackstartupright"
+        ],
+        "states": [
+          "BehindTheBackStartupRight"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.05000000074505806
+        ]
+      },
+      "Active": {
+        "samples": 3,
+        "clips": [
+          "locomotion/behindthebackactiveright"
+        ],
+        "states": [
+          "BehindTheBackActiveRight"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.01666666753590107
+        ]
+      },
+      "Recovery": {
+        "samples": 10,
+        "clips": [
+          "locomotion/behindthebackrecoveryright"
+        ],
+        "states": [
+          "BehindTheBackRecoveryRight"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.13333334028720856
+        ]
+      }
+    },
+    "bodySpaceMaximumExcursionMetres": {
+      "Hips": 0.18218294308476546,
+      "Spine": 0.2011154281605317,
+      "LeftHand": 0.4300238728478996,
+      "RightHand": 0.7482363146337554,
+      "LeftFoot": 0.39938822263285695,
+      "RightFoot": 0.36500719561501876
+    },
+    "sweepSamples": 7,
+    "behindBodySweepSamples": 3,
+    "poseFrameMismatches": 0,
+    "playerBallTickMismatches": null,
+    "observedMoves": [
+      "",
+      "behindtheback"
+    ],
+    "observedMaxPhysicsGap": 1,
+    "rendered": true,
+    "meaning": "Motion and hookup measurements only; no static-standing reproduction, repair or feel verdict inferred",
+    "archive": "local-right-stationary-1"
+  },
+  {
+    "directory": ".godot\\btb417-render-remote2\\left-moving-1",
+    "move": "behindtheback",
+    "role": "client",
+    "origin": "Left",
+    "motion": "moving",
+    "result": "captured",
+    "completedCycles": 1,
+    "measuringSamples": 42,
+    "actionSamples": 9,
+    "phases": {
+      "Startup": {
+        "samples": 2,
+        "clips": [
+          "locomotion/behindthebackstartupleft"
+        ],
+        "states": [
+          "BehindTheBackStartupLeft"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.03333333507180214
+        ]
+      },
+      "Active": {
+        "samples": 2,
+        "clips": [
+          "locomotion/behindthebackactiveleft"
+        ],
+        "states": [
+          "BehindTheBackActiveLeft"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.01666666753590107
+        ]
+      },
+      "Recovery": {
+        "samples": 5,
+        "clips": [
+          "locomotion/behindthebackrecoveryleft"
+        ],
+        "states": [
+          "BehindTheBackRecoveryLeft"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.13333334028720856
+        ]
+      }
+    },
+    "bodySpaceMaximumExcursionMetres": {
+      "Hips": 0.16597810489923848,
+      "Spine": 0.18344927482707582,
+      "LeftHand": 0.33808794722836555,
+      "RightHand": 0.2981716832668549,
+      "LeftFoot": 0.13771072760627193,
+      "RightFoot": 0.18867252766902395
+    },
+    "sweepSamples": 4,
+    "behindBodySweepSamples": 2,
+    "poseFrameMismatches": 0,
+    "playerBallTickMismatches": 0,
+    "observedMoves": [
+      "",
+      "behindtheback"
+    ],
+    "observedMaxPhysicsGap": 2,
+    "rendered": true,
+    "meaning": "Motion and hookup measurements only; no static-standing reproduction, repair or feel verdict inferred",
+    "archive": "remote-render-left-moving-1"
+  },
+  {
+    "directory": ".godot\\btb417-render-remote2\\left-stationary-1",
+    "move": "behindtheback",
+    "role": "client",
+    "origin": "Left",
+    "motion": "stationary",
+    "result": "captured",
+    "completedCycles": 1,
+    "measuringSamples": 33,
+    "actionSamples": 9,
+    "phases": {
+      "Startup": {
+        "samples": 3,
+        "clips": [
+          "locomotion/behindthebackstartupleft"
+        ],
+        "states": [
+          "BehindTheBackStartupLeft"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.05000000074505806
+        ]
+      },
+      "Active": {
+        "samples": 1,
+        "clips": [
+          "locomotion/behindthebackactiveleft"
+        ],
+        "states": [
+          "BehindTheBackActiveLeft"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0
+        ]
+      },
+      "Recovery": {
+        "samples": 5,
+        "clips": [
+          "locomotion/behindthebackrecoveryleft"
+        ],
+        "states": [
+          "BehindTheBackRecoveryLeft"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.11666666716337204
+        ]
+      }
+    },
+    "bodySpaceMaximumExcursionMetres": {
+      "Hips": 0.2138744845939846,
+      "Spine": 0.24409811906331977,
+      "LeftHand": 0.60241425675007,
+      "RightHand": 0.5485240823846891,
+      "LeftFoot": 0.3828845345587312,
+      "RightFoot": 0.42583308721948887
+    },
+    "sweepSamples": 3,
+    "behindBodySweepSamples": 1,
+    "poseFrameMismatches": 0,
+    "playerBallTickMismatches": 0,
+    "observedMoves": [
+      "",
+      "behindtheback"
+    ],
+    "observedMaxPhysicsGap": 2,
+    "rendered": true,
+    "meaning": "Motion and hookup measurements only; no static-standing reproduction, repair or feel verdict inferred",
+    "archive": "remote-render-left-stationary-1"
+  },
+  {
+    "directory": ".godot\\btb417-render-remote2\\right-moving-1",
+    "move": "behindtheback",
+    "role": "client",
+    "origin": "Right",
+    "motion": "moving",
+    "result": "captured",
+    "completedCycles": 1,
+    "measuringSamples": 42,
+    "actionSamples": 9,
+    "phases": {
+      "Startup": {
+        "samples": 3,
+        "clips": [
+          "locomotion/behindthebackstartupright"
+        ],
+        "states": [
+          "BehindTheBackStartupRight"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.05000000074505806
+        ]
+      },
+      "Active": {
+        "samples": 1,
+        "clips": [
+          "locomotion/behindthebackactiveright"
+        ],
+        "states": [
+          "BehindTheBackActiveRight"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0
+        ]
+      },
+      "Recovery": {
+        "samples": 5,
+        "clips": [
+          "locomotion/behindthebackrecoveryright"
+        ],
+        "states": [
+          "BehindTheBackRecoveryRight"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.11666666716337204
+        ]
+      }
+    },
+    "bodySpaceMaximumExcursionMetres": {
+      "Hips": 0.17921995566555204,
+      "Spine": 0.19818554843514732,
+      "LeftHand": 0.4658005945259933,
+      "RightHand": 0.7114136088910163,
+      "LeftFoot": 0.6303340382180037,
+      "RightFoot": 0.8302378315707584
+    },
+    "sweepSamples": 3,
+    "behindBodySweepSamples": 1,
+    "poseFrameMismatches": 0,
+    "playerBallTickMismatches": 0,
+    "observedMoves": [
+      "",
+      "behindtheback"
+    ],
+    "observedMaxPhysicsGap": 2,
+    "rendered": true,
+    "meaning": "Motion and hookup measurements only; no static-standing reproduction, repair or feel verdict inferred",
+    "archive": "remote-render-right-moving-1"
+  },
+  {
+    "directory": ".godot\\btb417-render-remote2\\right-stationary-1",
+    "move": "behindtheback",
+    "role": "client",
+    "origin": "Right",
+    "motion": "stationary",
+    "result": "captured",
+    "completedCycles": 1,
+    "measuringSamples": 33,
+    "actionSamples": 9,
+    "phases": {
+      "Startup": {
+        "samples": 3,
+        "clips": [
+          "locomotion/behindthebackstartupright"
+        ],
+        "states": [
+          "BehindTheBackStartupRight"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.05000000074505806
+        ]
+      },
+      "Active": {
+        "samples": 1,
+        "clips": [
+          "locomotion/behindthebackactiveright"
+        ],
+        "states": [
+          "BehindTheBackActiveRight"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0
+        ]
+      },
+      "Recovery": {
+        "samples": 5,
+        "clips": [
+          "locomotion/behindthebackrecoveryright"
+        ],
+        "states": [
+          "BehindTheBackRecoveryRight"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.11666666716337204
+        ]
+      }
+    },
+    "bodySpaceMaximumExcursionMetres": {
+      "Hips": 0.18186781770145366,
+      "Spine": 0.2008323959699062,
+      "LeftHand": 0.4317891419599339,
+      "RightHand": 0.7512783193691398,
+      "LeftFoot": 0.39932311240192386,
+      "RightFoot": 0.36514439471811755
+    },
+    "sweepSamples": 3,
+    "behindBodySweepSamples": 1,
+    "poseFrameMismatches": 0,
+    "playerBallTickMismatches": 0,
+    "observedMoves": [
+      "",
+      "behindtheback"
+    ],
+    "observedMaxPhysicsGap": 2,
+    "rendered": true,
+    "meaning": "Motion and hookup measurements only; no static-standing reproduction, repair or feel verdict inferred",
+    "archive": "remote-render-right-stationary-1"
+  },
+  {
+    "directory": ".godot\\btb417-control2-hesitation\\left-stationary-1",
+    "move": "hesitation",
+    "role": "local",
+    "origin": "Left",
+    "motion": "stationary",
+    "result": "captured",
+    "completedCycles": 1,
+    "measuringSamples": 58,
+    "actionSamples": 17,
+    "phases": {
+      "Startup": {
+        "samples": 3,
+        "clips": [
+          "locomotion/hesitationstartup"
+        ],
+        "states": [
+          "HesitationStartup"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.01666666753590107
+        ]
+      },
+      "Active": {
+        "samples": 8,
+        "clips": [
+          "locomotion/hesitationactive"
+        ],
+        "states": [
+          "HesitationActive"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.10000000149011612
+        ]
+      },
+      "Recovery": {
+        "samples": 6,
+        "clips": [
+          "locomotion/hesitationrecovery"
+        ],
+        "states": [
+          "HesitationRecovery"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.06666667014360428
+        ]
+      }
+    },
+    "bodySpaceMaximumExcursionMetres": {
+      "Hips": 0.2582241602942095,
+      "Spine": 0.2832271877216062,
+      "LeftHand": 0.40848924540700154,
+      "RightHand": 0.6603124070735759,
+      "LeftFoot": 0.21426109654357292,
+      "RightFoot": 0.2596893240037456
+    },
+    "sweepSamples": 0,
+    "behindBodySweepSamples": 0,
+    "poseFrameMismatches": 0,
+    "playerBallTickMismatches": null,
+    "observedMoves": [
+      "",
+      "hesitation"
+    ],
+    "observedMaxPhysicsGap": 1,
+    "rendered": false,
+    "meaning": "Motion and hookup measurements only; no static-standing reproduction, repair or feel verdict inferred",
+    "archive": "hesitation-left-stationary-1"
+  },
+  {
+    "directory": ".godot\\btb417-control2-hesitation\\right-stationary-1",
+    "move": "hesitation",
+    "role": "local",
+    "origin": "Right",
+    "motion": "stationary",
+    "result": "captured",
+    "completedCycles": 1,
+    "measuringSamples": 58,
+    "actionSamples": 17,
+    "phases": {
+      "Startup": {
+        "samples": 3,
+        "clips": [
+          "locomotion/hesitationstartup"
+        ],
+        "states": [
+          "HesitationStartup"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.01666666753590107
+        ]
+      },
+      "Active": {
+        "samples": 8,
+        "clips": [
+          "locomotion/hesitationactive"
+        ],
+        "states": [
+          "HesitationActive"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.10000000149011612
+        ]
+      },
+      "Recovery": {
+        "samples": 6,
+        "clips": [
+          "locomotion/hesitationrecovery"
+        ],
+        "states": [
+          "HesitationRecovery"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.06666667014360428
+        ]
+      }
+    },
+    "bodySpaceMaximumExcursionMetres": {
+      "Hips": 0.19000000373075396,
+      "Spine": 0.19027496676984418,
+      "LeftHand": 0.5633747326838011,
+      "RightHand": 0.5325314511441294,
+      "LeftFoot": 0.44206000192822104,
+      "RightFoot": 0.434653043787748
+    },
+    "sweepSamples": 0,
+    "behindBodySweepSamples": 0,
+    "poseFrameMismatches": 0,
+    "playerBallTickMismatches": null,
+    "observedMoves": [
+      "",
+      "hesitation"
+    ],
+    "observedMaxPhysicsGap": 1,
+    "rendered": false,
+    "meaning": "Motion and hookup measurements only; no static-standing reproduction, repair or feel verdict inferred",
+    "archive": "hesitation-right-stationary-1"
+  },
+  {
+    "directory": ".godot\\btb417-control2-stepback\\left-stationary-1",
+    "move": "stepback",
+    "role": "local",
+    "origin": "Left",
+    "motion": "stationary",
+    "result": "captured",
+    "completedCycles": 1,
+    "measuringSamples": 59,
+    "actionSamples": 18,
+    "phases": {
+      "Startup": {
+        "samples": 6,
+        "clips": [
+          "locomotion/stepbackstartup"
+        ],
+        "states": [
+          "StepBackStartup"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.06666667014360428
+        ]
+      },
+      "Active": {
+        "samples": 4,
+        "clips": [
+          "locomotion/stepbackactive"
+        ],
+        "states": [
+          "StepBackActive"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.03333333507180214
+        ]
+      },
+      "Recovery": {
+        "samples": 8,
+        "clips": [
+          "locomotion/stepbackrecovery"
+        ],
+        "states": [
+          "StepBackRecovery"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.10000000149011612
+        ]
+      }
+    },
+    "bodySpaceMaximumExcursionMetres": {
+      "Hips": 0.22105900022446862,
+      "Spine": 0.2503755573651447,
+      "LeftHand": 0.4846463857254508,
+      "RightHand": 0.5360432229970501,
+      "LeftFoot": 0.3883670571289606,
+      "RightFoot": 0.2846050860768417
+    },
+    "sweepSamples": 0,
+    "behindBodySweepSamples": 0,
+    "poseFrameMismatches": 0,
+    "playerBallTickMismatches": null,
+    "observedMoves": [
+      "",
+      "stepback"
+    ],
+    "observedMaxPhysicsGap": 1,
+    "rendered": false,
+    "meaning": "Motion and hookup measurements only; no static-standing reproduction, repair or feel verdict inferred",
+    "archive": "stepback-left-stationary-1"
+  },
+  {
+    "directory": ".godot\\btb417-control2-stepback\\right-stationary-1",
+    "move": "stepback",
+    "role": "local",
+    "origin": "Right",
+    "motion": "stationary",
+    "result": "captured",
+    "completedCycles": 1,
+    "measuringSamples": 59,
+    "actionSamples": 18,
+    "phases": {
+      "Startup": {
+        "samples": 6,
+        "clips": [
+          "locomotion/stepbackstartup"
+        ],
+        "states": [
+          "StepBackStartup"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.06666667014360428
+        ]
+      },
+      "Active": {
+        "samples": 4,
+        "clips": [
+          "locomotion/stepbackactive"
+        ],
+        "states": [
+          "StepBackActive"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.03333333507180214
+        ]
+      },
+      "Recovery": {
+        "samples": 8,
+        "clips": [
+          "locomotion/stepbackrecovery"
+        ],
+        "states": [
+          "StepBackRecovery"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.10000000149011612
+        ]
+      }
+    },
+    "bodySpaceMaximumExcursionMetres": {
+      "Hips": 0.17000001840738835,
+      "Spine": 0.17003116372167953,
+      "LeftHand": 0.4267743222647731,
+      "RightHand": 0.5980400846951011,
+      "LeftFoot": 0.47247488411671423,
+      "RightFoot": 0.6684373574129532
+    },
+    "sweepSamples": 0,
+    "behindBodySweepSamples": 0,
+    "poseFrameMismatches": 0,
+    "playerBallTickMismatches": null,
+    "observedMoves": [
+      "",
+      "stepback"
+    ],
+    "observedMaxPhysicsGap": 1,
+    "rendered": false,
+    "meaning": "Motion and hookup measurements only; no static-standing reproduction, repair or feel verdict inferred",
+    "archive": "stepback-right-stationary-1"
+  },
+  {
+    "directory": ".godot\\btb417-control2-idle\\left-stationary-1",
+    "move": "idle",
+    "role": "local",
+    "origin": "Left",
+    "motion": "stationary",
+    "result": "captured",
+    "completedCycles": 1,
+    "measuringSamples": 56,
+    "actionSamples": 56,
+    "phases": {
+      "Inactive": {
+        "samples": 56,
+        "clips": [
+          "<blend-space>"
+        ],
+        "states": [
+          "DribbleLeft"
+        ],
+        "playbackRangeSeconds": [
+          0.7666666507720947,
+          1.6833332777023315
+        ]
+      }
+    },
+    "bodySpaceMaximumExcursionMetres": {
+      "Hips": 0.012162693678281239,
+      "Spine": 0.012657944931800537,
+      "LeftHand": 0.30586969462599106,
+      "RightHand": 0.04791901446683661,
+      "LeftFoot": 0.0018663339304901992,
+      "RightFoot": 0.0023459819456679953
+    },
+    "sweepSamples": 0,
+    "behindBodySweepSamples": 0,
+    "poseFrameMismatches": 0,
+    "playerBallTickMismatches": null,
+    "observedMoves": [
+      ""
+    ],
+    "observedMaxPhysicsGap": 1,
+    "rendered": false,
+    "meaning": "Motion and hookup measurements only; no static-standing reproduction, repair or feel verdict inferred",
+    "archive": "idle-left-stationary-1"
+  },
+  {
+    "directory": ".godot\\btb417-control2-idle\\right-stationary-1",
+    "move": "idle",
+    "role": "local",
+    "origin": "Right",
+    "motion": "stationary",
+    "result": "captured",
+    "completedCycles": 1,
+    "measuringSamples": 56,
+    "actionSamples": 56,
+    "phases": {
+      "Inactive": {
+        "samples": 56,
+        "clips": [
+          "<blend-space>"
+        ],
+        "states": [
+          "DribbleRight"
+        ],
+        "playbackRangeSeconds": [
+          0.5333333611488342,
+          1.4500000476837158
+        ]
+      }
+    },
+    "bodySpaceMaximumExcursionMetres": {
+      "Hips": 0.00901823405518526,
+      "Spine": 0.007961198040276125,
+      "LeftHand": 0.04791951645952729,
+      "RightHand": 0.31161064420726803,
+      "LeftFoot": 0.00234558001553993,
+      "RightFoot": 0.0019237646313667292
+    },
+    "sweepSamples": 0,
+    "behindBodySweepSamples": 0,
+    "poseFrameMismatches": 0,
+    "playerBallTickMismatches": null,
+    "observedMoves": [
+      ""
+    ],
+    "observedMaxPhysicsGap": 1,
+    "rendered": false,
+    "meaning": "Motion and hookup measurements only; no static-standing reproduction, repair or feel verdict inferred",
+    "archive": "idle-right-stationary-1"
+  },
+  {
+    "directory": ".godot\\btb417-final-remote\\left-moving-1",
+    "move": "behindtheback",
+    "role": "client",
+    "origin": "Left",
+    "motion": "moving",
+    "result": "captured",
+    "completedCycles": 1,
+    "measuringSamples": 82,
+    "actionSamples": 18,
+    "phases": {
+      "Startup": {
+        "samples": 5,
+        "clips": [
+          "locomotion/behindthebackstartupleft"
+        ],
+        "states": [
+          "BehindTheBackStartupLeft"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.05000000074505806
+        ]
+      },
+      "Active": {
+        "samples": 3,
+        "clips": [
+          "locomotion/behindthebackactiveleft"
+        ],
+        "states": [
+          "BehindTheBackActiveLeft"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.01666666753590107
+        ]
+      },
+      "Recovery": {
+        "samples": 10,
+        "clips": [
+          "locomotion/behindthebackrecoveryleft"
+        ],
+        "states": [
+          "BehindTheBackRecoveryLeft"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.13333334028720856
+        ]
+      }
+    },
+    "bodySpaceMaximumExcursionMetres": {
+      "Hips": 0.21932864194721638,
+      "Spine": 0.25042803720287393,
+      "LeftHand": 0.5210071929444559,
+      "RightHand": 0.5377845856148374,
+      "LeftFoot": 0.9000531867553669,
+      "RightFoot": 0.46012062127183584
+    },
+    "sweepSamples": 7,
+    "behindBodySweepSamples": 3,
+    "poseFrameMismatches": 0,
+    "playerBallTickMismatches": 0,
+    "observedMoves": [
+      "",
+      "behindtheback"
+    ],
+    "observedMaxPhysicsGap": 1,
+    "rendered": false,
+    "meaning": "Motion and hookup measurements only; no static-standing reproduction, repair or feel verdict inferred",
+    "archive": "remote-headless-left-moving-1"
+  },
+  {
+    "directory": ".godot\\btb417-final-remote\\left-stationary-1",
+    "move": "behindtheback",
+    "role": "client",
+    "origin": "Left",
+    "motion": "stationary",
+    "result": "captured",
+    "completedCycles": 1,
+    "measuringSamples": 66,
+    "actionSamples": 18,
+    "phases": {
+      "Startup": {
+        "samples": 5,
+        "clips": [
+          "locomotion/behindthebackstartupleft"
+        ],
+        "states": [
+          "BehindTheBackStartupLeft"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.05000000074505806
+        ]
+      },
+      "Active": {
+        "samples": 3,
+        "clips": [
+          "locomotion/behindthebackactiveleft"
+        ],
+        "states": [
+          "BehindTheBackActiveLeft"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.01666666753590107
+        ]
+      },
+      "Recovery": {
+        "samples": 10,
+        "clips": [
+          "locomotion/behindthebackrecoveryleft"
+        ],
+        "states": [
+          "BehindTheBackRecoveryLeft"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.13333334028720856
+        ]
+      }
+    },
+    "bodySpaceMaximumExcursionMetres": {
+      "Hips": 0.2138744845939846,
+      "Spine": 0.2441448635223566,
+      "LeftHand": 0.6026176111077742,
+      "RightHand": 0.5486629751565936,
+      "LeftFoot": 0.3828845345587312,
+      "RightFoot": 0.4261514467908647
+    },
+    "sweepSamples": 7,
+    "behindBodySweepSamples": 3,
+    "poseFrameMismatches": 0,
+    "playerBallTickMismatches": 0,
+    "observedMoves": [
+      "",
+      "behindtheback"
+    ],
+    "observedMaxPhysicsGap": 1,
+    "rendered": false,
+    "meaning": "Motion and hookup measurements only; no static-standing reproduction, repair or feel verdict inferred",
+    "archive": "remote-headless-left-stationary-1"
+  },
+  {
+    "directory": ".godot\\btb417-final-remote\\right-moving-1",
+    "move": "behindtheback",
+    "role": "client",
+    "origin": "Right",
+    "motion": "moving",
+    "result": "captured",
+    "completedCycles": 1,
+    "measuringSamples": 82,
+    "actionSamples": 18,
+    "phases": {
+      "Startup": {
+        "samples": 5,
+        "clips": [
+          "locomotion/behindthebackstartupright"
+        ],
+        "states": [
+          "BehindTheBackStartupRight"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.05000000074505806
+        ]
+      },
+      "Active": {
+        "samples": 3,
+        "clips": [
+          "locomotion/behindthebackactiveright"
+        ],
+        "states": [
+          "BehindTheBackActiveRight"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.01666666753590107
+        ]
+      },
+      "Recovery": {
+        "samples": 10,
+        "clips": [
+          "locomotion/behindthebackrecoveryright"
+        ],
+        "states": [
+          "BehindTheBackRecoveryRight"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.13333334028720856
+        ]
+      }
+    },
+    "bodySpaceMaximumExcursionMetres": {
+      "Hips": 0.18080175198776172,
+      "Spine": 0.19987617708011773,
+      "LeftHand": 0.4696220082723113,
+      "RightHand": 0.7114136088910163,
+      "LeftFoot": 0.6473821620240363,
+      "RightFoot": 0.8434179292685773
+    },
+    "sweepSamples": 7,
+    "behindBodySweepSamples": 3,
+    "poseFrameMismatches": 0,
+    "playerBallTickMismatches": 0,
+    "observedMoves": [
+      "",
+      "behindtheback"
+    ],
+    "observedMaxPhysicsGap": 1,
+    "rendered": false,
+    "meaning": "Motion and hookup measurements only; no static-standing reproduction, repair or feel verdict inferred",
+    "archive": "remote-headless-right-moving-1"
+  },
+  {
+    "directory": ".godot\\btb417-final-remote\\right-stationary-1",
+    "move": "behindtheback",
+    "role": "client",
+    "origin": "Right",
+    "motion": "stationary",
+    "result": "captured",
+    "completedCycles": 1,
+    "measuringSamples": 66,
+    "actionSamples": 18,
+    "phases": {
+      "Startup": {
+        "samples": 5,
+        "clips": [
+          "locomotion/behindthebackstartupright"
+        ],
+        "states": [
+          "BehindTheBackStartupRight"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.05000000074505806
+        ]
+      },
+      "Active": {
+        "samples": 3,
+        "clips": [
+          "locomotion/behindthebackactiveright"
+        ],
+        "states": [
+          "BehindTheBackActiveRight"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.01666666753590107
+        ]
+      },
+      "Recovery": {
+        "samples": 10,
+        "clips": [
+          "locomotion/behindthebackrecoveryright"
+        ],
+        "states": [
+          "BehindTheBackRecoveryRight"
+        ],
+        "playbackRangeSeconds": [
+          0,
+          0.13333334028720856
+        ]
+      }
+    },
+    "bodySpaceMaximumExcursionMetres": {
+      "Hips": 0.18186781770145366,
+      "Spine": 0.2008323959699062,
+      "LeftHand": 0.4317891419599339,
+      "RightHand": 0.7512783193691398,
+      "LeftFoot": 0.39932311240192386,
+      "RightFoot": 0.3655698632589772
+    },
+    "sweepSamples": 7,
+    "behindBodySweepSamples": 3,
+    "poseFrameMismatches": 0,
+    "playerBallTickMismatches": 0,
+    "observedMoves": [
+      "",
+      "behindtheback"
+    ],
+    "observedMaxPhysicsGap": 1,
+    "rendered": false,
+    "meaning": "Motion and hookup measurements only; no static-standing reproduction, repair or feel verdict inferred",
+    "archive": "remote-headless-right-stationary-1"
+  }
+]

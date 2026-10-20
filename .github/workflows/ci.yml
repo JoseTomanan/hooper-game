@@ -119,6 +119,7 @@ jobs:
             .godot/harness-coordination/**
             .godot/dedicated-game-*/**
             .godot/crossover-continuity/**
+            .godot/pivot-continuity/**
             .godot/remote-presentation-lifecycle/**
             .godot/committed-replay/**
             .godot/production-contact/**
