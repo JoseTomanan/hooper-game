@@ -3644,15 +3644,19 @@ public partial class PlayerController : CharacterBody3D
 		}
 		else if (gesture.Kind == GestureKind.RetreatDribble)
 		{
-			// Retreat dribble (M9, issue #197): the "quick" half of the
-			// vertical pair. The gesture's own quick-return timing IS the
-			// feint (RetreatDribble.FeintWindowFrames=0 — see its class doc
-			// for why a SECOND free-abort would make this a zero-cost bait
-			// tool). Requires an actual live dribble (BeginCommittedMove's
-			// dead-dribble gate, extended for this move, refuses it from
-			// Held exactly like Crossover/Hesitation/BehindTheBack).
-			if (IsBallHolder && BeginCommittedMove(new RetreatDribble()) && !isServer)
-				RpcId(1, MethodName.RequestBeginMove, "retreatdribble", 0f, false, 0); // #225: not a cradle-family move
+			// User-approved downward tap grammar (#417): no directional payload
+			// is needed to choose the empty hand. Q retains retreat-dribble access.
+			if (Input.IsActionPressed("move_size_up"))
+			{
+				if (IsBallHolder && BeginCommittedMove(new RetreatDribble()) && !isServer)
+					RpcId(1, MethodName.RequestBeginMove, "retreatdribble", 0f, false, 0);
+			}
+			else
+			{
+				float direction = HandSide == HandSide.Left ? 1f : -1f;
+				if (IsBallHolder && BeginCommittedMove(new BehindTheBack(direction)) && !isServer)
+					RpcId(1, MethodName.RequestBeginMove, "behindtheback", direction, false, 0);
+			}
 		}
 
 		// Drive-gather (M9, issue #230, ADR-0022): a discrete button, not a

@@ -16,7 +16,7 @@ namespace Hooper.Moves;
 ///                flick-and-return; see GestureKind's doc for the #202 rename
 ///                — this used to be called "Feint").
 ///   Vertical, downward only (issue #197) — StepBack (held past
-///                FeintWindowTicks) / RetreatDribble (quick flick-and-return).
+///                DownHoldWindowTicks) / RetreatDribble (quick flick-and-return).
 ///
 /// In all four cases the recognizer fires exactly once per gesture and then
 /// waits for the stick to return to the deadzone before it can fire again
@@ -32,10 +32,11 @@ namespace Hooper.Moves;
 /// On the first tick the stick crosses FlickThreshold on EITHER axis we start
 /// counting, having first picked which axis this gesture belongs to (see
 /// "Axis disambiguation" below). The gesture kind is then decided when:
-///   (a) the stick returns to the deadzone within FeintWindowTicks ticks →
+///   (a) the stick returns to the deadzone within the axis's timing window →
 ///       QuickReturn (horizontal) / RetreatDribble (vertical).
-///   (b) the stick stays above threshold past FeintWindowTicks ticks →
+///   (b) the stick stays above threshold past that window →
 ///       Crossover (horizontal) / StepBack (vertical).
+/// Horizontal uses FeintWindowTicks; downward uses DownHoldWindowTicks.
 /// The caller (#17 integration, #197 for the vertical pair, #202 for the
 /// horizontal QuickReturn retarget) maps the GestureResult to a CommittedMove.
 ///
@@ -87,6 +88,13 @@ public sealed class RightStickGestureRecognizer
     public int FeintWindowTicks { get; }
 
     /// <summary>
+    /// Above-threshold samples allowed before the downward hold becomes
+    /// StepBack. Default 12 gives a provisional 200 ms tap allowance at 60 Hz
+    /// without delaying the horizontal pair. StepBack fires on sample 13.
+    /// </summary>
+    public int DownHoldWindowTicks { get; }
+
+    /// <summary>
     /// Hysteresis band (issue #197) applied when BOTH axes clear
     /// FlickThreshold on the same tick a gesture starts: the axis whose
     /// magnitude exceeds the other's by more than this band wins outright; a
@@ -110,18 +118,24 @@ public sealed class RightStickGestureRecognizer
 
     /// <param name="flickThreshold">Magnitude either axis must exceed to register a flick. Default 0.6.</param>
     /// <param name="deadzoneRadius">Return-to-centre radius. Default 0.2.</param>
-    /// <param name="feintWindowTicks">Ticks within which a quick-return commits the "quick" gesture (Feint / RetreatDribble). Default 4.</param>
+    /// <param name="feintWindowTicks">Above-threshold samples allowed for horizontal QuickReturn. Default 4.</param>
     /// <param name="axisHysteresis">Tie-break band for simultaneous-axis flicks (#197). Default 0.1.</param>
+    /// <param name="downHoldWindowTicks">Above-threshold samples allowed for the downward quick gesture. Must be positive. Default 12.</param>
     public RightStickGestureRecognizer(
         float flickThreshold   = 0.6f,
         float deadzoneRadius   = 0.2f,
         int   feintWindowTicks = 4,
-        float axisHysteresis   = 0.1f)
+        float axisHysteresis   = 0.1f,
+        int   downHoldWindowTicks = 12)
     {
+        if (downHoldWindowTicks <= 0)
+            throw new System.ArgumentOutOfRangeException(nameof(downHoldWindowTicks));
+
         FlickThreshold   = flickThreshold;
         DeadzoneRadius   = deadzoneRadius;
         FeintWindowTicks = feintWindowTicks;
         AxisHysteresis   = axisHysteresis;
+        DownHoldWindowTicks = downHoldWindowTicks;
     }
 
     // ── Per-tick sample ───────────────────────────────────────────────────────
@@ -195,13 +209,16 @@ public sealed class RightStickGestureRecognizer
         bool stillAboveThreshold = _pendingAxis == GestureAxis.Horizontal
             ? horizontalMag >= FlickThreshold
             : verticalMag   >= FlickThreshold;
+        int holdWindowTicks = _pendingAxis == GestureAxis.Horizontal
+            ? FeintWindowTicks
+            : DownHoldWindowTicks;
 
         if (stillAboveThreshold)
         {
             _ticksAboveThreshold++;
 
             // Window closed: commit as the "hold" gesture for this axis.
-            if (_ticksAboveThreshold > FeintWindowTicks)
+            if (_ticksAboveThreshold > holdWindowTicks)
             {
                 _gestureFired = true;
                 return _pendingAxis == GestureAxis.Horizontal
@@ -214,7 +231,7 @@ public sealed class RightStickGestureRecognizer
         }
 
         // Stick left the threshold area (on the locked axis).
-        if (inDeadzone && _ticksAboveThreshold <= FeintWindowTicks)
+        if (inDeadzone && _ticksAboveThreshold <= holdWindowTicks)
         {
             // Returned to deadzone within the window: it's the "quick" gesture.
             float dir     = _flickDir;

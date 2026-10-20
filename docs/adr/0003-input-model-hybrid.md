@@ -510,3 +510,25 @@ and exposure trade without a cancellable payload. Rejected: stacking an
 away-hand lock on the narrower phase band, because #345 requires exactly
 one protection benefit. Rejected: instantaneous velocity clamping on entry,
 which would erase the momentum cost of switching posture.
+
+## Amendment 2026-10-21 - Forgiving downward taps and explicit BehindTheBack (#417)
+
+The maintainer explicitly selected K tap as BehindTheBack switching to the
+opposite hand, with K hold retaining StepBack. The downward stick shares this
+grammar. A downward release after at most twelve above-threshold samples is a
+quick return; the thirteenth held sample commits StepBack. At the shipped
+60 Hz the allowance is 200 ms, three times the former four-sample allowance.
+This is a provisional response to the reported unforgiving threshold, not an
+official Godot recommendation or a feel acceptance (#173/#238).
+
+Horizontal quick/hold timing stays four samples. Q plus a downward tap retains
+RetreatDribble; Q plus horizontal toward the empty hand still selects
+BehindTheBack. No move windows, hand-swap timing or cancel rules change. The
+empty hand is selected from authoritative/predicted HandSide at recognition;
+the existing move ID and direction RPC carry the request unchanged.
+
+Rejected: increasing the shared window, because it also delays every horizontal
+gesture. Rejected: preserving unmodified K tap as RetreatDribble, because the
+maintainer explicitly requested BehindTheBack. The control choice is direct
+human authorization; real-ball hand transfer supplies the opposite-hand result
+(ADR-0014 tier 2), not a claim that basketball prescribes button timing.
