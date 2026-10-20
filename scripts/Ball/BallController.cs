@@ -155,7 +155,10 @@ public partial class BallController : Node3D
 	/// tuned default, hitl sign-off deferred to the per-milestone human pass
 	/// like every other sweep tunable.
 	/// </summary>
-	[Export] public float BehindTheBackSweepDepth { get; set; } = 0.7f;
+	// #417: larger visible gap at gameplay scale. Old .7 already cleared the
+	// posed mesh; 1.0 adds ~.29 m at the sampled peak without changing timing.
+	// Measured bounds and rendered comparisons: docs/analysis/0417-input-and-gather-repair.md.
+	[Export] public float BehindTheBackSweepDepth { get; set; } = 1.0f;
 
 	/// <summary>
 	/// Depth (metres) of the vertical dip a BetweenTheLegs sweep (#199) takes

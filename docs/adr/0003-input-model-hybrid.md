@@ -532,3 +532,28 @@ gesture. Rejected: preserving unmodified K tap as RetreatDribble, because the
 maintainer explicitly requested BehindTheBack. The control choice is direct
 human authorization; real-ball hand transfer supplies the opposite-hand result
 (ADR-0014 tier 2), not a claim that basketball prescribes button timing.
+
+### Behind-body presentation margin (#417)
+
+BehindTheBackSweepDepth increases from 0.7 to 1.0 metres. With the unchanged
+0.5 m forward baseline and seven-sample sweep, the deepest sampled centre moves
+from -0.1824 m to -0.4749 m relative to the player root. The sphere's forward
+surface moves from -0.0624 m to -0.3549 m. The regression floor requires that
+surface behind -0.23 m at least once per transfer, on both hands and network
+roles. This is an extra legibility margin at gameplay distance, not a diagnosis
+of torso penetration: the old path already cleared the measured posed mesh.
+
+The same deterministic path drives live ball geometry and the coherent remote
+envelope (ADR-0004/0012/0027). Move frame windows, sweep duration, hand-swap tick
+and authored clips remain unchanged. The existing transit-steal reach reads the
+new swept ball position; its timing interval and success rules do not change.
+The deeper body shield therefore changes spatial exposure as a consequence of
+where the visible ball actually travels, without separate defensive bonuses.
+
+Reference basis: the maintainer's explicit behind-model legibility request and
+ADR-0014 tier 2's body shielding during a real behind-the-back transfer. The
+numeric margin is a measured, provisional starting default, with tuning #238
+and readability judgment #173. Rejected: longer move/sweep windows, which would
+also change timing exposure; rejected: a cosmetic-only ball offset, which would
+separate the visible ball from the server's steal geometry. Measurements and
+rendered evidence are in docs/analysis/0417-input-and-gather-repair.md.

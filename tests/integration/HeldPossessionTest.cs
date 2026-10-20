@@ -25,6 +25,7 @@ public partial class HeldPossessionTest : Node
     private bool _heldIdle, _heldMoving, _freshHeld, _stepBackBurst;
     private Key _horizontal;
     private HandSide _tapStartHand;
+    private float _tapNearestForward = float.PositiveInfinity;
     private Vector3 _heldMoveOrigin;
     private float _heldMoveHeading;
     private string _heldMoveAction = "";
@@ -95,13 +96,16 @@ public partial class HeldPossessionTest : Node
                 if (_stageTick == 65)
                 {
                     RequireMove("behindtheback");
+                    Require(_tapNearestForward < -0.23f, "first K tap puts the full ball visibly behind the root plane");
                     Require(LiveDribble() && _holder.HandSide != _tapStartHand, "K tap switches to the opposite hand");
                     _observedIds.Clear(); _stageSawMove = false;
+                    _tapNearestForward = float.PositiveInfinity;
                     KeyEvent(Key.K, true);
                 }
                 if (_stageTick == 130)
                 {
                     RequireMove("behindtheback");
+                    Require(_tapNearestForward < -0.23f, "opposite-hand K tap retains the full-ball rear margin");
                     Require(LiveDribble() && _holder.HandSide == _tapStartHand, "repressed K tap switches back from the other hand");
                     _observedIds.Clear(); _stageSawMove = false;
                     KeyEvent(Key.Q, true); KeyEvent(Key.K, true);
@@ -215,6 +219,12 @@ public partial class HeldPossessionTest : Node
     {
         var (phase, _) = _holder.DisplayMove();
         string id = _holder.DisplayMoveId();
+        if (_stage == 3 && id == "behindtheback" && _ball.SweepActiveForHarness)
+        {
+            var forward = HeadingMath.Forward(_holder.Heading);
+            var offset = _ball.GlobalPosition - _holder.GlobalPosition;
+            _tapNearestForward = MathF.Min(_tapNearestForward, offset.X * forward.X + offset.Z * forward.Y + _ball.BallRadius);
+        }
         if (phase != MovePhase.Inactive) _observedIds.Add(id);
         if (phase != MovePhase.Inactive)
         {

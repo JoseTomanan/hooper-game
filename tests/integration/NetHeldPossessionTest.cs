@@ -25,6 +25,7 @@ public partial class NetHeldPossessionTest : Node
     private bool _tapSawMove;
     private bool _stepBackBurst;
     private HandSide _tapStartHand;
+    private float _tapNearestForward;
     private Vector3 _heldMoveOrigin;
     private const int FreshHeld = 0, Live = 1, TapFirst = 2, TapSecond = 3,
         Gather = 4, Planted = 5, Loss = 6, NewDribble = 7;
@@ -126,6 +127,7 @@ public partial class NetHeldPossessionTest : Node
         {
             _tapStartHand = _players.GetNode<PlayerController>(_ownerId.ToString()).DisplayHandSide;
             _tapSawMove = false;
+            _tapNearestForward = float.PositiveInfinity;
         }
         if (OwnsActor())
         {
@@ -142,6 +144,8 @@ public partial class NetHeldPossessionTest : Node
         bool historical = _role == "client" && _ownerId == 1;
         BallState state = _ball.State;
         int holderId = _ball.StateMachine.HolderPeerId;
+        Vector3 ballPosition = _ball.GlobalPosition;
+        bool sweepActive = _ball.SweepActiveForHarness;
         long tick = -1;
         if (historical)
         {
@@ -149,6 +153,7 @@ public partial class NetHeldPossessionTest : Node
             if (world == null || actor.PlayerPresentationTick < 0) return;
             if (!Require(world.Tick == actor.PlayerPresentationTick, $"remote world/player tick mismatch {world.Tick}/{actor.PlayerPresentationTick}")) return;
             tick = world.Tick; state = world.Ball.State; holderId = world.Ball.HolderPeerId;
+            ballPosition = world.Ball.Position; sweepActive = world.Ball.SweepActive;
         }
         var phase = actor.DisplayMove().phase;
         string node = actor.ActiveAnimNodeForHarness;
@@ -178,12 +183,19 @@ public partial class NetHeldPossessionTest : Node
                 break;
             case TapFirst:
             case TapSecond:
+                if (sweepActive && actor.DisplayMoveId() == "behindtheback")
+                {
+                    var forward = HeadingMath.Forward(actor.DisplayHeading);
+                    var offset = ballPosition - (historical ? actor.DisplayRootPosition : actor.GlobalPosition);
+                    _tapNearestForward = MathF.Min(_tapNearestForward,
+                        offset.X * forward.X + offset.Z * forward.Y + _ball.BallRadius);
+                }
                 if (phase != MovePhase.Inactive)
                 {
                     if (!Require(actor.DisplayMoveId() == "behindtheback", "K tap must begin BehindTheBack: " + _last)) return;
                     _tapSawMove = true;
                 }
-                good = _tapSawMove && actor.DisplayHandSide != _tapStartHand && state == BallState.Dribbling &&
+                good = _tapSawMove && _tapNearestForward < -0.23f && actor.DisplayHandSide != _tapStartHand && state == BallState.Dribbling &&
                     holderId == _ownerId && phase == MovePhase.Inactive && node == "Dribble" + hand && offBall;
                 break;
             case Gather:
