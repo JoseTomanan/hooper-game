@@ -636,7 +636,7 @@ class HarnessCatalogWorkflowTests(unittest.TestCase):
         for obsolete in ('run-net-handshake.sh', 'run-dedicated-game-journey.sh', '--harness-scenario='):
             self.assertNotIn(obsolete, workflow)
         self.assertIn("python3 -m unittest discover -s tests/repository -p 'test_*.py' -v", workflow)
-        for artifact in ('.godot/harness-runs/**', '.godot/harness-logs/**', '.godot/harness-coordination/**', '.godot/dedicated-game-*/**'):
+        for artifact in ('.godot/harness-runs/**', '.godot/harness-logs/**', '.godot/harness-coordination/**', '.godot/dedicated-game-*/**', '.godot/pivot-continuity/**'):
             self.assertIn(artifact, workflow)
 
 
