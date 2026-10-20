@@ -50,7 +50,8 @@ public sealed class PredictionBuffer
 	public readonly record struct InputFrame(Vector2 Movement, bool Sprint, bool Protect = false,
 		bool PostureHeld = false, bool StanceEligible = false,
 		bool PostHeld = false, bool PostEligible = false, Vector3 RimSample = default,
-		MovePhase TurnaroundPhase = MovePhase.Inactive, float TurnaroundTarget = 0, int TurnaroundToken = 0);
+		MovePhase TurnaroundPhase = MovePhase.Inactive, float TurnaroundTarget = 0, int TurnaroundToken = 0,
+		bool TranslationLocked = false);
 	private readonly Queue<(int seq, InputFrame input)> _pending = new();
 
 	/// <param name="capacity">Maximum buffered inputs before the oldest is evicted. Defaults to 120 (~2 s at 60 Hz), matching PlayerController's original PendingCap.</param>
@@ -74,7 +75,8 @@ public sealed class PredictionBuffer
 	public int Record(Vector2 input, bool sprint = false, bool protect = false,
 		bool postureHeld = false, bool stanceEligible = false,
 		bool postHeld = false, bool postEligible = false, Vector3 rimSample = default,
-		MovePhase turnaroundPhase = MovePhase.Inactive, float turnaroundTarget = 0, int turnaroundToken = 0)
+		MovePhase turnaroundPhase = MovePhase.Inactive, float turnaroundTarget = 0, int turnaroundToken = 0,
+		bool translationLocked = false)
 	{
 		LastSequence++;
 
@@ -82,7 +84,7 @@ public sealed class PredictionBuffer
 			_pending.Dequeue(); // oldest evicted; 2-s silence required to hit this
 
 		_pending.Enqueue((LastSequence, new InputFrame(input, sprint, protect, postureHeld, stanceEligible,
-			postHeld, postEligible, rimSample, turnaroundPhase, turnaroundTarget, turnaroundToken)));
+			postHeld, postEligible, rimSample, turnaroundPhase, turnaroundTarget, turnaroundToken, translationLocked)));
 		return LastSequence;
 	}
 

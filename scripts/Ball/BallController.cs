@@ -3180,8 +3180,8 @@ public partial class BallController : Node3D
 	/// the left stick past deadzone. Refused once <see cref="HasDribbled"/> is
 	/// set for this possession (DeadDribbleRule.CanStartDribble) — the dead-
 	/// dribble rule means a feinted pump-fake strands the holder in dead Held
-	/// until the next possession change; they can still walk (Move() is
-	/// unaffected), they just can't resume bouncing the ball.
+	/// until the next possession change. Neutral translation is also gated
+	/// while spent Held; pivoting and shooting remain available (ADR-0008).
 	///
 	/// Called from PlayerController.CheckAutoStartDribble wherever a tick's
 	/// REAL movement input is available for this player — see that method's

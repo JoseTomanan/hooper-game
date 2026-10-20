@@ -21,7 +21,15 @@ public partial class NetHeldPossessionTest : Node
     private Node _players;
     private BallController _ball;
     private string _last = "waiting for peers";
-    private static readonly string[] Stages = { "fresh-held", "live-dribble", "sustained-k-stepback/spent-idle", "spent-moving", "ownership-loss/reset", "new-possession-dribble" };
+    private int _stageTick;
+    private bool _tapSawMove;
+    private bool _stepBackBurst;
+    private HandSide _tapStartHand;
+    private Vector3 _heldMoveOrigin;
+    private const int FreshHeld = 0, Live = 1, TapFirst = 2, TapSecond = 3,
+        Gather = 4, Planted = 5, Loss = 6, NewDribble = 7;
+    private static readonly string[] Stages = { "fresh-held", "live-dribble", "k-tap-first-hand", "k-tap-other-hand",
+        "sustained-k-stepback/spent-idle", "spent-movement-refused", "ownership-loss/reset", "new-possession-dribble" };
 
     public override void _Ready()
     {
@@ -85,6 +93,8 @@ public partial class NetHeldPossessionTest : Node
             StartStage(0);
         }
         if (_stage < 0) return;
+        _stageTick++;
+        if (OwnsActor() && (_stage == TapFirst || _stage == TapSecond) && _stageTick == 10) KeyEvent(Key.K, false);
         Observe(holder, other);
         if (_finished) return;
         if (_role == "server" && _localDone && _remoteDone)
@@ -102,21 +112,27 @@ public partial class NetHeldPossessionTest : Node
     {
         // Server-only reset/loss fixtures deliberately exercise AwardPossession's
         // real HasDribbled reset; the client must learn both awards via netcode.
-        if (stage == 0 || stage == 5) _ball.PostAwardForHarness(_ownerId);
-        if (stage == 4) _ball.PostAwardForHarness(_ownerId == 1 ? _clientId : 1);
+        if (stage == FreshHeld || stage == NewDribble) _ball.PostAwardForHarness(_ownerId);
+        if (stage == Loss) _ball.PostAwardForHarness(_ownerId == 1 ? _clientId : 1);
         RpcId(_clientId, MethodName.BeginStage, stage);
         EnterStage(stage);
     }
 
     private void EnterStage(int stage)
     {
-        _stage = stage; _stable = 0; _localDone = _remoteDone = false;
-        if (stage == 2) { _arc = 0; _releasedMovement = false; }
+        _stage = stage; _stageTick = 0; _stable = 0; _localDone = _remoteDone = false;
+        if (stage == Gather) { _arc = 0; _releasedMovement = false; _stepBackBurst = false; }
+        if (stage == TapFirst || stage == TapSecond)
+        {
+            _tapStartHand = _players.GetNode<PlayerController>(_ownerId.ToString()).DisplayHandSide;
+            _tapSawMove = false;
+        }
         if (OwnsActor())
         {
-            if (stage == 1 || stage == 3 || stage == 5) KeyEvent(Key.W, true);
-            if (stage == 2) KeyEvent(Key.K, true);
-            if (stage == 4) { KeyEvent(Key.W, false); KeyEvent(Key.K, false); }
+            if (stage == Live || stage == Planted || stage == NewDribble) KeyEvent(Key.W, true);
+            if (stage == TapFirst || stage == TapSecond) { KeyEvent(Key.W, false); KeyEvent(Key.K, true); }
+            if (stage == Gather) KeyEvent(Key.K, true);
+            if (stage == Loss) { KeyEvent(Key.W, false); KeyEvent(Key.K, false); }
         }
         GD.Print($"[net-held] role={_role} stage={stage}/{Stages[stage]} owner={_ownerId}");
     }
@@ -151,16 +167,26 @@ public partial class NetHeldPossessionTest : Node
         bool good = false;
         switch (_stage)
         {
-            case 0:
+            case FreshHeld:
                 good = held && heldPlayback && speed < 0.02f && liveOwner && !_ball.HasDribbled && offBall;
                 break;
-            case 1:
-            case 5:
+            case Live:
+            case NewDribble:
                 good = state == BallState.Dribbling && holderId == _ownerId && phase == MovePhase.Inactive &&
                     node == "Dribble" + hand && BoundClips(actor, node) ==
                     $"locomotion/dribbleidle{hand.ToLowerInvariant()}|locomotion/dribblemove{hand.ToLowerInvariant()}" && offBall;
                 break;
-            case 2:
+            case TapFirst:
+            case TapSecond:
+                if (phase != MovePhase.Inactive)
+                {
+                    if (!Require(actor.DisplayMoveId() == "behindtheback", "K tap must begin BehindTheBack: " + _last)) return;
+                    _tapSawMove = true;
+                }
+                good = _tapSawMove && actor.DisplayHandSide != _tapStartHand && state == BallState.Dribbling &&
+                    holderId == _ownerId && phase == MovePhase.Inactive && node == "Dribble" + hand && offBall;
+                break;
+            case Gather:
                 if (phase != MovePhase.Inactive && actor.DisplayMoveId() == "stepback")
                 {
                     if (OwnsActor() && !_releasedMovement) { KeyEvent(Key.W, false); _releasedMovement = true; }
@@ -177,18 +203,25 @@ public partial class NetHeldPossessionTest : Node
                             GD.Print($"[net-held] same-tick StepBack role={_role} {_last}");
                         }
                         _arc |= bit;
+                        if (phase == MovePhase.Active && speed > actor.StepBackBurstSpeed * 0.9f) _stepBackBurst = true;
                     }
                 }
                 if (_arc == 7 && phase == MovePhase.Inactive && held)
                 {
                     if (!Require(heldPlayback, "StepBack recovery must exit directly into actual Held playback: " + _last)) return;
-                    good = speed < 0.02f && liveOwner && _ball.HasDribbled && offBall;
+                    good = _stepBackBurst && speed < 0.02f && liveOwner && _ball.HasDribbled && offBall;
                 }
                 break;
-            case 3:
-                good = held && heldPlayback && speed > actor.MoveSpeed * 0.9f && liveOwner && _ball.HasDribbled && offBall;
+            case Planted:
+                good = held && heldPlayback && speed < 0.02f && liveOwner && _ball.HasDribbled && offBall;
+                if (good)
+                {
+                    if (_stable == 0) _heldMoveOrigin = actor.DisplayRootPosition;
+                    if (!Require((actor.DisplayRootPosition - _heldMoveOrigin).Length() < 0.01f,
+                        "gathered holder translates while movement remains held: " + _last)) return;
+                }
                 break;
-            case 4:
+            case Loss:
                 int newHolder = _ownerId == 1 ? _clientId : 1;
                 good = state == BallState.Held && holderId == newHolder && node == "Locomotion" &&
                     _ball.StateMachine.HolderPeerId == newHolder && !_ball.HasDribbled &&
@@ -196,7 +229,8 @@ public partial class NetHeldPossessionTest : Node
                 break;
         }
         _stable = good ? _stable + 1 : 0;
-        if (_stable < (_stage == 2 ? 20 : 4) || _localDone) return;
+        int requiredStable = _stage == Planted ? 30 : (_stage == Gather || _stage == TapFirst || _stage == TapSecond) ? 20 : 4;
+        if (_stable < requiredStable || _localDone) return;
         _localDone = true;
         GD.Print($"[net-held] stage-proof role={_role} stage={_stage} arc={_arc} {_last}");
         if (_role == "client") RpcId(1, MethodName.ClientObserved, _stage);
@@ -261,7 +295,7 @@ public partial class NetHeldPossessionTest : Node
     [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
     private void Complete()
     {
-        if (Require(_role == "client" && Multiplayer.GetRemoteSenderId() == 1 && _stage == 5 && _localDone, "completion before both proofs")) Finish(0);
+        if (Require(_role == "client" && Multiplayer.GetRemoteSenderId() == 1 && _stage == NewDribble && _localDone, "completion before both proofs")) Finish(0);
     }
     private bool Require(bool condition, string diagnostic)
     {

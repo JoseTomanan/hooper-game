@@ -221,4 +221,21 @@ public class PredictionBufferTests
 
         Assert.Empty(buffer.Replay());
     }
+
+    [Fact]
+    public void Replay_AfterGatherAndAward_RetainsEachTicksTranslationRule()
+    {
+        var buffer = new PredictionBuffer();
+        buffer.Record(Vector2.Up); // acknowledged pre-gather movement
+        buffer.Record(Vector2.Right, translationLocked: true); // gathered
+        buffer.Record(Vector2.Left, translationLocked: false); // new possession
+        buffer.Acknowledge(1);
+
+        var replay = new List<PredictionBuffer.InputFrame>(buffer.ReplayInputs());
+        Assert.Equal(2, replay.Count);
+        Assert.True(replay[0].TranslationLocked);
+        Assert.Equal(Vector2.Right, replay[0].Movement); // raw intent survives
+        Assert.False(replay[1].TranslationLocked);
+        Assert.Equal(Vector2.Left, replay[1].Movement);
+    }
 }

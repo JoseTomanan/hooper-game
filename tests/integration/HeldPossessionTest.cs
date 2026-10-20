@@ -22,12 +22,16 @@ public partial class HeldPossessionTest : Node
     private string _scenario;
     private int _tick, _stage, _stageTick;
     private bool _finished, _stageSawMove, _sawStartup, _sawActive, _sawRecovery, _sawFlight;
-    private bool _heldIdle, _heldMoving, _freshHeld;
+    private bool _heldIdle, _heldMoving, _freshHeld, _stepBackBurst;
     private Key _horizontal;
+    private HandSide _tapStartHand;
+    private Vector3 _heldMoveOrigin;
+    private float _heldMoveHeading;
+    private string _heldMoveAction = "";
     private readonly Dictionary<Key, int> _keys = new();
     private readonly List<string> _failures = new();
     private static readonly string[] StageNames = {
-        "fresh-held", "start-dribble", "live-dribble", "short-k-retreat", "q-horizontal-first",
+        "fresh-held", "start-dribble", "live-dribble", "short-k-behindtheback", "q-horizontal-first",
         "q-horizontal-second", "live-crossover", "live-hesitation", "held-k-stepback", "spent-idle",
         "spent-moving", "spent-settle", "refused-crossover", "refused-hesitation", "legal-shot",
         "new-possession", "new-drive", "reset-live-dribble" };
@@ -72,7 +76,13 @@ public partial class HeldPossessionTest : Node
         switch (_stage)
         {
             case 0:
-                if (_stageTick == 15) { Require(Held(false), "fresh tipoff Held premise"); Advance(); }
+                if (_stageTick == 10 || _stageTick == 58) KeyEvent(Key.K, false);
+                if (_stageTick == 40) KeyEvent(Key.K, true);
+                if (_stageTick == 100)
+                {
+                    Require(!_stageSawMove && Held(false), "fresh Held refuses K tap and sustained K StepBack");
+                    Advance();
+                }
                 break;
             case 1:
                 if (_stageTick == 16) { Move(false); Advance(); }
@@ -81,8 +91,24 @@ public partial class HeldPossessionTest : Node
                 if (_stageTick == 30) { Require(LiveDribble(), "movement starts live handed dribble"); Advance(); }
                 break;
             case 3:
-                if (_stageTick == 2) KeyEvent(Key.K, false);
-                if (_stageTick == 65) { RequireMove("retreatdribble"); Require(LiveDribble(), "short K preserves live dribble"); Advance(); }
+                if (_stageTick == 10 || _stageTick == 75) KeyEvent(Key.K, false);
+                if (_stageTick == 65)
+                {
+                    RequireMove("behindtheback");
+                    Require(LiveDribble() && _holder.HandSide != _tapStartHand, "K tap switches to the opposite hand");
+                    _observedIds.Clear(); _stageSawMove = false;
+                    KeyEvent(Key.K, true);
+                }
+                if (_stageTick == 130)
+                {
+                    RequireMove("behindtheback");
+                    Require(LiveDribble() && _holder.HandSide == _tapStartHand, "repressed K tap switches back from the other hand");
+                    _observedIds.Clear(); _stageSawMove = false;
+                    KeyEvent(Key.Q, true); KeyEvent(Key.K, true);
+                }
+                if (_stageTick == 140) KeyEvent(Key.K, false);
+                if (_stageTick == 143) KeyEvent(Key.Q, false);
+                if (_stageTick == 195) { RequireMove("retreatdribble"); Require(LiveDribble(), "Q+K tap retains live retreat dribble"); Advance(); }
                 break;
             case 4:
             case 5:
@@ -95,11 +121,12 @@ public partial class HeldPossessionTest : Node
                 if (_stageTick == 75) { RequireMove(_stage == 6 ? "crossover" : "hesitation"); Require(LiveDribble(), "positive horizontal input control remains live"); Advance(); }
                 break;
             case 8:
-                if (_stageTick == 10) KeyEvent(Key.K, false);
+                if (_stageTick == 18) KeyEvent(Key.K, false);
                 if (_stageTick == 85)
                 {
                     RequireMove("stepback");
                     Require(_sawStartup && _sawActive && _sawRecovery, "StepBack runs all committed phases");
+                    Require(_stepBackBurst, "live StepBack retains its committed Active separation burst");
                     Require(Held(true), "StepBack gathers into spent Held");
                     Advance();
                 }
@@ -108,10 +135,18 @@ public partial class HeldPossessionTest : Node
                 if (_stageTick == 20) { Require(Held(true), "idle spent Held remains spent"); Advance(); }
                 break;
             case 10:
-                if (_stageTick == 16) { Require(Held(true), "movement cannot restart spent dribble"); Move(false); Advance(); }
+                if (_stageTick == 40)
+                {
+                    Require(Held(true), "movement cannot restart spent dribble");
+                    Require(MathF.Abs(MathF.Sin(_holder.Heading - _heldMoveHeading)) > 0.1f, "gathered holder can still pivot heading");
+                    Input.ActionRelease(_heldMoveAction); _heldMoveAction = "";
+                    Advance();
+                }
                 break;
             case 11:
-                if (_stageTick == 35) Advance();
+                if (_stageTick == 10 || _stageTick == 58) KeyEvent(Key.K, false);
+                if (_stageTick == 40) KeyEvent(Key.K, true);
+                if (_stageTick == 90) { Require(!_stageSawMove && Held(true), "spent Held refuses K tap and repeated StepBack"); Advance(); }
                 break;
             case 12:
             case 13:
@@ -153,8 +188,16 @@ public partial class HeldPossessionTest : Node
         _sawStartup = _sawActive = _sawRecovery = false;
         switch (_stage)
         {
-            case 1: case 10: case 16: Move(true); break;
-            case 3: case 8: KeyEvent(Key.K, true); break;
+            case 0: case 11: KeyEvent(Key.K, true); break;
+            case 1: case 16: Move(true); break;
+            case 3: _tapStartHand = _holder.HandSide; KeyEvent(Key.K, true); break;
+            case 8: KeyEvent(Key.K, true); break;
+            case 10:
+                _heldMoveHeading = _holder.Heading;
+                var forward = HeadingMath.Forward(_heldMoveHeading);
+                _heldMoveAction = MathF.Abs(forward.X) < MathF.Abs(forward.Y) ? "move_right" : "move_forward";
+                Input.ActionPress(_heldMoveAction);
+                break;
             case 4: case 5:
                 _horizontal = EmptyHandKey(); KeyEvent(Key.Q, true); KeyEvent(_horizontal, true); break;
             case 6: case 12:
@@ -195,11 +238,22 @@ public partial class HeldPossessionTest : Node
             Require(heldPlayback && correctBlend, "settled neutral Held window consistently uses the handed carry and speed blend");
         if (_stage == 0 && _stageTick >= 5 && Held(false) && heldPlayback && correctBlend && speed < 0.02f) _freshHeld = true;
         if (_stage == 9 && _stageTick >= 5 && Held(true) && heldPlayback && correctBlend && speed < 0.02f) _heldIdle = true;
-        if (_stage == 10 && _stageTick >= 5 && Held(true) && heldPlayback && correctBlend && speed > _holder.MoveSpeed * 0.9f) _heldMoving = true;
+        if (_stage == 10 && _stageTick >= 5)
+        {
+            Require(speed < 0.02f, "gathered holder cannot walk despite held movement input");
+            if (_stageTick == 5) _heldMoveOrigin = _holder.GlobalPosition;
+            // Keep the input pressed throughout this 35-tick observation. A
+            // zero velocity report alone would miss direct position writes.
+            Require((_holder.GlobalPosition - _heldMoveOrigin).Length() < 0.01f, "gathered holder position remains fixed while movement is held");
+            if (Held(true) && heldPlayback && correctBlend && speed < 0.02f) _heldMoving = true;
+        }
         if (_stage == 8 && phase != MovePhase.Inactive)
+        {
             Require(id == "stepback" && current == "StepBack" + phase &&
                 clips == "locomotion/stepback" + phase.ToString().ToLowerInvariant(),
                 "actual committed StepBack phase and clip outrank neutral Held");
+            if (phase == MovePhase.Active && speed > _holder.StepBackBurstSpeed * 0.9f) _stepBackBurst = true;
+        }
         if (_stageTick >= 5 && _other.ActiveAnimNodeForHarness != "Locomotion")
             Require(false, "off-ball player uses locomotion");
         string keys = string.Join(",", _keys.Select(pair => $"{pair.Key}:{_tick - pair.Value}ticks"));
@@ -275,6 +329,7 @@ public partial class HeldPossessionTest : Node
         _finished = true;
         if (failure.Length > 0) _failures.Add(failure);
         foreach (var key in _keys.Keys.ToArray()) KeyEvent(key, false);
+        if (_heldMoveAction.Length > 0) Input.ActionRelease(_heldMoveAction);
         Move(false);
         GD.Print($"[held-possession] {(_failures.Count == 0 ? "PASS" : "FAIL")} scenario={_scenario} errors={string.Join("; ", _failures)} freshHeld={_freshHeld} spentIdle={_heldIdle} spentMoving={_heldMoving}");
         GetTree().Quit(_failures.Count == 0 ? 0 : 1);

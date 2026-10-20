@@ -1684,7 +1684,7 @@ public partial class PlayerController : CharacterBody3D
 		{
 			Vector2 input = ReadInput();
 			Move(input, delta, GetContactOpponent(server: true), IsSprinting, IsProtecting, _requestedProtect && StanceEligible(),
-				_requestedPost, PostEligible(), PostRimSample());
+				_requestedPost, PostEligible(), PostRimSample(), TranslationLocked());
 			CheckAutoStartDribble(input);
 		}
 
@@ -1751,7 +1751,7 @@ public partial class PlayerController : CharacterBody3D
 		else
 		{
 			Move(_pendingInput, delta, GetContactOpponent(server: true), IsSprinting, IsProtecting, _requestedProtect && StanceEligible(),
-				_requestedPost, PostEligible(), PostRimSample());
+					_requestedPost, PostEligible(), PostRimSample(), TranslationLocked());
 
 			// #224 fix: only honor drive intent from _pendingInput once a
 			// genuinely FRESH (post-award) SubmitInput has actually arrived —
@@ -1837,7 +1837,8 @@ public partial class PlayerController : CharacterBody3D
 		int seq = _buffer.Record(moveInput, sprint, protect, _requestedProtect, stanceEligible,
 			_requestedPost, PostEligible(), PostRimSample(),
 			_machine.CurrentMove is TurnaroundShot ? _machine.Phase : MovePhase.Inactive,
-			_turnaroundTargetHeading, _machine.CurrentMove is TurnaroundShot ? _turnaroundToken : 0);
+			_turnaroundTargetHeading, _machine.CurrentMove is TurnaroundShot ? _turnaroundToken : 0,
+			TranslationLocked());
 
 		if (_machine.IsActive)
 		{
@@ -1864,7 +1865,7 @@ public partial class PlayerController : CharacterBody3D
 		else
 		{
 			Move(moveInput, delta, GetContactOpponent(server: false), sprint, protect, _requestedProtect && stanceEligible,
-				_requestedPost, PostEligible(), PostRimSample());
+				_requestedPost, PostEligible(), PostRimSample(), TranslationLocked());
 			CheckAutoStartDribble(moveInput);
 		}
 
@@ -2091,6 +2092,12 @@ public partial class PlayerController : CharacterBody3D
 		// whatever move comes next to inherit.
 		_authoritativeExitVector = null;
 
+		// A step-back gathers a live dribble. Preserve #253's fresh-Held
+		// packet-order allowance, but a spent hold can never buy another burst.
+		if (move is StepBack stepBack && IsBallHolder && GetBall() is { State: BallState.Held } stepBall
+			&& (stepBall.HasDribbled || !stepBack.ClientWasAlreadyDribbling))
+			return false;
+
 		// #193 code-review fix: a Crossover/Hesitation IS a dribble move in
 		// real ball — it cannot legally begin while this player HOLDS the
 		// ball in Held state, dead OR live. Without this gate, JumpShot was
@@ -2120,12 +2127,8 @@ public partial class PlayerController : CharacterBody3D
 		// RetreatDribble (#197) joins the same gate for the same reason:
 		// "the ball stays Dribbling" only makes sense starting FROM a live
 		// dribble — you cannot retreat-dribble a ball you haven't started
-		// bouncing. StepBack is deliberately NOT in this list: like
-		// JumpShot, it may begin from a live OR dead Held possession (its
-		// own Active-entry gather call safely no-ops if the ball isn't
-		// Dribbling — see BallController.CradleForShotStartup's doc), so
-		// gating its Begin() on ball state would only add a spurious
-		// restriction, not close a real bypass.
+		// bouncing. StepBack has its own gate above because #253's late
+		// dribble-start packet can temporarily leave authority in fresh Held.
 		//
 		// DriveGather (#230, ADR-0022) joins this gate too — code-review fix,
 		// NOT the same reasoning as StepBack's exemption above. Real ball
@@ -2920,7 +2923,7 @@ public partial class PlayerController : CharacterBody3D
 			if (input.TurnaroundPhase != MovePhase.Inactive)
 				TickTurnaroundMotion(input.TurnaroundPhase, input.TurnaroundTarget, fixedDelta, replayOpponent);
 			else Move(input.Movement, fixedDelta, replayOpponent, input.Sprint, input.Protect,
-				input.PostureHeld && input.StanceEligible, input.PostHeld, input.PostEligible, input.RimSample);
+				input.PostureHeld && input.StanceEligible, input.PostHeld, input.PostEligible, input.RimSample, input.TranslationLocked);
 		}
 		// A fully acknowledged buffer still needs to repair a snap into the raw opponent.
 		DepenetrateAgainstContactSnapshot(replayOpponent);
@@ -3614,11 +3617,8 @@ public partial class PlayerController : CharacterBody3D
 		{
 			// Step-back (M9, issue #197): the "hold" half of the new vertical
 			// gesture pair. Gated to the ball holder (an off-ball defender
-			// retreating has no ball to gather); BeginCommittedMove itself
-			// imposes NO Held-vs-Dribbling gate for StepBack (unlike
-			// Crossover/Hesitation/BehindTheBack/RetreatDribble) — see that
-			// method's comment for why the move's own Active-entry gather
-			// call safely no-ops from either starting state.
+			// retreating has no ball to gather). BeginCommittedMove requires
+			// a live dribble, allowing only #253's fresh-Held packet race.
 			//
 			// #253 cradle-race fix: capture whether OUR OWN ball copy was already
 			// Dribbling at Begin and carry it on the StepBack instance AND the
@@ -4352,12 +4352,17 @@ public partial class PlayerController : CharacterBody3D
 	/// Keep it pure: no role checks, no network calls, no side effects.
 	/// Any divergence between server and client is a bug in this function.
 	/// </summary>
+	// The same possession rule covers every completed gather, without a second
+	// StepBack-only latch that could survive a possession award. Committed motion
+	// retains its own timeline; only neutral movement consumes this flag.
+	private bool TranslationLocked() => IsBallHolder && GetBall() is { State: BallState.Held, HasDribbled: true };
+
 	// Both pace flags are resolved by the role-aware caller. Replay passes the
 	// historically resolved bit; re-reading today's ball state here would rewrite history.
 	public void Move(Vector2 inputDir, double delta, ContactOpponent? opponent = null, bool sprint = false, bool protect = false, bool stance = false,
-		bool postHeld = false, bool postEligible = false, Vector3 rimSample = default)
+		bool postHeld = false, bool postEligible = false, Vector3 rimSample = default, bool translationLocked = false)
 	{
-		_effectivePost = postHeld && postEligible;
+		_effectivePost = postHeld && postEligible && !translationLocked;
 		if (_effectivePost)
 		{
 			_effectiveStance = false;
@@ -4412,7 +4417,7 @@ public partial class PlayerController : CharacterBody3D
 			// Map 2D intent onto the ground plane. -Z is "forward" in Godot.
 			// World-space, not camera-relative — so the server can replay it
 			// without knowing each client's camera orientation (ADR-0002).
-			Vector3 wishDir = new Vector3(inputDir.X, 0.0f, inputDir.Y);
+			Vector3 wishDir = translationLocked ? Vector3.Zero : new Vector3(inputDir.X, 0.0f, inputDir.Y);
 			// The Accel/Decel asymmetry ("change of pace", ADR-0003) lives in
 			// MovementMath now (issue #37) so it's unit-testable without a
 			// running Godot instance — this call is behavior-identical to the
