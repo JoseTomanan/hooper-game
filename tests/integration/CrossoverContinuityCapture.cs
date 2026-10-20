@@ -213,7 +213,9 @@ public partial class CrossoverContinuityCapture : Node
         if (elapsed == 15) SetInput("move_forward", true);
         if (elapsed == 25) SetInput("move_forward", false);
         if (elapsed < 60 || (!_measuring && _ball.State != BallState.Dribbling)) return;
-        if (_pulseTick >= 0 && _tick == _pulseTick + 8)
+        // Downward hold now commits on sample 13; preparation and horizontal
+        // captures retain their original pulses.
+        if (_pulseTick >= 0 && _tick == _pulseTick + (_measuring && _move == "stepback" ? 18 : 8))
         { SetInput("aim_left", false); SetInput("aim_right", false); SetInput("aim_down", false); SetInput("move_size_up", false); }
         if (!_measuring)
         {
