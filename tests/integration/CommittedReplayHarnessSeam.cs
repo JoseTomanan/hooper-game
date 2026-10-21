@@ -29,6 +29,8 @@ public partial class PlayerController
         || _lastContactResponse.Self.Velocity != Vector3.Zero
         || _lastContactResponse.Opponent.Position != Vector3.Zero
         || _lastContactResponse.Opponent.Velocity != Vector3.Zero;
+    internal bool ReplayOwnContactResponse => _lastContactResponse.Self.Position != Vector3.Zero
+        || _lastContactResponse.Self.Velocity != Vector3.Zero;
     internal string ReplayPhase => _machine.Phase.ToString();
     internal int ReplayFrame => _machine.FrameInPhase;
     internal int ReplayAck => _serverAckedSeq;

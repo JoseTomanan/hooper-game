@@ -18,6 +18,8 @@ public partial class CommittedReplayTest : Node3D
     private float _preBeginSpeed;
     private int _correctionProbes;
     private int _serverStartup, _serverActive;
+    private bool _defenderContactResponse;
+    private int _stationaryDefenderTicks;
 
     public override void _Ready()
     {
@@ -83,6 +85,8 @@ public partial class CommittedReplayTest : Node3D
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
     private void Complete()
     {
+        if (_stationaryDefenderTicks < 10)
+        { Finish(false, "missing initial stationary defender evidence"); return; }
         if (_move != "neutral" && (_serverStartup == 0 || _serverActive == 0))
         { Finish(false, $"server phase premise failed: startup={_serverStartup} active={_serverActive}"); return; }
         if ((_contact == "contact" && (_opponentContacts == 0 || (_move != "neutral" && _committedContacts == 0)))
@@ -119,6 +123,9 @@ public partial class CommittedReplayTest : Node3D
                 // rather than the remote-input slot this instrument previously seeded.
                 // Source: https://docs.godotengine.org/en/4.7/classes/class_input.html#class-input-method-action-press
                 if (_tick == 90) Input.ActionPress("move_right", 1);
+                Vector2 defenderInput = Input.GetVector("move_left", "move_right", "move_forward", "move_backward");
+                if (defenderInput != (_tick < 90 ? Vector2.Zero : Vector2.Right))
+                    throw new InvalidOperationException("defender input premise violated");
                 _fixture.First.ReplayHarnessPair(_fixture.Second, fixedDelta, _tick < 90 ? Vector2.Zero : Vector2.Right);
                 if (_fixture.First.ReplayPhase == "Startup") _serverStartup++;
                 if (_fixture.First.ReplayPhase == "Active") _serverActive++;
@@ -127,8 +134,17 @@ public partial class CommittedReplayTest : Node3D
                 int opponentHits = _fixture.First.ReplayContactResponse ? 1 : 0;
                 _opponentContacts += opponentHits;
                 if (_fixture.First.ReplayPhase != "Inactive") _committedContacts += opponentHits;
-                if (_tick < 90 && (_fixture.Second.Velocity.Length() > 0.00001 || _fixture.Second.GlobalPosition.Length() > 0.00001))
-                    throw new InvalidOperationException("stationary defender premise violated");
+                _defenderContactResponse |= _fixture.Second.ReplayOwnContactResponse;
+                // Zero input is not a promise of an immovable body. #424's cut can
+                // carry the attacker outside the defender's facing cone, where
+                // ADR-0025 allows contact displacement. Require the real response
+                // before permitting drift; no-contact retains the fixed-origin check.
+                if (_tick < 90 && (!_defenderContactResponse || _contact == "no-contact"))
+                {
+                    if (_fixture.Second.Velocity.Length() > 0.00001 || _fixture.Second.GlobalPosition.Length() > 0.00001)
+                        throw new InvalidOperationException("defender moved without contact response");
+                    _stationaryDefenderTicks++;
+                }
                 if (_tick > 120 && _fixture.Second.GlobalPosition.Length() < 0.1)
                     throw new InvalidOperationException("moving defender premise not exercised");
                 GD.Print("SERVER_ROW " + JsonSerializer.Serialize(new {
@@ -136,7 +152,8 @@ public partial class CommittedReplayTest : Node3D
                     first_velocity = PlayerController.ReplayVector(_fixture.First.Velocity), first_phase = _fixture.First.ReplayPhase, first_frame = _fixture.First.ReplayFrame,
                     second_position = PlayerController.ReplayVector(_fixture.Second.GlobalPosition), second_velocity = PlayerController.ReplayVector(_fixture.Second.Velocity),
                     second_phase = _fixture.Second.ReplayPhase, second_frame = _fixture.Second.ReplayFrame,
-                    separation = _fixture.Snapshot.HorizontalSeparation, first_slides = _fixture.First.GetSlideCollisionCount(), second_slides = _fixture.Second.GetSlideCollisionCount(), opponent_hits = opponentHits
+                    separation = _fixture.Snapshot.HorizontalSeparation, first_slides = _fixture.First.GetSlideCollisionCount(), second_slides = _fixture.Second.GetSlideCollisionCount(), opponent_hits = opponentHits,
+                    defender_input = new[] { defenderInput.X, defenderInput.Y }, defender_contact_response = _fixture.Second.ReplayOwnContactResponse
                 }));
                 return;
             }

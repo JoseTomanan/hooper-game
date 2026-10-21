@@ -110,6 +110,36 @@ Only that capture fixture's pre-run position changes; it does not constrain
 or alter gameplay travel. Capture success and numerical bounds never accept
 readability or feel. #301 and #173 stay open; tuning remains #238.
 
+## CI replay-fixture diagnosis
+
+The initial PR run failed only `committed-replay-crossover-contact-0ms` and
+`committed-replay-crossover-contact-30ms`: `stationary defender premise violated`.
+The same assertion failed in two local zero-delay repetitions. A targeted
+probe at tick 73 showed zero defender input and heading 0, attacker position
+`(0.9120, 0, 0.4078)`, and defender velocity `(-0.1793, 0, -0.0929)`.
+The cut carries the attacker outside the defender's 60-degree facing cone;
+ADR-0025 then permits a contact response to move the zero-input defender.
+The fixture had incorrectly equated zero input with fixed position.
+
+The repaired fixture checks actual host input before every paired tick and
+allows drift only after observing the defender's own production contact
+response. No-contact retains the strict fixed-origin assertion, and every
+trial must establish an initial stationary interval. Phase, committed-contact,
+correction-probe and replay-oracle requirements remain in force. This changes
+test premises, not gameplay or the contact model.
+
+All 24 replay trials pass after repair (three moves, contact/no-contact,
+0/30 ms delay, two repetitions). Omitting the scheduled tick-90 host input
+makes the no-contact control fail specifically at `defender input premise
+violated`; the source was restored byte-for-byte and the game rebuilt cleanly.
+Independent review found no introduced correctness defects in the repair.
+
+The first local exhaustive run passed all 344 direct cases but could not start
+50 shell adapters: Git Bash failed inside the Windows sandbox with
+`couldn't create signal pipe, Win32 error 5` (exit 3221225794). Running the shell
+outside that sandbox succeeds; these launch failures are distinct from the
+two reproduced Linux CI assertions above.
+
 ## Framework sources
 
 Local validation on the final harness: game build (zero warnings/errors),
