@@ -39,6 +39,9 @@ SCENARIOS = {
     'held-possession': Scenario('NetHeldPossessionTest', 'net-held', 23466,
                                required=('server', 'client'), default='host',
                                variants=('host', 'client')),
+    'moving-crossover': Scenario('MovingCrossoverLateralTest', 'moving-crossover-lateral', 23467,
+                                required=('server', 'client'), default='host',
+                                variants=('host', 'client')),
 }
 
 

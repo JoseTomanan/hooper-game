@@ -336,6 +336,7 @@ def _slug(value: str) -> str:
 
 
 _ADDITIONAL_SINGLE_ROWS = """AnimationHarnessPrimitivesTest.tscn|primitives-discovery
+MovingCrossoverLateralTest.tscn|suite
 HeldPossessionTest.tscn|held
 AnimationHarnessPrimitivesTest.tscn|primitives-resources
 AnimationHarnessPrimitivesTest.tscn|primitives-state-clips
@@ -420,6 +421,8 @@ PostPresentationTest.tscn|presentation
 CommittedClipHookupAudit.tscn|
 """
 _ADDITIONAL_MULTIPROCESS_ROWS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
+    ("net-moving-crossover-host", "tests/integration/run-net-moving-crossover.sh godot host", "MovingCrossoverLateralTest.tscn", (".godot/harness-logs/net-moving-crossover-host-*.log",)),
+    ("net-moving-crossover-client", "tests/integration/run-net-moving-crossover.sh godot client", "MovingCrossoverLateralTest.tscn", (".godot/harness-logs/net-moving-crossover-client-*.log",)),
     ("net-held-possession-host", "tests/integration/run-net-held-possession.sh godot host", "NetHeldPossessionTest.tscn", (".godot/harness-logs/net-held-possession-host-*.log",)),
     ("net-held-possession-client", "tests/integration/run-net-held-possession.sh godot client", "NetHeldPossessionTest.tscn", (".godot/harness-logs/net-held-possession-client-*.log",)),
     ("crossover-continuity", "tests/integration/run-crossover-continuity.sh godot", "CrossoverContinuityCapture.tscn", (".godot/crossover-continuity/catalog-*/**/*",)),
