@@ -6,6 +6,8 @@ namespace Hooper.Player;
 /// <summary>
 /// Pure C# burst-vector composition for the moving crossover (issue #198) —
 /// no Godot Node inheritance, no engine singletons, no RPCs.
+/// ComposeActiveVelocity retains the shared #198/#209 contract below;
+/// ComposeCrossoverActiveVelocity adds #424's crossover-only moving cut.
 ///
 /// Extracted so PlayerController.TickCommittedMoveBehavior's Active-entry
 /// branch can call ONE headless-testable function instead of hand-rolling the
@@ -80,6 +82,8 @@ public static class CrossoverBurstMath
             burstSpeed, forwardBurstScale, exitDeadzone);
         float movingT = Mathf.Clamp(new Vector2(survivingVelocity.X, survivingVelocity.Z).Length()
             / PushCrossBlendSpeed, 0f, 1f);
+        // Orthonormal heading axes: Dot extracts the sideways component.
+        // https://docs.godotengine.org/en/4.7/classes/class_vector2.html#class-vector2-method-dot
         Vector2 right = HandStateResolver.BurstWorldDir(heading, +1);
         float straightWeight = 1f;
         if (exitVector.LengthSquared() > exitDeadzone * exitDeadzone)
