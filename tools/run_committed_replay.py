@@ -139,10 +139,12 @@ def trial(args, move, contact, delay, index):
         selected = [row for row in rows if row["server_phase"] == phase]
         phases[phase] = {"rows": len(selected), "nonempty_replays": sum(row["replay_count"] > 0 for row in selected),
                          "mean_replay_count": sum(row["replay_count"] for row in selected) / len(selected) if selected else 0,
-                         "max_correction": max((row["correction"] for row in selected), default=0),
+                         # Keep characterization comparable with the pre-probe baseline.
+                         "max_correction": max((row.get("unperturbed_correction", row["correction"]) for row in selected), default=0),
                          "max_oracle_position_error": max((row["oracle_position_error"] for row in selected), default=0)}
     summary = {"move": move, "contact": contact, "delay_ms": delay, "repeat": index, "passed": error is None,
                "error": error, "elapsed_seconds": time.monotonic() - started, "rows": len(rows), "relay": relay, "phases": phases,
+               "correction_probe_rows": sum(row.get("correction_probe_offset", 0) > 0 for row in rows),
                "server_opponent_hits": sum(row["opponent_hits"] for row in server_rows),
                "server_committed_opponent_hits": sum(row["opponent_hits"] for row in server_rows if row["first_phase"] != "Inactive"),
                "server_minimum_separation": min((row["separation"] for row in server_rows), default=None),

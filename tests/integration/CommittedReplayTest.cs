@@ -16,6 +16,8 @@ public partial class CommittedReplayTest : Node3D
     private double _serverCompleteAt = -1;
     private int _corrections, _committedCorrections, _startup, _active, _rows, _opponentContacts, _committedContacts;
     private float _preBeginSpeed;
+    private int _correctionProbes;
+    private int _serverStartup, _serverActive;
 
     public override void _Ready()
     {
@@ -81,14 +83,22 @@ public partial class CommittedReplayTest : Node3D
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
     private void Complete()
     {
+        if (_move != "neutral" && (_serverStartup == 0 || _serverActive == 0))
+        { Finish(false, $"server phase premise failed: startup={_serverStartup} active={_serverActive}"); return; }
         if ((_contact == "contact" && (_opponentContacts == 0 || (_move != "neutral" && _committedContacts == 0)))
             || (_contact == "no-contact" && _opponentContacts != 0))
         { Finish(false, $"contact premise failed: contacts={_opponentContacts} committed={_committedContacts}"); return; }
-        RpcId(Multiplayer.GetRemoteSenderId(), MethodName.Completed);
+        RpcId(Multiplayer.GetRemoteSenderId(), MethodName.Completed, _serverStartup, _serverActive);
         _serverCompleteAt = _elapsed + 0.25;
     }
     [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-    private void Completed() { Finish(true, "actual corrections, confirmed phases and replay measured"); }
+    private void Completed(int serverStartup, int serverActive)
+    {
+        if (_move != "neutral" && (serverStartup == 0 || serverActive == 0))
+        { Finish(false, "missing reliable server phase evidence"); return; }
+        GD.Print("SERVER_PHASE_SUMMARY " + JsonSerializer.Serialize(new { startup = serverStartup, active = serverActive }));
+        Finish(true, "actual corrections, confirmed phases and replay measured");
+    }
 
     public override void _PhysicsProcess(double delta)
     {
@@ -110,6 +120,8 @@ public partial class CommittedReplayTest : Node3D
                 // Source: https://docs.godotengine.org/en/4.7/classes/class_input.html#class-input-method-action-press
                 if (_tick == 90) Input.ActionPress("move_right", 1);
                 _fixture.First.ReplayHarnessPair(_fixture.Second, fixedDelta, _tick < 90 ? Vector2.Zero : Vector2.Right);
+                if (_fixture.First.ReplayPhase == "Startup") _serverStartup++;
+                if (_fixture.First.ReplayPhase == "Active") _serverActive++;
                 // #370 replaces the solver. Keep the instrument's contact premise tied
                 // to an actual deterministic response, rather than a now-masked slide.
                 int opponentHits = _fixture.First.ReplayContactResponse ? 1 : 0;
@@ -131,7 +143,8 @@ public partial class CommittedReplayTest : Node3D
             // The no-contact oracle remains exact. Contact rows are diagnostic only;
             // they do not reconstruct historical raw opponent samples (ADR-0025).
             _oracle.Second.ResetContactStateForHarness(_fixture.Second.GlobalPosition, _fixture.Second.Heading, _fixture.Second.Velocity);
-            var row = _fixture.First.ReplayHarnessReconcile(_oracle.First, fixedDelta, _tick);
+            var row = _fixture.First.ReplayHarnessReconcile(_oracle.First, fixedDelta, _tick,
+                _correctionProbes == 0 ? (_move == "gather" ? "drivegather" : _move) : null);
             if (row != null)
             {
                 row["opponent_raw_position"] = PlayerController.ReplayVector(_fixture.Second.ReplayRawPosition);
@@ -144,6 +157,7 @@ public partial class CommittedReplayTest : Node3D
                 // System.Text.Json rejects nonfinite floats, so corrupted data fails the trial.
                 GD.Print("REPLAY_ROW " + JsonSerializer.Serialize(row));
                 _rows++;
+                if ((float)row["correction_probe_offset"] > 0) _correctionProbes++;
                 int replay = (int)row["replay_count"];
                 if (replay > 0 && (float)row["correction"] > 0.00001f) _corrections++;
                 if ((string)row["server_move"] == (_move == "gather" ? "drivegather" : _move))
@@ -169,9 +183,14 @@ public partial class CommittedReplayTest : Node3D
             _fixture.Second.ReplayHarnessRemote();
             if (_tick >= 180)
             {
-                if (_rows < 30 || _corrections == 0 || (_move != "neutral" && (_startup == 0 || _active == 0 || _committedCorrections == 0)))
-                    throw new InvalidOperationException($"vacuous evidence: rows={_rows} corrections={_corrections} committedCorrections={_committedCorrections} startup={_startup} active={_active}");
-                GD.Print("REPLAY_SUMMARY " + JsonSerializer.Serialize(new { rows = _rows, corrections = _corrections, committed_corrections = _committedCorrections, startup = _startup, active = _active, pre_begin_speed = _preBeginSpeed }));
+                // Unreliable snapshots can omit a short phase completely when
+                // either process is descheduled. Complete verifies actual server
+                // phase ticks and reliably returns them before client PASS. Keep
+                // sampled phase counts diagnostic; the correction still requires
+                // a real received non-Inactive snapshot with committed replay.
+                if (_rows < 30 || _correctionProbes != 1 || _corrections == 0 || (_move != "neutral" && _committedCorrections == 0))
+                    throw new InvalidOperationException($"vacuous evidence: rows={_rows} probes={_correctionProbes} corrections={_corrections} committedCorrections={_committedCorrections} startup={_startup} active={_active}");
+                GD.Print("REPLAY_SUMMARY " + JsonSerializer.Serialize(new { rows = _rows, correction_probes = _correctionProbes, corrections = _corrections, committed_corrections = _committedCorrections, startup = _startup, active = _active, pre_begin_speed = _preBeginSpeed }));
                 RpcId(1, MethodName.Complete);
                 _waitingComplete = true;
             }

@@ -230,3 +230,50 @@ harness catalog runs all twelve conditions in CI and preserves contact/control
 groups together. Exact numbers vary with ENet delivery and OS scheduling;
 repeatability here means a bounded procedure and independently checked premises,
 not bit-identical network timing.
+
+## CI correction probe, 2026-10-21
+
+Main's [run 39529709910](https://github.com/JoseTomanan/hooper-game/actions/runs/39529709910)
+failed only `committed-replay-crossover-contact-0ms` (and its aggregate check).
+Its client observed 127 reconciliation rows, 43 corrections, two Startup and two
+Active snapshots, but no nonzero correction coincident with committed replay.
+At client tick 33, sequence 32 / ack 31, one committed-origin zero input survived
+under an Active snapshot. Predicted, authoritative and replayed positions were
+all exactly `(0, 0, 1)`. Recovery rows also replayed committed inputs with zero
+correction. This is valid exact prediction against a set defender, not evidence
+that reconciliation failed. Ten fresh local trials passed unchanged: incidental
+error at the required overlap depended on process scheduling.
+
+The live instrument now applies one labelled 0.25 m vertical prediction offset
+immediately before a real received snapshot is reconciled. For a move trial,
+that snapshot must identify the requested non-Inactive move and leave a real
+committed-origin zero input unacknowledged; neutral uses any nonempty replay.
+No input, acknowledgement, phase, RPC, server state, or replay input is invented.
+The fixture has no vertical motion or world geometry. It checks that premise,
+then requires production snap/replay to remove the offset before the next
+prediction step. The original nonempty replay, phase, contact and no-contact
+oracle gates remain. Each trial requires exactly one successful probe.
+
+Stress runs alongside repository tests exposed a second scheduling premise:
+two of ten crossover-contact trials received no Active snapshot (34 and 48 total
+rows), although the server trace contained the actual Active ticks. The client
+now retains its sampled Startup/Active counts as diagnostics. The server counts
+its actual phase ticks, rejects missing phases, and reliably returns those
+counts before client PASS. Short unreliable phase snapshots may legitimately be
+lost or coalesced; their arrival is not the phase-execution contract. The probe
+still requires a real received non-Inactive move snapshot and surviving committed
+zero input together, and does not create either condition.
+
+Raw rows label `correction_probe_offset`, `unperturbed_position` and
+`unperturbed_correction`. On the probe row, `before_position` and `correction`
+include the artificial error; they must not be presented as natural network
+divergence. Runner phase `max_correction` uses `unperturbed_correction`, and
+`correction_probe_rows` reports the injected count separately. Archived baseline
+results above remain historical, unperturbed measurements.
+
+The offset uses documented [Node3D.GlobalPosition](https://docs.godotengine.org/en/4.7/classes/class_node3d.html#class-node3d-property-global-position).
+Reconciliation still reaches production [MoveAndSlide](https://docs.godotengine.org/en/4.7/classes/class_characterbody3d.html#class-characterbody3d-method-move-and-slide)
+inside the real physics callback. The offset magnitude is a test stimulus,
+not a gameplay setting. This prevents a test from demanding naturally occurring
+prediction error where correct prediction may have none; it does not repair or
+claim to repair the historical committed replay approximation.

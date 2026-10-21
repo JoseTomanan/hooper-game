@@ -45,15 +45,49 @@ public partial class PlayerController
         RpcId(1, MethodName.RequestBeginMove, id, id == "crossover" ? 1f : 0f, false, 0);
         return true;
     }
-    internal Dictionary<string, object> ReplayHarnessReconcile(PlayerController oracle, double delta, int tick)
+    internal Dictionary<string, object> ReplayHarnessReconcile(PlayerController oracle, double delta, int tick,
+        string correctionProbeMove = null)
     {
         if (!_hasNewState) return null;
+        Vector3 unperturbed = GlobalPosition;
+        float probeOffset = 0;
+        // A zero-delay client can predict contact exactly. Requiring incidental
+        // error on the same row as committed replay made CI scheduling a premise.
+        // Perturb ONLY the predicted body, immediately before the real snap/replay;
+        // the planar fixture has no vertical motion or world geometry. Nothing is
+        // sent to the server and the probe must be removed before further simulation.
+        bool retainedInput = false, retainedCommittedZero = false;
+        // The buffer is a contiguous suffix of recorded sequences after pruning
+        // or capacity eviction; ReplayInputs intentionally exposes values only.
+        int sequence = _buffer.LastSequence - _buffer.Count;
+        foreach (PredictionBuffer.InputFrame input in _buffer.ReplayInputs())
+        {
+            sequence++;
+            if (sequence <= _serverAckedSeq) continue;
+            retainedInput = true;
+            if (input.Movement == Vector2.Zero
+                && _replayHarnessCommitted.TryGetValue(sequence, out bool committedOrigin) && committedOrigin)
+                retainedCommittedZero = true;
+        }
+        bool probeReady = correctionProbeMove == "neutral" ? retainedInput
+            : correctionProbeMove != null && _serverMoveId == correctionProbeMove
+                && _serverMovePhase != MovePhase.Inactive && retainedCommittedZero;
+        if (probeReady)
+        {
+            if (Math.Abs(unperturbed.Y - _serverPos.Y) > 0.0001f || Math.Abs(_serverVel.Y) > 0.0001f)
+                throw new InvalidOperationException("correction probe requires planar state");
+            probeOffset = 0.25f; // Test stimulus, not a gameplay tolerance or tuning value.
+            // Source: https://docs.godotengine.org/en/4.7/classes/class_node3d.html#class-node3d-property-global-position
+            GlobalPosition += Vector3.Up * probeOffset;
+        }
         Vector3 before = GlobalPosition, beforeVelocity = Velocity;
         string phaseBefore = _machine.Phase.ToString();
         int frameBefore = _machine.FrameInPhase;
         Vector3 authPosition = _serverPos, authVelocity = _serverVel;
         ReconcileFromServer(_serverPos, _serverVel, _serverAckedSeq, _serverHeading, delta);
         _hasNewState = false;
+        if (probeOffset != 0 && Math.Abs(GlobalPosition.Y - unperturbed.Y) > 0.0001f)
+            throw new InvalidOperationException("production reconciliation did not remove prediction probe");
         foreach (int seq in new List<int>(_replayHarnessCommitted.Keys))
             if (seq <= _serverAckedSeq || seq <= _buffer.LastSequence - _buffer.Capacity) _replayHarnessCommitted.Remove(seq);
         int committed = 0, zeros = 0;
@@ -70,9 +104,11 @@ public partial class PlayerController
             ["phase_after"] = _machine.Phase.ToString(), ["frame_after"] = _machine.FrameInPhase,
             ["server_phase"] = _serverMovePhase.ToString(), ["server_move"] = _serverMoveId,
             ["before_position"] = ReplayVector(before), ["before_velocity"] = ReplayVector(beforeVelocity),
+            ["unperturbed_position"] = ReplayVector(unperturbed), ["correction_probe_offset"] = probeOffset,
             ["auth_position"] = ReplayVector(authPosition), ["auth_velocity"] = ReplayVector(authVelocity),
             ["after_position"] = ReplayVector(GlobalPosition), ["after_velocity"] = ReplayVector(Velocity),
             ["correction"] = before.DistanceTo(GlobalPosition), ["velocity_correction"] = beforeVelocity.DistanceTo(Velocity),
+            ["unperturbed_correction"] = unperturbed.DistanceTo(GlobalPosition),
             ["replay_displacement"] = authPosition.DistanceTo(GlobalPosition),
             ["oracle_position_error"] = oraclePositionError, ["oracle_velocity_error"] = oracleVelocityError
         };
