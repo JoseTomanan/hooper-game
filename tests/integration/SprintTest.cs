@@ -89,8 +89,27 @@ public partial class SprintTest : Node3D
                     _holder.SprintFinishMoveForHarness();
                     _holder.Velocity = new Vector3(0, 0, -_holder.MoveSpeed);
                     _holder.SprintTickHostForHarness(Dt);
-                    Require(!_holder.IsSprinting && _ball.State == BallState.Held && Math.Abs(_holder.Velocity.Length() - _holder.MoveSpeed) < 0.001f, "dead Held sprinted or restarted");
+                    float brakingSpeed = _holder.Velocity.Length();
+                    Require(!_holder.IsSprinting && _ball.State == BallState.Held && _ball.HasDribbled &&
+                        _ball.StateMachine.HolderPeerId == 1 && brakingSpeed > 0f && brakingSpeed < _holder.MoveSpeed,
+                        $"dead Held must brake without sprint/restart; speed={brakingSpeed}");
+                    // Gathered neutral movement brakes existing momentum; holding
+                    // both movement and sprint must never re-accelerate it.
+                    for (int i = 0; i < 12; i++) _holder.SprintTickHostForHarness(Dt);
+                    Require(_holder.Velocity.Length() < 0.001f, "dead Held did not settle while movement/sprint stayed pressed");
+                    Vector3 settledPosition = _holder.GlobalPosition;
+                    for (int i = 0; i < 5; i++)
+                    {
+                        _holder.SprintTickHostForHarness(Dt);
+                        Require(!_holder.IsSprinting && _ball.State == BallState.Held && _ball.HasDribbled &&
+                            _ball.StateMachine.HolderPeerId == 1 && _holder.Velocity.Length() < 0.001f &&
+                            (_holder.GlobalPosition - settledPosition).Length() < 0.001f,
+                            "dead Held moved, sprinted or restarted after settling with input held");
+                    }
                     _ball.StateMachine.ForceState(BallState.Dribbling, 2);
+                    // Independently retain the off-ball jog-speed control after
+                    // the gathered holder's preceding zero-velocity observation.
+                    _holder.Velocity = new Vector3(0, 0, -_holder.MoveSpeed);
                     _holder.SprintTickHostForHarness(Dt);
                     Require(!_holder.IsSprinting && Math.Abs(_holder.Velocity.Length() - _holder.MoveSpeed) < 0.001f, "off-ball sprinted");
                     break;

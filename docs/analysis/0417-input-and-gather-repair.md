@@ -48,6 +48,16 @@ Spent Held never receives that allowance. ADR-0003/0008 record these changes.
 - A prediction-buffer test preserves each tick's translation restriction across
   acknowledgement and a subsequent new possession, retaining raw movement intent.
 
+The exhaustive run exposed one further stale rule assertion:
+`SprintTest/gates` expected a spent-Held holder to continue jogging at 6 m/s.
+It now requires finite braking from existing speed, settling to zero and a
+fixed position with movement and sprint still held. Its fresh-Held drive/sprint
+controls remain, and its off-ball control receives an independent starting
+velocity. The initial local run had 342/343 single-process passes; all 48 local
+multiprocess launches failed through the default Windows WSL Bash shim before
+game proof. Hosted CI passed the network cases and all other scenarios; the
+corrected sprint assertion is verified separately and by the PR's final CI.
+
 Local command/log records are `.godot/417-red-gather.stdout.log`,
 `417-green-held.stdout.log`, `417-net-held-{host,client}.stdout.log` and
 `417-final-units.log`. Final exhaustive verification is recorded in the PR.
