@@ -98,7 +98,9 @@ public partial class HeldPossessionTest
         string label = "";
         if (_stage == 0 && _stageTick >= 6 && neutral && Held(false) && speed < 0.02f && !_captureLabels.Contains("fresh-idle")) label = "fresh-idle";
         if (_stage == 9 && _stageTick >= 6 && neutral && Held(true) && speed < 0.02f && !_captureLabels.Contains("spent-idle")) label = "spent-idle";
-        if (_stage == 10 && _stageTick >= 6 && neutral && Held(true) && speed >= _holder.MoveSpeed * .9f && !_captureLabels.Contains("spent-moving")) label = "spent-moving";
+        // Retain the manifest label for consumers: this stage now proves
+        // movement INPUT while gathered remains planted, at zero speed.
+        if (_stage == 10 && _stageTick >= 6 && neutral && Held(true) && speed < 0.02f && _heldMoveAction.Length > 0 && !_captureLabels.Contains("spent-moving")) label = "spent-moving";
         bool recovery = _stage == 8 && _holder.DisplayMoveId() == "stepback" && phase == MovePhase.Recovery;
         bool returnToHeld = _stage == 8 && _captureRecoveryCount > 0 && neutral && _captureNeutralCount < 8;
         if (recovery) label = "stepback-recovery";
@@ -147,7 +149,7 @@ public partial class HeldPossessionTest
         if (_captureOutput.Length == 0) return;
         RenderingServer.FramePostDraw -= CaptureRenderedFrame;
         if (_captureSkeleton != null) _captureSkeleton.SkeletonUpdated -= SnapshotCaptureBones;
-        Require(new[] { "fresh-idle", "spent-idle", "spent-moving" }.All(_captureLabels.Contains), "rendered capture includes fresh idle, spent idle and spent moving");
+        Require(new[] { "fresh-idle", "spent-idle", "spent-moving" }.All(_captureLabels.Contains), "rendered capture includes fresh idle, spent idle and planted held-movement input");
         Require(_captureRecoveryCount >= StepBack.DefaultFrameData.RecoveryFrames && _captureNeutralCount == 8,
             "rendered capture includes every StepBack Recovery tick and first eight Held ticks");
         File.WriteAllText(Path.Combine(_captureOutput, "manifest.json"), JsonSerializer.Serialize(new {

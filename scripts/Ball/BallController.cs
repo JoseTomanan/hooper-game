@@ -155,7 +155,10 @@ public partial class BallController : Node3D
 	/// tuned default, hitl sign-off deferred to the per-milestone human pass
 	/// like every other sweep tunable.
 	/// </summary>
-	[Export] public float BehindTheBackSweepDepth { get; set; } = 0.7f;
+	// #417: larger visible gap at gameplay scale. Old .7 already cleared the
+	// posed mesh; 1.0 adds ~.29 m at the sampled peak without changing timing.
+	// Measured bounds and rendered comparisons: docs/analysis/0417-input-and-gather-repair.md.
+	[Export] public float BehindTheBackSweepDepth { get; set; } = 1.0f;
 
 	/// <summary>
 	/// Depth (metres) of the vertical dip a BetweenTheLegs sweep (#199) takes
@@ -3180,8 +3183,8 @@ public partial class BallController : Node3D
 	/// the left stick past deadzone. Refused once <see cref="HasDribbled"/> is
 	/// set for this possession (DeadDribbleRule.CanStartDribble) — the dead-
 	/// dribble rule means a feinted pump-fake strands the holder in dead Held
-	/// until the next possession change; they can still walk (Move() is
-	/// unaffected), they just can't resume bouncing the ball.
+	/// until the next possession change. Neutral translation is also gated
+	/// while spent Held; pivoting and shooting remain available (ADR-0008).
 	///
 	/// Called from PlayerController.CheckAutoStartDribble wherever a tick's
 	/// REAL movement input is available for this player — see that method's

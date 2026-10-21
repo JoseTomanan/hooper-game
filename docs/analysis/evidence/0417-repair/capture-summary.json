@@ -1,0 +1,92 @@
+[
+  {
+    "case": "before-right-stationary-1",
+    "commit": "4085a84",
+    "minimumNearestForward": -0.062449404374697204,
+    "peakTick": 73,
+    "image": "before-right-stationary-1-peak.png",
+    "sweepSamples": 7,
+    "coherentRemoteSamples": 0,
+    "poseFrameMatches": true
+  },
+  {
+    "case": "local-right-stationary-1",
+    "commit": "0915c6f",
+    "minimumNearestForward": -0.3549277043746969,
+    "peakTick": 73,
+    "image": "local-right-stationary-1-peak.png",
+    "sweepSamples": 7,
+    "coherentRemoteSamples": 0,
+    "poseFrameMatches": true
+  },
+  {
+    "case": "local-right-moving-1",
+    "commit": "0915c6f",
+    "minimumNearestForward": -0.35492790690043596,
+    "peakTick": 89,
+    "image": "local-right-moving-1-peak.png",
+    "sweepSamples": 7,
+    "coherentRemoteSamples": 0,
+    "poseFrameMatches": true
+  },
+  {
+    "case": "local-left-stationary-1",
+    "commit": "0915c6f",
+    "minimumNearestForward": -0.3549277043746987,
+    "peakTick": 144,
+    "image": "local-left-stationary-1-peak.png",
+    "sweepSamples": 7,
+    "coherentRemoteSamples": 0,
+    "poseFrameMatches": true
+  },
+  {
+    "case": "local-left-moving-1",
+    "commit": "0915c6f",
+    "minimumNearestForward": -0.3549279069004364,
+    "peakTick": 160,
+    "image": "local-left-moving-1-peak.png",
+    "sweepSamples": 7,
+    "coherentRemoteSamples": 0,
+    "poseFrameMatches": true
+  },
+  {
+    "case": "remote-right-stationary-1",
+    "commit": "0915c6f",
+    "minimumNearestForward": -0.35492769562530224,
+    "peakTick": 113,
+    "image": "remote-right-stationary-1-peak.png",
+    "sweepSamples": 4,
+    "coherentRemoteSamples": 4,
+    "poseFrameMatches": true
+  },
+  {
+    "case": "remote-right-moving-1",
+    "commit": "0915c6f",
+    "minimumNearestForward": -0.3549278930995685,
+    "peakTick": 129,
+    "image": "remote-right-moving-1-peak.png",
+    "sweepSamples": 4,
+    "coherentRemoteSamples": 4,
+    "poseFrameMatches": true
+  },
+  {
+    "case": "remote-left-stationary-1",
+    "commit": "0915c6f",
+    "minimumNearestForward": -0.3549276956253041,
+    "peakTick": 180,
+    "image": "remote-left-stationary-1-peak.png",
+    "sweepSamples": 3,
+    "coherentRemoteSamples": 3,
+    "poseFrameMatches": true
+  },
+  {
+    "case": "remote-left-moving-1",
+    "commit": "0915c6f",
+    "minimumNearestForward": -0.3549278430995685,
+    "peakTick": 198,
+    "image": "remote-left-moving-1-peak.png",
+    "sweepSamples": 3,
+    "coherentRemoteSamples": 3,
+    "poseFrameMatches": true
+  }
+]

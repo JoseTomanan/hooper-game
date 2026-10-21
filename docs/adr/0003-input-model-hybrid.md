@@ -510,3 +510,50 @@ and exposure trade without a cancellable payload. Rejected: stacking an
 away-hand lock on the narrower phase band, because #345 requires exactly
 one protection benefit. Rejected: instantaneous velocity clamping on entry,
 which would erase the momentum cost of switching posture.
+
+## Amendment 2026-10-21 - Forgiving downward taps and explicit BehindTheBack (#417)
+
+The maintainer explicitly selected K tap as BehindTheBack switching to the
+opposite hand, with K hold retaining StepBack. The downward stick shares this
+grammar. A downward release after at most twelve above-threshold samples is a
+quick return; the thirteenth held sample commits StepBack. At the shipped
+60 Hz the allowance is 200 ms, three times the former four-sample allowance.
+This is a provisional response to the reported unforgiving threshold, not an
+official Godot recommendation or a feel acceptance (#173/#238).
+
+Horizontal quick/hold timing stays four samples. Q plus a downward tap retains
+RetreatDribble; Q plus horizontal toward the empty hand still selects
+BehindTheBack. No move windows, hand-swap timing or cancel rules change. The
+empty hand is selected from authoritative/predicted HandSide at recognition;
+the existing move ID and direction RPC carry the request unchanged.
+
+Rejected: increasing the shared window, because it also delays every horizontal
+gesture. Rejected: preserving unmodified K tap as RetreatDribble, because the
+maintainer explicitly requested BehindTheBack. The control choice is direct
+human authorization; real-ball hand transfer supplies the opposite-hand result
+(ADR-0014 tier 2), not a claim that basketball prescribes button timing.
+
+### Behind-body presentation margin (#417)
+
+BehindTheBackSweepDepth increases from 0.7 to 1.0 metres. With the unchanged
+0.5 m forward baseline and seven-sample sweep, the deepest sampled centre moves
+from -0.1824 m to -0.4749 m relative to the player root. The sphere's forward
+surface moves from -0.0624 m to -0.3549 m. The regression floor requires that
+surface behind -0.23 m at least once per transfer, on both hands and network
+roles. This is an extra legibility margin at gameplay distance, not a diagnosis
+of torso penetration: the old path already cleared the measured posed mesh.
+
+The same deterministic path drives live ball geometry and the coherent remote
+envelope (ADR-0004/0012/0027). Move frame windows, sweep duration, hand-swap tick
+and authored clips remain unchanged. The existing transit-steal reach reads the
+new swept ball position; its timing interval and success rules do not change.
+The deeper body shield therefore changes spatial exposure as a consequence of
+where the visible ball actually travels, without separate defensive bonuses.
+
+Reference basis: the maintainer's explicit behind-model legibility request and
+ADR-0014 tier 2's body shielding during a real behind-the-back transfer. The
+numeric margin is a measured, provisional starting default, with tuning #238
+and readability judgment #173. Rejected: longer move/sweep windows, which would
+also change timing exposure; rejected: a cosmetic-only ball offset, which would
+separate the visible ball from the server's steal geometry. Measurements and
+rendered evidence are in docs/analysis/0417-input-and-gather-repair.md.

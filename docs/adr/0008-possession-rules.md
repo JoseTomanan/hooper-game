@@ -596,3 +596,37 @@ CheckAutoStartDribble` and the `BeginCommittedMove` dribble-move gate. Proven
 end to end by the headless `TripleThreatTest` harness (ADR-0016), which also
 sweeps `OobTurnoverTest`/`StealTurnoverTest`'s stale "award possession ⇒
 Dribbling" assumptions the prior behaviour left them with.
+
+## Amendment 2026-10-21 - No neutral walking after gathering (#417)
+
+The maintainer explicitly requested that StepBack's gathered ball disallow
+walking. This narrowly revisits #193's travel-enforcement deferral: a holder
+in spent Held (HasDribbled=true) cannot command neutral translation. Existing
+velocity decelerates through the ordinary finite Decel; heading and planted
+pivot remain available, as does shooting. The rule uses the existing possession
+state, so it also applies after a pump-fake or completed drive/euro gather.
+Fresh Held still permits movement to initiate a dribble. Possession award and
+loss naturally release the restriction without a new persistent lock field.
+
+StepBack now requires a live dribble. A genuine fresh-Held start is refused;
+#253's existing ClientWasAlreadyDribbling claim still permits the authority's
+fresh-Held packet-order race, but never a spent hold. This prevents repeated
+StepBack bursts from evading the gathered movement rule. Accepted moves still
+complete their own Startup/Active/Recovery and separation displacement. The
+neutral restriction does not cancel or brake their committed burst early.
+Contact and depenetration remain active. No foul, turnover or five-second count
+is introduced, and this is not full pivot-foot travel detection.
+
+Server-own/server-remote callers derive the restriction from live authoritative
+ball state. Client prediction samples its own ball state and stores that bit in
+each input frame; reconciliation uses that historical bit rather than applying
+today's possession to old movement. There is no client-supplied authority bit or
+new RPC. Existing ball snapshot staleness and approximate committed-motion replay
+remain bounded prediction limitations; historical sampling does not prove exact
+agreement through arbitrary possession-correction timing (ADR-0002/0025).
+
+Reference basis: direct human authorization, with ADR-0014 tier 2's gathered
+ball requiring planted footwork. Rejected: a StepBack-only latch, which would
+need separate possession-reset/reconciliation machinery for the same gathered
+state. Rejected: globally freezing input or committed movement at gather, which
+would remove pivoting or cancel StepBack's own separation. Feel stays #173.

@@ -203,10 +203,12 @@ public partial class BehindTheBackTest : Node
                 // centerline (BehindTheBackSweepDepth=0.7 > DribbleForwardOffset=0.5
                 // by default), not merely a smaller positive offset the way a
                 // Crossover's shared vertical-dip curve alone would produce.
-                bool wentBehindBody = _sawBehindBodySweep && _mostNegativeForwardOffset < 0f;
+                // Additional root-relative legibility margin, not a mesh-
+                // collision test. #417 records the measured posed-mesh plane.
+                bool wentBehindBody = _sawBehindBodySweep && _mostNegativeForwardOffset + _ball.BallRadius < -0.23f;
                 if (!wentBehindBody)
                 {
-                    Fail($"expected the sweep to pull the ball BEHIND the holder (forwardOffset < 0); sawBehindBodySweep={_sawBehindBodySweep}, mostNegativeForwardOffset={_mostNegativeForwardOffset:F4}.");
+                    Fail($"expected full-ball rear margin (forwardOffset + radius < -0.23); sawBehindBodySweep={_sawBehindBodySweep}, mostNegativeForwardOffset={_mostNegativeForwardOffset:F4}.");
                     Finish();
                     return;
                 }

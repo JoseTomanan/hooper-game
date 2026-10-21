@@ -10,8 +10,9 @@ namespace Hooper.Moves;
 /// flick-and-release vs. flick-and-hold" grammar, disambiguated from the
 /// horizontal pair by dominant-axis-wins (see RightStickGestureRecognizer's
 /// doc). There is deliberately no vertical "QuickReturn" kind: each vertical
-/// gesture IS its own complete committed move (RetreatDribble = quick,
-/// StepBack = held) rather than one move plus a separate disambiguation.
+/// quick gesture uses the historical RetreatDribble token. Since #417 the
+/// caller maps it to BehindTheBack, or RetreatDribble with size-up held.
+/// StepBack remains the held gesture.
 ///
 /// ── Rename history (issue #202) ──────────────────────────────────────────
 /// This kind was originally named "Feint": every quick flick-and-return used
@@ -42,8 +43,8 @@ public enum GestureKind { None, Crossover, QuickReturn, StepBack, RetreatDribble
 /// Kind == StepBack       → a vertical (downward) flick was held past the feint
 ///                          window — the step-back's "hold" commitment (#197).
 /// Kind == RetreatDribble → a vertical (downward) flick quick-returned to the
-///                          deadzone within the window — the retreat dribble's
-///                          "quick" commitment (#197).
+///                          deadzone within the downward window. The caller
+///                          selects BehindTheBack or modified RetreatDribble.
 ///
 /// Direction is 0 when Kind == None, StepBack, or RetreatDribble — the
 /// vertical pair carries no left/right payload (there is only one downward

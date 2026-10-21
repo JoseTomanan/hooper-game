@@ -25,6 +25,8 @@ namespace Hooper.Ball.Tests;
 /// With defaults (FlickThreshold=0.6, DeadzoneRadius=0.2, FeintWindowTicks=4):
 ///   Crossover fires on the 5th consecutive tick above threshold.
 ///   QuickReturn fires the tick the stick re-enters the deadzone (if within 4 ticks).
+/// Downward gestures use a separate 12-sample window: release through sample 12
+/// remains quick; holding through sample 13 fires StepBack.
 ///
 /// (issue #202) This kind was renamed from "Feint" — see GestureKind's own
 /// doc for why. The RENAME is a pure identifier change; the timing model
@@ -34,7 +36,7 @@ public class RightStickGestureRecognizerTests
 {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    /// <summary>Recognizer with default thresholds (flick=0.6, deadzone=0.2, feintWindow=4).</summary>
+    /// <summary>Default thresholds: flick=0.6, deadzone=0.2, horizontal=4, downward=12.</summary>
     private static RightStickGestureRecognizer NewRecognizer() =>
         new(flickThreshold: 0.6f, deadzoneRadius: 0.2f, feintWindowTicks: 4);
 
@@ -251,7 +253,7 @@ public class RightStickGestureRecognizerTests
     public void Sample_DownHeldPastWindow_FiresStepBack()
     {
         var r = NewRecognizer();
-        GestureResult result = SampleN(r, new Vector2(0f, 0.9f), 5);
+        GestureResult result = SampleN(r, new Vector2(0f, 0.9f), 13);
         Assert.Equal(GestureKind.StepBack, result.Kind);
     }
 
@@ -262,6 +264,59 @@ public class RightStickGestureRecognizerTests
         r.Sample(new Vector2(0f, 0.9f)); // tick 1 above threshold — starts timing
         GestureResult result = r.Sample(Vector2.Zero); // returns to deadzone within window
         Assert.Equal(GestureKind.RetreatDribble, result.Kind);
+    }
+
+    [Theory]
+    [InlineData(11)]
+    [InlineData(12)]
+    public void Sample_DownReleasedBeforeOrAtHoldBoundary_RemainsQuick(int downSamples)
+    {
+        var r = NewRecognizer();
+        for (int i = 0; i < downSamples; i++)
+            Assert.Equal(GestureKind.None, r.Sample(new Vector2(0f, 0.9f)).Kind);
+
+        Assert.Equal(GestureKind.RetreatDribble, r.Sample(Vector2.Zero).Kind);
+    }
+
+    [Fact]
+    public void Sample_DownHeldThroughThirteenthSample_FiresOnceUntilReleaseAndRepress()
+    {
+        var r = NewRecognizer();
+        for (int i = 0; i < 12; i++)
+            Assert.Equal(GestureKind.None, r.Sample(new Vector2(0f, 0.9f)).Kind);
+
+        Assert.Equal(GestureKind.StepBack, r.Sample(new Vector2(0f, 0.9f)).Kind);
+        for (int i = 0; i < 20; i++)
+            Assert.Equal(GestureKind.None, r.Sample(new Vector2(0f, 0.9f)).Kind);
+
+        Assert.Equal(GestureKind.None, r.Sample(Vector2.Zero).Kind);
+        for (int i = 0; i < 12; i++)
+            Assert.Equal(GestureKind.None, r.Sample(new Vector2(0f, 0.9f)).Kind);
+        Assert.Equal(GestureKind.StepBack, r.Sample(new Vector2(0f, 0.9f)).Kind);
+    }
+
+    [Fact]
+    public void Sample_CustomDownWindow_IsIndependentOfHorizontalWindow()
+    {
+        // The original four positional arguments retain their meanings.
+        var r = new RightStickGestureRecognizer(0.6f, 0.2f, 2, 0.1f, downHoldWindowTicks: 6);
+        for (int i = 0; i < 6; i++)
+            Assert.Equal(GestureKind.None, r.Sample(new Vector2(0f, 0.9f)).Kind);
+        Assert.Equal(GestureKind.StepBack, r.Sample(new Vector2(0f, 0.9f)).Kind);
+
+        r.Sample(Vector2.Zero);
+        Assert.Equal(GestureKind.None, r.Sample(new Vector2(0.9f, 0f)).Kind);
+        Assert.Equal(GestureKind.None, r.Sample(new Vector2(0.9f, 0f)).Kind);
+        Assert.Equal(GestureKind.Crossover, r.Sample(new Vector2(0.9f, 0f)).Kind);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Constructor_NonpositiveDownWindow_RejectsInvalidTiming(int window)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new RightStickGestureRecognizer(downHoldWindowTicks: window));
     }
 
     [Fact]
@@ -280,7 +335,7 @@ public class RightStickGestureRecognizerTests
         // The vertical pair has no left/right payload — Direction stays 0
         // regardless of Kind (#197).
         var r1 = NewRecognizer();
-        GestureResult stepBack = SampleN(r1, new Vector2(0f, 0.9f), 5);
+        GestureResult stepBack = SampleN(r1, new Vector2(0f, 0.9f), 13);
         Assert.Equal(0f, stepBack.Direction);
 
         var r2 = NewRecognizer();
@@ -293,7 +348,7 @@ public class RightStickGestureRecognizerTests
     public void Sample_VerticalGestureDebounce_NoRefireWithoutDeadzone()
     {
         var r = NewRecognizer();
-        SampleN(r, new Vector2(0f, 0.9f), 5); // fires StepBack
+        SampleN(r, new Vector2(0f, 0.9f), 13); // fires StepBack
         for (int i = 0; i < 10; i++)
         {
             GestureResult result = r.Sample(new Vector2(0f, 0.9f));
@@ -305,9 +360,9 @@ public class RightStickGestureRecognizerTests
     public void Sample_VerticalGestureReturnToDeadzoneThenFlick_FiresAgain()
     {
         var r = NewRecognizer();
-        SampleN(r, new Vector2(0f, 0.9f), 5); // fires StepBack
+        SampleN(r, new Vector2(0f, 0.9f), 13); // fires StepBack
         r.Sample(Vector2.Zero); // re-arm
-        GestureResult second = SampleN(r, new Vector2(0f, 0.9f), 5);
+        GestureResult second = SampleN(r, new Vector2(0f, 0.9f), 13);
         Assert.Equal(GestureKind.StepBack, second.Kind);
     }
 
@@ -331,7 +386,7 @@ public class RightStickGestureRecognizerTests
         // Y=0.9 vs X=0.65 — vertical exceeds horizontal well past the
         // hysteresis band, so the gesture is Vertical (StepBack).
         var r = NewRecognizer();
-        GestureResult result = SampleN(r, new Vector2(0.65f, 0.9f), 5);
+        GestureResult result = SampleN(r, new Vector2(0.65f, 0.9f), 13);
         Assert.Equal(GestureKind.StepBack, result.Kind);
     }
 
@@ -359,7 +414,7 @@ public class RightStickGestureRecognizerTests
         r.Sample(new Vector2(0.9f, 0.9f)); // tick 2: horizontal now also clears threshold
         r.Sample(new Vector2(0.9f, 0.9f)); // tick 3
         r.Sample(new Vector2(0.9f, 0.9f)); // tick 4
-        GestureResult result = r.Sample(new Vector2(0.9f, 0.9f)); // tick 5 (FeintWindowTicks+1)
+        GestureResult result = SampleN(r, new Vector2(0.9f, 0.9f), 9); // ticks 5-13 (DownHoldWindowTicks+1)
         Assert.Equal(GestureKind.StepBack, result.Kind);
     }
 

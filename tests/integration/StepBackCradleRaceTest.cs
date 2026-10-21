@@ -12,8 +12,8 @@ namespace HOOPERGAME.Tests.Integration;
 // have no cross-channel ordering: a client that drives then step-backs within
 // ~1 tick can have the server process Begin(StepBack) BEFORE that drive's
 // SubmitInput arrives. Unlike JumpShot (#225, which cradles synchronously at
-// Begin), StepBack is deliberately exempt from the dead-dribble Held-gate and
-// cradles LATER, at Active-entry (PlayerController.TickCommittedMoveBehavior's
+// Begin), StepBack permits a fresh Held server copy ONLY with the client's
+// already-dribbling claim and cradles LATER, at Active-entry (PlayerController.TickCommittedMoveBehavior's
 // StepBack branch → BallController.CradleForShotStartup). If the drive's
 // SubmitInput still hasn't arrived by that Active-entry tick, the server's ball
 // copy is still Held, CradleForShotStartup no-ops, and HasDribbled stays false
@@ -71,12 +71,11 @@ namespace HOOPERGAME.Tests.Integration;
 // Held, HasDribbled=true.
 //
 // ── Scenario "no-drive-ever": the triple-threat preservation control ──────
-// The hard constraint the fix must not violate: a StepBack begun from a
-// genuine Held possession with NO drive ever attempted must NOT fabricate a
-// dribble to gather. Begins with clientWasAlreadyDribbling=false (nothing to
-// report), ticks to Active-entry, and asserts the gather no-op'd cleanly —
-// ball still Held, HasDribbled STILL false. This is StepBack's analogue of
-// CradleRaceTest's shoot-from-triple-threat control.
+// A genuine fresh Held possession with NO drive attempted cannot start
+// StepBack: it has no live dribble to gather. With clientWasAlreadyDribbling=false,
+// assert refusal and preserve fresh Held throughout the old gather window.
+// Then drive through the normal input path to prove the refusal did not spend
+// or disable the fresh possession's legal dribble.
 public partial class StepBackCradleRaceTest : Node
 {
     private const double TimeoutSeconds = 10.0;
@@ -99,7 +98,7 @@ public partial class StepBackCradleRaceTest : Node
     private double _elapsed;
     private bool _finished;
 
-    private enum Step { AwaitTipoff, FirstEventIssued, BeginStepBack, AwaitGather }
+    private enum Step { AwaitTipoff, FirstEventIssued, BeginStepBack, AwaitGather, AwaitRefusedStepBack, AwaitLegalDrive }
     private Step _step = Step.AwaitTipoff;
     private int _deadlineFrame;
 
@@ -195,13 +194,20 @@ public partial class StepBackCradleRaceTest : Node
                 // For "out-of-order" the client reports it WAS already dribbling
                 // (true) even though the SERVER's ball is still Held — the race.
                 // For "no-drive-ever" the client has nothing to report (false):
-                // a genuine StepBack from triple threat. For "in-order" the ball
+                // a refused StepBack from triple threat. For "in-order" the ball
                 // is already Dribbling server-side, so the boolean is inert (the
                 // normal gather branch handles it) — pass true for parity with
                 // out-of-order, proving it changes nothing there.
                 bool clientWasAlreadyDribbling = _scenario != "no-drive-ever";
 
                 _p2.ApplyRequestedMoveForHarness("stepback", 0f, clientWasAlreadyDribbling);
+                if (_scenario == "no-drive-ever")
+                {
+                    _step = Step.AwaitRefusedStepBack;
+                    _deadlineFrame = _frame + StepBackActiveMarginFrames;
+                    AssertFreshHeldRefusal();
+                    return;
+                }
                 if (_p2.MachinePhaseForHarness != MovePhase.Startup)
                 {
                     Fail($"begin-stepback: expected StepBack to begin (Startup); got phase={_p2.MachinePhaseForHarness}.");
@@ -211,7 +217,7 @@ public partial class StepBackCradleRaceTest : Node
 
                 // StepBack cradles at ACTIVE-entry, not now — so at THIS instant
                 // HasDribbled must still be whatever it was before the Begin
-                // (false for out-of-order/no-drive-ever; true for in-order,
+                // (false for out-of-order; true for in-order,
                 // which already dribbled). Guard against a stray Begin-time
                 // cradle sneaking in (it must not — that would be a different
                 // bug: StepBack is exempt from the Begin-time cradle gate).
@@ -236,8 +242,6 @@ public partial class StepBackCradleRaceTest : Node
                 //                  Held, HasDribbled=TRUE (the #253 fix).
                 //   in-order      — the normal branch cradled the live dribble:
                 //                  Held, HasDribbled=true.
-                //   no-drive-ever — the no-op branch did nothing (boolean false):
-                //                  Held, HasDribbled=FALSE (triple-threat intact).
                 bool expectHasDribbled = _scenario != "no-drive-ever";
 
                 if (_ball.State != BallState.Held || _ball.HasDribbled != expectHasDribbled)
@@ -250,7 +254,40 @@ public partial class StepBackCradleRaceTest : Node
                 GD.Print("[stepback-cradle-race] RESULT: PASS (exit 0)");
                 Finish(0);
                 return;
+
+            case Step.AwaitRefusedStepBack:
+                if (!AssertFreshHeldRefusal()) return;
+                if (_frame < _deadlineFrame) break;
+                GD.Print("[stepback-cradle-race] PASS no-drive-ever refusal — no move began and fresh Held survived the full gather window.");
+                // Same production input seam/award-stamp sequence as in-order.
+                _p2.SetPendingInputForHarness(5, new Vector2(0f, 1f));
+                _step = Step.AwaitLegalDrive;
+                _deadlineFrame = _frame + ActionMarginFrames;
+                break;
+
+            case Step.AwaitLegalDrive:
+                if (_frame < _deadlineFrame) break;
+                if (_p2.MachinePhaseForHarness != MovePhase.Inactive || _ball.State != BallState.Dribbling ||
+                    _ball.StateMachine.HolderPeerId != 2 || _ball.HasDribbled)
+                {
+                    Fail($"legal-drive-after-refusal: expected inactive move and holder=2 live Dribbling/spent=false; got phase={_p2.MachinePhaseForHarness}, state={_ball.State}, holder={_ball.StateMachine.HolderPeerId}, HasDribbled={_ball.HasDribbled}.");
+                    Finish();
+                    return;
+                }
+                GD.Print("[stepback-cradle-race] PASS no-drive-ever positive control — normal drive still starts after refused StepBack.");
+                GD.Print("[stepback-cradle-race] RESULT: PASS (exit 0)");
+                Finish(0);
+                return;
         }
+    }
+
+    private bool AssertFreshHeldRefusal()
+    {
+        if (_p2.MachinePhaseForHarness == MovePhase.Inactive && _ball.State == BallState.Held &&
+            _ball.StateMachine.HolderPeerId == 2 && !_ball.HasDribbled) return true;
+        Fail($"no-drive-ever refusal: expected inactive move and holder=2 fresh Held; got phase={_p2.MachinePhaseForHarness}, state={_ball.State}, holder={_ball.StateMachine.HolderPeerId}, HasDribbled={_ball.HasDribbled}.");
+        Finish();
+        return false;
     }
 
     private void Fail(string message) => GD.PrintErr($"[stepback-cradle-race] FAIL: {message}");
