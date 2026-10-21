@@ -4104,7 +4104,13 @@ public partial class PlayerController : CharacterBody3D
 						_              => (BurstSpeed, ForwardBurstScale, 180f),
 					};
 
-					Velocity = CrossoverBurstMath.ComposeActiveVelocity(
+					// #424 revises only Crossover's moving push-cross. Siblings
+					// keep the original shared composition and tunables.
+					Velocity = _machine.CurrentMove is Crossover
+						? CrossoverBurstMath.ComposeCrossoverActiveVelocity(
+							Velocity, Heading, composeSign, exitVectorSample,
+							burstSpeed, forwardBurstScale, ExitDeadzone)
+						: CrossoverBurstMath.ComposeActiveVelocity(
 						Velocity, Heading, composeSign, exitVectorSample,
 						burstSpeed, forwardBurstScale, ExitDeadzone,
 						Mathf.DegToRad(exitConeDegrees));

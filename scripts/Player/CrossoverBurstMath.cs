@@ -67,6 +67,40 @@ namespace Hooper.Player;
 public static class CrossoverBurstMath
 {
     /// <summary>
+    /// Ordinary crossover (#424): retain the shared composition, then add a
+    /// bounded cut toward the empty hand when a moving player exits straight
+    /// or releases the stick. Stationary crosses and deliberate diagonal exits
+    /// keep their existing result. Call once at Active entry, never per tick.
+    /// </summary>
+    public static Vector3 ComposeCrossoverActiveVelocity(
+        Vector3 survivingVelocity, float heading, int flickSign, Vector2 exitVector,
+        float burstSpeed, float forwardBurstScale, float exitDeadzone)
+    {
+        Vector3 composed = ComposeActiveVelocity(survivingVelocity, heading, flickSign, exitVector,
+            burstSpeed, forwardBurstScale, exitDeadzone);
+        float movingT = Mathf.Clamp(new Vector2(survivingVelocity.X, survivingVelocity.Z).Length()
+            / PushCrossBlendSpeed, 0f, 1f);
+        Vector2 right = HandStateResolver.BurstWorldDir(heading, +1);
+        float straightWeight = 1f;
+        if (exitVector.LengthSquared() > exitDeadzone * exitDeadzone)
+        {
+            Vector2 exit = exitVector.Normalized();
+            // Fade out by 30 degrees: real diagonal steering already creates
+            // its own cut. Opposite steering can counteract the flick bias;
+            // keeping that continuous is intentional (ADR-0003, #209).
+            straightWeight = Mathf.Max(0f, 1f - 2f * MathF.Abs(exit.Dot(right)))
+                * Mathf.Max(0f, exit.Dot(HeadingMath.Forward(heading)));
+        }
+        // Half the existing stationary shuffle at the normal 2 m/s gather
+        // survivor is a provisional legibility default, not feel acceptance.
+        // Cap the speed blend so sprint cannot amplify the extra cut.
+        Vector2 cut = right * (flickSign * burstSpeed * MovingCutFraction * movingT * straightWeight);
+        return composed + new Vector3(cut.X, 0f, cut.Y);
+    }
+
+    private const float MovingCutFraction = 0.5f;
+
+    /// <summary>
     /// Floor on the exit-vector-driven impulse's magnitude (m/s) below which
     /// the composition BLENDS toward the legacy flick-driven lateral burst
     /// (code review, #198 fix round; blended rather than hard-snapped in #209).
