@@ -11,11 +11,18 @@ const TURN_SECONDS := 30.0 / 60.0
 const STARTUP_SECONDS := 48.0 / 60.0
 
 func _initialize() -> void:
-	var source: AnimationLibrary = load(SOURCE)
+	quit(0 if rebuild() == OK else 1)
+
+
+# The normal-shot builder calls this after saving its new source family, so
+# Turnaround's established dependency cannot silently retain the old arms.
+# https://docs.godotengine.org/en/4.7/tutorials/scripting/gdscript/gdscript_basics.html#static-functions
+static func rebuild(source: AnimationLibrary = null) -> Error:
+	if source == null:
+		source = load(SOURCE)
 	if source == null:
 		push_error("[rebuild-turnaround] source library missing")
-		quit(1)
-		return
+		return ERR_CANT_OPEN
 	var shot: Animation = source.get_animation(&"jumpshotstartup")
 	var out := AnimationLibrary.new()
 	var startup := Animation.new()
@@ -64,6 +71,8 @@ func _initialize() -> void:
 			assert(clip.track_get_key_count(track) > 0, "empty material track")
 		print("[rebuild-turnaround] %s length=%.6f tracks=%d" % [name, clip.length, clip.get_track_count()])
 	var error := ResourceSaver.save(out, OUTPUT)
-	assert(error == OK, "could not save turnaround library")
+	if error != OK:
+		push_error("could not save turnaround library")
+		return error
 	print("[rebuild-turnaround] PASS")
-	quit(0)
+	return OK

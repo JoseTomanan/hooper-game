@@ -293,6 +293,12 @@ func _initialize() -> void:
 		return
 
 	print("[rebuild-jumpshot] saved %s; clips now: %s" % [LIB_PATH, str(lib.get_animation_list())])
+	# Turnaround intentionally reuses the established shot arc after its turn.
+	# Keep that derived library synchronized through this existing entry point.
+	var dependent_error: Error = preload("res://tools/rebuild_turnaround_clips.gd").rebuild(lib)
+	if dependent_error != OK:
+		quit(1)
+		return
 	quit(0)
 
 
