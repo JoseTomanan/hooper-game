@@ -201,7 +201,8 @@ public partial class JumpshotFormCapture : Node
             physicsFrame = Engine.GetPhysicsFrames(), poseMatchesPhysics = _posePhysics == Engine.GetPhysicsFrames(), pose = _pose,
             camera = Transform(drawnCamera), cameraFov = _camera.Fov, cameraProjection = _camera.Projection.ToString(),
             cameraSize = _camera.Size, cameraNear = _camera.Near, cameraFar = _camera.Far,
-            viewportSize = new[] { viewportSize.X, viewportSize.Y }, cameraProvenance = "observed before post-draw diagnostic camera update",
+            viewportSize = new[] { viewportSize.X, viewportSize.Y }, cameraProvenance = _images
+                ? "observed before post-draw diagnostic camera update" : "headless camera state only; no rendered camera observation",
             role = _role, animation = p.ActiveAnimNodeForHarness, clip, playbackTime = p.ContinuityPlaybackTime,
             fadingFrom = p.ContinuityFadingFrom, fadingTime = p.ContinuityFadingTime,
             move = p.DisplayMoveId(), phase = p.DisplayMove().phase.ToString(), frame = p.AnimationDisplaySnapshot.FrameInPhase,
