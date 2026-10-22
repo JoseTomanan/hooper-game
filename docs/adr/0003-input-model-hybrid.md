@@ -557,3 +557,36 @@ and readability judgment #173. Rejected: longer move/sweep windows, which would
 also change timing exposure; rejected: a cosmetic-only ball offset, which would
 separate the visible ball from the server's steal geometry. Measurements and
 rendered evidence are in docs/analysis/0417-input-and-gather-repair.md.
+
+## Amendment 2026-10-21 - Moving crossover retains a lateral cut (#424)
+
+The maintainer's #424 direction revises #198's deliberately weak moving
+push-cross: ordinary forward movement plus a crossover must move the body
+sideways as well as transfer the ball. The existing finite Startup gather,
+one-time Active-entry exit snapshot, authoritative hand swap and complete
+Recovery remain intact. This is a trajectory change, not a pose repair;
+#414's pose continuity and ADR-0027's coherent remote display remain in place.
+
+Only Crossover augments the shared burst composition. Its extra empty-hand
+cut is half BurstSpeed times the surviving-speed blend, saturated at the
+existing 2 m/s PushCrossBlendSpeed. Neutral exit receives the full extra cut;
+forward exit tapers it continuously to zero by 30 degrees of lateral steering,
+weighted by the exit's forward component. Thus an ordinary 2 m/s gather
+survivor gets 4.5 m/s of lateral cut with a straight or released exit, while
+forward velocity is retained. Sprint cannot amplify that extra cut beyond
+the cap. Zero survivor preserves stationary behavior exactly, and deliberate
+diagonal exits retain the existing composition. Opposite steering may
+counteract or override the flick's cut; it is still a sampled exit parameter,
+not a guarantee of travel toward the flick for every analog direction.
+
+Reference basis is the explicit new human direction and ADR-0014 tier 2's
+change-of-direction crossover, already represented by ADR-0012's lateral
+separation burst. Half the stationary shuffle is a provisional starting
+profile, not a measured basketball constant or feel acceptance; magnitude
+and readability remain #238/#173. #301 and #173 stay open.
+
+Rejected: removing the gather, increasing all burst speeds, continuously
+steering Active, or adding a cosmetic-only lateral offset. Each would change
+the commitment or separate the displayed body from its authoritative root.
+BehindTheBack, BetweenTheLegs, InAndOut and Spin retain their original shared
+composition without the Crossover-specific contribution.

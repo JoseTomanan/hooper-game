@@ -113,8 +113,13 @@ public partial class CrossoverContinuityCapture : Node
             {
                 _fixtureSpawnX = _origin == "Right" ? -5.15f : -4.2f;
                 Vector3 spawn = _network.HostSpawn;
-                _network.HostSpawn = new Vector3(_fixtureSpawnX.Value, spawn.Y, spawn.Z);
+                // #424's left-origin cut travels toward the camera. Put this
+                // three-cycle fixture deeper on court so its final rightward
+                // run stays framed, without changing camera or gameplay motion.
+                float spawnZ = _origin == "Left" ? spawn.Z - 1.5f : spawn.Z;
+                _network.HostSpawn = new Vector3(_fixtureSpawnX.Value, spawn.Y, spawnZ);
                 Event("fixture-setup", $"HostSpawn.X={_fixtureSpawnX:R} before HostGame; centers three rightward runs in unchanged camera");
+                Event("fixture-setup", $"HostSpawn.Z={spawnZ:R} before HostGame; depth accommodates moving lateral cut");
             }
             _network.HostGame(_port);
         }
