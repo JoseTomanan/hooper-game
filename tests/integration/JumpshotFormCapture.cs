@@ -18,6 +18,7 @@ public partial class JumpshotFormCapture : Node
     private string _role, _output, _variant, _hand, _commit, _view;
     private int _tick, _start = -1, _shotTick = -1, _swapTick = -1, _samples, _releases;
     private bool _ready, _sentReady, _done, _finished, _feinted, _images, _sawShot, _sawFeintRecovery;
+    private bool _paced, _legacyShot, _legacyApplied;
     private NetworkManager _network;
     private Node _players;
     private BallController _ball;
@@ -42,6 +43,8 @@ public partial class JumpshotFormCapture : Node
         _view = Read("--capture-view", "gameplay");
         _commit = Read("--capture-commit", "unknown");
         _images = Read("--capture-images", "true") != "false";
+        _paced = Read("--capture-paced", "false") == "true";
+        _legacyShot = Read("--capture-legacy-shot", "false") == "true";
         _output = ProjectSettings.GlobalizePath(Read("--capture-output", ""));
         if (!new[] { "normal", "early", "late", "fadeaway" }.Contains(_variant) || !new[] { "Right", "Left" }.Contains(_hand) ||
             !new[] { "local", "server", "client" }.Contains(_role) || !new[] { "gameplay", "front", "side" }.Contains(_view) || Directory.Exists(_output))
@@ -78,6 +81,7 @@ public partial class JumpshotFormCapture : Node
         if (_wall.Elapsed.TotalSeconds > 80 || _tick > 6000) { Finish("timeout"); return; }
         var p = _players?.GetNodeOrNull<PlayerController>("1");
         if (p == null) return;
+        if (_legacyShot && !_legacyApplied) ApplyLegacyShot(p);
         ObserveRelease(p);
         if (p.DisplayMoveId() == "jumpshot" && p.DisplayMove().phase == MovePhase.Startup) _sawShot = true;
         if (_feinted && p.CurrentMoveIdForHarness == "jumpshot" && p.PhaseForHarness == MovePhase.Recovery && p.FrameInPhaseForHarness >= 12)
@@ -130,6 +134,11 @@ public partial class JumpshotFormCapture : Node
 
     public override void _Process(double delta)
     {
+        // Deliberate producer pacing preserves fixed 1/60 simulation steps but
+        // lets the real ENet observer draw each source tick. This is diagnostic
+        // coverage evidence, never a real-time network/performance claim.
+        // https://docs.godotengine.org/en/4.7/classes/class_os.html#class-os-method-delay-msec
+        if (!_finished && _paced && _role == "server") OS.DelayMsec(80);
         if (!_images && DisplayServer.GetName() == "headless") Sample();
     }
 
@@ -209,12 +218,29 @@ public partial class JumpshotFormCapture : Node
             schema = "hooper-jumpshot-form/v1", result = failure == "" ? "captured" : "failed", failure, role = _role, variant = _variant,
             hand = _hand, commit = _commit, view = _view, samples = _samples, releases = _releases, events = _events,
             sawProductionShotStartup = _sawShot, feintRequested = _feinted, sawAcceptedFeintRecovery = _sawFeintRecovery,
+            paced = _paced, pacingMeaning = _paced ? "80ms producer wall-clock delay; fixed simulation steps; not real-time" : "unpaced",
+            mutation = _legacyShot ? "legacy-normal-shot-three-clips" : "none", mutationApplied = _legacyApplied,
+            legacyFixtureSha256 = _legacyShot ? Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(ProjectSettings.GlobalizePath("res://tests/fixtures/jumpshot_goalkeeper.res")))) : "",
             animationResourceSha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(ProjectSettings.GlobalizePath("res://assets/locomotion.res")))),
             engine = Engine.GetVersionInfo()["string"].AsString(), images = _images,
             sampleTiming = _images ? "SkeletonUpdated modified pose / FramePostDraw image" : "HEADLESS diagnostic state only",
             verdict = "diagnostic only; no feel acceptance" }, new JsonSerializerOptions { WriteIndented = true }));
         GD.Print($"[jumpshot-capture] {(failure == "" ? "CAPTURED" : "FAIL " + failure)} samples={_samples}");
         GetTree().Quit(failure == "" ? 0 : 1);
+    }
+    private void ApplyLegacyShot(PlayerController subject)
+    {
+        var player = subject.GetNode<AnimationPlayer>("AnimationPlayer");
+        // Duplicate the library before replacing three clips. Every unrelated
+        // animation and the production on-disk resource stay intact.
+        // https://docs.godotengine.org/en/4.7/classes/class_resource.html#class-resource-method-duplicate
+        var library = (AnimationLibrary)player.GetAnimationLibrary("locomotion").Duplicate(true);
+        var legacy = GD.Load<AnimationLibrary>("res://tests/fixtures/jumpshot_goalkeeper.res");
+        foreach (string clip in new[] { "jumpshotstartup", "jumpshotactive", "jumpshotrecovery" })
+        { library.RemoveAnimation(clip); library.AddAnimation(clip, legacy.GetAnimation(clip)); }
+        player.RemoveAnimationLibrary("locomotion"); player.AddAnimationLibrary("locomotion", library);
+        _legacyApplied = true;
+        _events.Add(new { tick = _tick, kind = "fixture-mutation", detail = "legacy normal shot clips in duplicated subject AnimationLibrary" });
     }
     private void ObserveRelease(PlayerController p)
     {

@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def start(args, output, role, hand, variant):
     cmd = [args.godot, "--path", str(ROOT), "--max-fps", "60", "--disable-vsync",
            "--resolution", args.resolution, "--log-file", str(output) + ".godot.log"]
-    if not args.remote:
+    if not args.remote or (args.paced and role == "server"):
         cmd += ["--fixed-fps", "60"]
     if args.headless or role == "server":
         cmd += ["--headless"]
@@ -24,6 +24,10 @@ def start(args, output, role, hand, variant):
             "--capture-port=" + str(args.port)]
     if args.headless or role == "server":
         cmd += ["--capture-images=false"]
+    if args.paced:
+        cmd += ["--capture-paced=true"]
+    if args.legacy_shot:
+        cmd += ["--capture-legacy-shot=true"]
     options = {}
     if os.name == "nt":
         info = subprocess.STARTUPINFO()
@@ -58,6 +62,8 @@ def main():
     parser.add_argument("--commit", required=True)
     parser.add_argument("--headless", action="store_true")
     parser.add_argument("--remote", action="store_true")
+    parser.add_argument("--paced", action="store_true", help="diagnostic server pacing; no real-time timing claim")
+    parser.add_argument("--legacy-shot", action="store_true", help="supplemental before reproduction from the preserved three-clip fixture")
     parser.add_argument("--compatibility", action="store_true")
     parser.add_argument("--resolution", default="960x540")
     parser.add_argument("--port", type=int, default=23468)
@@ -66,6 +72,8 @@ def main():
     parser.add_argument("--view", choices=("gameplay", "front", "side"), default="gameplay")
     parser.add_argument("--repeat", type=int, default=1)
     args = parser.parse_args()
+    if args.paced and not args.remote:
+        parser.error("--paced requires --remote")
     args.output = (ROOT / args.output).resolve()
     if not args.output.is_relative_to(ROOT / ".godot" / "418") or args.repeat < 1:
         parser.error("output must be below .godot/418; repeat must be positive")
