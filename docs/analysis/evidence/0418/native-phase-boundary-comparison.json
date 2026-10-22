@@ -1,0 +1,1667 @@
+{
+  "provenance": "Observed source ticks and row playback metadata; metadata does not certify exact clip contribution at skeleton signal",
+  "limitation": "Native repeated render cadence may observe different evaluated clip offsets at equal source ticks. Right normal Recovery19 is legacy .3000000119 versus authored .3166666627; endpoint comparison remains RED and is not claimed as matching-clock motion proof.",
+  "authoritativeEndpointProof": "local final modified poses plus matched unpaced headless ENet source-clock captures",
+  "pairs": [
+    {
+      "case": "left-early-1",
+      "transition": "Startup->Recovery",
+      "beforeDisplacementM": 1.754034236859674,
+      "afterDisplacementM": 1.3865646222942412,
+      "deltaM": -0.3674696145654328,
+      "samples": [
+        {
+          "side": "before",
+          "samples": [
+            {
+              "selectedTick": 156,
+              "phase": "Startup",
+              "frame": 2,
+              "playbackTime": 0.01666666753590107,
+              "animation": "JumpshotStartup",
+              "renderSample": 248
+            },
+            {
+              "selectedTick": 157,
+              "phase": "Startup",
+              "frame": 3,
+              "playbackTime": 0.03333333507180214,
+              "animation": "JumpshotStartup",
+              "renderSample": 249
+            },
+            {
+              "selectedTick": 158,
+              "phase": "Recovery",
+              "frame": 13,
+              "playbackTime": 0,
+              "animation": "JumpshotRecovery",
+              "renderSample": 250
+            },
+            {
+              "selectedTick": 159,
+              "phase": "Recovery",
+              "frame": 14,
+              "playbackTime": 0,
+              "animation": "JumpshotRecovery",
+              "renderSample": 251
+            }
+          ]
+        },
+        {
+          "side": "after",
+          "samples": [
+            {
+              "selectedTick": 156,
+              "phase": "Startup",
+              "frame": 2,
+              "playbackTime": 0,
+              "animation": "JumpshotStartup",
+              "renderSample": 248
+            },
+            {
+              "selectedTick": 157,
+              "phase": "Startup",
+              "frame": 3,
+              "playbackTime": 0.01666666753590107,
+              "animation": "JumpshotStartup",
+              "renderSample": 249
+            },
+            {
+              "selectedTick": 158,
+              "phase": "Recovery",
+              "frame": 13,
+              "playbackTime": 0,
+              "animation": "JumpshotRecovery",
+              "renderSample": 250
+            },
+            {
+              "selectedTick": 159,
+              "phase": "Recovery",
+              "frame": 14,
+              "playbackTime": 0.01666666753590107,
+              "animation": "JumpshotRecovery",
+              "renderSample": 255
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "left-early-1",
+      "transition": "Recovery->Inactive",
+      "beforeDisplacementM": 1.5413319838981532,
+      "afterDisplacementM": 1.4212474183401718,
+      "deltaM": -0.12008456555798142,
+      "samples": [
+        {
+          "side": "before",
+          "samples": [
+            {
+              "selectedTick": 163,
+              "phase": "Recovery",
+              "frame": 18,
+              "playbackTime": 0.06666667014360428,
+              "animation": "JumpshotRecovery",
+              "renderSample": 259
+            },
+            {
+              "selectedTick": 164,
+              "phase": "Recovery",
+              "frame": 19,
+              "playbackTime": 0.0833333358168602,
+              "animation": "JumpshotRecovery",
+              "renderSample": 260
+            },
+            {
+              "selectedTick": 165,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "HeldLeft",
+              "renderSample": 261
+            },
+            {
+              "selectedTick": 166,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "HeldLeft",
+              "renderSample": 262
+            }
+          ]
+        },
+        {
+          "side": "after",
+          "samples": [
+            {
+              "selectedTick": 163,
+              "phase": "Recovery",
+              "frame": 18,
+              "playbackTime": 0.0833333358168602,
+              "animation": "JumpshotRecovery",
+              "renderSample": 259
+            },
+            {
+              "selectedTick": 164,
+              "phase": "Recovery",
+              "frame": 19,
+              "playbackTime": 0.10000000149011612,
+              "animation": "JumpshotRecovery",
+              "renderSample": 264
+            },
+            {
+              "selectedTick": 165,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "HeldLeft",
+              "renderSample": 265
+            },
+            {
+              "selectedTick": 166,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "HeldLeft",
+              "renderSample": 266
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "left-fadeaway-1",
+      "transition": "Startup->Active",
+      "beforeDisplacementM": 0.09834025583041969,
+      "afterDisplacementM": 0.07819270518966091,
+      "deltaM": -0.02014755064075878,
+      "samples": [
+        {
+          "side": "before",
+          "samples": [
+            {
+              "selectedTick": 170,
+              "phase": "Startup",
+              "frame": 16,
+              "playbackTime": 0.25,
+              "animation": "JumpshotStartup",
+              "renderSample": 274
+            },
+            {
+              "selectedTick": 171,
+              "phase": "Startup",
+              "frame": 17,
+              "playbackTime": 0.2666666805744171,
+              "animation": "JumpshotStartup",
+              "renderSample": 275
+            },
+            {
+              "selectedTick": 172,
+              "phase": "Active",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "JumpshotActive",
+              "renderSample": 276
+            },
+            {
+              "selectedTick": 173,
+              "phase": "Active",
+              "frame": 1,
+              "playbackTime": 0,
+              "animation": "JumpshotActive",
+              "renderSample": 277
+            }
+          ]
+        },
+        {
+          "side": "after",
+          "samples": [
+            {
+              "selectedTick": 169,
+              "phase": "Startup",
+              "frame": 16,
+              "playbackTime": 0.25,
+              "animation": "JumpshotStartup",
+              "renderSample": 274
+            },
+            {
+              "selectedTick": 170,
+              "phase": "Startup",
+              "frame": 17,
+              "playbackTime": 0.2666666805744171,
+              "animation": "JumpshotStartup",
+              "renderSample": 275
+            },
+            {
+              "selectedTick": 171,
+              "phase": "Active",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "JumpshotActive",
+              "renderSample": 276
+            },
+            {
+              "selectedTick": 172,
+              "phase": "Active",
+              "frame": 1,
+              "playbackTime": 0,
+              "animation": "JumpshotActive",
+              "renderSample": 277
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "left-fadeaway-1",
+      "transition": "Active->Recovery",
+      "beforeDisplacementM": 0.11268275057009611,
+      "afterDisplacementM": 0.054937426123506154,
+      "deltaM": -0.05774532444658995,
+      "samples": [
+        {
+          "side": "before",
+          "samples": [
+            {
+              "selectedTick": 174,
+              "phase": "Active",
+              "frame": 2,
+              "playbackTime": 0.01666666753590107,
+              "animation": "JumpshotActive",
+              "renderSample": 278
+            },
+            {
+              "selectedTick": 175,
+              "phase": "Active",
+              "frame": 3,
+              "playbackTime": 0.03333333507180214,
+              "animation": "JumpshotActive",
+              "renderSample": 279
+            },
+            {
+              "selectedTick": 176,
+              "phase": "Recovery",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "JumpshotRecovery",
+              "renderSample": 284
+            },
+            {
+              "selectedTick": 177,
+              "phase": "Recovery",
+              "frame": 1,
+              "playbackTime": 0,
+              "animation": "JumpshotRecovery",
+              "renderSample": 285
+            }
+          ]
+        },
+        {
+          "side": "after",
+          "samples": [
+            {
+              "selectedTick": 173,
+              "phase": "Active",
+              "frame": 2,
+              "playbackTime": 0.01666666753590107,
+              "animation": "JumpshotActive",
+              "renderSample": 282
+            },
+            {
+              "selectedTick": 174,
+              "phase": "Active",
+              "frame": 3,
+              "playbackTime": 0.03333333507180214,
+              "animation": "JumpshotActive",
+              "renderSample": 283
+            },
+            {
+              "selectedTick": 175,
+              "phase": "Recovery",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "JumpshotRecovery",
+              "renderSample": 284
+            },
+            {
+              "selectedTick": 176,
+              "phase": "Recovery",
+              "frame": 1,
+              "playbackTime": 0,
+              "animation": "JumpshotRecovery",
+              "renderSample": 285
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "left-fadeaway-1",
+      "transition": "Recovery->Inactive",
+      "beforeDisplacementM": 1.360948667951179,
+      "afterDisplacementM": 1.360948667951179,
+      "deltaM": 0.0,
+      "samples": [
+        {
+          "side": "before",
+          "samples": [
+            {
+              "selectedTick": 194,
+              "phase": "Recovery",
+              "frame": 18,
+              "playbackTime": 0.28333333134651184,
+              "animation": "JumpshotRecovery",
+              "renderSample": 316
+            },
+            {
+              "selectedTick": 195,
+              "phase": "Recovery",
+              "frame": 19,
+              "playbackTime": 0.30000001192092896,
+              "animation": "JumpshotRecovery",
+              "renderSample": 317
+            },
+            {
+              "selectedTick": 196,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "Locomotion",
+              "renderSample": 318
+            },
+            {
+              "selectedTick": 197,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "Locomotion",
+              "renderSample": 319
+            }
+          ]
+        },
+        {
+          "side": "after",
+          "samples": [
+            {
+              "selectedTick": 193,
+              "phase": "Recovery",
+              "frame": 18,
+              "playbackTime": 0.28333333134651184,
+              "animation": "JumpshotRecovery",
+              "renderSample": 314
+            },
+            {
+              "selectedTick": 194,
+              "phase": "Recovery",
+              "frame": 19,
+              "playbackTime": 0.30000001192092896,
+              "animation": "JumpshotRecovery",
+              "renderSample": 319
+            },
+            {
+              "selectedTick": 195,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "Locomotion",
+              "renderSample": 320
+            },
+            {
+              "selectedTick": 196,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "Locomotion",
+              "renderSample": 321
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "left-late-1",
+      "transition": "Startup->Recovery",
+      "beforeDisplacementM": 0.5708075819941906,
+      "afterDisplacementM": 0.5708076518649476,
+      "deltaM": 6.987075706899049e-08,
+      "samples": [
+        {
+          "side": "before",
+          "samples": [
+            {
+              "selectedTick": 164,
+              "phase": "Startup",
+              "frame": 10,
+              "playbackTime": 0.13333334028720856,
+              "animation": "JumpshotStartup",
+              "renderSample": 263
+            },
+            {
+              "selectedTick": 165,
+              "phase": "Startup",
+              "frame": 11,
+              "playbackTime": 0.15000000596046448,
+              "animation": "JumpshotStartup",
+              "renderSample": 264
+            },
+            {
+              "selectedTick": 166,
+              "phase": "Recovery",
+              "frame": 13,
+              "playbackTime": 0,
+              "animation": "JumpshotRecovery",
+              "renderSample": 269
+            },
+            {
+              "selectedTick": 167,
+              "phase": "Recovery",
+              "frame": 14,
+              "playbackTime": 0,
+              "animation": "JumpshotRecovery",
+              "renderSample": 270
+            }
+          ]
+        },
+        {
+          "side": "after",
+          "samples": [
+            {
+              "selectedTick": 165,
+              "phase": "Startup",
+              "frame": 10,
+              "playbackTime": 0.13333334028720856,
+              "animation": "JumpshotStartup",
+              "renderSample": 260
+            },
+            {
+              "selectedTick": 166,
+              "phase": "Startup",
+              "frame": 11,
+              "playbackTime": 0.15000000596046448,
+              "animation": "JumpshotStartup",
+              "renderSample": 265
+            },
+            {
+              "selectedTick": 167,
+              "phase": "Recovery",
+              "frame": 13,
+              "playbackTime": 0,
+              "animation": "JumpshotRecovery",
+              "renderSample": 266
+            },
+            {
+              "selectedTick": 168,
+              "phase": "Recovery",
+              "frame": 14,
+              "playbackTime": 0,
+              "animation": "JumpshotRecovery",
+              "renderSample": 267
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "left-late-1",
+      "transition": "Recovery->Inactive",
+      "beforeDisplacementM": 1.5413319838981532,
+      "afterDisplacementM": 1.5413319838981532,
+      "deltaM": 0.0,
+      "samples": [
+        {
+          "side": "before",
+          "samples": [
+            {
+              "selectedTick": 171,
+              "phase": "Recovery",
+              "frame": 18,
+              "playbackTime": 0.06666667014360428,
+              "animation": "JumpshotRecovery",
+              "renderSample": 278
+            },
+            {
+              "selectedTick": 172,
+              "phase": "Recovery",
+              "frame": 19,
+              "playbackTime": 0.0833333358168602,
+              "animation": "JumpshotRecovery",
+              "renderSample": 279
+            },
+            {
+              "selectedTick": 173,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "HeldLeft",
+              "renderSample": 280
+            },
+            {
+              "selectedTick": 174,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "HeldLeft",
+              "renderSample": 281
+            }
+          ]
+        },
+        {
+          "side": "after",
+          "samples": [
+            {
+              "selectedTick": 172,
+              "phase": "Recovery",
+              "frame": 18,
+              "playbackTime": 0.06666667014360428,
+              "animation": "JumpshotRecovery",
+              "renderSample": 275
+            },
+            {
+              "selectedTick": 173,
+              "phase": "Recovery",
+              "frame": 19,
+              "playbackTime": 0.0833333358168602,
+              "animation": "JumpshotRecovery",
+              "renderSample": 276
+            },
+            {
+              "selectedTick": 174,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "HeldLeft",
+              "renderSample": 277
+            },
+            {
+              "selectedTick": 175,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "HeldLeft",
+              "renderSample": 278
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "left-normal-1",
+      "transition": "Startup->Active",
+      "beforeDisplacementM": 0.14030461523440482,
+      "afterDisplacementM": 0.1144451812443565,
+      "deltaM": -0.025859433990048322,
+      "samples": [
+        {
+          "side": "before",
+          "samples": [
+            {
+              "selectedTick": 170,
+              "phase": "Startup",
+              "frame": 16,
+              "playbackTime": 0.23333333432674408,
+              "animation": "JumpshotStartup",
+              "renderSample": 272
+            },
+            {
+              "selectedTick": 171,
+              "phase": "Startup",
+              "frame": 17,
+              "playbackTime": 0.25,
+              "animation": "JumpshotStartup",
+              "renderSample": 273
+            },
+            {
+              "selectedTick": 172,
+              "phase": "Active",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "JumpshotActive",
+              "renderSample": 274
+            },
+            {
+              "selectedTick": 173,
+              "phase": "Active",
+              "frame": 1,
+              "playbackTime": 0,
+              "animation": "JumpshotActive",
+              "renderSample": 275
+            }
+          ]
+        },
+        {
+          "side": "after",
+          "samples": [
+            {
+              "selectedTick": 171,
+              "phase": "Startup",
+              "frame": 16,
+              "playbackTime": 0.23333333432674408,
+              "animation": "JumpshotStartup",
+              "renderSample": 273
+            },
+            {
+              "selectedTick": 172,
+              "phase": "Startup",
+              "frame": 17,
+              "playbackTime": 0.25,
+              "animation": "JumpshotStartup",
+              "renderSample": 274
+            },
+            {
+              "selectedTick": 173,
+              "phase": "Active",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "JumpshotActive",
+              "renderSample": 275
+            },
+            {
+              "selectedTick": 174,
+              "phase": "Active",
+              "frame": 1,
+              "playbackTime": 0,
+              "animation": "JumpshotActive",
+              "renderSample": 276
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "left-normal-1",
+      "transition": "Active->Recovery",
+      "beforeDisplacementM": 0.11268275057009611,
+      "afterDisplacementM": 0.054937426123506154,
+      "deltaM": -0.05774532444658995,
+      "samples": [
+        {
+          "side": "before",
+          "samples": [
+            {
+              "selectedTick": 174,
+              "phase": "Active",
+              "frame": 2,
+              "playbackTime": 0.01666666753590107,
+              "animation": "JumpshotActive",
+              "renderSample": 280
+            },
+            {
+              "selectedTick": 175,
+              "phase": "Active",
+              "frame": 3,
+              "playbackTime": 0.03333333507180214,
+              "animation": "JumpshotActive",
+              "renderSample": 281
+            },
+            {
+              "selectedTick": 176,
+              "phase": "Recovery",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "JumpshotRecovery",
+              "renderSample": 282
+            },
+            {
+              "selectedTick": 177,
+              "phase": "Recovery",
+              "frame": 1,
+              "playbackTime": 0,
+              "animation": "JumpshotRecovery",
+              "renderSample": 283
+            }
+          ]
+        },
+        {
+          "side": "after",
+          "samples": [
+            {
+              "selectedTick": 175,
+              "phase": "Active",
+              "frame": 2,
+              "playbackTime": 0.01666666753590107,
+              "animation": "JumpshotActive",
+              "renderSample": 282
+            },
+            {
+              "selectedTick": 176,
+              "phase": "Active",
+              "frame": 3,
+              "playbackTime": 0.03333333507180214,
+              "animation": "JumpshotActive",
+              "renderSample": 283
+            },
+            {
+              "selectedTick": 177,
+              "phase": "Recovery",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "JumpshotRecovery",
+              "renderSample": 284
+            },
+            {
+              "selectedTick": 178,
+              "phase": "Recovery",
+              "frame": 1,
+              "playbackTime": 0,
+              "animation": "JumpshotRecovery",
+              "renderSample": 285
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "left-normal-1",
+      "transition": "Recovery->Inactive",
+      "beforeDisplacementM": 1.360948667951179,
+      "afterDisplacementM": 1.360818202603389,
+      "deltaM": -0.00013046534779004304,
+      "samples": [
+        {
+          "side": "before",
+          "samples": [
+            {
+              "selectedTick": 194,
+              "phase": "Recovery",
+              "frame": 18,
+              "playbackTime": 0.28333333134651184,
+              "animation": "JumpshotRecovery",
+              "renderSample": 312
+            },
+            {
+              "selectedTick": 195,
+              "phase": "Recovery",
+              "frame": 19,
+              "playbackTime": 0.30000001192092896,
+              "animation": "JumpshotRecovery",
+              "renderSample": 317
+            },
+            {
+              "selectedTick": 196,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "Locomotion",
+              "renderSample": 318
+            },
+            {
+              "selectedTick": 197,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "Locomotion",
+              "renderSample": 319
+            }
+          ]
+        },
+        {
+          "side": "after",
+          "samples": [
+            {
+              "selectedTick": 195,
+              "phase": "Recovery",
+              "frame": 18,
+              "playbackTime": 0.28333333134651184,
+              "animation": "JumpshotRecovery",
+              "renderSample": 315
+            },
+            {
+              "selectedTick": 196,
+              "phase": "Recovery",
+              "frame": 19,
+              "playbackTime": 0.30000001192092896,
+              "animation": "JumpshotRecovery",
+              "renderSample": 316
+            },
+            {
+              "selectedTick": 197,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "Locomotion",
+              "renderSample": 317
+            },
+            {
+              "selectedTick": 198,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0.01666666753590107,
+              "animation": "Locomotion",
+              "renderSample": 322
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "right-early-1",
+      "transition": "Startup->Recovery",
+      "beforeDisplacementM": 1.9780551362973724,
+      "afterDisplacementM": 1.3865646256006305,
+      "deltaM": -0.5914905106967419,
+      "samples": [
+        {
+          "side": "before",
+          "samples": [
+            {
+              "selectedTick": 90,
+              "phase": "Startup",
+              "frame": 2,
+              "playbackTime": 0,
+              "animation": "JumpshotStartup",
+              "renderSample": 139
+            },
+            {
+              "selectedTick": 91,
+              "phase": "Startup",
+              "frame": 3,
+              "playbackTime": 0.01666666753590107,
+              "animation": "JumpshotStartup",
+              "renderSample": 140
+            },
+            {
+              "selectedTick": 92,
+              "phase": "Recovery",
+              "frame": 13,
+              "playbackTime": 0,
+              "animation": "JumpshotRecovery",
+              "renderSample": 141
+            },
+            {
+              "selectedTick": 93,
+              "phase": "Recovery",
+              "frame": 14,
+              "playbackTime": 0,
+              "animation": "JumpshotRecovery",
+              "renderSample": 142
+            }
+          ]
+        },
+        {
+          "side": "after",
+          "samples": [
+            {
+              "selectedTick": 89,
+              "phase": "Startup",
+              "frame": 2,
+              "playbackTime": 0,
+              "animation": "JumpshotStartup",
+              "renderSample": 131
+            },
+            {
+              "selectedTick": 90,
+              "phase": "Startup",
+              "frame": 3,
+              "playbackTime": 0.01666666753590107,
+              "animation": "JumpshotStartup",
+              "renderSample": 132
+            },
+            {
+              "selectedTick": 91,
+              "phase": "Recovery",
+              "frame": 13,
+              "playbackTime": 0,
+              "animation": "JumpshotRecovery",
+              "renderSample": 133
+            },
+            {
+              "selectedTick": 92,
+              "phase": "Recovery",
+              "frame": 14,
+              "playbackTime": 0.01666666753590107,
+              "animation": "JumpshotRecovery",
+              "renderSample": 139
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "right-early-1",
+      "transition": "Recovery->Inactive",
+      "beforeDisplacementM": 1.7400110254941576,
+      "afterDisplacementM": 1.6318764491861253,
+      "deltaM": -0.10813457630803236,
+      "samples": [
+        {
+          "side": "before",
+          "samples": [
+            {
+              "selectedTick": 97,
+              "phase": "Recovery",
+              "frame": 18,
+              "playbackTime": 0.06666667014360428,
+              "animation": "JumpshotRecovery",
+              "renderSample": 151
+            },
+            {
+              "selectedTick": 98,
+              "phase": "Recovery",
+              "frame": 19,
+              "playbackTime": 0.0833333358168602,
+              "animation": "JumpshotRecovery",
+              "renderSample": 152
+            },
+            {
+              "selectedTick": 99,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "HeldRight",
+              "renderSample": 153
+            },
+            {
+              "selectedTick": 100,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "HeldRight",
+              "renderSample": 154
+            }
+          ]
+        },
+        {
+          "side": "after",
+          "samples": [
+            {
+              "selectedTick": 96,
+              "phase": "Recovery",
+              "frame": 18,
+              "playbackTime": 0.0833333358168602,
+              "animation": "JumpshotRecovery",
+              "renderSample": 143
+            },
+            {
+              "selectedTick": 97,
+              "phase": "Recovery",
+              "frame": 19,
+              "playbackTime": 0.10000000149011612,
+              "animation": "JumpshotRecovery",
+              "renderSample": 144
+            },
+            {
+              "selectedTick": 98,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "HeldRight",
+              "renderSample": 149
+            },
+            {
+              "selectedTick": 99,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "HeldRight",
+              "renderSample": 150
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "right-fadeaway-1",
+      "transition": "Startup->Active",
+      "beforeDisplacementM": 1.3681614582125656,
+      "afterDisplacementM": 1.2939068751879343,
+      "deltaM": -0.07425458302463128,
+      "samples": [
+        {
+          "side": "before",
+          "samples": [
+            {
+              "selectedTick": 146,
+              "phase": "Startup",
+              "frame": 16,
+              "playbackTime": 0.23333333432674408,
+              "animation": "JumpshotStartup",
+              "renderSample": 226
+            },
+            {
+              "selectedTick": 147,
+              "phase": "Startup",
+              "frame": 17,
+              "playbackTime": 0.25,
+              "animation": "JumpshotStartup",
+              "renderSample": 231
+            },
+            {
+              "selectedTick": 148,
+              "phase": "Active",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "FadeawayActive",
+              "renderSample": 232
+            },
+            {
+              "selectedTick": 149,
+              "phase": "Active",
+              "frame": 1,
+              "playbackTime": 0,
+              "animation": "FadeawayActive",
+              "renderSample": 233
+            }
+          ]
+        },
+        {
+          "side": "after",
+          "samples": [
+            {
+              "selectedTick": 144,
+              "phase": "Startup",
+              "frame": 16,
+              "playbackTime": 0.23333333432674408,
+              "animation": "JumpshotStartup",
+              "renderSample": 230
+            },
+            {
+              "selectedTick": 145,
+              "phase": "Startup",
+              "frame": 17,
+              "playbackTime": 0.25,
+              "animation": "JumpshotStartup",
+              "renderSample": 231
+            },
+            {
+              "selectedTick": 146,
+              "phase": "Active",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "FadeawayActive",
+              "renderSample": 232
+            },
+            {
+              "selectedTick": 147,
+              "phase": "Active",
+              "frame": 1,
+              "playbackTime": 0,
+              "animation": "FadeawayActive",
+              "renderSample": 233
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "right-fadeaway-1",
+      "transition": "Active->Recovery",
+      "beforeDisplacementM": 1.93842928716799,
+      "afterDisplacementM": 1.854182955956984,
+      "deltaM": -0.084246331211006,
+      "samples": [
+        {
+          "side": "before",
+          "samples": [
+            {
+              "selectedTick": 150,
+              "phase": "Active",
+              "frame": 2,
+              "playbackTime": 0.01666666753590107,
+              "animation": "FadeawayActive",
+              "renderSample": 234
+            },
+            {
+              "selectedTick": 151,
+              "phase": "Active",
+              "frame": 3,
+              "playbackTime": 0.03333333507180214,
+              "animation": "FadeawayActive",
+              "renderSample": 235
+            },
+            {
+              "selectedTick": 152,
+              "phase": "Recovery",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "JumpshotRecovery",
+              "renderSample": 240
+            },
+            {
+              "selectedTick": 153,
+              "phase": "Recovery",
+              "frame": 1,
+              "playbackTime": 0,
+              "animation": "JumpshotRecovery",
+              "renderSample": 241
+            }
+          ]
+        },
+        {
+          "side": "after",
+          "samples": [
+            {
+              "selectedTick": 148,
+              "phase": "Active",
+              "frame": 2,
+              "playbackTime": 0.01666666753590107,
+              "animation": "FadeawayActive",
+              "renderSample": 234
+            },
+            {
+              "selectedTick": 149,
+              "phase": "Active",
+              "frame": 3,
+              "playbackTime": 0.03333333507180214,
+              "animation": "FadeawayActive",
+              "renderSample": 235
+            },
+            {
+              "selectedTick": 150,
+              "phase": "Recovery",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "JumpshotRecovery",
+              "renderSample": 240
+            },
+            {
+              "selectedTick": 151,
+              "phase": "Recovery",
+              "frame": 1,
+              "playbackTime": 0,
+              "animation": "JumpshotRecovery",
+              "renderSample": 241
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "right-fadeaway-1",
+      "transition": "Recovery->Inactive",
+      "beforeDisplacementM": 1.3609487317369546,
+      "afterDisplacementM": 1.3609486821257955,
+      "deltaM": -4.9611159180784625e-08,
+      "samples": [
+        {
+          "side": "before",
+          "samples": [
+            {
+              "selectedTick": 170,
+              "phase": "Recovery",
+              "frame": 18,
+              "playbackTime": 0.28333333134651184,
+              "animation": "JumpshotRecovery",
+              "renderSample": 271
+            },
+            {
+              "selectedTick": 171,
+              "phase": "Recovery",
+              "frame": 19,
+              "playbackTime": 0.30000001192092896,
+              "animation": "JumpshotRecovery",
+              "renderSample": 272
+            },
+            {
+              "selectedTick": 172,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "Locomotion",
+              "renderSample": 273
+            },
+            {
+              "selectedTick": 173,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "Locomotion",
+              "renderSample": 274
+            }
+          ]
+        },
+        {
+          "side": "after",
+          "samples": [
+            {
+              "selectedTick": 168,
+              "phase": "Recovery",
+              "frame": 18,
+              "playbackTime": 0.28333333134651184,
+              "animation": "JumpshotRecovery",
+              "renderSample": 270
+            },
+            {
+              "selectedTick": 169,
+              "phase": "Recovery",
+              "frame": 19,
+              "playbackTime": 0.30000001192092896,
+              "animation": "JumpshotRecovery",
+              "renderSample": 271
+            },
+            {
+              "selectedTick": 170,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "Locomotion",
+              "renderSample": 272
+            },
+            {
+              "selectedTick": 171,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "Locomotion",
+              "renderSample": 273
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "right-late-1",
+      "transition": "Startup->Recovery",
+      "beforeDisplacementM": 0.5708076367262822,
+      "afterDisplacementM": 0.5708076425488456,
+      "deltaM": 5.822563431401306e-09,
+      "samples": [
+        {
+          "side": "before",
+          "samples": [
+            {
+              "selectedTick": 98,
+              "phase": "Startup",
+              "frame": 10,
+              "playbackTime": 0.13333334028720856,
+              "animation": "JumpshotStartup",
+              "renderSample": 148
+            },
+            {
+              "selectedTick": 99,
+              "phase": "Startup",
+              "frame": 11,
+              "playbackTime": 0.15000000596046448,
+              "animation": "JumpshotStartup",
+              "renderSample": 153
+            },
+            {
+              "selectedTick": 100,
+              "phase": "Recovery",
+              "frame": 13,
+              "playbackTime": 0,
+              "animation": "JumpshotRecovery",
+              "renderSample": 154
+            },
+            {
+              "selectedTick": 101,
+              "phase": "Recovery",
+              "frame": 14,
+              "playbackTime": 0,
+              "animation": "JumpshotRecovery",
+              "renderSample": 155
+            }
+          ]
+        },
+        {
+          "side": "after",
+          "samples": [
+            {
+              "selectedTick": 100,
+              "phase": "Startup",
+              "frame": 10,
+              "playbackTime": 0.13333334028720856,
+              "animation": "JumpshotStartup",
+              "renderSample": 146
+            },
+            {
+              "selectedTick": 101,
+              "phase": "Startup",
+              "frame": 11,
+              "playbackTime": 0.15000000596046448,
+              "animation": "JumpshotStartup",
+              "renderSample": 151
+            },
+            {
+              "selectedTick": 102,
+              "phase": "Recovery",
+              "frame": 13,
+              "playbackTime": 0,
+              "animation": "JumpshotRecovery",
+              "renderSample": 152
+            },
+            {
+              "selectedTick": 103,
+              "phase": "Recovery",
+              "frame": 14,
+              "playbackTime": 0,
+              "animation": "JumpshotRecovery",
+              "renderSample": 153
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "right-late-1",
+      "transition": "Recovery->Inactive",
+      "beforeDisplacementM": 1.7400110254941576,
+      "afterDisplacementM": 1.7400108965312309,
+      "deltaM": -1.2896292678199472e-07,
+      "samples": [
+        {
+          "side": "before",
+          "samples": [
+            {
+              "selectedTick": 105,
+              "phase": "Recovery",
+              "frame": 18,
+              "playbackTime": 0.06666667014360428,
+              "animation": "JumpshotRecovery",
+              "renderSample": 163
+            },
+            {
+              "selectedTick": 106,
+              "phase": "Recovery",
+              "frame": 19,
+              "playbackTime": 0.0833333358168602,
+              "animation": "JumpshotRecovery",
+              "renderSample": 164
+            },
+            {
+              "selectedTick": 107,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "HeldRight",
+              "renderSample": 165
+            },
+            {
+              "selectedTick": 108,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "HeldRight",
+              "renderSample": 166
+            }
+          ]
+        },
+        {
+          "side": "after",
+          "samples": [
+            {
+              "selectedTick": 107,
+              "phase": "Recovery",
+              "frame": 18,
+              "playbackTime": 0.06666667014360428,
+              "animation": "JumpshotRecovery",
+              "renderSample": 161
+            },
+            {
+              "selectedTick": 108,
+              "phase": "Recovery",
+              "frame": 19,
+              "playbackTime": 0.0833333358168602,
+              "animation": "JumpshotRecovery",
+              "renderSample": 162
+            },
+            {
+              "selectedTick": 109,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "HeldRight",
+              "renderSample": 163
+            },
+            {
+              "selectedTick": 110,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "HeldRight",
+              "renderSample": 164
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "right-normal-1",
+      "transition": "Startup->Active",
+      "beforeDisplacementM": 0.14030461523440482,
+      "afterDisplacementM": 0.11444518490101059,
+      "deltaM": -0.02585943033339423,
+      "samples": [
+        {
+          "side": "before",
+          "samples": [
+            {
+              "selectedTick": 105,
+              "phase": "Startup",
+              "frame": 16,
+              "playbackTime": 0.23333333432674408,
+              "animation": "JumpshotStartup",
+              "renderSample": 159
+            },
+            {
+              "selectedTick": 106,
+              "phase": "Startup",
+              "frame": 17,
+              "playbackTime": 0.25,
+              "animation": "JumpshotStartup",
+              "renderSample": 160
+            },
+            {
+              "selectedTick": 107,
+              "phase": "Active",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "JumpshotActive",
+              "renderSample": 161
+            },
+            {
+              "selectedTick": 108,
+              "phase": "Active",
+              "frame": 1,
+              "playbackTime": 0,
+              "animation": "JumpshotActive",
+              "renderSample": 162
+            }
+          ]
+        },
+        {
+          "side": "after",
+          "samples": [
+            {
+              "selectedTick": 105,
+              "phase": "Startup",
+              "frame": 16,
+              "playbackTime": 0.23333333432674408,
+              "animation": "JumpshotStartup",
+              "renderSample": 158
+            },
+            {
+              "selectedTick": 106,
+              "phase": "Startup",
+              "frame": 17,
+              "playbackTime": 0.25,
+              "animation": "JumpshotStartup",
+              "renderSample": 159
+            },
+            {
+              "selectedTick": 107,
+              "phase": "Active",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "JumpshotActive",
+              "renderSample": 164
+            },
+            {
+              "selectedTick": 108,
+              "phase": "Active",
+              "frame": 1,
+              "playbackTime": 0,
+              "animation": "JumpshotActive",
+              "renderSample": 165
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "right-normal-1",
+      "transition": "Active->Recovery",
+      "beforeDisplacementM": 0.11268272446704682,
+      "afterDisplacementM": 0.0884868396120378,
+      "deltaM": -0.024195884855009023,
+      "samples": [
+        {
+          "side": "before",
+          "samples": [
+            {
+              "selectedTick": 109,
+              "phase": "Active",
+              "frame": 2,
+              "playbackTime": 0.01666666753590107,
+              "animation": "JumpshotActive",
+              "renderSample": 163
+            },
+            {
+              "selectedTick": 110,
+              "phase": "Active",
+              "frame": 3,
+              "playbackTime": 0.03333333507180214,
+              "animation": "JumpshotActive",
+              "renderSample": 164
+            },
+            {
+              "selectedTick": 111,
+              "phase": "Recovery",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "JumpshotRecovery",
+              "renderSample": 169
+            },
+            {
+              "selectedTick": 112,
+              "phase": "Recovery",
+              "frame": 1,
+              "playbackTime": 0,
+              "animation": "JumpshotRecovery",
+              "renderSample": 170
+            }
+          ]
+        },
+        {
+          "side": "after",
+          "samples": [
+            {
+              "selectedTick": 109,
+              "phase": "Active",
+              "frame": 2,
+              "playbackTime": 0.01666666753590107,
+              "animation": "JumpshotActive",
+              "renderSample": 166
+            },
+            {
+              "selectedTick": 110,
+              "phase": "Active",
+              "frame": 3,
+              "playbackTime": 0.03333333507180214,
+              "animation": "JumpshotActive",
+              "renderSample": 167
+            },
+            {
+              "selectedTick": 111,
+              "phase": "Recovery",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "JumpshotRecovery",
+              "renderSample": 168
+            },
+            {
+              "selectedTick": 112,
+              "phase": "Recovery",
+              "frame": 1,
+              "playbackTime": 0.01666666753590107,
+              "animation": "JumpshotRecovery",
+              "renderSample": 173
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "right-normal-1",
+      "transition": "Recovery->Inactive",
+      "beforeDisplacementM": 1.3609487459115717,
+      "afterDisplacementM": 1.3612403044576118,
+      "deltaM": 0.0002915585460401271,
+      "samples": [
+        {
+          "side": "before",
+          "samples": [
+            {
+              "selectedTick": 129,
+              "phase": "Recovery",
+              "frame": 18,
+              "playbackTime": 0.28333333134651184,
+              "animation": "JumpshotRecovery",
+              "renderSample": 200
+            },
+            {
+              "selectedTick": 130,
+              "phase": "Recovery",
+              "frame": 19,
+              "playbackTime": 0.30000001192092896,
+              "animation": "JumpshotRecovery",
+              "renderSample": 201
+            },
+            {
+              "selectedTick": 131,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "Locomotion",
+              "renderSample": 202
+            },
+            {
+              "selectedTick": 132,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "Locomotion",
+              "renderSample": 203
+            }
+          ]
+        },
+        {
+          "side": "after",
+          "samples": [
+            {
+              "selectedTick": 129,
+              "phase": "Recovery",
+              "frame": 18,
+              "playbackTime": 0.30000001192092896,
+              "animation": "JumpshotRecovery",
+              "renderSample": 203
+            },
+            {
+              "selectedTick": 130,
+              "phase": "Recovery",
+              "frame": 19,
+              "playbackTime": 0.3166666626930237,
+              "animation": "JumpshotRecovery",
+              "renderSample": 204
+            },
+            {
+              "selectedTick": 131,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "Locomotion",
+              "renderSample": 205
+            },
+            {
+              "selectedTick": 132,
+              "phase": "Inactive",
+              "frame": 0,
+              "playbackTime": 0,
+              "animation": "Locomotion",
+              "renderSample": 206
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
