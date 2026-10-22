@@ -3,6 +3,7 @@ import argparse
 import copy
 import json
 import math
+import struct
 from pathlib import Path
 
 
@@ -15,6 +16,17 @@ def norm(v):
     return [x/size for x in v]
 def distance(a, b): return math.sqrt(dot(sub(a, b), sub(a, b)))
 def angle(a, b): return math.degrees(math.acos(max(-1, min(1, dot(norm(a), norm(b))))))
+
+
+def coordinate_resolution(magnitude):
+    # Godot Vector3 components are 32-bit by default. Two 3D endpoints each
+    # contribute at most sqrt(3) native component ULPs to a distance comparison.
+    # This is input-coordinate precision, not animation repeat noise or taste.
+    # https://docs.godotengine.org/en/4.7/classes/class_vector3.html
+    value = struct.unpack("f",struct.pack("f",magnitude))[0]
+    bits = struct.unpack("I",struct.pack("f",value))[0]
+    ulp = struct.unpack("f",struct.pack("I",bits+1))[0]-value
+    return 2*math.sqrt(3)*ulp
 
 
 def geometry(pose):
@@ -56,7 +68,9 @@ def boundaries(rows, remote, mutate=False):
         if remote and len({r.get("presentationResyncCount",0) for r in neighborhood}) != 1:
             continue
         if mutate and not injected:
-            neighborhood[min(2,i)]["pose"]["bones"]["mixamorig_RightHand"]["body"][0] += 1
+            original_max = max(distance(a["pose"]["bones"][name]["body"][:3],b["pose"]["bones"][name]["body"][:3])
+                               for a,b in zip(neighborhood,neighborhood[1:]) for name in a["pose"]["bones"])
+            neighborhood[min(2,i)]["pose"]["bones"]["mixamorig_RightHand"]["body"][0] += 2*original_max+1
             injected = True
         edges = []
         for a,b in zip(neighborhood,neighborhood[1:]):
@@ -64,7 +78,9 @@ def boundaries(rows, remote, mutate=False):
             values = {name:distance(a["pose"]["bones"][name]["body"][:3],b["pose"]["bones"][name]["body"][:3]) for name in a["pose"]["bones"]}
             worst = max(values,key=values.get)
             edges.append(dict(fromTick=clock(a,remote),toTick=clock(b,remote),tickGap=gap,bone=worst,maxDisplacement=values[worst]))
+        magnitude = max(abs(x) for r in neighborhood for bone in r["pose"]["bones"].values() for space in ("body","world") for x in bone[space][:3])
         result.append(dict(transition="->".join(pair),fromFrame=old["frame"],toFrame=new["frame"],edges=edges,
+                           coordinateMagnitudeM=magnitude,coordinateResolutionM=coordinate_resolution(magnitude),
                            maxDisplacement=max(e["maxDisplacement"] for e in edges),maxTickGap=max(e["tickGap"] for e in edges)))
     return result
 
@@ -161,8 +177,7 @@ def main():
     parser.add_argument("--output",type=Path,required=True)
     parser.add_argument("--no-form-gates",action="store_true",help="baseline measurement; coverage/release contracts still apply")
     parser.add_argument("--baseline",type=Path)
-    parser.add_argument("--boundary-tolerance",type=float,default=0)
-    parser.add_argument("--mutate-boundary",action="store_true",help="negative control: add one metre wrist displacement to first seam")
+    parser.add_argument("--mutate-boundary",action="store_true",help="negative control: displace wrist by twice the observed seam bound plus one metre")
     args=parser.parse_args()
     directories=[args.directory] if (args.directory/"manifest.json").exists() else sorted(p.parent for p in args.directory.glob("*/manifest.json") if not p.parent.name.endswith("-server"))
     results=[analyze(p,not args.no_form_gates,args.mutate_boundary) for p in directories]
@@ -173,9 +188,13 @@ def main():
             if prior is None:
                 r["failures"].append("baseline case missing")
             else:
-                limits={b["transition"]:b["maxDisplacement"] for b in prior["boundaries"]}
+                limits={b["transition"]:b for b in prior["boundaries"]}
                 for b in r["boundaries"]:
-                    if b["transition"] not in limits or b["maxDisplacement"]>limits[b["transition"]]+args.boundary_tolerance:
+                    old = limits.get(b["transition"])
+                    if old is not None:
+                        b["baselineMotionBoundM"] = old["maxDisplacement"]
+                        b["baselineCoordinateResolutionM"] = old["coordinateResolutionM"]
+                    if old is None or b["maxDisplacement"]>old["maxDisplacement"]+old["coordinateResolutionM"]:
                         r["failures"].append("boundary displacement exceeds baseline: "+b["transition"])
             r["result"]="failed" if r["failures"] else "passed"
     passed=bool(results) and all(r["result"]=="passed" for r in results)

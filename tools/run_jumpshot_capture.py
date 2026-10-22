@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def start(args, output, role, hand, variant):
     cmd = [args.godot, "--path", str(ROOT), "--max-fps", "60", "--disable-vsync",
            "--resolution", args.resolution, "--log-file", str(output) + ".godot.log"]
-    if not args.remote or (args.paced and role == "server"):
+    if not args.remote or args.paced:
         cmd += ["--fixed-fps", "60"]
     if args.headless or role == "server":
         cmd += ["--headless"]
