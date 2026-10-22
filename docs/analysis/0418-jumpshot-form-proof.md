@@ -242,3 +242,30 @@ the boundary neighborhood, and inject a presentation reset; the missing evidence
 fails and reset spans remain excluded. Reanalysis passes all 16 local, eight
 unpaced ENet and eight native coverage/form captures. A second independent review
 confirmed this correction without weakening the original motion bounds.
+
+The next CI attempt (run 39771833786) exposed a separate crossover fixture
+reset race. Reliable ClientObserved could overtake the next neutral
+UnreliableOrdered SubmitInput: the harness awarded and teleported while the
+previous case's movement was still arriving. The original shard artifact is
+retained in PR #426. An unchanged local repeat reproduced the same stuck
+Dribbling/heading setup on run 2. Targeted instrumentation then observed reset
+at received sequence 87, before the neutral fence 94, with nonzero input.
+
+The harness now waits for the owner's post-release input sequence and verifies
+both movement/raw-stick caches are neutral before resetting. These are read-only
+harness observations; production input, netcode and shot behavior are unchanged.
+A new client-reset-race catalog scenario holds real previous-case input until
+the server acknowledges both proofs, guaranteeing that completion precedes
+neutral input without relying on a scheduling delay. It must observe the reset
+barrier blocking and then complete all four original movement proofs. The
+initial six-tick stimulus failed before the fix; the acknowledgment-based
+control passes afterward. All original phase, travel, hand-swap and authoritative
+gather thresholds remain intact. The catalog now has 403 cases.
+
+The new control, ordinary client/host paths and offline suite are verified by
+the targeted catalog run; unit tests remain 1,273 passed/five intentional skips
+and repository contracts remain 101 tests/one platform skip. An independent
+review rejected the initial fixed-delay witness as scheduling-dependent; its
+acknowledgment replacement has no remaining correctness finding. This fixture
+needed an explicit input-stream barrier, rather than treating a proof RPC as
+evidence that another transfer stream had drained.

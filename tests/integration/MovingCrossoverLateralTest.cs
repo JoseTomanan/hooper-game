@@ -34,6 +34,10 @@ public partial class MovingCrossoverLateralTest : Node
     private ulong _previousPhysicsFrame;
     private float _entryHeading, _entrySpeed, _startupFirstSpeed, _startupLastSpeed, _startupLastForward;
     private long _lastPresentationTick = -1;
+    private bool _delayNeutral;
+    private bool _neutralReleaseRequested;
+    private int _remoteNeutralSequence;
+    private int _blockedResets;
     private string _last = "waiting for production players";
     private static readonly Vector3 Origin = new(-2, 1, 7);
     private static readonly Vector3 DefenderOrigin = new(4, 1, 11);
@@ -45,6 +49,8 @@ public partial class MovingCrossoverLateralTest : Node
         var args = OS.GetCmdlineUserArgs().Concat(OS.GetCmdlineArgs()).ToArray();
         _role = HarnessArgs.ReadArg(args, "--harness-role", "offline");
         _scenario = HarnessArgs.ReadArg(args, "--harness-scenario", "suite");
+        _delayNeutral = _scenario == "client-reset-race";
+        if (_delayNeutral) _scenario = "client";
         _networked = _role != "offline";
         if (!Require((_role == "offline" && _scenario == "suite") ||
             ((_role == "server" || _role == "client") && (_scenario == "host" || _scenario == "client")), "unknown role/scenario")) return;
@@ -164,9 +170,31 @@ public partial class MovingCrossoverLateralTest : Node
         if (_finished) return;
         if (_localDone && (!_networked || (_role == "server" && _remoteDone)))
         {
+            // The control retains real movement until the server has both
+            // proofs. Release by acknowledgment, so scheduling cannot make the
+            // stimulus vanish before the server reaches this barrier.
+            if (_delayNeutral && !_neutralReleaseRequested)
+            {
+                _neutralReleaseRequested = true;
+                RpcId(_clientId, MethodName.ReleaseNeutralInput, _case);
+            }
+            // ClientObserved is Reliable, SubmitInput is UnreliableOrdered.
+            // Even channel 0 has independent streams for these transfer modes:
+            // https://docs.godotengine.org/en/4.7/tutorials/networking/high_level_multiplayer.html#channels
+            // A proof RPC can overtake the next neutral input. Teleporting and
+            // awarding now lets the previous case rotate/dribble the new fixture.
+            // Wait for actual sequence + neutral-cache evidence, not a sleep.
+            if (_networked && _scenario == "client" &&
+                (actor.CrossoverFixtureReceivedSequence < _remoteNeutralSequence || !actor.CrossoverFixtureNeutralInput))
+            {
+                if (_blockedResets++ == 0)
+                    GD.Print($"[moving-crossover-lateral] reset barrier received={actor.CrossoverFixtureReceivedSequence} fence={_remoteNeutralSequence} neutral={actor.CrossoverFixtureNeutralInput}");
+                return;
+            }
             if (_case + 1 < _cases.Count) StartCase(_case + 1);
             else if (_networked)
             {
+                if (!Require(!_delayNeutral || _blockedResets > 0, "delayed-neutral control did not exercise reset barrier")) return;
                 RpcId(_clientId, MethodName.Complete);
                 _exitAt = _elapsed + 0.5;
             }
@@ -187,6 +215,7 @@ public partial class MovingCrossoverLateralTest : Node
         ReleaseInput();
         _case = index; _caseTick = _driveTick = _stable = 0;
         _fixtureReady = _remoteFixtureReady = _driving = _localDone = _remoteDone = false;
+        _neutralReleaseRequested = false;
         _flick = _exitApplied = _activeChanged = false;
         _arc = _swaps = _activeSamples = 0;
         _previousHand = Current.Hand; _lastPresentationTick = -1;
@@ -372,9 +401,17 @@ public partial class MovingCrossoverLateralTest : Node
                 $"gather must reduce but retain momentum first={_startupFirstSpeed:F3} last={_startupLastSpeed:F3}: " + _last)) return;
             if (OwnsActor && !Require(_flick && _exitApplied && _activeChanged, "input/snapshot controls were not exercised")) return;
             _localDone = true;
-            if (OwnsActor) ReleaseInput();
+            int neutralSequence = 0;
+            if (OwnsActor)
+            {
+                // The control keeps sending the preceding case's real input
+                // until the server acknowledges both proofs. This forces the
+                // reliable completion ahead of neutral SubmitInput.
+                neutralSequence = actor.CrossoverFixtureSentSequence + 1;
+                if (!_delayNeutral) ReleaseInput();
+            }
             GD.Print($"[moving-crossover-lateral] proof role={_role} predicting={predicting} activeLateral={lateral:F4} activeForward={forward:F4} committedLateral={committedLateral:F4} committedForward={committedForward:F4} activeSamples={_activeSamples} swaps={_swaps} gather={_startupFirstSpeed:F3}->{_startupLastSpeed:F3} {_last}");
-            if (_role == "client") RpcId(1, MethodName.ClientObserved, _case);
+            if (_role == "client") RpcId(1, MethodName.ClientObserved, _case, neutralSequence);
         }
         _previousPosition = position;
         _previousPhase = phase;
@@ -413,8 +450,20 @@ public partial class MovingCrossoverLateralTest : Node
     private void BeginDrive(int index)
     { if (Require(_role == "client" && Multiplayer.GetRemoteSenderId() == 1 && index == _case && _fixtureReady && !_driving, "invalid drive sender/state")) EnterDrive(); }
     [Rpc(MultiplayerApi.RpcMode.AnyPeer, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-    private void ClientObserved(int index)
-    { if (Require(_role == "server" && Multiplayer.GetRemoteSenderId() == _clientId && index == _case && !_remoteDone, "invalid proof sender/case")) _remoteDone = true; }
+    private void ClientObserved(int index, int neutralSequence)
+    {
+        if (Require(_role == "server" && Multiplayer.GetRemoteSenderId() == _clientId && index == _case && !_remoteDone, "invalid proof sender/case"))
+        {
+            if (!Require(_scenario != "client" || neutralSequence > 0, "missing owner neutral-input sequence")) return;
+            _remoteDone = true; _remoteNeutralSequence = neutralSequence;
+        }
+    }
+    [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
+    private void ReleaseNeutralInput(int index)
+    {
+        if (Require(_role == "client" && _delayNeutral && OwnsActor && _localDone &&
+            Multiplayer.GetRemoteSenderId() == 1 && index == _case, "invalid neutral-release sender/case")) ReleaseInput();
+    }
     [Rpc(MultiplayerApi.RpcMode.Authority, CallLocal = false, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
     private void Complete()
     { if (Require(_role == "client" && Multiplayer.GetRemoteSenderId() == 1 && _case == _cases.Count - 1 && _localDone, "completion before both proofs")) Finish(0); }
