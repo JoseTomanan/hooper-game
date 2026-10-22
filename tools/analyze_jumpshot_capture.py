@@ -161,6 +161,12 @@ def analyze(directory, form=True, mutate=False):
     resets = max((r.get("presentationResyncCount",0) for r in rows),default=0)
     stable = [r for i,r in enumerate(coherent) if i==0 or r.get("presentationResyncCount",0)==coherent[i-1].get("presentationResyncCount",0)]
     seams = boundaries(stable,remote,mutate)
+    # Frozen motion limits describe three adjacent one-source-tick edges.
+    # A missing pose can hide a transient jump even when the remaining endpoints
+    # fit that limit, so retain its diagnostics but reject the incomplete proof.
+    for seam in seams:
+        require(len(seam["edges"]) == 3 and all(edge["tickGap"] == 1 for edge in seam["edges"]),
+                "incomplete one-tick phase boundary " + seam["transition"])
     required_seams = {"Startup->Recovery","Recovery->Inactive"} if feint else {"Startup->Active","Active->Recovery","Recovery->Inactive"}
     for transition in sorted(required_seams):
         require(transition in {s["transition"] for s in seams},"missing coherent phase boundary "+transition)

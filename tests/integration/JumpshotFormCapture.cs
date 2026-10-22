@@ -269,5 +269,3 @@ public partial class JumpshotFormCapture : Node
     private static float[] Vec(Vector3 v) => new[] { v.X, v.Y, v.Z };
     private static float[] Transform(Transform3D t) => Vec(t.Origin).Concat(Vec(t.Basis.X)).Concat(Vec(t.Basis.Y)).Concat(Vec(t.Basis.Z)).ToArray();
 }
-
-

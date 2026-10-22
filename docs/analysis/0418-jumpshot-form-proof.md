@@ -225,3 +225,20 @@ The final-gather assertion now applies to authority/history, with its original
 numeric thresholds. Client first-Active entry and actual corrected net-cut
 assertions remain. No gameplay/reconciliation code changes. This bounded QA
 correction was adversarially reviewed and isolated from the shot asset commit.
+
+Final local validation: ordinary and harness-enabled game builds both completed
+with zero warnings/errors; 1,273 unit tests passed with five intentional skips;
+101 repository contract tests completed with one platform skip. The exhaustive
+catalog run passed 399/402 cases. The derived Turnaround and predictive crossover
+failures passed after the corrections above (the client crossover twice); the
+remaining lifecycle server could not bind its ENet port and passed an isolated
+rerun. Every catalog case therefore has passing evidence, without describing the
+initial run as green. PR #426 records the independent CI gates.
+
+Independent review also found that the capture analyzer reported a source-tick
+gap without rejecting the boundary proof. It now requires exactly three adjacent
+one-tick edges. Real-trace regression controls remove Recovery/18 or /19, truncate
+the boundary neighborhood, and inject a presentation reset; the missing evidence
+fails and reset spans remain excluded. Reanalysis passes all 16 local, eight
+unpaced ENet and eight native coverage/form captures. A second independent review
+confirmed this correction without weakening the original motion bounds.
