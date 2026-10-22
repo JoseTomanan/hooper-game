@@ -166,6 +166,11 @@ public partial class JumpshotFormCapture : Node
         if (_finished || _trace == null) return;
         var p = _players.GetNodeOrNull<PlayerController>("1");
         if (p == null) return;
+        // Preserve the camera which drew this frame before the diagnostic view
+        // setter queues a different transform for the NEXT rendered frame.
+        // https://docs.godotengine.org/en/4.7/classes/class_camera3d.html
+        Transform3D drawnCamera = _camera.GlobalTransform;
+        Vector2 viewportSize = GetViewport().GetVisibleRect().Size;
         if (_skeleton == null)
         {
             _skeleton = FindSkeleton(p);
@@ -194,6 +199,9 @@ public partial class JumpshotFormCapture : Node
         var view = _role == "client" ? _ball.GetPresentationFrame() : null;
         _trace.WriteLine(JsonSerializer.Serialize(new { sample = _samples++, tick = _tick, file,
             physicsFrame = Engine.GetPhysicsFrames(), poseMatchesPhysics = _posePhysics == Engine.GetPhysicsFrames(), pose = _pose,
+            camera = Transform(drawnCamera), cameraFov = _camera.Fov, cameraProjection = _camera.Projection.ToString(),
+            cameraSize = _camera.Size, cameraNear = _camera.Near, cameraFar = _camera.Far,
+            viewportSize = new[] { viewportSize.X, viewportSize.Y }, cameraProvenance = "observed before post-draw diagnostic camera update",
             role = _role, animation = p.ActiveAnimNodeForHarness, clip, playbackTime = p.ContinuityPlaybackTime,
             fadingFrom = p.ContinuityFadingFrom, fadingTime = p.ContinuityFadingTime,
             move = p.DisplayMoveId(), phase = p.DisplayMove().phase.ToString(), frame = p.AnimationDisplaySnapshot.FrameInPhase,
