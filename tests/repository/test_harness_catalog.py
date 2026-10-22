@@ -46,6 +46,13 @@ class HarnessCatalogCliTests(unittest.TestCase):
         self.assertTrue(lines[baseline_tail].startswith('dedicated-game-journey-score-rpc-disabled\t'))
         self.assertEqual(
             ['animation-harness-primitives-test-primitives-discovery',
+             'jumpshot-form-test-normal-right',
+             'jumpshot-form-test-normal-left',
+             'jumpshot-form-test-feint-early',
+             'jumpshot-form-test-feint-late',
+             'jumpshot-form-test-fadeaway',
+             'jumpshot-form-test-control-idle',
+             'jumpshot-form-test-control-goalkeeper',
              'moving-crossover-lateral-test-suite',
              'held-possession-test-held',
              'animation-harness-primitives-test-primitives-resources',
@@ -82,7 +89,9 @@ class HarnessCatalogCliTests(unittest.TestCase):
                 'lost-payload', 'turnaround-steal', 'turnaround-oob', 'replay',
                 'turnaround-replay', 'turnaround-rejected', 'contact-set', 'contact-unset')]
             + ['post-presentation-test-presentation', 'committed-clip-hookup-audit',
+               'net-jumpshot-form',
                'net-moving-crossover-host', 'net-moving-crossover-client',
+               'net-moving-crossover-client-reset-race',
                'net-held-possession-host', 'net-held-possession-client',
                'crossover-continuity', 'pivot-continuity', 'remote-presentation-lifecycle',
                'net-rig-presentation-left', 'net-rig-presentation-right']
@@ -315,9 +324,9 @@ class HarnessCatalogShardTests(unittest.TestCase):
                 self.assertEqual(catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS, weights[case.id])
         self.assertEqual(250.0, weights['pivot-continuity'])
         self.assertEqual(catalog.DEFAULT_SINGLE_WEIGHT_SECONDS, weights['moving-crossover-lateral-test-suite'])
-        for case_id in ('net-moving-crossover-host', 'net-moving-crossover-client'):
+        for case_id in ('net-moving-crossover-host', 'net-moving-crossover-client', 'net-moving-crossover-client-reset-race'):
             self.assertEqual(catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS, weights[case_id])
-        self.assertAlmostEqual(969.0, sum(weights.values()))
+        self.assertAlmostEqual(976.0 + 2 * catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS, sum(weights.values()))
 
         base = catalog.CATALOG[0]
         new_single = replace(base, id='new-single', scenes=(catalog.SceneMetadata('res://tests/integration/Unknown.tscn'),))

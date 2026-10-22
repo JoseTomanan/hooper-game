@@ -1,88 +1,16 @@
 extends SceneTree
-# Asset build tool (#279) — drafts the jump-shot clip family into
-# assets/locomotion.res by slicing `Goalkeeper Catch Stationary`.
-#
-# Run:  godot --headless --path . -s tools/rebuild_jumpshot_clips.gd
-# Idempotent: re-running re-derives all four clips from the pristine FBX rather
-# than stacking edits (the previous build is removed before the new one lands).
-#
-# Produces, all LOOP_NONE one-shots:
-#   jumpshotstartup   18 ticks / 0.3000 s — the gather-to-extension rise
-#   jumpshotactive     4 ticks / 0.0667 s — the release, at full extension
-#   jumpshotrecovery  20 ticks / 0.3333 s — the descent / landing
-#   fadeawayactive     4 ticks / 0.0667 s — the release with the torso tipped back
-#
-# ── Why this is a SLICE, not a retarget (#279's body is stale) ────────────────
-# #279's original body said "retarget the sourced jumpshot + fadeaway FBX clips
-# via docs/spikes/0012". There IS no jumpshot FBX: the #278 Mixamo sitting found
-# only 3 of 9 requested clips, and #276's "Sourcing outcome (2026-07-25)"
-# re-scoped this move to a temp-draft (re-confirmed in #279's own 2026-07-25
-# comment). So spike 0012's retarget block does NOT apply here — there is no
-# source rig to retarget FROM. No bone_map, no custom SkeletonProfile, no
-# fix_silhouette, and no "match count > 0" check to run; #276's temp-draft
-# verification variant replaces it.
-#
-# ── Why slice an owned clip instead of hand-keying poses ─────────────────────
-# #276's temp-draft rules make this binding, and it is the single most important
-# constraint in this file. A single-clip AnimationTree state plays at FULL
-# WEIGHT, and Godot's AnimationMixer writes every bone the active clip does NOT
-# track to the skeleton's REST transform — Y Bot's rest is a Mixamo T-pose. A
-# hand-keyed pose touching only the shooting arm would therefore T-pose
-# everything else the instant the state was entered. That is not hypothetical:
-# it shipped once as the "turning T-pose" bug (a45bd1d), where `pivot` tracked
-# only 4 plant bones and a turn snapped the arms horizontal.
-#
-# Slicing sidesteps it structurally rather than by care: `Goalkeeper Catch
-# Stationary` carries 53 tracks (52 rotation + 1 position) covering the whole
-# body, every one of which resolves on Y Bot with zero unresolved bones (probed
-# headlessly, Godot 4.7.1). Every slice inherits that coverage verbatim, so the
-# omitted-bone trap cannot bite by construction. _assert_complete() below pins
-# it anyway, because "by construction" is exactly the kind of claim that rots.
-#
-# ── Why the family mismatch is harmless here ─────────────────────────────────
-# locomotion.res holds clips from two rotation representations that sit 155-180
-# deg apart (Kenney-retargeted idle/run/pivot vs stock-Mixamo catch/dribble*) —
-# see rebuild_dribble_clips.gd's header for the measured table. That gap only
-# matters at PARTIAL blend weight, because ROTATION_3D tracks are ABSOLUTE local
-# rotations and a full-weight single-clip state ignores rest entirely. All four
-# clips here feed per-move states, which are single-clip and full-weight, so
-# they are safely in the "no" column of that rule. These are stock-Mixamo-family
-# anyway (the source is stock Mixamo on stock Mixamo), same as `catch`.
-#
-# ── Where the slice boundaries come from ─────────────────────────────────────
-# Derived, not hardcoded: the tool measures mean hand elevation above the hips
-# across the source clip and reads the shot arc off that curve (gather bottom ->
-# extension peak -> descent). Hardcoded times would silently drift into
-# nonsense if the source FBX were ever re-exported; a derivation fails loudly
-# instead. The measured arc on the committed FBX is:
-#
-#   t=0.00-0.31  hands -0.10 -> -0.17 m   the dip into the gather
-#   t=0.31-0.82  hands -0.17 -> +0.86 m   the extension  <- Startup
-#   t~0.82       hands +0.86 m (peak)     full extension <- Active begins here
-#   t=0.82-1.35  hands +0.86 -> +0.08 m   the descent    <- Recovery
-#   t=1.35-2.73  hands ~+0.02 m, static   idle tail, discarded
-#
-# Those boundaries are the derived landmarks below, rounded to 2dp — keep the two
-# in agreement if the source FBX is ever re-exported.
-#
-# Startup begins at the GATHER BOTTOM, not at t=0 (human call on #279, 2026-07-27,
-# recorded here per ADR-0014). Both readings are defensible: including the dip
-# gives ADR-0003 more telegraph shape, but it compresses 0.82 s of source into
-# the 0.300 s window (2.7x) and reads frantic, while the rise alone compresses
-# the measured 0.506 s (1.7x) and matches real catch-and-shoot timing — the top
-# reference tier.
-#
-# Landmarks the tool actually derives from the committed FBX, for reference when
-# reading a build log: gather=0.3143 peak=0.8200 active_end=0.9293 settle=1.3530.
-#
-# Active begins exactly AT the peak because the ball leaves the hand on the FIRST
-# Active tick (JumpShot's JustEnteredActive, consumed by
-# BallController.CheckJumpShotRelease). Anything else would show the release
-# before or after full extension.
+# Rebuild #418's basketball normal-shot family and the distinct #318 fadeaway.
+# Run after headless Blender author_jumpshot.py and Godot import.
+# Normal action windows are exact 60 Hz ticks, not elevation-curve guesses.
+# The original source retains provenance and landmark diagnostics; the
+# separately authored fadeaway is unchanged. Full body tracks are mandatory.
+# API: https://docs.godotengine.org/en/4.7/classes/class_animation.html
 
 const LIB_PATH := "res://assets/locomotion.res"
 const SRC_FBX := "res://assets/Goalkeeper Catch Stationary.fbx"
 const SRC_CLIP := "mixamo_com"
+const AUTHORED_NORMAL_FBX := "res://assets/jumpshot_authored.fbx"
+const AUTHORED_NORMAL_CLIP := "jumpshot"
 # #318 default: use the single authored off-balance release while retaining
 # the former source-slice-plus-lean route as a measurable recovery path.
 const AUTHORED_FADEAWAY_FBX := "res://assets/fadeaway_authored.fbx"
@@ -218,8 +146,40 @@ func _initialize() -> void:
 	var startup := _slice(src, t_gather, t_peak, STARTUP_TICKS)
 	var active := _slice(src, t_peak, t_active_end, ACTIVE_TICKS)
 	var recovery := _slice(src, t_active_end, t_settle, RECOVERY_TICKS)
+	# #318's authored fadeaway imports some immutable channels as omissions.
+	# Its original complete fallback is part of that asset's established pose;
+	# filling those channels from the new normal shot would silently reauthor it.
+	var legacy_active := active
+	var legacy_startup := startup
+	var legacy_recovery := recovery
 
 	# ── The fadeaway variant ─────────────────────────────────────────────────
+	# One authored action supplies three phases with identical shared keys.
+	var normal_packed = load(AUTHORED_NORMAL_FBX)
+	if normal_packed == null:
+		push_error("[rebuild-jumpshot] missing normal source; run author_jumpshot.py and import")
+		quit(1)
+		return
+	var normal_ap: AnimationPlayer = _find(normal_packed.instantiate(), "AnimationPlayer")
+	if normal_ap == null or not normal_ap.has_animation(AUTHORED_NORMAL_CLIP):
+		push_error("[rebuild-jumpshot] authored source has no jumpshot action")
+		quit(1)
+		return
+	var normal: Animation = normal_ap.get_animation(AUTHORED_NORMAL_CLIP)
+	startup = _slice(normal, 0.0, STARTUP_TICKS / TPS, STARTUP_TICKS)
+	active = _slice(normal, STARTUP_TICKS / TPS, (STARTUP_TICKS + ACTIVE_TICKS) / TPS, ACTIVE_TICKS)
+	recovery = _slice(normal, (STARTUP_TICKS + ACTIVE_TICKS) / TPS, (STARTUP_TICKS + ACTIVE_TICKS + RECOVERY_TICKS) / TPS, RECOVERY_TICKS)
+	# Blender changes the six arm-chain rotations. Preserve the owned source's
+	# untouched channels exactly, including its grounding and landing endpoints.
+	# A round-trip of those channels otherwise introduces import-basis noise at
+	# the shared neutral and short pump-fake exits for no intended motion change.
+	_restore_inherited_channels(startup, legacy_startup, true)
+	_restore_inherited_channels(active, legacy_active, false)
+	# The eight-tick feint first displays Startup's tail and hands off to
+	# neutral with Recovery's sixth key still visible. Preserve that measured
+	# final pose, not an unobserved theoretical eighth animation key.
+	_restore_inherited_channels(recovery, legacy_recovery, false, 6.0 / TPS)
+
 	var lean_axis := _derive_body_right_axis()
 	if lean_axis == Vector3.ZERO:
 		push_error("[rebuild-jumpshot] could not derive the body's right axis from Y Bot's rest pose.")
@@ -253,7 +213,7 @@ func _initialize() -> void:
 		# the T-pose. The squared-up active is the shared base pose for this one
 		# release variant, so inherit only missing channels from it; authored tracks
 		# always win and retain the lean, hips, arms, and airborne legs.
-		_fill_missing_rotation_tracks(fadeaway, active)
+		_fill_missing_rotation_tracks(fadeaway, legacy_active)
 		fadeaway_expected_rot = _rotation_track_count(fadeaway)
 		print("[rebuild-jumpshot] authored fadeaway '%s': len=%.4f tracks=%d" % [AUTHORED_FADEAWAY_CLIP, authored.length, authored.get_track_count()])
 	else:
@@ -300,7 +260,7 @@ func _initialize() -> void:
 		RECOVERY_NAME: recovery,
 		FADEAWAY_NAME: fadeaway,
 	}
-	var src_rot := _rotation_track_count(src)
+	var src_rot := _rotation_track_count(normal)
 	for name in built:
 		var expected_rot := fadeaway_expected_rot if name == FADEAWAY_NAME else src_rot
 		if not _assert_complete(built[name], name, expected_rot):
@@ -333,6 +293,12 @@ func _initialize() -> void:
 		return
 
 	print("[rebuild-jumpshot] saved %s; clips now: %s" % [LIB_PATH, str(lib.get_animation_list())])
+	# Turnaround intentionally reuses the established shot arc after its turn.
+	# Keep that derived library synchronized through this existing entry point.
+	var dependent_error: Error = preload("res://tools/rebuild_turnaround_clips.gd").rebuild(lib)
+	if dependent_error != OK:
+		quit(1)
+		return
 	quit(0)
 
 
@@ -437,6 +403,29 @@ func _slice(src: Animation, t0: float, t1: float, ticks: int) -> Animation:
 				Animation.TYPE_SCALE_3D:
 					out.scale_track_insert_key(t, dt, src.scale_track_interpolate(i, st))
 	return out
+
+
+func _restore_inherited_channels(authored: Animation, original: Animation, startup: bool, arm_tail_s: float = INF) -> void:
+	var arm_bones := ["mixamorig_LeftArm", "mixamorig_LeftForeArm", "mixamorig_LeftHand",
+		"mixamorig_RightArm", "mixamorig_RightForeArm", "mixamorig_RightHand"]
+	for track in authored.get_track_count():
+		var type := authored.track_get_type(track)
+		var path := authored.track_get_path(track)
+		var old := original.find_track(path, type)
+		if old < 0:
+			continue
+		var is_arm := bone_of(path) in arm_bones and type == Animation.TYPE_ROTATION_3D
+		for key in authored.track_get_key_count(track):
+			var time := authored.track_get_key_time(track, key)
+			if is_arm and not (startup and key == 0) and time < arm_tail_s:
+				continue
+			match type:
+				Animation.TYPE_ROTATION_3D:
+					authored.track_set_key_value(track, key, original.rotation_track_interpolate(old, time))
+				Animation.TYPE_POSITION_3D:
+					authored.track_set_key_value(track, key, original.position_track_interpolate(old, time))
+				Animation.TYPE_SCALE_3D:
+					authored.track_set_key_value(track, key, original.scale_track_interpolate(old, time))
 
 
 # The a45bd1d guard, applied at build time as well as in the harness: a slice

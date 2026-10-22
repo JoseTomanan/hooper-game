@@ -1,0 +1,3210 @@
+{
+  "result": "passed",
+  "formGates": false,
+  "cases": [
+    {
+      "case": "left-early-1",
+      "result": "passed",
+      "failures": [],
+      "role": "client",
+      "variant": "early",
+      "hand": "Left",
+      "resourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B",
+      "coherentShotSamples": 10,
+      "posePhysicsMismatches": 0,
+      "presentationMismatches": 0,
+      "renderPhysicsGaps": 2,
+      "maxRenderPhysicsGap": 8,
+      "presentationHoldSamples": 3,
+      "presentationResets": 0,
+      "resetSpanContinuityExcluded": true,
+      "form": {},
+      "metrics": [
+        {
+          "tick": 195,
+          "phase": "Startup",
+          "frame": 1,
+          "elbow": 152.06958106975137,
+          "guideElbow": 72.8060484053923,
+          "wristHeight": -0.1959305484877749,
+          "wristFlexion": 13.617514385872767,
+          "asymmetry": 79.26353266435906
+        },
+        {
+          "tick": 196,
+          "phase": "Startup",
+          "frame": 2,
+          "elbow": 166.94400148483575,
+          "guideElbow": 164.83045343611064,
+          "wristHeight": -0.18450005808722827,
+          "wristFlexion": -48.86414163303382,
+          "asymmetry": 2.1135480487251073
+        },
+        {
+          "tick": 197,
+          "phase": "Startup",
+          "frame": 3,
+          "elbow": 168.2851959504221,
+          "guideElbow": 163.21572392340136,
+          "wristHeight": -0.14539132403180446,
+          "wristFlexion": -47.95260406708572,
+          "asymmetry": 5.069472027020737
+        },
+        {
+          "tick": 198,
+          "phase": "Recovery",
+          "frame": 13,
+          "elbow": 163.83687643283764,
+          "guideElbow": 160.2571323214166,
+          "wristHeight": -0.07287851170295134,
+          "wristFlexion": -47.0423338637993,
+          "asymmetry": 3.5797441114210358
+        },
+        {
+          "tick": 199,
+          "phase": "Recovery",
+          "frame": 14,
+          "elbow": 147.69470500017454,
+          "guideElbow": 139.89110483458353,
+          "wristHeight": 0.15271959785378375,
+          "wristFlexion": -13.884133942155493,
+          "asymmetry": 7.803600165591007
+        },
+        {
+          "tick": 200,
+          "phase": "Recovery",
+          "frame": 15,
+          "elbow": 141.75030765950967,
+          "guideElbow": 133.4808712659891,
+          "wristHeight": 0.1505472758930195,
+          "wristFlexion": -13.267635886513107,
+          "asymmetry": 8.269436393520579
+        },
+        {
+          "tick": 201,
+          "phase": "Recovery",
+          "frame": 16,
+          "elbow": 133.97651650829266,
+          "guideElbow": 125.46003446899626,
+          "wristHeight": 0.15125919800330248,
+          "wristFlexion": -12.677654154862669,
+          "asymmetry": 8.516482039296406
+        },
+        {
+          "tick": 202,
+          "phase": "Recovery",
+          "frame": 17,
+          "elbow": 126.79758631854772,
+          "guideElbow": 114.99878389562404,
+          "wristHeight": 0.14719080976573434,
+          "wristFlexion": -15.763782949090372,
+          "asymmetry": 11.798802422923671
+        },
+        {
+          "tick": 203,
+          "phase": "Recovery",
+          "frame": 18,
+          "elbow": 118.86456808902857,
+          "guideElbow": 104.43635088531421,
+          "wristHeight": 0.1474645777960764,
+          "wristFlexion": -16.257771913374338,
+          "asymmetry": 14.428217203714354
+        },
+        {
+          "tick": 204,
+          "phase": "Recovery",
+          "frame": 19,
+          "elbow": 110.408853617859,
+          "guideElbow": 93.97097587505014,
+          "wristHeight": 0.1479157875668412,
+          "wristFlexion": -15.541031931874667,
+          "asymmetry": 16.43787774280885
+        }
+      ],
+      "releaseWindow": [],
+      "boundaries": [
+        {
+          "transition": "Startup->Recovery",
+          "fromFrame": 3,
+          "toFrame": 13,
+          "edges": [
+            {
+              "fromTick": 196,
+              "toTick": 197,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandRing4",
+              "maxDisplacement": 0.195585509690272
+            },
+            {
+              "fromTick": 197,
+              "toTick": 198,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandRing4",
+              "maxDisplacement": 0.2404572674532128
+            },
+            {
+              "fromTick": 198,
+              "toTick": 199,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandPinky4",
+              "maxDisplacement": 1.9780551362973724
+            }
+          ],
+          "coordinateMagnitudeM": 6.019506,
+          "coordinateResolutionM": 1.6518123698891422e-06,
+          "maxDisplacement": 1.9780551362973724,
+          "maxTickGap": 1
+        },
+        {
+          "transition": "Recovery->Inactive",
+          "fromFrame": 19,
+          "toFrame": 0,
+          "edges": [
+            {
+              "fromTick": 203,
+              "toTick": 204,
+              "tickGap": 1,
+              "bone": "mixamorig_RightForeArm",
+              "maxDisplacement": 0.09351039496041816
+            },
+            {
+              "fromTick": 204,
+              "toTick": 205,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandPinky4",
+              "maxDisplacement": 0.1288583163370284
+            },
+            {
+              "fromTick": 205,
+              "toTick": 206,
+              "tickGap": 1,
+              "bone": "mixamorig_RightHandMiddle4",
+              "maxDisplacement": 1.5413319838981532
+            }
+          ],
+          "coordinateMagnitudeM": 6.1938233,
+          "coordinateResolutionM": 1.6518123698891422e-06,
+          "maxDisplacement": 1.5413319838981532,
+          "maxTickGap": 1
+        }
+      ]
+    },
+    {
+      "case": "left-fadeaway-1",
+      "result": "passed",
+      "failures": [],
+      "role": "client",
+      "variant": "fadeaway",
+      "hand": "Left",
+      "resourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B",
+      "coherentShotSamples": 41,
+      "posePhysicsMismatches": 0,
+      "presentationMismatches": 0,
+      "renderPhysicsGaps": 2,
+      "maxRenderPhysicsGap": 8,
+      "presentationHoldSamples": 3,
+      "presentationResets": 0,
+      "resetSpanContinuityExcluded": true,
+      "form": {},
+      "metrics": [
+        {
+          "tick": 197,
+          "phase": "Startup",
+          "frame": 1,
+          "elbow": 152.06958106975137,
+          "guideElbow": 72.8060484053923,
+          "wristHeight": -0.1959305484877749,
+          "wristFlexion": 13.617514385872767,
+          "asymmetry": 79.26353266435906
+        },
+        {
+          "tick": 198,
+          "phase": "Startup",
+          "frame": 2,
+          "elbow": 166.94400148483575,
+          "guideElbow": 164.83045343611064,
+          "wristHeight": -0.18450005808722827,
+          "wristFlexion": -48.86414163303382,
+          "asymmetry": 2.1135480487251073
+        },
+        {
+          "tick": 199,
+          "phase": "Startup",
+          "frame": 3,
+          "elbow": 168.2851959504221,
+          "guideElbow": 163.21572392340136,
+          "wristHeight": -0.14539132403180446,
+          "wristFlexion": -47.95260406708572,
+          "asymmetry": 5.069472027020737
+        },
+        {
+          "tick": 200,
+          "phase": "Startup",
+          "frame": 4,
+          "elbow": 163.83687643283764,
+          "guideElbow": 160.2571323214166,
+          "wristHeight": -0.07287851170295134,
+          "wristFlexion": -47.0423338637993,
+          "asymmetry": 3.5797441114210358
+        },
+        {
+          "tick": 201,
+          "phase": "Startup",
+          "frame": 5,
+          "elbow": 154.50597637506652,
+          "guideElbow": 155.30379487827642,
+          "wristHeight": 0.02820476481072584,
+          "wristFlexion": -34.92642767981291,
+          "asymmetry": -0.7978185032098963
+        },
+        {
+          "tick": 202,
+          "phase": "Startup",
+          "frame": 6,
+          "elbow": 150.21774029737534,
+          "guideElbow": 152.34530559824387,
+          "wristHeight": 0.10442781850888407,
+          "wristFlexion": -33.24122614777357,
+          "asymmetry": -2.1275653008685254
+        },
+        {
+          "tick": 203,
+          "phase": "Startup",
+          "frame": 7,
+          "elbow": 149.1910875433018,
+          "guideElbow": 150.18708042307023,
+          "wristHeight": 0.15455459314771006,
+          "wristFlexion": -36.129254246495606,
+          "asymmetry": -0.995992879768437
+        },
+        {
+          "tick": 204,
+          "phase": "Startup",
+          "frame": 8,
+          "elbow": 148.56254433544447,
+          "guideElbow": 150.77766558759126,
+          "wristHeight": 0.1915129790075147,
+          "wristFlexion": -35.84758516989826,
+          "asymmetry": -2.215121252146787
+        },
+        {
+          "tick": 205,
+          "phase": "Startup",
+          "frame": 9,
+          "elbow": 147.3593859048143,
+          "guideElbow": 154.38044419187807,
+          "wristHeight": 0.2197356141385965,
+          "wristFlexion": -29.789229276573792,
+          "asymmetry": -7.021058287063767
+        },
+        {
+          "tick": 206,
+          "phase": "Startup",
+          "frame": 10,
+          "elbow": 146.7609842191743,
+          "guideElbow": 159.53772979844132,
+          "wristHeight": 0.23398823113821332,
+          "wristFlexion": -23.201811665504852,
+          "asymmetry": -12.776745579267015
+        },
+        {
+          "tick": 207,
+          "phase": "Startup",
+          "frame": 11,
+          "elbow": 149.7327237975672,
+          "guideElbow": 163.64748382522973,
+          "wristHeight": 0.23419600921278166,
+          "wristFlexion": -28.22945280402636,
+          "asymmetry": -13.914760027662538
+        },
+        {
+          "tick": 208,
+          "phase": "Startup",
+          "frame": 12,
+          "elbow": 156.8811804661395,
+          "guideElbow": 163.7054741725925,
+          "wristHeight": 0.2223778896243756,
+          "wristFlexion": -32.41097139696741,
+          "asymmetry": -6.824293706452977
+        },
+        {
+          "tick": 209,
+          "phase": "Startup",
+          "frame": 13,
+          "elbow": 164.242996717122,
+          "guideElbow": 161.1941866113285,
+          "wristHeight": 0.2039220502974408,
+          "wristFlexion": -24.389092586924377,
+          "asymmetry": 3.048810105793507
+        },
+        {
+          "tick": 210,
+          "phase": "Startup",
+          "frame": 14,
+          "elbow": 168.95781167005705,
+          "guideElbow": 160.55378182014078,
+          "wristHeight": 0.19272781561152227,
+          "wristFlexion": -18.75845058622318,
+          "asymmetry": 8.40402984991627
+        },
+        {
+          "tick": 211,
+          "phase": "Startup",
+          "frame": 15,
+          "elbow": 171.2150081346509,
+          "guideElbow": 162.5593185208002,
+          "wristHeight": 0.18900741597041548,
+          "wristFlexion": -15.812142497024318,
+          "asymmetry": 8.655689613850711
+        },
+        {
+          "tick": 212,
+          "phase": "Startup",
+          "frame": 16,
+          "elbow": 172.51729280590607,
+          "guideElbow": 166.27031672829966,
+          "wristHeight": 0.1890480477399302,
+          "wristFlexion": -13.77859148144243,
+          "asymmetry": 6.246976077606405
+        },
+        {
+          "tick": 213,
+          "phase": "Startup",
+          "frame": 17,
+          "elbow": 174.48563741297122,
+          "guideElbow": 170.1642690357707,
+          "wristHeight": 0.19224107629998,
+          "wristFlexion": -16.13756378030474,
+          "asymmetry": 4.321368377200514
+        },
+        {
+          "tick": 214,
+          "phase": "Active",
+          "frame": 0,
+          "elbow": 177.90069518397675,
+          "guideElbow": 172.10247884334177,
+          "wristHeight": 0.1966719682156278,
+          "wristFlexion": -23.317307745219825,
+          "asymmetry": 5.79821634063498
+        },
+        {
+          "tick": 215,
+          "phase": "Active",
+          "frame": 1,
+          "elbow": 173.61642120744702,
+          "guideElbow": 165.2917750220763,
+          "wristHeight": 0.19344975381425267,
+          "wristFlexion": -26.630667472321772,
+          "asymmetry": 8.32464618537071
+        },
+        {
+          "tick": 216,
+          "phase": "Active",
+          "frame": 2,
+          "elbow": 159.29366643061104,
+          "guideElbow": 156.24916783293693,
+          "wristHeight": 0.1795224570342396,
+          "wristFlexion": -19.51339339260954,
+          "asymmetry": 3.0444985976741066
+        },
+        {
+          "tick": 217,
+          "phase": "Active",
+          "frame": 3,
+          "elbow": 145.0261220288597,
+          "guideElbow": 147.5833797427771,
+          "wristHeight": 0.16196129409372734,
+          "wristFlexion": -12.697237266774485,
+          "asymmetry": -2.5572577139174086
+        },
+        {
+          "tick": 218,
+          "phase": "Recovery",
+          "frame": 0,
+          "elbow": 144.19685301828594,
+          "guideElbow": 143.45056707848622,
+          "wristHeight": 0.15279682277373793,
+          "wristFlexion": -14.680195530847843,
+          "asymmetry": 0.7462859397997192
+        },
+        {
+          "tick": 219,
+          "phase": "Recovery",
+          "frame": 1,
+          "elbow": 147.69470500017454,
+          "guideElbow": 139.89110483458353,
+          "wristHeight": 0.15271959785378375,
+          "wristFlexion": -13.884133942155493,
+          "asymmetry": 7.803600165591007
+        },
+        {
+          "tick": 220,
+          "phase": "Recovery",
+          "frame": 2,
+          "elbow": 141.75030765950967,
+          "guideElbow": 133.4808712659891,
+          "wristHeight": 0.1505472758930195,
+          "wristFlexion": -13.267635886513107,
+          "asymmetry": 8.269436393520579
+        },
+        {
+          "tick": 221,
+          "phase": "Recovery",
+          "frame": 3,
+          "elbow": 133.97651650829266,
+          "guideElbow": 125.46003446899626,
+          "wristHeight": 0.15125919800330248,
+          "wristFlexion": -12.677654154862669,
+          "asymmetry": 8.516482039296406
+        },
+        {
+          "tick": 222,
+          "phase": "Recovery",
+          "frame": 4,
+          "elbow": 126.79758631854772,
+          "guideElbow": 114.99878389562404,
+          "wristHeight": 0.14719080976573434,
+          "wristFlexion": -15.763782949090372,
+          "asymmetry": 11.798802422923671
+        },
+        {
+          "tick": 223,
+          "phase": "Recovery",
+          "frame": 5,
+          "elbow": 118.86456808902857,
+          "guideElbow": 104.43635088531421,
+          "wristHeight": 0.1474645777960764,
+          "wristFlexion": -16.257771913374338,
+          "asymmetry": 14.428217203714354
+        },
+        {
+          "tick": 224,
+          "phase": "Recovery",
+          "frame": 6,
+          "elbow": 110.408853617859,
+          "guideElbow": 93.97097587505014,
+          "wristHeight": 0.1479157875668412,
+          "wristFlexion": -15.541031931874667,
+          "asymmetry": 16.43787774280885
+        },
+        {
+          "tick": 225,
+          "phase": "Recovery",
+          "frame": 7,
+          "elbow": 100.53223089619141,
+          "guideElbow": 84.99779152817143,
+          "wristHeight": 0.1297441053849034,
+          "wristFlexion": -15.849726803064147,
+          "asymmetry": 15.534439368019974
+        },
+        {
+          "tick": 226,
+          "phase": "Recovery",
+          "frame": 8,
+          "elbow": 93.19878379934192,
+          "guideElbow": 78.75645311377428,
+          "wristHeight": 0.10726747968428116,
+          "wristFlexion": -17.16847215223556,
+          "asymmetry": 14.44233068556764
+        },
+        {
+          "tick": 227,
+          "phase": "Recovery",
+          "frame": 9,
+          "elbow": 88.24218088893139,
+          "guideElbow": 75.06833604454239,
+          "wristHeight": 0.08062312333690044,
+          "wristFlexion": -19.465474406920983,
+          "asymmetry": 13.173844844388995
+        },
+        {
+          "tick": 228,
+          "phase": "Recovery",
+          "frame": 10,
+          "elbow": 86.53454363886885,
+          "guideElbow": 74.4618564896865,
+          "wristHeight": 0.06412382351788679,
+          "wristFlexion": -23.33704287121149,
+          "asymmetry": 12.072687149182357
+        },
+        {
+          "tick": 229,
+          "phase": "Recovery",
+          "frame": 11,
+          "elbow": 85.69706507272129,
+          "guideElbow": 74.50574477361657,
+          "wristHeight": 0.046120834313919765,
+          "wristFlexion": -29.31329765793714,
+          "asymmetry": 11.191320299104717
+        },
+        {
+          "tick": 230,
+          "phase": "Recovery",
+          "frame": 12,
+          "elbow": 86.01013894929964,
+          "guideElbow": 75.34292935594105,
+          "wristHeight": 0.0288693951300655,
+          "wristFlexion": -35.2066805645838,
+          "asymmetry": 10.667209593358592
+        },
+        {
+          "tick": 231,
+          "phase": "Recovery",
+          "frame": 13,
+          "elbow": 85.84848434783869,
+          "guideElbow": 76.12545650848888,
+          "wristHeight": 0.018402972830148277,
+          "wristFlexion": -38.541965177236314,
+          "asymmetry": 9.723027839349811
+        },
+        {
+          "tick": 232,
+          "phase": "Recovery",
+          "frame": 14,
+          "elbow": 85.48279545714068,
+          "guideElbow": 76.72532925030238,
+          "wristHeight": 0.014147113673692575,
+          "wristFlexion": -40.88851035971164,
+          "asymmetry": 8.757466206838302
+        },
+        {
+          "tick": 233,
+          "phase": "Recovery",
+          "frame": 15,
+          "elbow": 84.82892082603372,
+          "guideElbow": 76.73573984846072,
+          "wristHeight": 0.024521730027894692,
+          "wristFlexion": -41.16448355336611,
+          "asymmetry": 8.093180977572999
+        },
+        {
+          "tick": 234,
+          "phase": "Recovery",
+          "frame": 16,
+          "elbow": 84.76660766869881,
+          "guideElbow": 76.83543189042665,
+          "wristHeight": 0.03879245567252787,
+          "wristFlexion": -41.68167287470508,
+          "asymmetry": 7.931175778272163
+        },
+        {
+          "tick": 235,
+          "phase": "Recovery",
+          "frame": 17,
+          "elbow": 85.1768516227081,
+          "guideElbow": 77.1350883474225,
+          "wristHeight": 0.0548903613971066,
+          "wristFlexion": -42.434340337302906,
+          "asymmetry": 8.041763275285604
+        },
+        {
+          "tick": 236,
+          "phase": "Recovery",
+          "frame": 18,
+          "elbow": 87.4573942360985,
+          "guideElbow": 79.29218742888838,
+          "wristHeight": 0.06537869923721266,
+          "wristFlexion": -43.62307492829641,
+          "asymmetry": 8.165206807210112
+        },
+        {
+          "tick": 237,
+          "phase": "Recovery",
+          "frame": 19,
+          "elbow": 90.24854824781862,
+          "guideElbow": 81.54364198161973,
+          "wristHeight": 0.07605832740431319,
+          "wristFlexion": -44.10530226137615,
+          "asymmetry": 8.70490626619889
+        }
+      ],
+      "releaseWindow": [
+        {
+          "offset": -2,
+          "tick": 212,
+          "phase": "Startup",
+          "frame": 16,
+          "wristVisibleBallDistance": 1.5965703177724455,
+          "wristAuthoritativeOriginDistance": 1.5965703177724455
+        },
+        {
+          "offset": -1,
+          "tick": 213,
+          "phase": "Startup",
+          "frame": 17,
+          "wristVisibleBallDistance": 1.6346879851029799,
+          "wristAuthoritativeOriginDistance": 1.6346879851029799
+        },
+        {
+          "offset": 0,
+          "tick": 214,
+          "phase": "Active",
+          "frame": 0,
+          "wristVisibleBallDistance": 1.6630300060781251,
+          "wristAuthoritativeOriginDistance": 1.6630300060781251
+        },
+        {
+          "offset": 1,
+          "tick": 215,
+          "phase": "Active",
+          "frame": 1,
+          "wristVisibleBallDistance": 1.5776969466694848,
+          "wristAuthoritativeOriginDistance": 1.686905563296014
+        },
+        {
+          "offset": 2,
+          "tick": 216,
+          "phase": "Active",
+          "frame": 2,
+          "wristVisibleBallDistance": 1.4684787063814548,
+          "wristAuthoritativeOriginDistance": 1.6801018776391257
+        }
+      ],
+      "boundaries": [
+        {
+          "transition": "Startup->Active",
+          "fromFrame": 17,
+          "toFrame": 0,
+          "edges": [
+            {
+              "fromTick": 212,
+              "toTick": 213,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftToe_End",
+              "maxDisplacement": 0.08255977872710484
+            },
+            {
+              "fromTick": 213,
+              "toTick": 214,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftToe_End",
+              "maxDisplacement": 0.07819265976207243
+            },
+            {
+              "fromTick": 214,
+              "toTick": 215,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandPinky4",
+              "maxDisplacement": 0.14030461523440482
+            }
+          ],
+          "coordinateMagnitudeM": 5.940751,
+          "coordinateResolutionM": 1.6518123698891422e-06,
+          "maxDisplacement": 0.14030461523440482,
+          "maxTickGap": 1
+        },
+        {
+          "transition": "Active->Recovery",
+          "fromFrame": 3,
+          "toFrame": 0,
+          "edges": [
+            {
+              "fromTick": 216,
+              "toTick": 217,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandPinky4",
+              "maxDisplacement": 0.11268275057009611
+            },
+            {
+              "fromTick": 217,
+              "toTick": 218,
+              "tickGap": 1,
+              "bone": "mixamorig_RightToe_End",
+              "maxDisplacement": 0.054937426123506154
+            },
+            {
+              "fromTick": 218,
+              "toTick": 219,
+              "tickGap": 1,
+              "bone": "mixamorig_RightToe_End",
+              "maxDisplacement": 0.05111898538730396
+            }
+          ],
+          "coordinateMagnitudeM": 5.827151,
+          "coordinateResolutionM": 1.6518123698891422e-06,
+          "maxDisplacement": 0.11268275057009611,
+          "maxTickGap": 1
+        },
+        {
+          "transition": "Recovery->Inactive",
+          "fromFrame": 19,
+          "toFrame": 0,
+          "edges": [
+            {
+              "fromTick": 236,
+              "toTick": 237,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandPinky2",
+              "maxDisplacement": 0.048931261636060076
+            },
+            {
+              "fromTick": 237,
+              "toTick": 238,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandRing3",
+              "maxDisplacement": 0.04776017361359371
+            },
+            {
+              "fromTick": 238,
+              "toTick": 239,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandPinky4",
+              "maxDisplacement": 1.360948667951179
+            }
+          ],
+          "coordinateMagnitudeM": 6.1938233,
+          "coordinateResolutionM": 1.6518123698891422e-06,
+          "maxDisplacement": 1.360948667951179,
+          "maxTickGap": 1
+        }
+      ]
+    },
+    {
+      "case": "left-late-1",
+      "result": "passed",
+      "failures": [],
+      "role": "client",
+      "variant": "late",
+      "hand": "Left",
+      "resourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B",
+      "coherentShotSamples": 18,
+      "posePhysicsMismatches": 0,
+      "presentationMismatches": 0,
+      "renderPhysicsGaps": 1,
+      "maxRenderPhysicsGap": 8,
+      "presentationHoldSamples": 6,
+      "presentationResets": 0,
+      "resetSpanContinuityExcluded": true,
+      "form": {},
+      "metrics": [
+        {
+          "tick": 195,
+          "phase": "Startup",
+          "frame": 1,
+          "elbow": 152.06958106975137,
+          "guideElbow": 72.8060484053923,
+          "wristHeight": -0.1959305484877749,
+          "wristFlexion": 13.617514385872767,
+          "asymmetry": 79.26353266435906
+        },
+        {
+          "tick": 196,
+          "phase": "Startup",
+          "frame": 2,
+          "elbow": 166.94400148483575,
+          "guideElbow": 164.83045343611064,
+          "wristHeight": -0.18450005808722827,
+          "wristFlexion": -48.86414163303382,
+          "asymmetry": 2.1135480487251073
+        },
+        {
+          "tick": 197,
+          "phase": "Startup",
+          "frame": 3,
+          "elbow": 168.2851959504221,
+          "guideElbow": 163.21572392340136,
+          "wristHeight": -0.14539132403180446,
+          "wristFlexion": -47.95260406708572,
+          "asymmetry": 5.069472027020737
+        },
+        {
+          "tick": 198,
+          "phase": "Startup",
+          "frame": 4,
+          "elbow": 163.83687643283764,
+          "guideElbow": 160.2571323214166,
+          "wristHeight": -0.07287851170295134,
+          "wristFlexion": -47.0423338637993,
+          "asymmetry": 3.5797441114210358
+        },
+        {
+          "tick": 199,
+          "phase": "Startup",
+          "frame": 5,
+          "elbow": 154.50597637506652,
+          "guideElbow": 155.30379487827642,
+          "wristHeight": 0.02820476481072584,
+          "wristFlexion": -34.92642767981291,
+          "asymmetry": -0.7978185032098963
+        },
+        {
+          "tick": 200,
+          "phase": "Startup",
+          "frame": 6,
+          "elbow": 150.21774029737534,
+          "guideElbow": 152.34530559824387,
+          "wristHeight": 0.10442781850888407,
+          "wristFlexion": -33.24122614777357,
+          "asymmetry": -2.1275653008685254
+        },
+        {
+          "tick": 201,
+          "phase": "Startup",
+          "frame": 7,
+          "elbow": 149.1910875433018,
+          "guideElbow": 150.18708042307023,
+          "wristHeight": 0.15455459314771006,
+          "wristFlexion": -36.129254246495606,
+          "asymmetry": -0.995992879768437
+        },
+        {
+          "tick": 202,
+          "phase": "Startup",
+          "frame": 8,
+          "elbow": 148.56254433544447,
+          "guideElbow": 150.77766558759126,
+          "wristHeight": 0.1915129790075147,
+          "wristFlexion": -35.84758516989826,
+          "asymmetry": -2.215121252146787
+        },
+        {
+          "tick": 203,
+          "phase": "Startup",
+          "frame": 9,
+          "elbow": 147.3593859048143,
+          "guideElbow": 154.38044419187807,
+          "wristHeight": 0.2197356141385965,
+          "wristFlexion": -29.789229276573792,
+          "asymmetry": -7.021058287063767
+        },
+        {
+          "tick": 204,
+          "phase": "Startup",
+          "frame": 10,
+          "elbow": 146.7609842191743,
+          "guideElbow": 159.53772979844132,
+          "wristHeight": 0.23398823113821332,
+          "wristFlexion": -23.201811665504852,
+          "asymmetry": -12.776745579267015
+        },
+        {
+          "tick": 205,
+          "phase": "Startup",
+          "frame": 11,
+          "elbow": 149.7327237975672,
+          "guideElbow": 163.64748382522973,
+          "wristHeight": 0.23419600921278166,
+          "wristFlexion": -28.22945280402636,
+          "asymmetry": -13.914760027662538
+        },
+        {
+          "tick": 206,
+          "phase": "Recovery",
+          "frame": 13,
+          "elbow": 156.8811804661395,
+          "guideElbow": 163.7054741725925,
+          "wristHeight": 0.2223778896243756,
+          "wristFlexion": -32.41097139696741,
+          "asymmetry": -6.824293706452977
+        },
+        {
+          "tick": 207,
+          "phase": "Recovery",
+          "frame": 14,
+          "elbow": 147.69470500017454,
+          "guideElbow": 139.89110483458353,
+          "wristHeight": 0.15271959785378375,
+          "wristFlexion": -13.884133942155493,
+          "asymmetry": 7.803600165591007
+        },
+        {
+          "tick": 208,
+          "phase": "Recovery",
+          "frame": 15,
+          "elbow": 141.75030765950967,
+          "guideElbow": 133.4808712659891,
+          "wristHeight": 0.1505472758930195,
+          "wristFlexion": -13.267635886513107,
+          "asymmetry": 8.269436393520579
+        },
+        {
+          "tick": 209,
+          "phase": "Recovery",
+          "frame": 16,
+          "elbow": 133.97651650829266,
+          "guideElbow": 125.46003446899626,
+          "wristHeight": 0.15125919800330248,
+          "wristFlexion": -12.677654154862669,
+          "asymmetry": 8.516482039296406
+        },
+        {
+          "tick": 210,
+          "phase": "Recovery",
+          "frame": 17,
+          "elbow": 126.79758631854772,
+          "guideElbow": 114.99878389562404,
+          "wristHeight": 0.14719080976573434,
+          "wristFlexion": -15.763782949090372,
+          "asymmetry": 11.798802422923671
+        },
+        {
+          "tick": 211,
+          "phase": "Recovery",
+          "frame": 18,
+          "elbow": 118.86456808902857,
+          "guideElbow": 104.43635088531421,
+          "wristHeight": 0.1474645777960764,
+          "wristFlexion": -16.257771913374338,
+          "asymmetry": 14.428217203714354
+        },
+        {
+          "tick": 212,
+          "phase": "Recovery",
+          "frame": 19,
+          "elbow": 110.408853617859,
+          "guideElbow": 93.97097587505014,
+          "wristHeight": 0.1479157875668412,
+          "wristFlexion": -15.541031931874667,
+          "asymmetry": 16.43787774280885
+        }
+      ],
+      "releaseWindow": [],
+      "boundaries": [
+        {
+          "transition": "Startup->Recovery",
+          "fromFrame": 11,
+          "toFrame": 13,
+          "edges": [
+            {
+              "fromTick": 204,
+              "toTick": 205,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandPinky4",
+              "maxDisplacement": 0.16689151621983328
+            },
+            {
+              "fromTick": 205,
+              "toTick": 206,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandPinky4",
+              "maxDisplacement": 0.1498299731967494
+            },
+            {
+              "fromTick": 206,
+              "toTick": 207,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftToe_End",
+              "maxDisplacement": 0.5708075819941906
+            }
+          ],
+          "coordinateMagnitudeM": 5.945295,
+          "coordinateResolutionM": 1.6518123698891422e-06,
+          "maxDisplacement": 0.5708075819941906,
+          "maxTickGap": 1
+        },
+        {
+          "transition": "Recovery->Inactive",
+          "fromFrame": 19,
+          "toFrame": 0,
+          "edges": [
+            {
+              "fromTick": 211,
+              "toTick": 212,
+              "tickGap": 1,
+              "bone": "mixamorig_RightForeArm",
+              "maxDisplacement": 0.09351039496041816
+            },
+            {
+              "fromTick": 212,
+              "toTick": 213,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandPinky4",
+              "maxDisplacement": 0.1288583163370284
+            },
+            {
+              "fromTick": 213,
+              "toTick": 214,
+              "tickGap": 1,
+              "bone": "mixamorig_RightHandMiddle4",
+              "maxDisplacement": 1.5413319838981532
+            }
+          ],
+          "coordinateMagnitudeM": 6.1938233,
+          "coordinateResolutionM": 1.6518123698891422e-06,
+          "maxDisplacement": 1.5413319838981532,
+          "maxTickGap": 1
+        }
+      ]
+    },
+    {
+      "case": "left-normal-1",
+      "result": "passed",
+      "failures": [],
+      "role": "client",
+      "variant": "normal",
+      "hand": "Left",
+      "resourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B",
+      "coherentShotSamples": 41,
+      "posePhysicsMismatches": 0,
+      "presentationMismatches": 0,
+      "renderPhysicsGaps": 2,
+      "maxRenderPhysicsGap": 8,
+      "presentationHoldSamples": 6,
+      "presentationResets": 0,
+      "resetSpanContinuityExcluded": true,
+      "form": {
+        "gatherMax": 149.7327237975672,
+        "releaseMean": 159.3120698889726,
+        "releaseMinHeight": 0.16196129409372734,
+        "releaseMinAsym": -2.5572577139174086,
+        "flexionChange": 15.639614850406037,
+        "followMinElbow": 133.97651650829266,
+        "followMinAsym": 0.7462859397997192
+      },
+      "metrics": [
+        {
+          "tick": 198,
+          "phase": "Startup",
+          "frame": 1,
+          "elbow": 152.06958106975137,
+          "guideElbow": 72.8060484053923,
+          "wristHeight": -0.1959305484877749,
+          "wristFlexion": 13.617514385872767,
+          "asymmetry": 79.26353266435906
+        },
+        {
+          "tick": 199,
+          "phase": "Startup",
+          "frame": 2,
+          "elbow": 166.94400148483575,
+          "guideElbow": 164.83045343611064,
+          "wristHeight": -0.18450005808722827,
+          "wristFlexion": -48.86414163303382,
+          "asymmetry": 2.1135480487251073
+        },
+        {
+          "tick": 200,
+          "phase": "Startup",
+          "frame": 3,
+          "elbow": 168.2851959504221,
+          "guideElbow": 163.21572392340136,
+          "wristHeight": -0.14539132403180446,
+          "wristFlexion": -47.95260406708572,
+          "asymmetry": 5.069472027020737
+        },
+        {
+          "tick": 201,
+          "phase": "Startup",
+          "frame": 4,
+          "elbow": 163.83687643283764,
+          "guideElbow": 160.2571323214166,
+          "wristHeight": -0.07287851170295134,
+          "wristFlexion": -47.0423338637993,
+          "asymmetry": 3.5797441114210358
+        },
+        {
+          "tick": 202,
+          "phase": "Startup",
+          "frame": 5,
+          "elbow": 154.50597637506652,
+          "guideElbow": 155.30379487827642,
+          "wristHeight": 0.02820476481072584,
+          "wristFlexion": -34.92642767981291,
+          "asymmetry": -0.7978185032098963
+        },
+        {
+          "tick": 203,
+          "phase": "Startup",
+          "frame": 6,
+          "elbow": 150.21774029737534,
+          "guideElbow": 152.34530559824387,
+          "wristHeight": 0.10442781850888407,
+          "wristFlexion": -33.24122614777357,
+          "asymmetry": -2.1275653008685254
+        },
+        {
+          "tick": 204,
+          "phase": "Startup",
+          "frame": 7,
+          "elbow": 149.1910875433018,
+          "guideElbow": 150.18708042307023,
+          "wristHeight": 0.15455459314771006,
+          "wristFlexion": -36.129254246495606,
+          "asymmetry": -0.995992879768437
+        },
+        {
+          "tick": 205,
+          "phase": "Startup",
+          "frame": 8,
+          "elbow": 148.56254433544447,
+          "guideElbow": 150.77766558759126,
+          "wristHeight": 0.1915129790075147,
+          "wristFlexion": -35.84758516989826,
+          "asymmetry": -2.215121252146787
+        },
+        {
+          "tick": 206,
+          "phase": "Startup",
+          "frame": 9,
+          "elbow": 147.3593859048143,
+          "guideElbow": 154.38044419187807,
+          "wristHeight": 0.2197356141385965,
+          "wristFlexion": -29.789229276573792,
+          "asymmetry": -7.021058287063767
+        },
+        {
+          "tick": 207,
+          "phase": "Startup",
+          "frame": 10,
+          "elbow": 146.7609842191743,
+          "guideElbow": 159.53772979844132,
+          "wristHeight": 0.23398823113821332,
+          "wristFlexion": -23.201811665504852,
+          "asymmetry": -12.776745579267015
+        },
+        {
+          "tick": 208,
+          "phase": "Startup",
+          "frame": 11,
+          "elbow": 149.7327237975672,
+          "guideElbow": 163.64748382522973,
+          "wristHeight": 0.23419600921278166,
+          "wristFlexion": -28.22945280402636,
+          "asymmetry": -13.914760027662538
+        },
+        {
+          "tick": 209,
+          "phase": "Startup",
+          "frame": 12,
+          "elbow": 156.8811804661395,
+          "guideElbow": 163.7054741725925,
+          "wristHeight": 0.2223778896243756,
+          "wristFlexion": -32.41097139696741,
+          "asymmetry": -6.824293706452977
+        },
+        {
+          "tick": 210,
+          "phase": "Startup",
+          "frame": 13,
+          "elbow": 164.242996717122,
+          "guideElbow": 161.1941866113285,
+          "wristHeight": 0.2039220502974408,
+          "wristFlexion": -24.389092586924377,
+          "asymmetry": 3.048810105793507
+        },
+        {
+          "tick": 211,
+          "phase": "Startup",
+          "frame": 14,
+          "elbow": 168.95781167005705,
+          "guideElbow": 160.55378182014078,
+          "wristHeight": 0.19272781561152227,
+          "wristFlexion": -18.75845058622318,
+          "asymmetry": 8.40402984991627
+        },
+        {
+          "tick": 212,
+          "phase": "Startup",
+          "frame": 15,
+          "elbow": 171.2150081346509,
+          "guideElbow": 162.5593185208002,
+          "wristHeight": 0.18900741597041548,
+          "wristFlexion": -15.812142497024318,
+          "asymmetry": 8.655689613850711
+        },
+        {
+          "tick": 213,
+          "phase": "Startup",
+          "frame": 16,
+          "elbow": 172.51729280590607,
+          "guideElbow": 166.27031672829966,
+          "wristHeight": 0.1890480477399302,
+          "wristFlexion": -13.77859148144243,
+          "asymmetry": 6.246976077606405
+        },
+        {
+          "tick": 214,
+          "phase": "Startup",
+          "frame": 17,
+          "elbow": 174.48563741297122,
+          "guideElbow": 170.1642690357707,
+          "wristHeight": 0.19224107629998,
+          "wristFlexion": -16.13756378030474,
+          "asymmetry": 4.321368377200514
+        },
+        {
+          "tick": 215,
+          "phase": "Active",
+          "frame": 0,
+          "elbow": 177.90069518397675,
+          "guideElbow": 172.10247884334177,
+          "wristHeight": 0.1966719682156278,
+          "wristFlexion": -23.317307745219825,
+          "asymmetry": 5.79821634063498
+        },
+        {
+          "tick": 216,
+          "phase": "Active",
+          "frame": 1,
+          "elbow": 173.61642120744702,
+          "guideElbow": 165.2917750220763,
+          "wristHeight": 0.19344975381425267,
+          "wristFlexion": -26.630667472321772,
+          "asymmetry": 8.32464618537071
+        },
+        {
+          "tick": 217,
+          "phase": "Active",
+          "frame": 2,
+          "elbow": 159.29366643061104,
+          "guideElbow": 156.24916783293693,
+          "wristHeight": 0.1795224570342396,
+          "wristFlexion": -19.51339339260954,
+          "asymmetry": 3.0444985976741066
+        },
+        {
+          "tick": 218,
+          "phase": "Active",
+          "frame": 3,
+          "elbow": 145.0261220288597,
+          "guideElbow": 147.5833797427771,
+          "wristHeight": 0.16196129409372734,
+          "wristFlexion": -12.697237266774485,
+          "asymmetry": -2.5572577139174086
+        },
+        {
+          "tick": 219,
+          "phase": "Recovery",
+          "frame": 0,
+          "elbow": 144.19685301828594,
+          "guideElbow": 143.45056707848622,
+          "wristHeight": 0.15279682277373793,
+          "wristFlexion": -14.680195530847843,
+          "asymmetry": 0.7462859397997192
+        },
+        {
+          "tick": 220,
+          "phase": "Recovery",
+          "frame": 1,
+          "elbow": 147.69470500017454,
+          "guideElbow": 139.89110483458353,
+          "wristHeight": 0.15271959785378375,
+          "wristFlexion": -13.884133942155493,
+          "asymmetry": 7.803600165591007
+        },
+        {
+          "tick": 221,
+          "phase": "Recovery",
+          "frame": 2,
+          "elbow": 141.75030765950967,
+          "guideElbow": 133.4808712659891,
+          "wristHeight": 0.1505472758930195,
+          "wristFlexion": -13.267635886513107,
+          "asymmetry": 8.269436393520579
+        },
+        {
+          "tick": 222,
+          "phase": "Recovery",
+          "frame": 3,
+          "elbow": 133.97651650829266,
+          "guideElbow": 125.46003446899626,
+          "wristHeight": 0.15125919800330248,
+          "wristFlexion": -12.677654154862669,
+          "asymmetry": 8.516482039296406
+        },
+        {
+          "tick": 223,
+          "phase": "Recovery",
+          "frame": 4,
+          "elbow": 126.79758631854772,
+          "guideElbow": 114.99878389562404,
+          "wristHeight": 0.14719080976573434,
+          "wristFlexion": -15.763782949090372,
+          "asymmetry": 11.798802422923671
+        },
+        {
+          "tick": 224,
+          "phase": "Recovery",
+          "frame": 5,
+          "elbow": 118.86456808902857,
+          "guideElbow": 104.43635088531421,
+          "wristHeight": 0.1474645777960764,
+          "wristFlexion": -16.257771913374338,
+          "asymmetry": 14.428217203714354
+        },
+        {
+          "tick": 225,
+          "phase": "Recovery",
+          "frame": 6,
+          "elbow": 110.408853617859,
+          "guideElbow": 93.97097587505014,
+          "wristHeight": 0.1479157875668412,
+          "wristFlexion": -15.541031931874667,
+          "asymmetry": 16.43787774280885
+        },
+        {
+          "tick": 226,
+          "phase": "Recovery",
+          "frame": 7,
+          "elbow": 100.53223089619141,
+          "guideElbow": 84.99779152817143,
+          "wristHeight": 0.1297441053849034,
+          "wristFlexion": -15.849726803064147,
+          "asymmetry": 15.534439368019974
+        },
+        {
+          "tick": 227,
+          "phase": "Recovery",
+          "frame": 8,
+          "elbow": 93.19878379934192,
+          "guideElbow": 78.75645311377428,
+          "wristHeight": 0.10726747968428116,
+          "wristFlexion": -17.16847215223556,
+          "asymmetry": 14.44233068556764
+        },
+        {
+          "tick": 228,
+          "phase": "Recovery",
+          "frame": 9,
+          "elbow": 88.24218088893139,
+          "guideElbow": 75.06833604454239,
+          "wristHeight": 0.08062312333690044,
+          "wristFlexion": -19.465474406920983,
+          "asymmetry": 13.173844844388995
+        },
+        {
+          "tick": 229,
+          "phase": "Recovery",
+          "frame": 10,
+          "elbow": 86.53454363886885,
+          "guideElbow": 74.4618564896865,
+          "wristHeight": 0.06412382351788679,
+          "wristFlexion": -23.33704287121149,
+          "asymmetry": 12.072687149182357
+        },
+        {
+          "tick": 230,
+          "phase": "Recovery",
+          "frame": 11,
+          "elbow": 85.69706507272129,
+          "guideElbow": 74.50574477361657,
+          "wristHeight": 0.046120834313919765,
+          "wristFlexion": -29.31329765793714,
+          "asymmetry": 11.191320299104717
+        },
+        {
+          "tick": 231,
+          "phase": "Recovery",
+          "frame": 12,
+          "elbow": 86.01013894929964,
+          "guideElbow": 75.34292935594105,
+          "wristHeight": 0.0288693951300655,
+          "wristFlexion": -35.2066805645838,
+          "asymmetry": 10.667209593358592
+        },
+        {
+          "tick": 232,
+          "phase": "Recovery",
+          "frame": 13,
+          "elbow": 85.84848434783869,
+          "guideElbow": 76.12545650848888,
+          "wristHeight": 0.018402972830148277,
+          "wristFlexion": -38.541965177236314,
+          "asymmetry": 9.723027839349811
+        },
+        {
+          "tick": 233,
+          "phase": "Recovery",
+          "frame": 14,
+          "elbow": 85.48279545714068,
+          "guideElbow": 76.72532925030238,
+          "wristHeight": 0.014147113673692575,
+          "wristFlexion": -40.88851035971164,
+          "asymmetry": 8.757466206838302
+        },
+        {
+          "tick": 234,
+          "phase": "Recovery",
+          "frame": 15,
+          "elbow": 84.82892082603372,
+          "guideElbow": 76.73573984846072,
+          "wristHeight": 0.024521730027894692,
+          "wristFlexion": -41.16448355336611,
+          "asymmetry": 8.093180977572999
+        },
+        {
+          "tick": 235,
+          "phase": "Recovery",
+          "frame": 16,
+          "elbow": 84.76660766869881,
+          "guideElbow": 76.83543189042665,
+          "wristHeight": 0.03879245567252787,
+          "wristFlexion": -41.68167287470508,
+          "asymmetry": 7.931175778272163
+        },
+        {
+          "tick": 236,
+          "phase": "Recovery",
+          "frame": 17,
+          "elbow": 85.1768516227081,
+          "guideElbow": 77.1350883474225,
+          "wristHeight": 0.0548903613971066,
+          "wristFlexion": -42.434340337302906,
+          "asymmetry": 8.041763275285604
+        },
+        {
+          "tick": 237,
+          "phase": "Recovery",
+          "frame": 18,
+          "elbow": 87.4573942360985,
+          "guideElbow": 79.29218742888838,
+          "wristHeight": 0.06537869923721266,
+          "wristFlexion": -43.62307492829641,
+          "asymmetry": 8.165206807210112
+        },
+        {
+          "tick": 238,
+          "phase": "Recovery",
+          "frame": 19,
+          "elbow": 90.24854824781862,
+          "guideElbow": 81.54364198161973,
+          "wristHeight": 0.07605832740431319,
+          "wristFlexion": -44.10530226137615,
+          "asymmetry": 8.70490626619889
+        }
+      ],
+      "releaseWindow": [
+        {
+          "offset": -2,
+          "tick": 213,
+          "phase": "Startup",
+          "frame": 16,
+          "wristVisibleBallDistance": 1.5965703177724455,
+          "wristAuthoritativeOriginDistance": 1.5965703177724455
+        },
+        {
+          "offset": -1,
+          "tick": 214,
+          "phase": "Startup",
+          "frame": 17,
+          "wristVisibleBallDistance": 1.6346879851029799,
+          "wristAuthoritativeOriginDistance": 1.6346879851029799
+        },
+        {
+          "offset": 0,
+          "tick": 215,
+          "phase": "Active",
+          "frame": 0,
+          "wristVisibleBallDistance": 1.6630300060781251,
+          "wristAuthoritativeOriginDistance": 1.6630300060781251
+        },
+        {
+          "offset": 1,
+          "tick": 216,
+          "phase": "Active",
+          "frame": 1,
+          "wristVisibleBallDistance": 1.5776969466694848,
+          "wristAuthoritativeOriginDistance": 1.686905563296014
+        },
+        {
+          "offset": 2,
+          "tick": 217,
+          "phase": "Active",
+          "frame": 2,
+          "wristVisibleBallDistance": 1.4684787063814548,
+          "wristAuthoritativeOriginDistance": 1.6801018776391257
+        }
+      ],
+      "boundaries": [
+        {
+          "transition": "Startup->Active",
+          "fromFrame": 17,
+          "toFrame": 0,
+          "edges": [
+            {
+              "fromTick": 213,
+              "toTick": 214,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftToe_End",
+              "maxDisplacement": 0.08255977872710484
+            },
+            {
+              "fromTick": 214,
+              "toTick": 215,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftToe_End",
+              "maxDisplacement": 0.07819265976207243
+            },
+            {
+              "fromTick": 215,
+              "toTick": 216,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandPinky4",
+              "maxDisplacement": 0.14030461523440482
+            }
+          ],
+          "coordinateMagnitudeM": 5.940751,
+          "coordinateResolutionM": 1.6518123698891422e-06,
+          "maxDisplacement": 0.14030461523440482,
+          "maxTickGap": 1
+        },
+        {
+          "transition": "Active->Recovery",
+          "fromFrame": 3,
+          "toFrame": 0,
+          "edges": [
+            {
+              "fromTick": 217,
+              "toTick": 218,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandPinky4",
+              "maxDisplacement": 0.11268275057009611
+            },
+            {
+              "fromTick": 218,
+              "toTick": 219,
+              "tickGap": 1,
+              "bone": "mixamorig_RightToe_End",
+              "maxDisplacement": 0.054937426123506154
+            },
+            {
+              "fromTick": 219,
+              "toTick": 220,
+              "tickGap": 1,
+              "bone": "mixamorig_RightToe_End",
+              "maxDisplacement": 0.05111898538730396
+            }
+          ],
+          "coordinateMagnitudeM": 5.827151,
+          "coordinateResolutionM": 1.6518123698891422e-06,
+          "maxDisplacement": 0.11268275057009611,
+          "maxTickGap": 1
+        },
+        {
+          "transition": "Recovery->Inactive",
+          "fromFrame": 19,
+          "toFrame": 0,
+          "edges": [
+            {
+              "fromTick": 237,
+              "toTick": 238,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandPinky2",
+              "maxDisplacement": 0.048931261636060076
+            },
+            {
+              "fromTick": 238,
+              "toTick": 239,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandRing3",
+              "maxDisplacement": 0.04776017361359371
+            },
+            {
+              "fromTick": 239,
+              "toTick": 240,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandPinky4",
+              "maxDisplacement": 1.360948667951179
+            }
+          ],
+          "coordinateMagnitudeM": 6.1938233,
+          "coordinateResolutionM": 1.6518123698891422e-06,
+          "maxDisplacement": 1.360948667951179,
+          "maxTickGap": 1
+        }
+      ]
+    },
+    {
+      "case": "right-early-1",
+      "result": "passed",
+      "failures": [],
+      "role": "client",
+      "variant": "early",
+      "hand": "Right",
+      "resourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B",
+      "coherentShotSamples": 10,
+      "posePhysicsMismatches": 0,
+      "presentationMismatches": 0,
+      "renderPhysicsGaps": 1,
+      "maxRenderPhysicsGap": 8,
+      "presentationHoldSamples": 3,
+      "presentationResets": 0,
+      "resetSpanContinuityExcluded": true,
+      "form": {},
+      "metrics": [
+        {
+          "tick": 133,
+          "phase": "Startup",
+          "frame": 1,
+          "elbow": 78.10890288865552,
+          "guideElbow": 150.69236087864635,
+          "wristHeight": 0.20616870307791266,
+          "wristFlexion": 19.52009680486153,
+          "asymmetry": -72.58345798999083
+        },
+        {
+          "tick": 134,
+          "phase": "Startup",
+          "frame": 2,
+          "elbow": 166.94399454102202,
+          "guideElbow": 164.83044668558276,
+          "wristHeight": -0.18450006379113285,
+          "wristFlexion": -48.86414393622048,
+          "asymmetry": 2.113547855439265
+        },
+        {
+          "tick": 135,
+          "phase": "Startup",
+          "frame": 3,
+          "elbow": 168.2851993804555,
+          "guideElbow": 163.21572917614708,
+          "wristHeight": -0.14539132374065877,
+          "wristFlexion": -47.95260443518877,
+          "asymmetry": 5.0694702043084305
+        },
+        {
+          "tick": 136,
+          "phase": "Recovery",
+          "frame": 13,
+          "elbow": 163.83688379272252,
+          "guideElbow": 160.25713589997073,
+          "wristHeight": -0.07287850941008389,
+          "wristFlexion": -47.0423348610366,
+          "asymmetry": 3.579747892751783
+        },
+        {
+          "tick": 137,
+          "phase": "Recovery",
+          "frame": 14,
+          "elbow": 147.69470500017454,
+          "guideElbow": 139.89110619332848,
+          "wristHeight": 0.1527196040223137,
+          "wristFlexion": -13.884138132072561,
+          "asymmetry": 7.803598806846054
+        },
+        {
+          "tick": 138,
+          "phase": "Recovery",
+          "frame": 15,
+          "elbow": 141.75030765950967,
+          "guideElbow": 133.48087924576296,
+          "wristHeight": 0.1505472683594806,
+          "wristFlexion": -13.267635747931836,
+          "asymmetry": 8.26942841374671
+        },
+        {
+          "tick": 139,
+          "phase": "Recovery",
+          "frame": 16,
+          "elbow": 133.9765268138933,
+          "guideElbow": 125.46001775584078,
+          "wristHeight": 0.1512592009884611,
+          "wristFlexion": -12.677663182903874,
+          "asymmetry": 8.516509058052506
+        },
+        {
+          "tick": 140,
+          "phase": "Recovery",
+          "frame": 17,
+          "elbow": 126.79759395273935,
+          "guideElbow": 114.99877211563084,
+          "wristHeight": 0.14719079989516554,
+          "wristFlexion": -15.763782927761165,
+          "asymmetry": 11.798821837108505
+        },
+        {
+          "tick": 141,
+          "phase": "Recovery",
+          "frame": 18,
+          "elbow": 118.86456808902857,
+          "guideElbow": 104.43636103193576,
+          "wristHeight": 0.1474645777960764,
+          "wristFlexion": -16.25777832340203,
+          "asymmetry": 14.428207057092806
+        },
+        {
+          "tick": 142,
+          "phase": "Recovery",
+          "frame": 19,
+          "elbow": 110.408853617859,
+          "guideElbow": 93.97098665126752,
+          "wristHeight": 0.1479157875668412,
+          "wristFlexion": -15.541031931874667,
+          "asymmetry": 16.43786696659147
+        }
+      ],
+      "releaseWindow": [],
+      "boundaries": [
+        {
+          "transition": "Startup->Recovery",
+          "fromFrame": 3,
+          "toFrame": 13,
+          "edges": [
+            {
+              "fromTick": 134,
+              "toTick": 135,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandRing4",
+              "maxDisplacement": 0.19558551665145016
+            },
+            {
+              "fromTick": 135,
+              "toTick": 136,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandRing4",
+              "maxDisplacement": 0.2404572746311673
+            },
+            {
+              "fromTick": 136,
+              "toTick": 137,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandPinky4",
+              "maxDisplacement": 1.9780551362973724
+            }
+          ],
+          "coordinateMagnitudeM": 6.019506,
+          "coordinateResolutionM": 1.6518123698891422e-06,
+          "maxDisplacement": 1.9780551362973724,
+          "maxTickGap": 1
+        },
+        {
+          "transition": "Recovery->Inactive",
+          "fromFrame": 19,
+          "toFrame": 0,
+          "edges": [
+            {
+              "fromTick": 141,
+              "toTick": 142,
+              "tickGap": 1,
+              "bone": "mixamorig_RightForeArm",
+              "maxDisplacement": 0.09351039496041816
+            },
+            {
+              "fromTick": 142,
+              "toTick": 143,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandPinky4",
+              "maxDisplacement": 0.1288583163370284
+            },
+            {
+              "fromTick": 143,
+              "toTick": 144,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandMiddle4",
+              "maxDisplacement": 1.7400110254941576
+            }
+          ],
+          "coordinateMagnitudeM": 6.1938233,
+          "coordinateResolutionM": 1.6518123698891422e-06,
+          "maxDisplacement": 1.7400110254941576,
+          "maxTickGap": 1
+        }
+      ]
+    },
+    {
+      "case": "right-fadeaway-1",
+      "result": "passed",
+      "failures": [],
+      "role": "client",
+      "variant": "fadeaway",
+      "hand": "Right",
+      "resourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B",
+      "coherentShotSamples": 41,
+      "posePhysicsMismatches": 0,
+      "presentationMismatches": 0,
+      "renderPhysicsGaps": 2,
+      "maxRenderPhysicsGap": 8,
+      "presentationHoldSamples": 3,
+      "presentationResets": 0,
+      "resetSpanContinuityExcluded": true,
+      "form": {},
+      "metrics": [
+        {
+          "tick": 173,
+          "phase": "Startup",
+          "frame": 1,
+          "elbow": 83.99242907458918,
+          "guideElbow": 152.20615666720718,
+          "wristHeight": 0.19472853369280702,
+          "wristFlexion": 15.869077736426771,
+          "asymmetry": -68.213727592618
+        },
+        {
+          "tick": 174,
+          "phase": "Startup",
+          "frame": 2,
+          "elbow": 166.94407660035574,
+          "guideElbow": 164.83036675989652,
+          "wristHeight": -0.1844998722228565,
+          "wristFlexion": -48.864028457678195,
+          "asymmetry": 2.1137098404592223
+        },
+        {
+          "tick": 175,
+          "phase": "Startup",
+          "frame": 3,
+          "elbow": 168.28527605070676,
+          "guideElbow": 163.2158986859,
+          "wristHeight": -0.14539182671525225,
+          "wristFlexion": -47.952848714944686,
+          "asymmetry": 5.069377364806769
+        },
+        {
+          "tick": 176,
+          "phase": "Startup",
+          "frame": 4,
+          "elbow": 163.83688379272252,
+          "guideElbow": 160.25727645816463,
+          "wristHeight": -0.07287824581765126,
+          "wristFlexion": -47.04233544462885,
+          "asymmetry": 3.579607334557892
+        },
+        {
+          "tick": 177,
+          "phase": "Startup",
+          "frame": 5,
+          "elbow": 154.5057867665221,
+          "guideElbow": 155.30384238517158,
+          "wristHeight": 0.028204985818978894,
+          "wristFlexion": -34.92634549128824,
+          "asymmetry": -0.7980556186494709
+        },
+        {
+          "tick": 178,
+          "phase": "Startup",
+          "frame": 6,
+          "elbow": 150.2177574014036,
+          "guideElbow": 152.34534290996308,
+          "wristHeight": 0.10442761611955198,
+          "wristFlexion": -33.241137582172655,
+          "asymmetry": -2.1275855085594912
+        },
+        {
+          "tick": 179,
+          "phase": "Startup",
+          "frame": 7,
+          "elbow": 149.1911232138737,
+          "guideElbow": 150.1870772980699,
+          "wristHeight": 0.15455459133164645,
+          "wristFlexion": -36.12940161202848,
+          "asymmetry": -0.9959540841961996
+        },
+        {
+          "tick": 180,
+          "phase": "Startup",
+          "frame": 8,
+          "elbow": 148.5625721969774,
+          "guideElbow": 150.7777191481779,
+          "wristHeight": 0.19151290472190502,
+          "wristFlexion": -35.84783184272089,
+          "asymmetry": -2.215146951200495
+        },
+        {
+          "tick": 181,
+          "phase": "Startup",
+          "frame": 9,
+          "elbow": 147.35950618018256,
+          "guideElbow": 154.3804437179218,
+          "wristHeight": 0.21973562550006326,
+          "wristFlexion": -29.789575422534913,
+          "asymmetry": -7.020937537739229
+        },
+        {
+          "tick": 182,
+          "phase": "Startup",
+          "frame": 10,
+          "elbow": 146.76099058419058,
+          "guideElbow": 159.53761209103988,
+          "wristHeight": 0.23398823520075876,
+          "wristFlexion": -23.202073012280717,
+          "asymmetry": -12.776621506849295
+        },
+        {
+          "tick": 183,
+          "phase": "Startup",
+          "frame": 11,
+          "elbow": 149.73283201227724,
+          "guideElbow": 163.64730657798958,
+          "wristHeight": 0.23419602013080015,
+          "wristFlexion": -28.229763411610293,
+          "asymmetry": -13.91447456571234
+        },
+        {
+          "tick": 184,
+          "phase": "Startup",
+          "frame": 12,
+          "elbow": 156.8812931136573,
+          "guideElbow": 163.70552153554044,
+          "wristHeight": 0.2223780512311702,
+          "wristFlexion": -32.41129076321604,
+          "asymmetry": -6.824228421883134
+        },
+        {
+          "tick": 185,
+          "phase": "Startup",
+          "frame": 13,
+          "elbow": 164.2430507620971,
+          "guideElbow": 161.19413320257593,
+          "wristHeight": 0.2039220109651587,
+          "wristFlexion": -24.389413597594398,
+          "asymmetry": 3.048917559521186
+        },
+        {
+          "tick": 186,
+          "phase": "Startup",
+          "frame": 14,
+          "elbow": 168.95777711353273,
+          "guideElbow": 160.55371727951962,
+          "wristHeight": 0.1927278759167126,
+          "wristFlexion": -18.758161288049642,
+          "asymmetry": 8.404059834013111
+        },
+        {
+          "tick": 187,
+          "phase": "Startup",
+          "frame": 15,
+          "elbow": 171.2150081346509,
+          "guideElbow": 162.5592261445479,
+          "wristHeight": 0.18900764857404226,
+          "wristFlexion": -15.81214636850733,
+          "asymmetry": 8.655781990103009
+        },
+        {
+          "tick": 188,
+          "phase": "Startup",
+          "frame": 16,
+          "elbow": 172.5172893592484,
+          "guideElbow": 166.27032356287987,
+          "wristHeight": 0.18904809533345135,
+          "wristFlexion": -13.778724923770378,
+          "asymmetry": 6.246965796368528
+        },
+        {
+          "tick": 189,
+          "phase": "Startup",
+          "frame": 17,
+          "elbow": 174.48568428503805,
+          "guideElbow": 170.16430312904706,
+          "wristHeight": 0.1922409027422054,
+          "wristFlexion": -16.137280877752328,
+          "asymmetry": 4.321381155990991
+        },
+        {
+          "tick": 190,
+          "phase": "Active",
+          "frame": 0,
+          "elbow": 177.90063902230773,
+          "guideElbow": 172.1025250603876,
+          "wristHeight": 0.1966716816452235,
+          "wristFlexion": -23.317392959309913,
+          "asymmetry": 5.798113961920137
+        },
+        {
+          "tick": 191,
+          "phase": "Active",
+          "frame": 1,
+          "elbow": 97.21770027004055,
+          "guideElbow": 91.29604122640073,
+          "wristHeight": 0.01066211032551833,
+          "wristFlexion": -51.49109161607852,
+          "asymmetry": 5.921659043639821
+        },
+        {
+          "tick": 192,
+          "phase": "Active",
+          "frame": 2,
+          "elbow": 126.23813747813543,
+          "guideElbow": 125.26472493708248,
+          "wristHeight": 0.11089275216725734,
+          "wristFlexion": 6.429714894915237,
+          "asymmetry": 0.9734125410529515
+        },
+        {
+          "tick": 193,
+          "phase": "Active",
+          "frame": 3,
+          "elbow": 49.41854100655487,
+          "guideElbow": 54.58928869418146,
+          "wristHeight": -0.15360200238427701,
+          "wristFlexion": 88.16329287906939,
+          "asymmetry": -5.170747687626594
+        },
+        {
+          "tick": 194,
+          "phase": "Recovery",
+          "frame": 0,
+          "elbow": 73.99796997488399,
+          "guideElbow": 79.97132643202754,
+          "wristHeight": 0.17142635141302734,
+          "wristFlexion": -79.10038232552877,
+          "asymmetry": -5.973356457143552
+        },
+        {
+          "tick": 195,
+          "phase": "Recovery",
+          "frame": 1,
+          "elbow": 147.69470848442646,
+          "guideElbow": 139.89105749833195,
+          "wristHeight": 0.15271931492282736,
+          "wristFlexion": -13.884570255704338,
+          "asymmetry": 7.80365098609451
+        },
+        {
+          "tick": 196,
+          "phase": "Recovery",
+          "frame": 2,
+          "elbow": 141.75034309088565,
+          "guideElbow": 133.48087924576296,
+          "wristHeight": 0.1505474680726683,
+          "wristFlexion": -13.267882367651879,
+          "asymmetry": 8.269463845122687
+        },
+        {
+          "tick": 197,
+          "phase": "Recovery",
+          "frame": 3,
+          "elbow": 133.9764674547447,
+          "guideElbow": 125.46001775584078,
+          "wristHeight": 0.15125879659856667,
+          "wristFlexion": -12.677178621819724,
+          "asymmetry": 8.516449698903912
+        },
+        {
+          "tick": 198,
+          "phase": "Recovery",
+          "frame": 4,
+          "elbow": 126.79756254219758,
+          "guideElbow": 114.99869690604068,
+          "wristHeight": 0.14719058414573868,
+          "wristFlexion": -15.76354587790422,
+          "asymmetry": 11.798865636156904
+        },
+        {
+          "tick": 199,
+          "phase": "Recovery",
+          "frame": 5,
+          "elbow": 118.86470980684294,
+          "guideElbow": 104.43636103193576,
+          "wristHeight": 0.14746442726043607,
+          "wristFlexion": -16.257951643014007,
+          "asymmetry": 14.428348774907178
+        },
+        {
+          "tick": 200,
+          "phase": "Recovery",
+          "frame": 6,
+          "elbow": 110.40884676095853,
+          "guideElbow": 93.97105537293517,
+          "wristHeight": 0.14791577619005955,
+          "wristFlexion": -15.541255681053498,
+          "asymmetry": 16.437791388023356
+        },
+        {
+          "tick": 201,
+          "phase": "Recovery",
+          "frame": 7,
+          "elbow": 100.53223089619141,
+          "guideElbow": 84.99768278035741,
+          "wristHeight": 0.1297440894093601,
+          "wristFlexion": -15.849684255426304,
+          "asymmetry": 15.534548115834
+        },
+        {
+          "tick": 202,
+          "phase": "Recovery",
+          "frame": 8,
+          "elbow": 93.19879840105848,
+          "guideElbow": 78.75645798068273,
+          "wristHeight": 0.10726715447962061,
+          "wristFlexion": -17.16866934941811,
+          "asymmetry": 14.442340420375757
+        },
+        {
+          "tick": 203,
+          "phase": "Recovery",
+          "frame": 9,
+          "elbow": 88.24210656199915,
+          "guideElbow": 75.06833079554377,
+          "wristHeight": 0.08062295107220008,
+          "wristFlexion": -19.464935223786405,
+          "asymmetry": 13.173775766455378
+        },
+        {
+          "tick": 204,
+          "phase": "Recovery",
+          "frame": 10,
+          "elbow": 86.53453786859835,
+          "guideElbow": 74.46181269011934,
+          "wristHeight": 0.06412381411457685,
+          "wristFlexion": -23.337101135868497,
+          "asymmetry": 12.072725178479004
+        },
+        {
+          "tick": 205,
+          "phase": "Recovery",
+          "frame": 11,
+          "elbow": 85.69701553860683,
+          "guideElbow": 74.5056973645533,
+          "wristHeight": 0.04612033507030694,
+          "wristFlexion": -29.313104738188134,
+          "asymmetry": 11.191318174053535
+        },
+        {
+          "tick": 206,
+          "phase": "Recovery",
+          "frame": 12,
+          "elbow": 86.01017273826064,
+          "guideElbow": 75.3430484534699,
+          "wristHeight": 0.02886935880996719,
+          "wristFlexion": -35.206729563233225,
+          "asymmetry": 10.66712428479073
+        },
+        {
+          "tick": 207,
+          "phase": "Recovery",
+          "frame": 13,
+          "elbow": 85.8485139125502,
+          "guideElbow": 76.1255437160643,
+          "wristHeight": 0.018403244274803644,
+          "wristFlexion": -38.54211517455275,
+          "asymmetry": 9.722970196485903
+        },
+        {
+          "tick": 208,
+          "phase": "Recovery",
+          "frame": 14,
+          "elbow": 85.48268521637709,
+          "guideElbow": 76.72533350806135,
+          "wristHeight": 0.014147360142319607,
+          "wristFlexion": -40.88848267791834,
+          "asymmetry": 8.757351708315738
+        },
+        {
+          "tick": 209,
+          "phase": "Recovery",
+          "frame": 15,
+          "elbow": 84.82892082603372,
+          "guideElbow": 76.73581912630047,
+          "wristHeight": 0.02452200179694576,
+          "wristFlexion": -41.16447653840315,
+          "asymmetry": 8.093101699733253
+        },
+        {
+          "tick": 210,
+          "phase": "Recovery",
+          "frame": 16,
+          "elbow": 84.76667766149073,
+          "guideElbow": 76.83534514402989,
+          "wristHeight": 0.03879208635518917,
+          "wristFlexion": -41.681547789587626,
+          "asymmetry": 7.931332517460845
+        },
+        {
+          "tick": 211,
+          "phase": "Recovery",
+          "frame": 17,
+          "elbow": 85.17683549220047,
+          "guideElbow": 77.13494447132274,
+          "wristHeight": 0.0548902179780297,
+          "wristFlexion": -42.43420259067265,
+          "asymmetry": 8.041891020877728
+        },
+        {
+          "tick": 212,
+          "phase": "Recovery",
+          "frame": 18,
+          "elbow": 87.45756133593628,
+          "guideElbow": 79.29213011989748,
+          "wristHeight": 0.0653790498631425,
+          "wristFlexion": -43.623075503224236,
+          "asymmetry": 8.165431216038797
+        },
+        {
+          "tick": 213,
+          "phase": "Recovery",
+          "frame": 19,
+          "elbow": 90.24846645388574,
+          "guideElbow": 81.54370677318056,
+          "wristHeight": 0.07605828265329415,
+          "wristFlexion": -44.105289637927235,
+          "asymmetry": 8.70475968070518
+        }
+      ],
+      "releaseWindow": [
+        {
+          "offset": -2,
+          "tick": 188,
+          "phase": "Startup",
+          "frame": 16,
+          "wristVisibleBallDistance": 1.1817809248332607,
+          "wristAuthoritativeOriginDistance": 1.1817809248332607
+        },
+        {
+          "offset": -1,
+          "tick": 189,
+          "phase": "Startup",
+          "frame": 17,
+          "wristVisibleBallDistance": 1.2287665608080487,
+          "wristAuthoritativeOriginDistance": 1.2287665608080487
+        },
+        {
+          "offset": 0,
+          "tick": 190,
+          "phase": "Active",
+          "frame": 0,
+          "wristVisibleBallDistance": 1.2640497154509116,
+          "wristAuthoritativeOriginDistance": 1.2640497154509116
+        },
+        {
+          "offset": 1,
+          "tick": 191,
+          "phase": "Active",
+          "frame": 1,
+          "wristVisibleBallDistance": 0.4669733012191681,
+          "wristAuthoritativeOriginDistance": 0.589234662651654
+        },
+        {
+          "offset": 2,
+          "tick": 192,
+          "phase": "Active",
+          "frame": 2,
+          "wristVisibleBallDistance": 0.8690262764840204,
+          "wristAuthoritativeOriginDistance": 1.1585479621872092
+        }
+      ],
+      "boundaries": [
+        {
+          "transition": "Startup->Active",
+          "fromFrame": 17,
+          "toFrame": 0,
+          "edges": [
+            {
+              "fromTick": 188,
+              "toTick": 189,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftToe_End",
+              "maxDisplacement": 0.08255946546757516
+            },
+            {
+              "fromTick": 189,
+              "toTick": 190,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftToe_End",
+              "maxDisplacement": 0.07819302853731847
+            },
+            {
+              "fromTick": 190,
+              "toTick": 191,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandIndex4",
+              "maxDisplacement": 1.3681614582125656
+            }
+          ],
+          "coordinateMagnitudeM": 9.295063,
+          "coordinateResolutionM": 3.3036247397782844e-06,
+          "maxDisplacement": 1.3681614582125656,
+          "maxTickGap": 1
+        },
+        {
+          "transition": "Active->Recovery",
+          "fromFrame": 3,
+          "toFrame": 0,
+          "edges": [
+            {
+              "fromTick": 192,
+              "toTick": 193,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandIndex1",
+              "maxDisplacement": 0.681947332200022
+            },
+            {
+              "fromTick": 193,
+              "toTick": 194,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandIndex1",
+              "maxDisplacement": 0.6414825519020366
+            },
+            {
+              "fromTick": 194,
+              "toTick": 195,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandMiddle4",
+              "maxDisplacement": 1.93842928716799
+            }
+          ],
+          "coordinateMagnitudeM": 9.293839,
+          "coordinateResolutionM": 3.3036247397782844e-06,
+          "maxDisplacement": 1.93842928716799,
+          "maxTickGap": 1
+        },
+        {
+          "transition": "Recovery->Inactive",
+          "fromFrame": 19,
+          "toFrame": 0,
+          "edges": [
+            {
+              "fromTick": 212,
+              "toTick": 213,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandPinky2",
+              "maxDisplacement": 0.048931259777678565
+            },
+            {
+              "fromTick": 213,
+              "toTick": 214,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandRing3",
+              "maxDisplacement": 0.04775990431209645
+            },
+            {
+              "fromTick": 214,
+              "toTick": 215,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandPinky4",
+              "maxDisplacement": 1.3609487317369546
+            }
+          ],
+          "coordinateMagnitudeM": 9.402517,
+          "coordinateResolutionM": 3.3036247397782844e-06,
+          "maxDisplacement": 1.3609487317369546,
+          "maxTickGap": 1
+        }
+      ]
+    },
+    {
+      "case": "right-late-1",
+      "result": "passed",
+      "failures": [],
+      "role": "client",
+      "variant": "late",
+      "hand": "Right",
+      "resourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B",
+      "coherentShotSamples": 18,
+      "posePhysicsMismatches": 0,
+      "presentationMismatches": 0,
+      "renderPhysicsGaps": 2,
+      "maxRenderPhysicsGap": 8,
+      "presentationHoldSamples": 3,
+      "presentationResets": 0,
+      "resetSpanContinuityExcluded": true,
+      "form": {},
+      "metrics": [
+        {
+          "tick": 137,
+          "phase": "Startup",
+          "frame": 1,
+          "elbow": 78.10890288865552,
+          "guideElbow": 150.69236087864635,
+          "wristHeight": 0.20616870307791266,
+          "wristFlexion": 19.52009680486153,
+          "asymmetry": -72.58345798999083
+        },
+        {
+          "tick": 138,
+          "phase": "Startup",
+          "frame": 2,
+          "elbow": 166.94399454102202,
+          "guideElbow": 164.83044668558276,
+          "wristHeight": -0.18450006379113285,
+          "wristFlexion": -48.86414393622048,
+          "asymmetry": 2.113547855439265
+        },
+        {
+          "tick": 139,
+          "phase": "Startup",
+          "frame": 3,
+          "elbow": 168.2851993804555,
+          "guideElbow": 163.21572917614708,
+          "wristHeight": -0.14539132374065877,
+          "wristFlexion": -47.95260443518877,
+          "asymmetry": 5.0694702043084305
+        },
+        {
+          "tick": 140,
+          "phase": "Startup",
+          "frame": 4,
+          "elbow": 163.83688379272252,
+          "guideElbow": 160.25713589997073,
+          "wristHeight": -0.07287850941008389,
+          "wristFlexion": -47.0423348610366,
+          "asymmetry": 3.579747892751783
+        },
+        {
+          "tick": 141,
+          "phase": "Startup",
+          "frame": 5,
+          "elbow": 154.50598876914611,
+          "guideElbow": 155.3038124765438,
+          "wristHeight": 0.02820476906375227,
+          "wristFlexion": -34.926424401440045,
+          "asymmetry": -0.797823707397697
+        },
+        {
+          "tick": 142,
+          "phase": "Startup",
+          "frame": 6,
+          "elbow": 150.2177462162465,
+          "guideElbow": 152.34530226762027,
+          "wristHeight": 0.10442782007903194,
+          "wristFlexion": -33.24122304361379,
+          "asymmetry": -2.127556051373773
+        },
+        {
+          "tick": 143,
+          "phase": "Startup",
+          "frame": 7,
+          "elbow": 149.1910841067215,
+          "guideElbow": 150.1871040348634,
+          "wristHeight": 0.15455459176960945,
+          "wristFlexion": -36.12924999781995,
+          "asymmetry": -0.9960199281419193
+        },
+        {
+          "tick": 144,
+          "phase": "Startup",
+          "frame": 8,
+          "elbow": 148.56254396828902,
+          "guideElbow": 150.77767542808684,
+          "wristHeight": 0.19151297938807435,
+          "wristFlexion": -35.84758096928311,
+          "asymmetry": -2.215131459797817
+        },
+        {
+          "tick": 145,
+          "phase": "Startup",
+          "frame": 9,
+          "elbow": 147.3593836141883,
+          "guideElbow": 154.38044578369556,
+          "wristHeight": 0.21973561427665078,
+          "wristFlexion": -29.78923029077948,
+          "asymmetry": -7.021062169507275
+        },
+        {
+          "tick": 146,
+          "phase": "Startup",
+          "frame": 10,
+          "elbow": 146.76098520806076,
+          "guideElbow": 159.5377318044567,
+          "wristHeight": 0.23398822957826335,
+          "wristFlexion": -23.20181259496252,
+          "asymmetry": -12.776746596395952
+        },
+        {
+          "tick": 147,
+          "phase": "Startup",
+          "frame": 11,
+          "elbow": 149.73272621937085,
+          "guideElbow": 163.64747504387654,
+          "wristHeight": 0.23419600366982934,
+          "wristFlexion": -28.22944696873352,
+          "asymmetry": -13.914748824505693
+        },
+        {
+          "tick": 148,
+          "phase": "Recovery",
+          "frame": 13,
+          "elbow": 156.88118207695757,
+          "guideElbow": 163.70548054873632,
+          "wristHeight": 0.22237788547523105,
+          "wristFlexion": -32.41096763773648,
+          "asymmetry": -6.8242984717787465
+        },
+        {
+          "tick": 149,
+          "phase": "Recovery",
+          "frame": 14,
+          "elbow": 147.69470500017454,
+          "guideElbow": 139.89110619332848,
+          "wristHeight": 0.1527196040223137,
+          "wristFlexion": -13.884138132072561,
+          "asymmetry": 7.803598806846054
+        },
+        {
+          "tick": 150,
+          "phase": "Recovery",
+          "frame": 15,
+          "elbow": 141.75030765950967,
+          "guideElbow": 133.48087924576296,
+          "wristHeight": 0.1505472683594806,
+          "wristFlexion": -13.267635747931836,
+          "asymmetry": 8.26942841374671
+        },
+        {
+          "tick": 151,
+          "phase": "Recovery",
+          "frame": 16,
+          "elbow": 133.9765268138933,
+          "guideElbow": 125.46001775584078,
+          "wristHeight": 0.1512592009884611,
+          "wristFlexion": -12.677663182903874,
+          "asymmetry": 8.516509058052506
+        },
+        {
+          "tick": 152,
+          "phase": "Recovery",
+          "frame": 17,
+          "elbow": 126.79759395273935,
+          "guideElbow": 114.99877211563084,
+          "wristHeight": 0.14719079989516554,
+          "wristFlexion": -15.763782927761165,
+          "asymmetry": 11.798821837108505
+        },
+        {
+          "tick": 153,
+          "phase": "Recovery",
+          "frame": 18,
+          "elbow": 118.86456808902857,
+          "guideElbow": 104.43636103193576,
+          "wristHeight": 0.1474645777960764,
+          "wristFlexion": -16.25777832340203,
+          "asymmetry": 14.428207057092806
+        },
+        {
+          "tick": 154,
+          "phase": "Recovery",
+          "frame": 19,
+          "elbow": 110.408853617859,
+          "guideElbow": 93.97098665126752,
+          "wristHeight": 0.1479157875668412,
+          "wristFlexion": -15.541031931874667,
+          "asymmetry": 16.43786696659147
+        }
+      ],
+      "releaseWindow": [],
+      "boundaries": [
+        {
+          "transition": "Startup->Recovery",
+          "fromFrame": 11,
+          "toFrame": 13,
+          "edges": [
+            {
+              "fromTick": 146,
+              "toTick": 147,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandPinky4",
+              "maxDisplacement": 0.16689151621983328
+            },
+            {
+              "fromTick": 147,
+              "toTick": 148,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandPinky4",
+              "maxDisplacement": 0.14982997724151914
+            },
+            {
+              "fromTick": 148,
+              "toTick": 149,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftToe_End",
+              "maxDisplacement": 0.5708076367262822
+            }
+          ],
+          "coordinateMagnitudeM": 5.945295,
+          "coordinateResolutionM": 1.6518123698891422e-06,
+          "maxDisplacement": 0.5708076367262822,
+          "maxTickGap": 1
+        },
+        {
+          "transition": "Recovery->Inactive",
+          "fromFrame": 19,
+          "toFrame": 0,
+          "edges": [
+            {
+              "fromTick": 153,
+              "toTick": 154,
+              "tickGap": 1,
+              "bone": "mixamorig_RightForeArm",
+              "maxDisplacement": 0.09351039496041816
+            },
+            {
+              "fromTick": 154,
+              "toTick": 155,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandPinky4",
+              "maxDisplacement": 0.1288583163370284
+            },
+            {
+              "fromTick": 155,
+              "toTick": 156,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandMiddle4",
+              "maxDisplacement": 1.7400110254941576
+            }
+          ],
+          "coordinateMagnitudeM": 6.1938233,
+          "coordinateResolutionM": 1.6518123698891422e-06,
+          "maxDisplacement": 1.7400110254941576,
+          "maxTickGap": 1
+        }
+      ]
+    },
+    {
+      "case": "right-normal-1",
+      "result": "passed",
+      "failures": [],
+      "role": "client",
+      "variant": "normal",
+      "hand": "Right",
+      "resourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B",
+      "coherentShotSamples": 41,
+      "posePhysicsMismatches": 0,
+      "presentationMismatches": 0,
+      "renderPhysicsGaps": 2,
+      "maxRenderPhysicsGap": 8,
+      "presentationHoldSamples": 3,
+      "presentationResets": 0,
+      "resetSpanContinuityExcluded": true,
+      "form": {
+        "gatherMax": 149.73272621937085,
+        "releaseMean": 159.31207611373318,
+        "releaseMinHeight": 0.16196129228145287,
+        "releaseMinAsym": -2.557251125793954,
+        "flexionChange": 15.63960856705068,
+        "followMinElbow": 133.9765268138933,
+        "followMinAsym": 0.746297702455621
+      },
+      "metrics": [
+        {
+          "tick": 132,
+          "phase": "Startup",
+          "frame": 1,
+          "elbow": 78.10890288865552,
+          "guideElbow": 150.69236087864635,
+          "wristHeight": 0.20616870307791266,
+          "wristFlexion": 19.52009680486153,
+          "asymmetry": -72.58345798999083
+        },
+        {
+          "tick": 133,
+          "phase": "Startup",
+          "frame": 2,
+          "elbow": 166.94399454102202,
+          "guideElbow": 164.83044668558276,
+          "wristHeight": -0.18450006379113285,
+          "wristFlexion": -48.86414393622048,
+          "asymmetry": 2.113547855439265
+        },
+        {
+          "tick": 134,
+          "phase": "Startup",
+          "frame": 3,
+          "elbow": 168.2851993804555,
+          "guideElbow": 163.21572917614708,
+          "wristHeight": -0.14539132374065877,
+          "wristFlexion": -47.95260443518877,
+          "asymmetry": 5.0694702043084305
+        },
+        {
+          "tick": 135,
+          "phase": "Startup",
+          "frame": 4,
+          "elbow": 163.83688379272252,
+          "guideElbow": 160.25713589997073,
+          "wristHeight": -0.07287850941008389,
+          "wristFlexion": -47.0423348610366,
+          "asymmetry": 3.579747892751783
+        },
+        {
+          "tick": 136,
+          "phase": "Startup",
+          "frame": 5,
+          "elbow": 154.50598876914611,
+          "guideElbow": 155.3038124765438,
+          "wristHeight": 0.02820476906375227,
+          "wristFlexion": -34.926424401440045,
+          "asymmetry": -0.797823707397697
+        },
+        {
+          "tick": 137,
+          "phase": "Startup",
+          "frame": 6,
+          "elbow": 150.2177462162465,
+          "guideElbow": 152.34530226762027,
+          "wristHeight": 0.10442782007903194,
+          "wristFlexion": -33.24122304361379,
+          "asymmetry": -2.127556051373773
+        },
+        {
+          "tick": 138,
+          "phase": "Startup",
+          "frame": 7,
+          "elbow": 149.1910841067215,
+          "guideElbow": 150.1871040348634,
+          "wristHeight": 0.15455459176960945,
+          "wristFlexion": -36.12924999781995,
+          "asymmetry": -0.9960199281419193
+        },
+        {
+          "tick": 139,
+          "phase": "Startup",
+          "frame": 8,
+          "elbow": 148.56254396828902,
+          "guideElbow": 150.77767542808684,
+          "wristHeight": 0.19151297938807435,
+          "wristFlexion": -35.84758096928311,
+          "asymmetry": -2.215131459797817
+        },
+        {
+          "tick": 140,
+          "phase": "Startup",
+          "frame": 9,
+          "elbow": 147.3593836141883,
+          "guideElbow": 154.38044578369556,
+          "wristHeight": 0.21973561427665078,
+          "wristFlexion": -29.78923029077948,
+          "asymmetry": -7.021062169507275
+        },
+        {
+          "tick": 141,
+          "phase": "Startup",
+          "frame": 10,
+          "elbow": 146.76098520806076,
+          "guideElbow": 159.5377318044567,
+          "wristHeight": 0.23398822957826335,
+          "wristFlexion": -23.20181259496252,
+          "asymmetry": -12.776746596395952
+        },
+        {
+          "tick": 142,
+          "phase": "Startup",
+          "frame": 11,
+          "elbow": 149.73272621937085,
+          "guideElbow": 163.64747504387654,
+          "wristHeight": 0.23419600366982934,
+          "wristFlexion": -28.22944696873352,
+          "asymmetry": -13.914748824505693
+        },
+        {
+          "tick": 143,
+          "phase": "Startup",
+          "frame": 12,
+          "elbow": 156.88118207695757,
+          "guideElbow": 163.70548054873632,
+          "wristHeight": 0.22237788547523105,
+          "wristFlexion": -32.41096763773648,
+          "asymmetry": -6.8242984717787465
+        },
+        {
+          "tick": 144,
+          "phase": "Startup",
+          "frame": 13,
+          "elbow": 164.24299929015407,
+          "guideElbow": 161.1942005205006,
+          "wristHeight": 0.20392205608899994,
+          "wristFlexion": -24.389091816234302,
+          "asymmetry": 3.048798769653473
+        },
+        {
+          "tick": 145,
+          "phase": "Startup",
+          "frame": 14,
+          "elbow": 168.95781666998894,
+          "guideElbow": 160.5537914742196,
+          "wristHeight": 0.19272782125398547,
+          "wristFlexion": -18.75845194560843,
+          "asymmetry": 8.40402519576935
+        },
+        {
+          "tick": 146,
+          "phase": "Startup",
+          "frame": 15,
+          "elbow": 171.2150081346509,
+          "guideElbow": 162.55931129852806,
+          "wristHeight": 0.18900741847542607,
+          "wristFlexion": -15.812145287842709,
+          "asymmetry": 8.655696836122843
+        },
+        {
+          "tick": 147,
+          "phase": "Startup",
+          "frame": 16,
+          "elbow": 172.5172740092575,
+          "guideElbow": 166.27032394453002,
+          "wristHeight": 0.1890480371283294,
+          "wristFlexion": -13.778592317957623,
+          "asymmetry": 6.246950064727486
+        },
+        {
+          "tick": 148,
+          "phase": "Startup",
+          "frame": 17,
+          "elbow": 174.48563741297122,
+          "guideElbow": 170.16427272864138,
+          "wristHeight": 0.19224107090451498,
+          "wristFlexion": -16.137564490635622,
+          "asymmetry": 4.321364684329836
+        },
+        {
+          "tick": 149,
+          "phase": "Active",
+          "frame": 0,
+          "elbow": 177.90069518397675,
+          "guideElbow": 172.1024861724948,
+          "wristHeight": 0.1966719634250705,
+          "wristFlexion": -23.317307059295043,
+          "asymmetry": 5.798209011481958
+        },
+        {
+          "tick": 150,
+          "phase": "Active",
+          "frame": 1,
+          "elbow": 173.61642120744702,
+          "guideElbow": 165.2917770024459,
+          "wristHeight": 0.19344975419057053,
+          "wristFlexion": -26.63066779176651,
+          "asymmetry": 8.324644205001107
+        },
+        {
+          "tick": 151,
+          "phase": "Active",
+          "frame": 2,
+          "elbow": 159.29367965940233,
+          "guideElbow": 156.24917386280347,
+          "wristHeight": 0.17952245791416363,
+          "wristFlexion": -19.513392832840672,
+          "asymmetry": 3.0445057965988553
+        },
+        {
+          "tick": 152,
+          "phase": "Active",
+          "frame": 3,
+          "elbow": 145.0261274743502,
+          "guideElbow": 147.58337860014416,
+          "wristHeight": 0.16196129228145287,
+          "wristFlexion": -12.697235194948112,
+          "asymmetry": -2.557251125793954
+        },
+        {
+          "tick": 153,
+          "phase": "Recovery",
+          "frame": 0,
+          "elbow": 144.19685301828594,
+          "guideElbow": 143.45055531583031,
+          "wristHeight": 0.15279681679622598,
+          "wristFlexion": -14.680199492647642,
+          "asymmetry": 0.746297702455621
+        },
+        {
+          "tick": 154,
+          "phase": "Recovery",
+          "frame": 1,
+          "elbow": 147.69470500017454,
+          "guideElbow": 139.89110619332848,
+          "wristHeight": 0.1527196040223137,
+          "wristFlexion": -13.884138132072561,
+          "asymmetry": 7.803598806846054
+        },
+        {
+          "tick": 155,
+          "phase": "Recovery",
+          "frame": 2,
+          "elbow": 141.75030765950967,
+          "guideElbow": 133.48087924576296,
+          "wristHeight": 0.1505472683594806,
+          "wristFlexion": -13.267635747931836,
+          "asymmetry": 8.26942841374671
+        },
+        {
+          "tick": 156,
+          "phase": "Recovery",
+          "frame": 3,
+          "elbow": 133.9765268138933,
+          "guideElbow": 125.46001775584078,
+          "wristHeight": 0.1512592009884611,
+          "wristFlexion": -12.677663182903874,
+          "asymmetry": 8.516509058052506
+        },
+        {
+          "tick": 157,
+          "phase": "Recovery",
+          "frame": 4,
+          "elbow": 126.79759395273935,
+          "guideElbow": 114.99877211563084,
+          "wristHeight": 0.14719079989516554,
+          "wristFlexion": -15.763782927761165,
+          "asymmetry": 11.798821837108505
+        },
+        {
+          "tick": 158,
+          "phase": "Recovery",
+          "frame": 5,
+          "elbow": 118.86456808902857,
+          "guideElbow": 104.43636103193576,
+          "wristHeight": 0.1474645777960764,
+          "wristFlexion": -16.25777832340203,
+          "asymmetry": 14.428207057092806
+        },
+        {
+          "tick": 159,
+          "phase": "Recovery",
+          "frame": 6,
+          "elbow": 110.408853617859,
+          "guideElbow": 93.97098665126752,
+          "wristHeight": 0.1479157875668412,
+          "wristFlexion": -15.541031931874667,
+          "asymmetry": 16.43786696659147
+        },
+        {
+          "tick": 160,
+          "phase": "Recovery",
+          "frame": 7,
+          "elbow": 100.53223414074516,
+          "guideElbow": 84.99779885479698,
+          "wristHeight": 0.1297440894093601,
+          "wristFlexion": -15.849722466282472,
+          "asymmetry": 15.534435285948177
+        },
+        {
+          "tick": 161,
+          "phase": "Recovery",
+          "frame": 8,
+          "elbow": 93.19878379934192,
+          "guideElbow": 78.75645067037729,
+          "wristHeight": 0.1072674675501626,
+          "wristFlexion": -17.16848725052318,
+          "asymmetry": 14.442333128964634
+        },
+        {
+          "tick": 162,
+          "phase": "Recovery",
+          "frame": 9,
+          "elbow": 88.24219136656544,
+          "guideElbow": 75.06833811150489,
+          "wristHeight": 0.08062312333690043,
+          "wristFlexion": -19.465474406920983,
+          "asymmetry": 13.17385325506055
+        },
+        {
+          "tick": 163,
+          "phase": "Recovery",
+          "frame": 10,
+          "elbow": 86.53454363886885,
+          "guideElbow": 74.46185679828827,
+          "wristHeight": 0.06412382351788679,
+          "wristFlexion": -23.337058926773476,
+          "asymmetry": 12.072686840580587
+        },
+        {
+          "tick": 164,
+          "phase": "Recovery",
+          "frame": 11,
+          "elbow": 85.69706507272129,
+          "guideElbow": 74.50574821471567,
+          "wristHeight": 0.046120834313919765,
+          "wristFlexion": -29.313295216315513,
+          "asymmetry": 11.19131685800562
+        },
+        {
+          "tick": 165,
+          "phase": "Recovery",
+          "frame": 12,
+          "elbow": 86.01013894929964,
+          "guideElbow": 75.34292689410336,
+          "wristHeight": 0.0288693951300655,
+          "wristFlexion": -35.206680316153445,
+          "asymmetry": 10.667212055196288
+        },
+        {
+          "tick": 166,
+          "phase": "Recovery",
+          "frame": 13,
+          "elbow": 85.84848434783869,
+          "guideElbow": 76.12546059740797,
+          "wristHeight": 0.018402972830148277,
+          "wristFlexion": -38.541965177236314,
+          "asymmetry": 9.723023750430727
+        },
+        {
+          "tick": 167,
+          "phase": "Recovery",
+          "frame": 14,
+          "elbow": 85.48279545714068,
+          "guideElbow": 76.72532720492597,
+          "wristHeight": 0.014147113673692575,
+          "wristFlexion": -40.888510531644386,
+          "asymmetry": 8.757468252214707
+        },
+        {
+          "tick": 168,
+          "phase": "Recovery",
+          "frame": 15,
+          "elbow": 84.82892082603372,
+          "guideElbow": 76.7357349809011,
+          "wristHeight": 0.024521730027894692,
+          "wristFlexion": -41.16448374114567,
+          "asymmetry": 8.093185845132624
+        },
+        {
+          "tick": 169,
+          "phase": "Recovery",
+          "frame": 16,
+          "elbow": 84.76660766869881,
+          "guideElbow": 76.83542923653948,
+          "wristHeight": 0.03879245567252787,
+          "wristFlexion": -41.681672435297074,
+          "asymmetry": 7.931178432159328
+        },
+        {
+          "tick": 170,
+          "phase": "Recovery",
+          "frame": 17,
+          "elbow": 85.1768516227081,
+          "guideElbow": 77.13508222157809,
+          "wristHeight": 0.0548903613971066,
+          "wristFlexion": -42.434340337302906,
+          "asymmetry": 8.041769401130011
+        },
+        {
+          "tick": 171,
+          "phase": "Recovery",
+          "frame": 18,
+          "elbow": 87.4573942360985,
+          "guideElbow": 79.29218397190226,
+          "wristHeight": 0.06537869923721266,
+          "wristFlexion": -43.62307412522083,
+          "asymmetry": 8.165210264196233
+        },
+        {
+          "tick": 172,
+          "phase": "Recovery",
+          "frame": 19,
+          "elbow": 90.24854824781862,
+          "guideElbow": 81.54364198161973,
+          "wristHeight": 0.0760583375910968,
+          "wristFlexion": -44.10529956331625,
+          "asymmetry": 8.70490626619889
+        }
+      ],
+      "releaseWindow": [
+        {
+          "offset": -2,
+          "tick": 147,
+          "phase": "Startup",
+          "frame": 16,
+          "wristVisibleBallDistance": 1.180302262151396,
+          "wristAuthoritativeOriginDistance": 1.180302262151396
+        },
+        {
+          "offset": -1,
+          "tick": 148,
+          "phase": "Startup",
+          "frame": 17,
+          "wristVisibleBallDistance": 1.227287570558676,
+          "wristAuthoritativeOriginDistance": 1.227287570558676
+        },
+        {
+          "offset": 0,
+          "tick": 149,
+          "phase": "Active",
+          "frame": 0,
+          "wristVisibleBallDistance": 1.2625704077191802,
+          "wristAuthoritativeOriginDistance": 1.2625704077191802
+        },
+        {
+          "offset": 1,
+          "tick": 150,
+          "phase": "Active",
+          "frame": 1,
+          "wristVisibleBallDistance": 1.1668642591721596,
+          "wristAuthoritativeOriginDistance": 1.2932640126864952
+        },
+        {
+          "offset": 2,
+          "tick": 151,
+          "phase": "Active",
+          "frame": 2,
+          "wristVisibleBallDistance": 1.0414181246778673,
+          "wristAuthoritativeOriginDistance": 1.2888344318850489
+        }
+      ],
+      "boundaries": [
+        {
+          "transition": "Startup->Active",
+          "fromFrame": 17,
+          "toFrame": 0,
+          "edges": [
+            {
+              "fromTick": 147,
+              "toTick": 148,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftToe_End",
+              "maxDisplacement": 0.08255980238354581
+            },
+            {
+              "fromTick": 148,
+              "toTick": 149,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftToe_End",
+              "maxDisplacement": 0.07819265708963852
+            },
+            {
+              "fromTick": 149,
+              "toTick": 150,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandPinky4",
+              "maxDisplacement": 0.14030461523440482
+            }
+          ],
+          "coordinateMagnitudeM": 5.940751,
+          "coordinateResolutionM": 1.6518123698891422e-06,
+          "maxDisplacement": 0.14030461523440482,
+          "maxTickGap": 1
+        },
+        {
+          "transition": "Active->Recovery",
+          "fromFrame": 3,
+          "toFrame": 0,
+          "edges": [
+            {
+              "fromTick": 151,
+              "toTick": 152,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandPinky4",
+              "maxDisplacement": 0.11268272446704682
+            },
+            {
+              "fromTick": 152,
+              "toTick": 153,
+              "tickGap": 1,
+              "bone": "mixamorig_RightToe_End",
+              "maxDisplacement": 0.054937426123506154
+            },
+            {
+              "fromTick": 153,
+              "toTick": 154,
+              "tickGap": 1,
+              "bone": "mixamorig_RightToe_End",
+              "maxDisplacement": 0.05111898538730396
+            }
+          ],
+          "coordinateMagnitudeM": 5.827151,
+          "coordinateResolutionM": 1.6518123698891422e-06,
+          "maxDisplacement": 0.11268272446704682,
+          "maxTickGap": 1
+        },
+        {
+          "transition": "Recovery->Inactive",
+          "fromFrame": 19,
+          "toFrame": 0,
+          "edges": [
+            {
+              "fromTick": 171,
+              "toTick": 172,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandPinky2",
+              "maxDisplacement": 0.048931269069605834
+            },
+            {
+              "fromTick": 172,
+              "toTick": 173,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandRing3",
+              "maxDisplacement": 0.047760178826730885
+            },
+            {
+              "fromTick": 173,
+              "toTick": 174,
+              "tickGap": 1,
+              "bone": "mixamorig_LeftHandPinky4",
+              "maxDisplacement": 1.3609487459115717
+            }
+          ],
+          "coordinateMagnitudeM": 6.1938233,
+          "coordinateResolutionM": 1.6518123698891422e-06,
+          "maxDisplacement": 1.3609487459115717,
+          "maxTickGap": 1
+        }
+      ]
+    }
+  ]
+}

@@ -336,6 +336,13 @@ def _slug(value: str) -> str:
 
 
 _ADDITIONAL_SINGLE_ROWS = """AnimationHarnessPrimitivesTest.tscn|primitives-discovery
+JumpshotFormTest.tscn|normal-right
+JumpshotFormTest.tscn|normal-left
+JumpshotFormTest.tscn|feint-early
+JumpshotFormTest.tscn|feint-late
+JumpshotFormTest.tscn|fadeaway
+JumpshotFormTest.tscn|control-idle
+JumpshotFormTest.tscn|control-goalkeeper
 MovingCrossoverLateralTest.tscn|suite
 HeldPossessionTest.tscn|held
 AnimationHarnessPrimitivesTest.tscn|primitives-resources
@@ -421,8 +428,10 @@ PostPresentationTest.tscn|presentation
 CommittedClipHookupAudit.tscn|
 """
 _ADDITIONAL_MULTIPROCESS_ROWS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
+    ("net-jumpshot-form", "tests/integration/run-net-jumpshot-form.sh godot", "JumpshotFormCapture.tscn", (".godot/418/catalog-net-*/**/*",)),
     ("net-moving-crossover-host", "tests/integration/run-net-moving-crossover.sh godot host", "MovingCrossoverLateralTest.tscn", (".godot/harness-logs/net-moving-crossover-host-*.log",)),
     ("net-moving-crossover-client", "tests/integration/run-net-moving-crossover.sh godot client", "MovingCrossoverLateralTest.tscn", (".godot/harness-logs/net-moving-crossover-client-*.log",)),
+    ("net-moving-crossover-client-reset-race", "tests/integration/run-net-moving-crossover.sh godot client-reset-race", "MovingCrossoverLateralTest.tscn", (".godot/harness-logs/net-moving-crossover-client-reset-race-*.log",)),
     ("net-held-possession-host", "tests/integration/run-net-held-possession.sh godot host", "NetHeldPossessionTest.tscn", (".godot/harness-logs/net-held-possession-host-*.log",)),
     ("net-held-possession-client", "tests/integration/run-net-held-possession.sh godot client", "NetHeldPossessionTest.tscn", (".godot/harness-logs/net-held-possession-client-*.log",)),
     ("crossover-continuity", "tests/integration/run-crossover-continuity.sh godot", "CrossoverContinuityCapture.tscn", (".godot/crossover-continuity/catalog-*/**/*",)),
@@ -504,6 +513,8 @@ def _multiprocess_cases(rows: Iterable[tuple[str, str, str, tuple[str, ...]]]) -
 
 
 _CONTROL_COMPONENTS = (
+    ("jumpshot-form-test-normal-right", "jumpshot-form-test-normal-left", "jumpshot-form-test-control-idle", "jumpshot-form-test-control-goalkeeper"),
+    ("jumpshot-form-test-normal-right", "jumpshot-form-test-feint-early", "jumpshot-form-test-feint-late"),
     ("post-play-test-accuracy", "post-play-test-accuracy-unsquared"),
     ("post-play-test-turnaround", "post-play-test-lost-payload", "post-play-test-turnaround-steal", "post-play-test-turnaround-oob"),
     ("post-play-test-contact-set", "post-play-test-contact-unset"),

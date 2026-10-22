@@ -41,7 +41,7 @@ SCENARIOS = {
                                variants=('host', 'client')),
     'moving-crossover': Scenario('MovingCrossoverLateralTest', 'moving-crossover-lateral', 23467,
                                 required=('server', 'client'), default='host',
-                                variants=('host', 'client')),
+                                variants=('host', 'client', 'client-reset-race')),
 }
 
 

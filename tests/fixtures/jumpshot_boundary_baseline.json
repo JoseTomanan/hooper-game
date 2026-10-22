@@ -1,0 +1,369 @@
+{
+  "sourceCommit": "7c2a4bb",
+  "sourceAnimationSha256": "7f533df820adc35e43b26cd7e232459e21efdf028a6b299a05f5a9680e06bd71",
+  "repeatNoise": 0.0,
+  "window": "three adjacent one-physics-tick edges around each phase transition, including final-pose reporting lag",
+  "cases": [
+    {
+      "case": "left-early-1",
+      "boundaries": [
+        {
+          "transition": "Startup->Recovery",
+          "maxDisplacement": 1.9780551362973724,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 6.019506,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        },
+        {
+          "transition": "Recovery->Inactive",
+          "maxDisplacement": 1.5413319838981532,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 6.1938233,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        }
+      ]
+    },
+    {
+      "case": "left-early-2",
+      "boundaries": [
+        {
+          "transition": "Startup->Recovery",
+          "maxDisplacement": 1.9780551362973724,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 6.019506,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        },
+        {
+          "transition": "Recovery->Inactive",
+          "maxDisplacement": 1.5413319838981532,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 6.1938233,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        }
+      ]
+    },
+    {
+      "case": "left-fadeaway-1",
+      "boundaries": [
+        {
+          "transition": "Startup->Active",
+          "maxDisplacement": 0.14030461523440482,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 5.940751,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        },
+        {
+          "transition": "Active->Recovery",
+          "maxDisplacement": 0.11268275057009611,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 5.827151,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        },
+        {
+          "transition": "Recovery->Inactive",
+          "maxDisplacement": 1.360948667951179,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 6.1938233,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        }
+      ]
+    },
+    {
+      "case": "left-fadeaway-2",
+      "boundaries": [
+        {
+          "transition": "Startup->Active",
+          "maxDisplacement": 0.14030461523440482,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 5.940751,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        },
+        {
+          "transition": "Active->Recovery",
+          "maxDisplacement": 0.11268275057009611,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 5.827151,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        },
+        {
+          "transition": "Recovery->Inactive",
+          "maxDisplacement": 1.360948667951179,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 6.1938233,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        }
+      ]
+    },
+    {
+      "case": "left-late-1",
+      "boundaries": [
+        {
+          "transition": "Startup->Recovery",
+          "maxDisplacement": 0.5708075819941906,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 5.945295,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        },
+        {
+          "transition": "Recovery->Inactive",
+          "maxDisplacement": 1.5413319838981532,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 6.1938233,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        }
+      ]
+    },
+    {
+      "case": "left-late-2",
+      "boundaries": [
+        {
+          "transition": "Startup->Recovery",
+          "maxDisplacement": 0.5708075819941906,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 5.945295,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        },
+        {
+          "transition": "Recovery->Inactive",
+          "maxDisplacement": 1.5413319838981532,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 6.1938233,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        }
+      ]
+    },
+    {
+      "case": "left-normal-1",
+      "boundaries": [
+        {
+          "transition": "Startup->Active",
+          "maxDisplacement": 0.14030461523440482,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 5.940751,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        },
+        {
+          "transition": "Active->Recovery",
+          "maxDisplacement": 0.11268275057009611,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 5.827151,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        },
+        {
+          "transition": "Recovery->Inactive",
+          "maxDisplacement": 1.360948667951179,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 6.1938233,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        }
+      ]
+    },
+    {
+      "case": "left-normal-2",
+      "boundaries": [
+        {
+          "transition": "Startup->Active",
+          "maxDisplacement": 0.14030461523440482,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 5.940751,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        },
+        {
+          "transition": "Active->Recovery",
+          "maxDisplacement": 0.11268275057009611,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 5.827151,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        },
+        {
+          "transition": "Recovery->Inactive",
+          "maxDisplacement": 1.360948667951179,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 6.1938233,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        }
+      ]
+    },
+    {
+      "case": "right-early-1",
+      "boundaries": [
+        {
+          "transition": "Startup->Recovery",
+          "maxDisplacement": 1.9780551362973724,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 6.019506,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        },
+        {
+          "transition": "Recovery->Inactive",
+          "maxDisplacement": 1.7400110254941576,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 6.1938233,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        }
+      ]
+    },
+    {
+      "case": "right-early-2",
+      "boundaries": [
+        {
+          "transition": "Startup->Recovery",
+          "maxDisplacement": 1.9780551362973724,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 6.019506,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        },
+        {
+          "transition": "Recovery->Inactive",
+          "maxDisplacement": 1.7400110254941576,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 6.1938233,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        }
+      ]
+    },
+    {
+      "case": "right-fadeaway-1",
+      "boundaries": [
+        {
+          "transition": "Startup->Active",
+          "maxDisplacement": 1.3681614582125656,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 9.295063,
+          "coordinateResolutionM": 3.3036247397782844e-06
+        },
+        {
+          "transition": "Active->Recovery",
+          "maxDisplacement": 1.93842928716799,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 9.293839,
+          "coordinateResolutionM": 3.3036247397782844e-06
+        },
+        {
+          "transition": "Recovery->Inactive",
+          "maxDisplacement": 1.3609487317369546,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 9.402517,
+          "coordinateResolutionM": 3.3036247397782844e-06
+        }
+      ]
+    },
+    {
+      "case": "right-fadeaway-2",
+      "boundaries": [
+        {
+          "transition": "Startup->Active",
+          "maxDisplacement": 1.3681614582125656,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 9.295063,
+          "coordinateResolutionM": 3.3036247397782844e-06
+        },
+        {
+          "transition": "Active->Recovery",
+          "maxDisplacement": 1.93842928716799,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 9.293839,
+          "coordinateResolutionM": 3.3036247397782844e-06
+        },
+        {
+          "transition": "Recovery->Inactive",
+          "maxDisplacement": 1.3609487317369546,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 9.402517,
+          "coordinateResolutionM": 3.3036247397782844e-06
+        }
+      ]
+    },
+    {
+      "case": "right-late-1",
+      "boundaries": [
+        {
+          "transition": "Startup->Recovery",
+          "maxDisplacement": 0.5708076367262822,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 5.945295,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        },
+        {
+          "transition": "Recovery->Inactive",
+          "maxDisplacement": 1.7400110254941576,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 6.1938233,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        }
+      ]
+    },
+    {
+      "case": "right-late-2",
+      "boundaries": [
+        {
+          "transition": "Startup->Recovery",
+          "maxDisplacement": 0.5708076367262822,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 5.945295,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        },
+        {
+          "transition": "Recovery->Inactive",
+          "maxDisplacement": 1.7400110254941576,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 6.1938233,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        }
+      ]
+    },
+    {
+      "case": "right-normal-1",
+      "boundaries": [
+        {
+          "transition": "Startup->Active",
+          "maxDisplacement": 0.14030461523440482,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 5.940751,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        },
+        {
+          "transition": "Active->Recovery",
+          "maxDisplacement": 0.11268272446704682,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 5.827151,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        },
+        {
+          "transition": "Recovery->Inactive",
+          "maxDisplacement": 1.3609487459115717,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 6.1938233,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        }
+      ]
+    },
+    {
+      "case": "right-normal-2",
+      "boundaries": [
+        {
+          "transition": "Startup->Active",
+          "maxDisplacement": 0.14030461523440482,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 5.940751,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        },
+        {
+          "transition": "Active->Recovery",
+          "maxDisplacement": 0.11268272446704682,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 5.827151,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        },
+        {
+          "transition": "Recovery->Inactive",
+          "maxDisplacement": 1.3609487459115717,
+          "maxTickGap": 1,
+          "coordinateMagnitudeM": 6.1938233,
+          "coordinateResolutionM": 1.6518123698891422e-06
+        }
+      ]
+    }
+  ],
+  "coordinateResolutionMethod": "2*sqrt(3)*float32_ulp(max_abs_body_or_world_coordinate_at_seam); native Vector3 quantization floor, independent of replacement; repeat noise remains zero"
+}
