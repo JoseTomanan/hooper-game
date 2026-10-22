@@ -364,7 +364,11 @@ public partial class MovingCrossoverLateralTest : Node
             if (!Require(traveled,
                 $"root did not cut across drive line: activeLateral={lateral:F4} activeForward={forward:F4} committedLateral={committedLateral:F4} committedForward={committedForward:F4} " + _last)) return;
             if (!Require(_swaps == 1 && frame.Hand != Current.Hand, "must swap hand exactly once: " + _last)) return;
-            if (!Current.Stationary && !Require(_startupLastForward > 0.1f && _startupLastSpeed < _startupFirstSpeed - 0.1f,
+            // The same accepted zero-input reconciliation replay described
+            // above can also erase a client's final predicted Startup velocity.
+            // Authority/history prove the final gather survivor; prediction
+            // still proves its first Active entry and actual corrected net cut.
+            if (!Current.Stationary && !predicting && !Require(_startupLastForward > 0.1f && _startupLastSpeed < _startupFirstSpeed - 0.1f,
                 $"gather must reduce but retain momentum first={_startupFirstSpeed:F3} last={_startupLastSpeed:F3}: " + _last)) return;
             if (OwnsActor && !Require(_flick && _exitApplied && _activeChanged, "input/snapshot controls were not exercised")) return;
             _localDone = true;
