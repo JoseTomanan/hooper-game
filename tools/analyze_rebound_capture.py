@@ -131,7 +131,9 @@ def analyze(directory, mutate_disconnected=False, mutate_delayed=False):
     metrics = dict(rawSamples=len(rows), uniqueSourceSamples=len(ordered), recoveryCount=len(recoveries),
                    catchIntervals=len(groups), recoveryTicks=recovery_ticks, onsetClock=onset_clock,
                    contactLimitM=CONTACT_LIMIT, continuityBoundsM=BOUNDS,
-                   ownershipBallBypass=is_owner(manifest), intervals=[])
+                   ownershipBallBypass=is_owner(manifest), intervals=[],
+                   bodyCoordinateMode="sampled model rigid frame; world metres" if manifest.get("schema", "").endswith("/v2")
+                       else "legacy signal-time world pose / sampled heading; moving-transform comparisons are diagnostic")
     if len(recoveries) < 2:
         failures.append("fewer than two observed real recoveries")
     if len(groups) != 2:
@@ -163,6 +165,11 @@ def analyze(directory, mutate_disconnected=False, mutate_delayed=False):
                 missing_bones.append(tick)
             if "bodyBones" in pose and not all(vector(pose["bodyBones"].get(name)) for name in BOUNDS):
                 missing_bones.append(tick)
+            if manifest.get("schema", "").endswith("/v2"):
+                transform = pose.get("skeletonTransform", [])
+                if "bodyBones" not in pose or not isinstance(transform, list) or len(transform) != 12 or not all(
+                        isinstance(x, (float, int)) and math.isfinite(x) for x in transform):
+                    missing_bones.append(tick)
             if not vector(row.get("displayRoot")) or not isinstance(row.get("heading"), (int, float)) or not math.isfinite(row["heading"]):
                 missing_heading.append(tick)
         contact, missing_contact = [], []
