@@ -28,6 +28,7 @@ public partial class ReboundPose : SkeletonModifier3D
 
     public bool AppliedForHarness { get; private set; }
     public int AgeForHarness => _age;
+    partial void AlterReboundClockForHarness(bool catchPose, int step);
 
     public override void _Ready()
     {
@@ -150,6 +151,7 @@ public partial class ReboundPose : SkeletonModifier3D
             else _age = Math.Min(BridgeTicks, _age + step);
         }
         _wasCatch = catchPose;
+        AlterReboundClockForHarness(catchPose, step);
         Transform3D[] target = catchPose ? SampleNeutral(fresh) : fresh;
         Transform3D[] result = _bridge.Blend(_anchor, target,
             Math.Clamp(_age / (float)BridgeTicks, 0, 1)).Pose;

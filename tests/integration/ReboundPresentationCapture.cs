@@ -37,7 +37,9 @@ public partial class ReboundPresentationCapture : Node
     private string _controlFailure = "";
     private ulong _posePhysics;
     private long _posePresentation = -1;
-    private object _pose = new { };
+    private string _poseAnimation, _poseHand;
+    private double _posePlayback;
+    private readonly Dictionary<string, Vector3> _boneFinalLocal = new();
     private readonly Dictionary<string, Vector3> _boneWorld = new();
     private readonly List<object> _events = new();
     private readonly System.Diagnostics.Stopwatch _wall = System.Diagnostics.Stopwatch.StartNew();
@@ -337,8 +339,7 @@ public partial class ReboundPresentationCapture : Node
     {
         var subject = Subject;
         if (_finished || subject == null) return;
-        var bones = new Dictionary<string, float[]>();
-        _boneWorld.Clear();
+        _boneFinalLocal.Clear();
         foreach (string name in Bones)
         {
             int bone = _skeleton.FindBone("mixamorig_" + name);
@@ -346,15 +347,13 @@ public partial class ReboundPresentationCapture : Node
             // get_bone_global_pose is skeleton-relative; skeleton_updated includes final modifiers.
             // https://docs.godotengine.org/en/4.7/classes/class_skeleton3d.html#class-skeleton3d-method-get-bone-global-pose
             // https://docs.godotengine.org/en/4.7/classes/class_skeleton3d.html#class-skeleton3d-signal-skeleton-updated
-            Vector3 world = (_skeleton.GlobalTransform * _skeleton.GetBoneGlobalPose(bone)).Origin;
-            _boneWorld[name] = world;
-            bones[name] = Vec(world);
+            _boneFinalLocal[name] = _skeleton.GetBoneGlobalPose(bone).Origin;
         }
         _posePhysics = Engine.GetPhysicsFrames();
         _posePresentation = subject.AnimationDisplaySnapshot.PresentationTick;
-        _pose = new { physicsFrame = _posePhysics, renderFrame = Engine.GetProcessFrames(), presentationTick = _posePresentation,
-            animation = subject.ActiveAnimNodeForHarness, playbackTime = subject.ContinuityPlaybackTime,
-            hand = subject.DisplayHandSide.ToString(), root = Vec(subject.DisplayRootPosition), bones };
+        _poseAnimation = subject.ActiveAnimNodeForHarness;
+        _posePlayback = subject.ContinuityPlaybackTime;
+        _poseHand = subject.DisplayHandSide.ToString();
     }
     private void Sample()
     {
@@ -362,6 +361,22 @@ public partial class ReboundPresentationCapture : Node
         var subject = Subject;
         if (subject == null) return;
         AttachSkeleton(subject);
+        // SkeletonUpdated preserves final skeleton-relative bones before Godot
+        // restores modifier input. Apply the model's CURRENT displayed transform
+        // here: visual yaw and reconciliation can change after that signal.
+        // Mixing earlier world bones with a later root/heading invents limb pops.
+        var drawnSkeleton = _skeleton.GlobalTransform;
+        var inverseDrawnRotation = drawnSkeleton.Basis.Orthonormalized().Inverse();
+        // Remove model rotation/translation while retaining world-metre scale.
+        // https://docs.godotengine.org/en/4.7/classes/class_basis.html#class-basis-method-inverse
+        _boneWorld.Clear();
+        foreach (var bone in _boneFinalLocal) _boneWorld[bone.Key] = drawnSkeleton * bone.Value;
+        var sampledPose = new { physicsFrame = _posePhysics, renderFrame = Engine.GetProcessFrames(),
+            presentationTick = _posePresentation, animation = _poseAnimation, playbackTime = _posePlayback,
+            hand = _poseHand, root = Vec(drawnSkeleton.Origin),
+            bones = _boneWorld.ToDictionary(p => p.Key, p => Vec(p.Value)),
+            bodyBones = _boneWorld.ToDictionary(p => p.Key,
+                p => Vec(inverseDrawnRotation * (p.Value - drawnSkeleton.Origin))) };
         Transform3D drawnCamera = _camera.GlobalTransform;
         if (_view == "side")
         {
@@ -388,7 +403,7 @@ public partial class ReboundPresentationCapture : Node
         string state = subject.ActiveAnimNodeForHarness;
         string clip = machine.HasNode(state) && machine.GetNode(state) is AnimationNodeAnimation node ? node.Animation.ToString() : "<blend-space>";
         _trace.WriteLine(JsonSerializer.Serialize(new { sample = _samples++, tick = _tick, elapsedTick = _tick - _start, file,
-            physicsFrame = Engine.GetPhysicsFrames(), poseMatchesPhysics = _posePhysics == Engine.GetPhysicsFrames(), pose = _pose,
+            physicsFrame = Engine.GetPhysicsFrames(), poseMatchesPhysics = _posePhysics == Engine.GetPhysicsFrames(), pose = sampledPose,
             role = _role, actor = _actor, subject = _subjectId, isLocalSubject = subject.ContinuityIsLocalPlayer,
             animation = state, clip, playbackTime = subject.ContinuityPlaybackTime, animationCallback = subject.ContinuityAnimationCallback,
             reboundGrab = subject.IsPlayingReboundGrab, displayReboundGrab = view?.Players.FirstOrDefault(p => p.PeerId == _subjectId)?.ReboundGrab,

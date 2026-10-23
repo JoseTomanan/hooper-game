@@ -49,6 +49,8 @@ def intervals(rows):
 
 
 def body_point(row, name):
+    if "bodyBones" in row["pose"]:
+        return row["pose"]["bodyBones"][name]
     point = row["pose"]["bones"][name]
     root = row["displayRoot"]
     x, y, z = [a - b for a, b in zip(point, root)]
@@ -158,6 +160,8 @@ def analyze(directory, mutate_disconnected=False, mutate_delayed=False):
                     incoherent.append(tick)
             bones = pose.get("bones", {})
             if not all(vector(bones.get(name)) for name in BOUNDS):
+                missing_bones.append(tick)
+            if "bodyBones" in pose and not all(vector(pose["bodyBones"].get(name)) for name in BOUNDS):
                 missing_bones.append(tick)
             if not vector(row.get("displayRoot")) or not isinstance(row.get("heading"), (int, float)) or not math.isfinite(row["heading"]):
                 missing_heading.append(tick)
