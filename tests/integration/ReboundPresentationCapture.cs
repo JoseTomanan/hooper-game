@@ -19,6 +19,7 @@ public partial class ReboundPresentationCapture : Node
     private string _role, _actor, _output, _hand, _commit, _view, _action;
     private bool _images, _moving, _ready, _sentReady, _finished, _done, _paced, _contested, _legacyPose, _longLoose;
     private float _height;
+    private int _seedDelay;
     private int _tick, _start = -1, _subjectId = 1, _clientPeer, _recoveries, _serverRecoveries;
     private int _previousHolder = -1, _doneTick = -1, _lastSeedTick = -1000;
     private BallState _previousState;
@@ -64,6 +65,7 @@ public partial class ReboundPresentationCapture : Node
         _view = Read("--capture-view", "gameplay");
         _action = Read("--capture-action", "none");
         _resetNeutral = Read("--capture-reset-neutral", "false") == "true";
+        _seedDelay = int.TryParse(Read("--capture-seed-delay", "0"), out int seedDelay) ? seedDelay : -1;
         string height = Read("--capture-height", "floor");
         _height = height == "floor" ? .12f : height == "falling" ? 2f :
             float.TryParse(height, NumberStyles.Float, CultureInfo.InvariantCulture, out float parsed) ? parsed : float.NaN;
@@ -73,6 +75,7 @@ public partial class ReboundPresentationCapture : Node
             (_role == "owner" && _actor != "client") || (_role == "local" && _actor != "host") ||
             !new[] { "gameplay", "side" }.Contains(_view) ||
             !new[] { "none", "immediate", "feint" }.Contains(_action) ||
+            _seedDelay < 0 || _seedDelay > 12 ||
             !float.IsFinite(_height) || _height < .12f || string.IsNullOrWhiteSpace(_output) || Directory.Exists(_output))
         { Finish("invalid arguments or nonfresh output"); return; }
         Directory.CreateDirectory(_output);
@@ -199,8 +202,8 @@ public partial class ReboundPresentationCapture : Node
         if (t is 25 or 130) Prepare(subject);
         if (_longLoose && t is 40 or 140)
             _ball.SeedLooseBallForHarness(new Vector3(3, _height, 4.7f));
-        if (t is 60 or 150) Seed(subject, t == 60 ? 1 : 2);
-        if (t is 105 or 195)
+        if (t == 60 + _seedDelay || t == 150 + _seedDelay) Seed(subject, t == 60 + _seedDelay ? 1 : 2);
+        if (t == 105 + _seedDelay || t == 195 + _seedDelay)
         {
             Input.ActionRelease("move_forward");
             if (_role == "server") Rpc(nameof(FixtureMovementStopped));
@@ -429,6 +432,7 @@ public partial class ReboundPresentationCapture : Node
             role = _role, actor = _actor, subject = _subjectId, commit = _commit, requestedPreRecoveryHand = _hand,
             height = _height, moving = _moving, movementAction = "move_forward", contested = _contested, view = _view,
             legacyPose = _legacyPose, longLoose = _longLoose,
+            seedDelay = _seedDelay,
             action = _action, actionRequests = _actionRequests, acceptedActions = _acceptedActions,
             feintRequests = _feintRequests, acceptedFeints = _acceptedFeints,
             successfulShotReleases = _ball.SuccessfulShotReleasesForHarness, controlFailure = _controlFailure,

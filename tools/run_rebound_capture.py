@@ -23,6 +23,7 @@ def start(args, output, role):
             "--capture-actor=" + args.actor, "--capture-hand=" + args.hand,
             "--capture-height=" + str(args.height), "--capture-view=" + args.view,
             "--capture-action=" + args.action,
+            "--capture-seed-delay=" + str(args.seed_delay),
             "--capture-port=" + str(args.port)]
     if args.commit:
         cmd += ["--capture-commit=" + args.commit]
@@ -99,6 +100,8 @@ def main():
     parser.add_argument("--hand", choices=("Right", "Left"), default="Right")
     parser.add_argument("--height", type=float, choices=(.12, 2.), default=.12)
     parser.add_argument("--moving", action="store_true")
+    parser.add_argument("--seed-delay", type=int, choices=range(13), default=0,
+                        help="shift recovery fixture ticks without changing the production animation clock")
     parser.add_argument("--legacy-pose", action="store_true", help="pre-fix goalkeeper pose control")
     parser.add_argument("--long-loose", action="store_true", help="observe a loose interval before recovery")
     parser.add_argument("--action", choices=("none", "immediate", "feint"), default="none", help="owning production-input interruption control")

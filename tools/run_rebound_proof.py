@@ -37,6 +37,7 @@ def main():
                     ("moving", ["--moving"]),
                     ("moving-observer", ["--moving", "--remote"]),
                     ("moving-owner", ["--moving", "--remote", "--actor", "client"]),
+                    ("moving-owner-phase-shift", ["--moving", "--remote", "--actor", "client", "--seed-delay", "7"]),
                     ("reset-neutral", ["--remote", "--reset-neutral", "--long-loose"]))
     for offset, (name, extra) in enumerate(normal_cases):
         capture = output / name
@@ -53,7 +54,7 @@ def main():
     for offset, (name, extra) in enumerate((("immediate-local", ["--action", "immediate"]),
                                           ("feint-local", ["--action", "feint"]),
                                           ("immediate-owner", ["--remote", "--actor", "client", "--action", "immediate"]),
-                                          ("feint-owner", ["--remote", "--actor", "client", "--action", "feint"])), 9):
+                                          ("feint-owner", ["--remote", "--actor", "client", "--action", "feint"])), 10):
         capture = output / name
         subprocess.run([*launcher, "--port", str(args.port + offset), "--output", str(capture), *extra],
                        cwd=ROOT, check=True, timeout=220)
@@ -66,7 +67,7 @@ def main():
                            manifest["action"] == "feint" and manifest.get("acceptedFeints") != 2):
                 raise RuntimeError("interruption control lacks accepted actions: " + str(path))
     legacy = output / "legacy-pose"
-    subprocess.run([*launcher, "--port", str(args.port + 13), "--output", str(legacy), "--legacy-pose"],
+    subprocess.run([*launcher, "--port", str(args.port + 14), "--output", str(legacy), "--legacy-pose"],
                    cwd=ROOT, check=True, timeout=220)
     legacy_report = output / "legacy-pose-control.json"
     legacy_result = subprocess.run([*analyzer, str(legacy), "--verify", "--output", str(legacy_report)],
