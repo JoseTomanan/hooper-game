@@ -22,6 +22,7 @@ def start(args, output, role):
             "--capture-output=" + str(output), "--capture-role=" + role,
             "--capture-actor=" + args.actor, "--capture-hand=" + args.hand,
             "--capture-height=" + str(args.height), "--capture-view=" + args.view,
+            "--capture-action=" + args.action,
             "--capture-port=" + str(args.port)]
     if args.commit:
         cmd += ["--capture-commit=" + args.commit]
@@ -33,6 +34,12 @@ def start(args, output, role):
         cmd += ["--capture-contested=true"]
     if args.paced:
         cmd += ["--capture-paced=true"]
+    if args.legacy_pose:
+        cmd += ["--capture-legacy-pose=true"]
+    if args.long_loose:
+        cmd += ["--capture-long-loose=true"]
+    if args.reset_neutral:
+        cmd += ["--capture-reset-neutral=true"]
     options = {}
     if os.name == "nt":
         # Hidden helpers still render their viewport when capture images are enabled.
@@ -92,6 +99,10 @@ def main():
     parser.add_argument("--hand", choices=("Right", "Left"), default="Right")
     parser.add_argument("--height", type=float, choices=(.12, 2.), default=.12)
     parser.add_argument("--moving", action="store_true")
+    parser.add_argument("--legacy-pose", action="store_true", help="pre-fix goalkeeper pose control")
+    parser.add_argument("--long-loose", action="store_true", help="observe a loose interval before recovery")
+    parser.add_argument("--action", choices=("none", "immediate", "feint"), default="none", help="owning production-input interruption control")
+    parser.add_argument("--reset-neutral", action="store_true", help="reset the remote neutral presentation epoch before recovery")
     parser.add_argument("--contested", action="store_true")
     parser.add_argument("--paced", action="store_true", help="diagnostic server pacing; no real-time timing claim")
     parser.add_argument("--view", choices=("gameplay", "side"), default="gameplay")
@@ -103,6 +114,8 @@ def main():
         parser.error("--paced requires --remote")
     if args.actor == "client" and not args.remote:
         parser.error("--actor client requires --remote")
+    if args.reset_neutral and not args.remote:
+        parser.error("--reset-neutral requires --remote")
     if not 1 <= args.port <= 65535:
         parser.error("--port must be between 1 and 65535")
     args.output = (ROOT / args.output).resolve()

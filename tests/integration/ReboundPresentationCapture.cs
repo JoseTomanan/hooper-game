@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using Godot;
 using Hooper.Ball;
+using Hooper.Moves;
 using Hooper.Networking;
 using Hooper.Player;
 
@@ -15,8 +16,8 @@ namespace HOOPERGAME.Tests.Integration;
 /// <summary>Issue #427 production-scene diagnostic. Capture completion does not accept presentation or feel.</summary>
 public partial class ReboundPresentationCapture : Node
 {
-    private string _role, _actor, _output, _hand, _commit, _view;
-    private bool _images, _moving, _ready, _sentReady, _finished, _done, _paced, _contested;
+    private string _role, _actor, _output, _hand, _commit, _view, _action;
+    private bool _images, _moving, _ready, _sentReady, _finished, _done, _paced, _contested, _legacyPose, _longLoose;
     private float _height;
     private int _tick, _start = -1, _subjectId = 1, _clientPeer, _recoveries, _serverRecoveries;
     private int _previousHolder = -1, _doneTick = -1, _lastSeedTick = -1000;
@@ -28,6 +29,11 @@ public partial class ReboundPresentationCapture : Node
     private Camera3D _camera;
     private StreamWriter _trace;
     private int _samples;
+    private int _lastConfirmedReceipt;
+    private bool _resetNeutral, _resetPerformed, _actionAccepted, _feintRequested, _feintAccepted, _suppressGrab, _actionSawActive;
+    private int _seedOrdinal, _actionSeedOrdinal, _actionRequests, _acceptedActions, _feintRequests, _acceptedFeints;
+    private int _actionTick = -1, _shootReleaseTick = -1, _feintReleaseTick = -1, _actionReceipt;
+    private string _controlFailure = "";
     private ulong _posePhysics;
     private long _posePresentation = -1;
     private object _pose = new { };
@@ -51,9 +57,13 @@ public partial class ReboundPresentationCapture : Node
         _commit = Read("--capture-commit", "unknown");
         _images = Read("--capture-images", "false") == "true";
         _moving = Read("--capture-moving", "false") == "true";
+        _legacyPose = Read("--capture-legacy-pose", "false") == "true";
+        _longLoose = Read("--capture-long-loose", "false") == "true";
         _paced = Read("--capture-paced", "false") == "true";
         _contested = Read("--capture-contested", "false") == "true";
         _view = Read("--capture-view", "gameplay");
+        _action = Read("--capture-action", "none");
+        _resetNeutral = Read("--capture-reset-neutral", "false") == "true";
         string height = Read("--capture-height", "floor");
         _height = height == "floor" ? .12f : height == "falling" ? 2f :
             float.TryParse(height, NumberStyles.Float, CultureInfo.InvariantCulture, out float parsed) ? parsed : float.NaN;
@@ -62,6 +72,7 @@ public partial class ReboundPresentationCapture : Node
             !new[] { "host", "client" }.Contains(_actor) || !new[] { "Right", "Left" }.Contains(_hand) ||
             (_role == "owner" && _actor != "client") || (_role == "local" && _actor != "host") ||
             !new[] { "gameplay", "side" }.Contains(_view) ||
+            !new[] { "none", "immediate", "feint" }.Contains(_action) ||
             !float.IsFinite(_height) || _height < .12f || string.IsNullOrWhiteSpace(_output) || Directory.Exists(_output))
         { Finish("invalid arguments or nonfresh output"); return; }
         Directory.CreateDirectory(_output);
@@ -107,6 +118,7 @@ public partial class ReboundPresentationCapture : Node
     [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
     private void CaptureSeeded(int ordinal, long sourceTick)
     {
+        _seedOrdinal = ordinal;
         _lastSeedTick = _tick;
         Event("seed-received", new { ordinal, sourceTick });
         if (_moving && Subject?.ContinuityIsLocalPlayer == true) Input.ActionPress("move_forward");
@@ -155,6 +167,29 @@ public partial class ReboundPresentationCapture : Node
         if (subject == null || _start < 0) return;
         AttachSkeleton(subject);
         ObserveRecovery(subject);
+        var confirmed = _ball.ConfirmedRecovery;
+        if (confirmed.Receipt != 0 && confirmed.Receipt != _lastConfirmedReceipt)
+        {
+            _lastConfirmedReceipt = confirmed.Receipt;
+            Event("confirmed-recovery-received", new { receipt = confirmed.Receipt, recipient = confirmed.Recipient,
+                age = confirmed.Age, inputSequence = confirmed.InputSequence });
+        }
+        if (IsClient && _seedOrdinal > 0 && subject.ContinuityIsLocalPlayer && confirmed.Receipt != 0 && confirmed.Receipt != _actionReceipt &&
+            confirmed.Recipient == _subjectId && _ball.StateMachine.HolderPeerId == _subjectId)
+        {
+            _actionReceipt = confirmed.Receipt;
+            _suppressGrab = false;
+            TriggerAction(subject, "confirmed-recovery-receipt");
+        }
+        TickActionControl(subject);
+        if (IsClient && _resetNeutral && !_resetPerformed && _tick - _start >= 35)
+        {
+            int previousEpoch = _ball.PresentationEpoch;
+            _ball.ResetReboundPresentationForHarness();
+            _resetPerformed = true;
+            Event("neutral-presentation-reset", new { previousEpoch, epoch = _ball.PresentationEpoch,
+                holder = _ball.StateMachine.HolderPeerId, animation = subject.ActiveAnimNodeForHarness });
+        }
         if (IsClient)
         {
             // Give the reliable visual history and the local final skeleton additional drain frames.
@@ -162,6 +197,8 @@ public partial class ReboundPresentationCapture : Node
         }
         int t = _tick - _start;
         if (t is 25 or 130) Prepare(subject);
+        if (_longLoose && t is 40 or 140)
+            _ball.SeedLooseBallForHarness(new Vector3(3, _height, 4.7f));
         if (t is 60 or 150) Seed(subject, t == 60 ? 1 : 2);
         if (t is 105 or 195)
         {
@@ -192,6 +229,7 @@ public partial class ReboundPresentationCapture : Node
     }
     private void Seed(PlayerController subject, int ordinal)
     {
+        _seedOrdinal = ordinal;
         _ball.SeedLooseBallForHarness(new Vector3(.3f, _height, 4.7f));
         _lastSeedTick = _tick;
         // Record the actual Loose state before next tick's genuine production contest.
@@ -207,14 +245,77 @@ public partial class ReboundPresentationCapture : Node
         int holder = _ball.StateMachine.HolderPeerId;
         if (holder == _subjectId && _previousHolder != _subjectId && _previousState == BallState.Loose)
         {
+            _suppressGrab = false;
             _recoveries++;
             Event("live-holder-edge", new { count = _recoveries, holder, state = _ball.State.ToString(),
                 position = Vec(_ball.GlobalPosition), hand = subject.HandSide.ToString(), animation = subject.ActiveAnimNodeForHarness,
                 playbackTime = subject.ContinuityPlaybackTime, awardCount = _ball.SuccessfulPossessionAwardCountForHarness });
             if (_role == "server") Rpc(nameof(RecoveryObserved), _recoveries, unchecked((long)Engine.GetPhysicsFrames()));
+            TriggerAction(subject, "live-holder-edge");
         }
         _previousHolder = holder;
         _previousState = _ball.State;
+    }
+
+    private void TriggerAction(PlayerController subject, string trigger)
+    {
+        if (_action == "none" || !subject.ContinuityIsLocalPlayer || _seedOrdinal == 0 || _actionSeedOrdinal == _seedOrdinal) return;
+        _actionSeedOrdinal = _seedOrdinal;
+        _actionRequests++;
+        _actionTick = _tick;
+        _shootReleaseTick = _tick + 1;
+        _actionAccepted = _feintRequested = _feintAccepted = _actionSawActive = false;
+        _suppressGrab = true;
+        // Production input is consumed on the next owning Player tick, before its catch latch.
+        // https://docs.godotengine.org/en/4.7/classes/class_input.html#class-input-method-action-press
+        Input.ActionPress("ball_shoot");
+        Event("action-input", new { action = _action, trigger, ordinal = _seedOrdinal, request = _actionRequests,
+            phase = subject.PhaseForHarness.ToString(), frame = subject.FrameInPhaseForHarness,
+            confirmedReceipt = _ball.ConfirmedRecovery.Receipt, holder = _ball.StateMachine.HolderPeerId });
+    }
+
+    private void TickActionControl(PlayerController subject)
+    {
+        if (_action == "none" || !subject.ContinuityIsLocalPlayer) return;
+        if (_tick == _shootReleaseTick) Input.ActionRelease("ball_shoot");
+        if (_tick == _feintReleaseTick) Input.ActionRelease("move_feint");
+        if (_actionTick < 0) return;
+        bool jumpShot = subject.CurrentMoveIdForHarness == "jumpshot";
+        if (jumpShot && subject.PhaseForHarness == MovePhase.Active) _actionSawActive = true;
+        if (!_actionAccepted && jumpShot && subject.PhaseForHarness == MovePhase.Startup)
+        {
+            _actionAccepted = true;
+            _acceptedActions++;
+            Event("accepted-action-startup", new { ordinal = _actionSeedOrdinal, count = _acceptedActions,
+                frame = subject.FrameInPhaseForHarness, actionInputTick = _actionTick });
+        }
+        if (_action == "feint" && _actionAccepted && !_feintRequested && jumpShot &&
+            subject.PhaseForHarness == MovePhase.Startup && subject.FrameInPhaseForHarness >= 3)
+        {
+            Input.ActionPress("move_feint");
+            _feintReleaseTick = _tick + 1;
+            _feintRequested = true;
+            _feintRequests++;
+            Event("feint-input", new { ordinal = _actionSeedOrdinal, count = _feintRequests, phase = "Startup",
+                frame = subject.FrameInPhaseForHarness });
+        }
+        if (_feintRequested && !_feintAccepted && !_actionSawActive && jumpShot && subject.PhaseForHarness == MovePhase.Recovery &&
+            subject.FrameInPhaseForHarness >= Hooper.Moves.JumpShot.DefaultFrameData.RecoveryFrames
+                - Hooper.Moves.JumpShot.DefaultFrameData.FeintRecoveryFrames)
+        {
+            _feintAccepted = true;
+            _acceptedFeints++;
+            Event("accepted-feint-recovery", new { ordinal = _actionSeedOrdinal, count = _acceptedFeints,
+                frame = subject.FrameInPhaseForHarness });
+        }
+        if (_suppressGrab && _tick >= _actionTick + 2 &&
+            (subject.IsPlayingReboundGrab || subject.ActiveAnimNodeForHarness == "ReboundGrab") && _controlFailure.Length == 0)
+        {
+            _controlFailure = "rebound grab replayed after the owning action interrupted it";
+            Event("control-failure", new { failure = _controlFailure, ordinal = _actionSeedOrdinal,
+                phase = subject.PhaseForHarness.ToString(), animation = subject.ActiveAnimNodeForHarness,
+                latch = subject.IsPlayingReboundGrab });
+        }
     }
     public override void _Process(double delta)
     {
@@ -227,6 +328,7 @@ public partial class ReboundPresentationCapture : Node
     {
         if (_skeleton != null) return;
         if (AnimationHarnessResources.TryFindSkeleton(subject, out _skeleton, out _)) _skeleton.SkeletonUpdated += SnapshotPose;
+        if (_legacyPose) _skeleton?.GetNodeOrNull<ReboundPose>("ReboundPose")?.Set("active", false);
     }
     private void SnapshotPose()
     {
@@ -287,7 +389,9 @@ public partial class ReboundPresentationCapture : Node
             role = _role, actor = _actor, subject = _subjectId, isLocalSubject = subject.ContinuityIsLocalPlayer,
             animation = state, clip, playbackTime = subject.ContinuityPlaybackTime, animationCallback = subject.ContinuityAnimationCallback,
             reboundGrab = subject.IsPlayingReboundGrab, displayReboundGrab = view?.Players.FirstOrDefault(p => p.PeerId == _subjectId)?.ReboundGrab,
-            hand = subject.HandSide.ToString(), displayHand = subject.DisplayHandSide.ToString(),
+            hand = subject.HandSide.ToString(), displayHand = subject.DisplayHandSide.ToString(), heading = subject.DisplayHeading,
+            confirmedRecovery = new { receipt = _ball.ConfirmedRecovery.Receipt, recipient = _ball.ConfirmedRecovery.Recipient,
+                age = _ball.ConfirmedRecovery.Age, inputSequence = _ball.ConfirmedRecovery.InputSequence },
             liveRoot = Vec(subject.GlobalPosition), displayRoot = Vec(subject.DisplayRootPosition), velocity = Vec(subject.Velocity),
             ball = Vec(visible), liveBall = Vec(_ball.GlobalPosition), ballRadius = _ball.BallRadius,
             ballState = _ball.State.ToString(), holder = _ball.StateMachine.HolderPeerId,
@@ -303,15 +407,32 @@ public partial class ReboundPresentationCapture : Node
     private void Finish(string failure)
     {
         if (_finished) return;
+        if (failure.Length == 0 && _controlFailure.Length != 0) failure = _controlFailure;
+        bool owningActionRole = !IsClient && _actor == "host" || IsClient && _actor == "client";
+        if (failure.Length == 0 && _action != "none" && owningActionRole)
+        {
+            if (_actionRequests != 2 || _acceptedActions != 2) failure = "control did not witness two accepted owning shot actions";
+            else if (_action == "feint" && (_feintRequests != 2 || _acceptedFeints != 2)) failure = "control did not witness two genuine accepted feints";
+        }
+        if (failure.Length == 0 && _action != "none" && (!IsClient || owningActionRole) &&
+            _ball.SuccessfulShotReleasesForHarness != (_action == "immediate" ? 2 : 0)) failure = "control shot release count mismatch";
+        if (failure.Length == 0 && _resetNeutral && IsClient && !_resetPerformed) failure = "neutral presentation reset did not execute";
         _finished = true;
         RenderingServer.FramePostDraw -= Sample;
         if (GodotObject.IsInstanceValid(_skeleton)) _skeleton.SkeletonUpdated -= SnapshotPose;
         Input.ActionRelease("move_forward");
+        Input.ActionRelease("ball_shoot");
+        Input.ActionRelease("move_feint");
         _trace?.Dispose();
         if (_trace != null) File.WriteAllText(Path.Combine(_output, "manifest.json"), JsonSerializer.Serialize(new {
             schema = "hooper-rebound-presentation/v1", result = failure == "" ? "captured" : "failed", failure,
             role = _role, actor = _actor, subject = _subjectId, commit = _commit, requestedPreRecoveryHand = _hand,
             height = _height, moving = _moving, movementAction = "move_forward", contested = _contested, view = _view,
+            legacyPose = _legacyPose, longLoose = _longLoose,
+            action = _action, actionRequests = _actionRequests, acceptedActions = _acceptedActions,
+            feintRequests = _feintRequests, acceptedFeints = _acceptedFeints,
+            successfulShotReleases = _ball.SuccessfulShotReleasesForHarness, controlFailure = _controlFailure,
+            resetNeutral = _resetNeutral, resetPerformed = _resetPerformed,
             paced = _paced, pacingMeaning = _paced ? "80ms producer wall-clock delay; diagnostic fixed-step coverage only" : "unpaced",
             images = _images, samples = _samples,
             observedRecoveries = _recoveries, authoritativeRecoveriesReceived = _serverRecoveries, events = _events,
