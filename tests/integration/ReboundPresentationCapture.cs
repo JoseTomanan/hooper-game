@@ -126,7 +126,7 @@ public partial class ReboundPresentationCapture : Node
         _seedOrdinal = ordinal;
         _lastSeedTick = _tick;
         Event("seed-received", new { ordinal, sourceTick });
-        if (_moving && Subject?.ContinuityIsLocalPlayer == true) Input.ActionPress("move_forward");
+        if (_moving && Subject?.ContinuityIsLocalPlayer == true) Input.ActionPress("move_left");
     }
     [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
     private void RecoveryObserved(int count, long sourceTick)
@@ -135,14 +135,14 @@ public partial class ReboundPresentationCapture : Node
         Event("authoritative-recovery-received", new { count, sourceTick });
     }
     [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-    private void FixtureMovementStopped() => Input.ActionRelease("move_forward");
+    private void FixtureMovementStopped() => Input.ActionRelease("move_left");
     [Rpc(MultiplayerApi.RpcMode.Authority, TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
     private void Completed(int recoveries)
     {
         _serverRecoveries = recoveries;
         _done = true;
         _doneTick = _tick;
-        Input.ActionRelease("move_forward");
+        Input.ActionRelease("move_left");
     }
 
     public override void _PhysicsProcess(double delta)
@@ -205,14 +205,16 @@ public partial class ReboundPresentationCapture : Node
         if (_longLoose && t is 40 or 140)
             _ball.SeedLooseBallForHarness(new Vector3(3, _height, 4.7f));
         if (t == 60 + _seedDelay || t == 150 + _seedDelay) Seed(subject, t == 60 + _seedDelay ? 1 : 2);
-        if (t == 105 + _seedDelay || t == 195 + _seedDelay)
+        // Keep movement unchanged through the complete catch handoff proof.
+        // The unrelated neutral deceleration blend is not an exit observation.
+        if (t == 125 + _seedDelay || t == 215 + _seedDelay)
         {
-            Input.ActionRelease("move_forward");
+            Input.ActionRelease("move_left");
             if (_role == "server") Rpc(nameof(FixtureMovementStopped));
         }
         if (t == 220)
         {
-            Input.ActionRelease("move_forward");
+            Input.ActionRelease("move_left");
             if (_role == "server") Rpc(nameof(Completed), _recoveries);
             _done = true;
         }
@@ -222,7 +224,7 @@ public partial class ReboundPresentationCapture : Node
 
     private void Prepare(PlayerController subject)
     {
-        Input.ActionRelease("move_forward");
+        Input.ActionRelease("move_left");
         subject.GlobalPosition = new Vector3(0f, 0f, 5f);
         subject.Velocity = Vector3.Zero;
         subject.SetHandSideForHarness(_hand == "Right" ? HandSide.Right : HandSide.Left);
@@ -243,7 +245,7 @@ public partial class ReboundPresentationCapture : Node
         Event("seed", new { ordinal, position = Vec(_ball.GlobalPosition), state = _ball.State.ToString(),
             hand = subject.HandSide.ToString(), awardCount = _ball.SuccessfulPossessionAwardCountForHarness });
         if (_role == "server") Rpc(nameof(CaptureSeeded), ordinal, unchecked((long)Engine.GetPhysicsFrames()));
-        if (_moving && subject.ContinuityIsLocalPlayer) Input.ActionPress("move_forward");
+        if (_moving && subject.ContinuityIsLocalPlayer) Input.ActionPress("move_left");
     }
     private void ObserveRecovery(PlayerController subject)
     {
@@ -375,6 +377,7 @@ public partial class ReboundPresentationCapture : Node
         var sampledPose = new { physicsFrame = _posePhysics, renderFrame = Engine.GetProcessFrames(),
             presentationTick = _posePresentation, animation = _poseAnimation, playbackTime = _posePlayback,
             hand = _poseHand, root = Vec(drawnSkeleton.Origin), skeletonTransform = Transform(drawnSkeleton),
+            reboundPoseApplied = _skeleton.GetNodeOrNull<ReboundPose>("ReboundPose")?.AppliedForHarness ?? false,
             bones = _boneWorld.ToDictionary(p => p.Key, p => Vec(p.Value)),
             bodyBones = _boneWorld.ToDictionary(p => p.Key,
                 p => Vec(inverseDrawnRotation * (p.Value - drawnSkeleton.Origin))) };
@@ -439,14 +442,14 @@ public partial class ReboundPresentationCapture : Node
         _finished = true;
         RenderingServer.FramePostDraw -= Sample;
         if (GodotObject.IsInstanceValid(_skeleton)) _skeleton.SkeletonUpdated -= SnapshotPose;
-        Input.ActionRelease("move_forward");
+        Input.ActionRelease("move_left");
         Input.ActionRelease("ball_shoot");
         Input.ActionRelease("move_feint");
         _trace?.Dispose();
         if (_trace != null) File.WriteAllText(Path.Combine(_output, "manifest.json"), JsonSerializer.Serialize(new {
             schema = "hooper-rebound-presentation/v2", result = failure == "" ? "captured" : "failed", failure,
             role = _role, actor = _actor, subject = _subjectId, commit = _commit, requestedPreRecoveryHand = _hand,
-            height = _height, moving = _moving, movementAction = "move_forward", contested = _contested, view = _view,
+            height = _height, moving = _moving, movementAction = "move_left", contested = _contested, view = _view,
             legacyPose = _legacyPose, longLoose = _longLoose,
             bodyPoseCoordinates = "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
             seedDelay = _seedDelay,

@@ -13,13 +13,19 @@ public partial class ReboundPose : SkeletonModifier3D
 
     // A presentation handoff, measured in consumed source ticks rather than renders.
     private const int BridgeTicks = 6;
+    private const int MaxExitTicks = 20;
+    // Stay below the independent 0.24m support/head regression bound. This
+    // limits presentation corrections only; committed poses bypass it outright.
+    private const float MaxPoseStepMetres = .18f;
     private Skeleton3D _skeleton;
     private int[] _parents;
-    private CrossoverPoseBridge _bridge, _neutralBlend;
+    private CrossoverPoseBridge _bridge, _neutralBlend, _correctionBridge;
     private Transform3D[] _lastFinal, _anchor, _held;
     private bool _wasCatch, _exiting, _buffered, _discardIncoming;
     private long _clock = -1;
     private int _age;
+    private int _exitStableTicks;
+    private int _exitTicks;
     private double _neutralTime;
     private (int Epoch, int Resync) _reset;
     private readonly Dictionary<string, Clip> _clips = new();
@@ -43,6 +49,7 @@ public partial class ReboundPose : SkeletonModifier3D
         }
         _bridge = new CrossoverPoseBridge(_parents, chains.ToArray());
         _neutralBlend = new CrossoverPoseBridge(_parents, chains.ToArray(), followAnchorPose: true);
+        _correctionBridge = new CrossoverPoseBridge(_parents, chains.ToArray(), followAnchorPose: true);
         CacheFinalPose();
         // Read the final displayed result, after all modifiers, before Godot restores
         // the mixer input. A catch must start from the pose the viewer actually saw.
@@ -94,11 +101,10 @@ public partial class ReboundPose : SkeletonModifier3D
         _clock = clock; _buffered = buffered; _reset = reset;
         if (discontinuity)
         {
-            bool interruptedCatch = _wasCatch && catchPose;
             Clear();
             // A resynchronized presentation explicitly permits a discontinuity;
             // do not blend a previous world/ownership context into the new one.
-            _discardIncoming = interruptedCatch;
+            _discardIncoming = catchPose;
         }
 
         if (display.Phase != MovePhase.Inactive
@@ -132,21 +138,64 @@ public partial class ReboundPose : SkeletonModifier3D
                 _anchor = (Transform3D[])_lastFinal.Clone();
                 _age = 0;
                 _exiting = true;
+                _exitStableTicks = 0;
+                _exitTicks = 0;
                 _bridge.ResetContinuity();
             }
             else _age = Math.Min(BridgeTicks, _age + step);
         }
         _wasCatch = catchPose;
+        if (_exiting)
+        {
+            _exitTicks += step;
+            // Persistent neutral-animation corrections must not turn a catch
+            // handoff into an indefinitely active pose filter. The proof includes
+            // this release tick, so a discontinuous deadline drop cannot pass.
+            if (_exitTicks >= MaxExitTicks) { Clear(); return; }
+        }
         Transform3D[] target = catchPose ? SampleNeutral(fresh) : fresh;
         Transform3D[] result = _bridge.Blend(_anchor, target,
             Math.Clamp(_age / (float)BridgeTicks, 0, 1)).Pose;
+        // A Held->Dribbling target change or an owning playback correction can
+        // occur halfway through either bridge. Limit the actually displayed
+        // articulated step from the previous final pose, including fingers/toes,
+        // rather than assuming the destination stayed continuous.
+        bool corrected = !discontinuity && MaxStep(_lastFinal, result) > MaxPoseStepMetres;
+        if (corrected)
+        {
+            Transform3D[] destination = result;
+            result = _lastFinal;
+            for (float weight = .5f; weight >= 1f / 256f; weight *= .5f)
+            {
+                _correctionBridge.ResetContinuity();
+                var candidate = _correctionBridge.Blend(_lastFinal, destination, weight).Pose;
+                if (MaxStep(_lastFinal, candidate) <= MaxPoseStepMetres) { result = candidate; break; }
+            }
+        }
         Write(result);
         _held = result;
         if (_exiting && _age >= BridgeTicks)
         {
-            _exiting = false;
-            _held = _anchor = null;
+            // Rejoin only after reaching the real neutral pose and observing a
+            // full bridge interval of stable source steps. A correction arriving
+            // on the next tick must not turn the handoff into a delayed pop.
+            _exitStableTicks = corrected ? 0 : _exitStableTicks + step;
+            if (_exitStableTicks >= BridgeTicks)
+            {
+                _exiting = false;
+                _held = _anchor = null;
+            }
         }
+    }
+
+    private float MaxStep(Transform3D[] before, Transform3D[] after)
+    {
+        var a = CrossoverPoseBridge.Forward(_parents, before);
+        var b = CrossoverPoseBridge.Forward(_parents, after);
+        float maximum = 0f;
+        for (int i = 0; i < a.Length; i++)
+            maximum = Math.Max(maximum, (_skeleton.GlobalBasis * (b[i].Origin - a[i].Origin)).Length());
+        return maximum;
     }
 
     private void Clear()
@@ -154,6 +203,8 @@ public partial class ReboundPose : SkeletonModifier3D
         _wasCatch = _exiting = false;
         _anchor = _held = null;
         _age = 0;
+        _exitStableTicks = 0;
+        _exitTicks = 0;
         _bridge.ResetContinuity();
         _neutralBlend.ResetContinuity();
     }

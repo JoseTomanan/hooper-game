@@ -146,8 +146,8 @@ def analyze(directory, mutate_disconnected=False, mutate_delayed=False):
         onset = start - recovery if recovery is not None else None
         # Include entry and exit in one continuous observed window. An omitted
         # intermediate source tick cannot hide a transient discontinuity.
-        # Include the complete six-tick exit bridge and its first unmodified tick.
-        expected_ticks = list(range(start - 1, end + 8))
+        # Include the corrected exit, convergence and an unmodified neutral tail.
+        expected_ticks = list(range(start - 1, end + 22))
         window = [unique[t] for t in expected_ticks if t in unique]
         missing = [t for t in expected_ticks if t not in unique]
         bad_pose, incoherent, missing_bones, missing_heading = [], [], [], []
@@ -225,6 +225,9 @@ def analyze(directory, mutate_disconnected=False, mutate_delayed=False):
             failures.append(prefix + "onset exceeds two source ticks after observed recovery")
         if missing:
             failures.append(prefix + "missing source tick coverage including entry/exit")
+        if manifest.get("schema", "").endswith("/v2") and (end + 20 not in unique or
+                unique[end + 20].get("pose", {}).get("reboundPoseApplied") is not False):
+            failures.append(prefix + "pose handoff did not finish within 20 source ticks")
         if bad_pose:
             failures.append(prefix + "pose does not match sampled physics frame")
         if incoherent:
