@@ -1,19 +1,21 @@
 {
-  "schema": "hooper-rebound-presentation/v1",
+  "schema": "hooper-rebound-presentation/v2",
   "result": "captured",
   "failure": "",
   "role": "server",
   "actor": "host",
   "subject": 1,
-  "commit": "dce36aad28ffd750746be05a94f9b669ea44ae00",
+  "commit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
   "requestedPreRecoveryHand": "Right",
   "height": 0.12,
   "moving": true,
-  "movementAction": "move_forward",
+  "movementAction": "move_left",
   "contested": false,
   "view": "gameplay",
   "legacyPose": false,
   "longLoose": false,
+  "bodyPoseCoordinates": "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
+  "seedDelay": 0,
   "action": "none",
   "actionRequests": 0,
   "acceptedActions": 0,
@@ -26,21 +28,21 @@
   "paced": false,
   "pacingMeaning": "unpaced",
   "images": false,
-  "samples": 268,
+  "samples": 265,
   "observedRecoveries": 2,
   "authoritativeRecoveriesReceived": 0,
   "events": [
     {
-      "tick": 64,
-      "physicsFrame": 64,
+      "tick": 84,
+      "physicsFrame": 84,
       "kind": "fixture-start",
       "detail": {
         "subject": 1
       }
     },
     {
-      "tick": 89,
-      "physicsFrame": 89,
+      "tick": 109,
+      "physicsFrame": 109,
       "kind": "fixture-positioned",
       "detail": {
         "position": [
@@ -53,8 +55,8 @@
       }
     },
     {
-      "tick": 124,
-      "physicsFrame": 124,
+      "tick": 144,
+      "physicsFrame": 144,
       "kind": "seed",
       "detail": {
         "ordinal": 1,
@@ -69,8 +71,8 @@
       }
     },
     {
-      "tick": 125,
-      "physicsFrame": 125,
+      "tick": 145,
+      "physicsFrame": 145,
       "kind": "live-holder-edge",
       "detail": {
         "count": 1,
@@ -82,14 +84,14 @@
           4.7
         ],
         "hand": "Right",
-        "animation": "Pivot",
+        "animation": "Locomotion",
         "playbackTime": 0,
         "awardCount": 1
       }
     },
     {
-      "tick": 194,
-      "physicsFrame": 194,
+      "tick": 214,
+      "physicsFrame": 214,
       "kind": "fixture-positioned",
       "detail": {
         "position": [
@@ -102,8 +104,8 @@
       }
     },
     {
-      "tick": 214,
-      "physicsFrame": 214,
+      "tick": 234,
+      "physicsFrame": 234,
       "kind": "seed",
       "detail": {
         "ordinal": 2,
@@ -118,8 +120,8 @@
       }
     },
     {
-      "tick": 215,
-      "physicsFrame": 215,
+      "tick": 235,
+      "physicsFrame": 235,
       "kind": "live-holder-edge",
       "detail": {
         "count": 2,
@@ -143,15 +145,16 @@
     "res://tests/integration/ReboundPresentationCapture.tscn"
   ],
   "userArgs": [
-    "--capture-output=C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\427\\proof-final\\moving-observer\\server",
+    "--capture-output=C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\427\\proof-handoff-final\\moving-observer\\server",
     "--capture-role=server",
     "--capture-actor=host",
     "--capture-hand=Right",
     "--capture-height=0.12",
     "--capture-view=gameplay",
     "--capture-action=none",
-    "--capture-port=24516",
-    "--capture-commit=dce36aad28ffd750746be05a94f9b669ea44ae00",
+    "--capture-seed-delay=0",
+    "--capture-port=25006",
+    "--capture-commit=e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
     "--capture-images=false",
     "--capture-moving=true"
   ],

@@ -1,19 +1,21 @@
 {
-  "schema": "hooper-rebound-presentation/v1",
+  "schema": "hooper-rebound-presentation/v2",
   "result": "captured",
   "failure": "",
   "role": "client",
   "actor": "host",
   "subject": 1,
-  "commit": "dce36aad28ffd750746be05a94f9b669ea44ae00",
+  "commit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
   "requestedPreRecoveryHand": "Right",
   "height": 0.12,
   "moving": false,
-  "movementAction": "move_forward",
+  "movementAction": "move_left",
   "contested": false,
   "view": "gameplay",
   "legacyPose": false,
-  "longLoose": false,
+  "longLoose": true,
+  "bodyPoseCoordinates": "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
+  "seedDelay": 0,
   "action": "none",
   "actionRequests": 0,
   "acceptedActions": 0,
@@ -26,21 +28,21 @@
   "paced": false,
   "pacingMeaning": "unpaced",
   "images": false,
-  "samples": 247,
-  "observedRecoveries": 0,
+  "samples": 244,
+  "observedRecoveries": 2,
   "authoritativeRecoveriesReceived": 2,
   "events": [
     {
-      "tick": 25,
-      "physicsFrame": 25,
+      "tick": 28,
+      "physicsFrame": 28,
       "kind": "fixture-start",
       "detail": {
         "subject": 1
       }
     },
     {
-      "tick": 60,
-      "physicsFrame": 60,
+      "tick": 63,
+      "physicsFrame": 63,
       "kind": "neutral-presentation-reset",
       "detail": {
         "previousEpoch": 1,
@@ -50,26 +52,45 @@
       }
     },
     {
-      "tick": 85,
-      "physicsFrame": 85,
+      "tick": 87,
+      "physicsFrame": 87,
       "kind": "seed-received",
       "detail": {
         "ordinal": 1,
-        "sourceTick": 122
+        "sourceTick": 146
       }
     },
     {
-      "tick": 86,
-      "physicsFrame": 86,
+      "tick": 88,
+      "physicsFrame": 88,
       "kind": "authoritative-recovery-received",
       "detail": {
         "count": 1,
-        "sourceTick": 123
+        "sourceTick": 147
       }
     },
     {
-      "tick": 87,
-      "physicsFrame": 87,
+      "tick": 89,
+      "physicsFrame": 89,
+      "kind": "live-holder-edge",
+      "detail": {
+        "count": 1,
+        "holder": 1,
+        "state": "Held",
+        "position": [
+          -0.4428999,
+          1,
+          5.5000024
+        ],
+        "hand": "Right",
+        "animation": "Locomotion",
+        "playbackTime": 0.2666666805744171,
+        "awardCount": 0
+      }
+    },
+    {
+      "tick": 89,
+      "physicsFrame": 89,
       "kind": "confirmed-recovery-received",
       "detail": {
         "receipt": 1,
@@ -79,26 +100,45 @@
       }
     },
     {
-      "tick": 175,
-      "physicsFrame": 175,
+      "tick": 177,
+      "physicsFrame": 177,
       "kind": "seed-received",
       "detail": {
         "ordinal": 2,
-        "sourceTick": 212
+        "sourceTick": 236
       }
     },
     {
-      "tick": 176,
-      "physicsFrame": 176,
+      "tick": 178,
+      "physicsFrame": 178,
       "kind": "authoritative-recovery-received",
       "detail": {
         "count": 2,
-        "sourceTick": 213
+        "sourceTick": 237
       }
     },
     {
-      "tick": 177,
-      "physicsFrame": 177,
+      "tick": 179,
+      "physicsFrame": 179,
+      "kind": "live-holder-edge",
+      "detail": {
+        "count": 2,
+        "holder": 1,
+        "state": "Held",
+        "position": [
+          -0.4428999,
+          1,
+          5.5000005
+        ],
+        "hand": "Right",
+        "animation": "Locomotion",
+        "playbackTime": 0.10000000149011612,
+        "awardCount": 0
+      }
+    },
+    {
+      "tick": 179,
+      "physicsFrame": 179,
       "kind": "confirmed-recovery-received",
       "detail": {
         "receipt": 2,
@@ -114,16 +154,18 @@
     "res://tests/integration/ReboundPresentationCapture.tscn"
   ],
   "userArgs": [
-    "--capture-output=C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\427\\proof-final\\reset-neutral\\client",
+    "--capture-output=C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\427\\proof-handoff-final\\reset-neutral\\client",
     "--capture-role=client",
     "--capture-actor=host",
     "--capture-hand=Right",
     "--capture-height=0.12",
     "--capture-view=gameplay",
     "--capture-action=none",
-    "--capture-port=24518",
-    "--capture-commit=dce36aad28ffd750746be05a94f9b669ea44ae00",
+    "--capture-seed-delay=0",
+    "--capture-port=25009",
+    "--capture-commit=e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
     "--capture-images=false",
+    "--capture-long-loose=true",
     "--capture-reset-neutral=true"
   ],
   "sampleTiming": "HEADLESS diagnostic state only; SkeletonUpdated final modifier pose / _Process state",

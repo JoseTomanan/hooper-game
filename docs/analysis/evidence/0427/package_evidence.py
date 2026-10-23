@@ -1,7 +1,7 @@
 """Reproduce #427's compact package from the unchanged workspace captures.
 
 Run with Python from any directory. No Godot launch or source trace edits occur.
-The nine normal reports are regenerated with the current analyzer; negative
+The ten normal reports are regenerated with the current analyzer; negative
 control reports are retained verbatim. Trace gzip headers use mtime=0 and no name.
 """
 import gzip
@@ -15,8 +15,10 @@ import sys
 DEST = Path(__file__).resolve().parent
 ROOT = DEST.parents[3]
 SOURCE = ROOT / ".godot/427"
+PROOF_SOURCE = SOURCE / "proof-handoff-final"
+NATIVE_AFTER_SOURCE = SOURCE / "native-handoff-after/local"
 NORMAL = ("local", "observer", "owner", "long-loose", "falling-contested", "moving",
-          "moving-observer", "moving-owner", "reset-neutral")
+          "moving-observer", "moving-owner", "moving-owner-phase-shift", "reset-neutral")
 ACTIONS = ("immediate-local", "feint-local", "immediate-owner", "feint-owner")
 ANALYZER = ROOT / "tools/analyze_rebound_capture.py"
 
@@ -29,11 +31,21 @@ def relative(path, base=ROOT):
     return path.relative_to(base).as_posix()
 
 
+def packaged_relative(source):
+    # Stable review links retain proof-final/, while inventory records the actual
+    # final phase-repair capture directory and its original commit faithfully.
+    if source.is_relative_to(PROOF_SOURCE):
+        return Path("proof-final") / source.relative_to(PROOF_SOURCE)
+    if source.is_relative_to(NATIVE_AFTER_SOURCE):
+        return Path("native-after/local") / source.relative_to(NATIVE_AFTER_SOURCE)
+    return source.relative_to(SOURCE)
+
+
 def main():
     entries, captures, issues = [], [], []
 
     def copy(source, transform="copy", metadata=None):
-        target = DEST / source.relative_to(SOURCE)
+        target = DEST / packaged_relative(source)
         if transform == "gzip-mtime-zero":
             target = target.with_suffix(target.suffix + ".gz")
         if not source.is_file():
@@ -55,9 +67,10 @@ def main():
             entry.update(metadata)
         entries.append(entry)
 
-    source_dirs = [SOURCE / "proof-final" / case for case in (*NORMAL, *ACTIONS, "legacy-pose")]
+    source_dirs = [PROOF_SOURCE / case for case in (*NORMAL, *ACTIONS, "legacy-pose")]
     source_dirs += [SOURCE / "probe-owner-completion-fix", SOURCE / "baseline-falling/local",
-                    SOURCE / "native-before/local", SOURCE / "native-after/local", SOURCE / "native-observer/client"]
+                    SOURCE / "native-before/local", NATIVE_AFTER_SOURCE, SOURCE / "native-observer/client",
+                    SOURCE / "phase-v2-control"]
     for source_dir in source_dirs:
         manifests = [source_dir / "manifest.json"] if (source_dir / "manifest.json").is_file() else sorted(source_dir.rglob("manifest.json"))
         if not manifests:
@@ -67,6 +80,7 @@ def main():
             capture = dict(source=relative(manifest_path.parent), originalCommit=manifest.get("commit"),
                            result=manifest.get("result"), failure=manifest.get("failure", ""),
                            role=manifest.get("role"), actor=manifest.get("actor"), images=manifest.get("images"),
+                           schema=manifest.get("schema"), bodyPoseCoordinates=manifest.get("bodyPoseCoordinates"),
                            animationResourceSha256=manifest.get("animationResourceSha256"))
             captures.append(capture)
             if manifest.get("result") != "captured" or manifest.get("failure"):
@@ -76,10 +90,10 @@ def main():
 
     reports = []
     for case in NORMAL:
-        source_report = SOURCE / "proof-final" / (case + "-proof.json")
-        target = DEST / source_report.relative_to(SOURCE)
+        source_report = PROOF_SOURCE / (case + "-proof.json")
+        target = DEST / packaged_relative(source_report)
         target.parent.mkdir(parents=True, exist_ok=True)
-        command = [sys.executable, relative(ANALYZER), relative(SOURCE / "proof-final" / case),
+        command = [sys.executable, relative(ANALYZER), relative(PROOF_SOURCE / case),
                    "--output", relative(target)]
         result = subprocess.run(command, cwd=ROOT, check=False)
         report = json.loads(target.read_text(encoding="utf-8"))
@@ -87,19 +101,24 @@ def main():
         if result.returncode:
             issues.append("normal report failed: " + case)
         entries.append(dict(source=relative(source_report), packaged=relative(target, DEST),
-                            transformation="reanalyzed unchanged capture with current analyzer; full exit window through end+7",
+                            transformation="reanalyzed unchanged capture with current analyzer; full exit window through end+21",
                             sourceSha256=sha(source_report) if source_report.is_file() else None,
                             packagedSha256=sha(target), packagedBytes=target.stat().st_size,
                             command=command[1:]))
     for name in ("legacy-pose-control.json", "disconnected-control.json", "delayed-control.json"):
-        path = SOURCE / "proof-final" / name
+        path = PROOF_SOURCE / name
         copy(path, metadata=dict(expectedResult="failed; intentional negative control"))
         if path.is_file() and json.loads(path.read_text(encoding="utf-8")).get("result") != "failed":
             issues.append("negative control did not fail: " + name)
+    phase_control_report = SOURCE / "phase-v2-control-proof.json"
+    copy(phase_control_report, metadata=dict(evidenceScope="historical diagnostic only; temporary old-clock restoration probe with corrected v2 coordinates; PASS falsified the phase-only hypothesis; flag removed from current CLI; original report predates current +21 exit gates"))
+    if json.loads(phase_control_report.read_text(encoding="utf-8")).get("result") != "passed":
+        issues.append("historical phase-only falsification diagnostic did not pass")
 
     for case in ("native-before", "native-after"):
         for frame in (63, 70, 90):
-            copy(SOURCE / case / "local" / f"frame-{frame:05d}.png",
+            directory = NATIVE_AFTER_SOURCE if case == "native-after" else SOURCE / case / "local"
+            copy(directory / f"frame-{frame:05d}.png",
                  metadata=dict(imageMeaning="original rendered PNG; no image manipulation"))
 
     observer_dir = SOURCE / "native-observer/client"
@@ -120,9 +139,11 @@ def main():
 
     inventory = dict(schema="hooper-rebound-evidence-package/v1",
                      packagingHead=subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
-                     analyzer=dict(path=relative(ANALYZER), sha256=sha(ANALYZER), exitWindow="first catch tick -1 through last catch tick +7 inclusive"),
+                     analyzer=dict(path=relative(ANALYZER), sha256=sha(ANALYZER), exitWindow="first catch tick -1 through last catch tick +21 inclusive; modifier inactive by last catch tick +20"),
                      traceEncoding="complete original UTF-8 JSONL bytes in gzip; mtime=0; empty gzip filename",
                      images="nine selected original PNGs only; no image processing",
+                     withdrawnPhaseHypothesis="The earlier v1 phase-failure claim mixed world bones from an earlier model transform with a later root/yaw. The phase-only repair was withdrawn after corrected v2 falsification. No phase-before/held result is accepted or packaged as negative proof. Current production proof covers the later bounded target handoff repair.",
+                     historicalDiagnostics={"phase-v2-control": "Unmodified temporary clock-restoration diagnostic and its original PASS report. This records falsification, not a current reproducible negative control; the flag was removed. Native-before and native-observer retain original v1 stationary diagnostic metadata; native-after is current v2."},
                      captures=captures, normalReportResults=reports, issues=issues,
                      files=sorted(entries, key=lambda entry: entry["packaged"]))
     (DEST / "inventory.json").write_text(json.dumps(inventory, indent=2) + "\n", encoding="utf-8")
