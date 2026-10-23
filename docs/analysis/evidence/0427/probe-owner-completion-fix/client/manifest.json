@@ -1,0 +1,86 @@
+{
+  "schema": "hooper-rebound-presentation/v1",
+  "result": "captured",
+  "failure": "",
+  "role": "client",
+  "actor": "client",
+  "subject": 505784233,
+  "commit": "b74c68c",
+  "requestedPreRecoveryHand": "Right",
+  "height": 0.12,
+  "moving": false,
+  "movementAction": "move_forward",
+  "contested": false,
+  "view": "gameplay",
+  "paced": false,
+  "pacingMeaning": "unpaced",
+  "images": false,
+  "samples": 248,
+  "observedRecoveries": 0,
+  "authoritativeRecoveriesReceived": 2,
+  "events": [
+    {
+      "tick": 25,
+      "physicsFrame": 25,
+      "kind": "fixture-start",
+      "detail": {
+        "subject": 505784233
+      }
+    },
+    {
+      "tick": 86,
+      "physicsFrame": 86,
+      "kind": "seed-received",
+      "detail": {
+        "ordinal": 1,
+        "sourceTick": 129
+      }
+    },
+    {
+      "tick": 88,
+      "physicsFrame": 88,
+      "kind": "authoritative-recovery-received",
+      "detail": {
+        "count": 1,
+        "sourceTick": 130
+      }
+    },
+    {
+      "tick": 176,
+      "physicsFrame": 176,
+      "kind": "seed-received",
+      "detail": {
+        "ordinal": 2,
+        "sourceTick": 219
+      }
+    },
+    {
+      "tick": 177,
+      "physicsFrame": 177,
+      "kind": "authoritative-recovery-received",
+      "detail": {
+        "count": 2,
+        "sourceTick": 220
+      }
+    }
+  ],
+  "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B",
+  "engine": "4.7.1-stable (official)",
+  "commandLine": [
+    "res://tests/integration/ReboundPresentationCapture.tscn"
+  ],
+  "userArgs": [
+    "--capture-output=C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\427\\probe-owner-completion-fix\\client",
+    "--capture-role=client",
+    "--capture-actor=client",
+    "--capture-hand=Right",
+    "--capture-height=0.12",
+    "--capture-view=gameplay",
+    "--capture-port=23481",
+    "--capture-commit=b74c68c",
+    "--capture-images=false"
+  ],
+  "sampleTiming": "HEADLESS diagnostic state only; SkeletonUpdated final modifier pose / _Process state",
+  "fixture": "normal Main scene, production host/join and animation callback; explicit position/hand/Loose setup; owning movement uses production Input.ActionPress",
+  "verdict": "diagnostic only; no presentation correctness or feel acceptance"
+}

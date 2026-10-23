@@ -1,0 +1,1008 @@
+{
+  "schema": "hooper-rebound-evidence-package/v1",
+  "packagingHead": "b4fb2f1b9a0e0a5b79b4d34167e7fdc31c1b49c7",
+  "analyzer": {
+    "path": "tools/analyze_rebound_capture.py",
+    "sha256": "d78ff6ad253db603e2a2bcde7777a58017b13d0c82ab08c1162007fef1324886",
+    "exitWindow": "first catch tick -1 through last catch tick +7 inclusive"
+  },
+  "traceEncoding": "complete original UTF-8 JSONL bytes in gzip; mtime=0; empty gzip filename",
+  "images": "nine selected original PNGs only; no image processing",
+  "captures": [
+    {
+      "source": ".godot/427/proof-final/local/local",
+      "originalCommit": "dce36aad28ffd750746be05a94f9b669ea44ae00",
+      "result": "captured",
+      "failure": "",
+      "role": "local",
+      "actor": "host",
+      "images": false,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-final/observer/client",
+      "originalCommit": "dce36aad28ffd750746be05a94f9b669ea44ae00",
+      "result": "captured",
+      "failure": "",
+      "role": "client",
+      "actor": "host",
+      "images": false,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-final/observer/server",
+      "originalCommit": "dce36aad28ffd750746be05a94f9b669ea44ae00",
+      "result": "captured",
+      "failure": "",
+      "role": "server",
+      "actor": "host",
+      "images": false,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-final/owner/client",
+      "originalCommit": "dce36aad28ffd750746be05a94f9b669ea44ae00",
+      "result": "captured",
+      "failure": "",
+      "role": "client",
+      "actor": "client",
+      "images": false,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-final/owner/server",
+      "originalCommit": "dce36aad28ffd750746be05a94f9b669ea44ae00",
+      "result": "captured",
+      "failure": "",
+      "role": "server",
+      "actor": "client",
+      "images": false,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-final/long-loose/local",
+      "originalCommit": "dce36aad28ffd750746be05a94f9b669ea44ae00",
+      "result": "captured",
+      "failure": "",
+      "role": "local",
+      "actor": "host",
+      "images": false,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-final/falling-contested/local",
+      "originalCommit": "dce36aad28ffd750746be05a94f9b669ea44ae00",
+      "result": "captured",
+      "failure": "",
+      "role": "local",
+      "actor": "host",
+      "images": false,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-final/moving/local",
+      "originalCommit": "dce36aad28ffd750746be05a94f9b669ea44ae00",
+      "result": "captured",
+      "failure": "",
+      "role": "local",
+      "actor": "host",
+      "images": false,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-final/moving-observer/client",
+      "originalCommit": "dce36aad28ffd750746be05a94f9b669ea44ae00",
+      "result": "captured",
+      "failure": "",
+      "role": "client",
+      "actor": "host",
+      "images": false,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-final/moving-observer/server",
+      "originalCommit": "dce36aad28ffd750746be05a94f9b669ea44ae00",
+      "result": "captured",
+      "failure": "",
+      "role": "server",
+      "actor": "host",
+      "images": false,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-final/moving-owner/client",
+      "originalCommit": "dce36aad28ffd750746be05a94f9b669ea44ae00",
+      "result": "captured",
+      "failure": "",
+      "role": "client",
+      "actor": "client",
+      "images": false,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-final/moving-owner/server",
+      "originalCommit": "dce36aad28ffd750746be05a94f9b669ea44ae00",
+      "result": "captured",
+      "failure": "",
+      "role": "server",
+      "actor": "client",
+      "images": false,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-final/reset-neutral/client",
+      "originalCommit": "dce36aad28ffd750746be05a94f9b669ea44ae00",
+      "result": "captured",
+      "failure": "",
+      "role": "client",
+      "actor": "host",
+      "images": false,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-final/reset-neutral/server",
+      "originalCommit": "dce36aad28ffd750746be05a94f9b669ea44ae00",
+      "result": "captured",
+      "failure": "",
+      "role": "server",
+      "actor": "host",
+      "images": false,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-final/immediate-local/local",
+      "originalCommit": "dce36aad28ffd750746be05a94f9b669ea44ae00",
+      "result": "captured",
+      "failure": "",
+      "role": "local",
+      "actor": "host",
+      "images": false,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-final/feint-local/local",
+      "originalCommit": "dce36aad28ffd750746be05a94f9b669ea44ae00",
+      "result": "captured",
+      "failure": "",
+      "role": "local",
+      "actor": "host",
+      "images": false,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-final/immediate-owner/client",
+      "originalCommit": "dce36aad28ffd750746be05a94f9b669ea44ae00",
+      "result": "captured",
+      "failure": "",
+      "role": "client",
+      "actor": "client",
+      "images": false,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-final/immediate-owner/server",
+      "originalCommit": "dce36aad28ffd750746be05a94f9b669ea44ae00",
+      "result": "captured",
+      "failure": "",
+      "role": "server",
+      "actor": "client",
+      "images": false,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-final/feint-owner/client",
+      "originalCommit": "dce36aad28ffd750746be05a94f9b669ea44ae00",
+      "result": "captured",
+      "failure": "",
+      "role": "client",
+      "actor": "client",
+      "images": false,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-final/feint-owner/server",
+      "originalCommit": "dce36aad28ffd750746be05a94f9b669ea44ae00",
+      "result": "captured",
+      "failure": "",
+      "role": "server",
+      "actor": "client",
+      "images": false,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-final/legacy-pose/local",
+      "originalCommit": "dce36aad28ffd750746be05a94f9b669ea44ae00",
+      "result": "captured",
+      "failure": "",
+      "role": "local",
+      "actor": "host",
+      "images": false,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/probe-owner-completion-fix/client",
+      "originalCommit": "b74c68c",
+      "result": "captured",
+      "failure": "",
+      "role": "client",
+      "actor": "client",
+      "images": false,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/probe-owner-completion-fix/server",
+      "originalCommit": "b74c68c",
+      "result": "captured",
+      "failure": "",
+      "role": "server",
+      "actor": "client",
+      "images": false,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/baseline-falling/local",
+      "originalCommit": "b74c68c",
+      "result": "captured",
+      "failure": "",
+      "role": "local",
+      "actor": "host",
+      "images": false,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/native-before/local",
+      "originalCommit": "dce36aa",
+      "result": "captured",
+      "failure": "",
+      "role": "local",
+      "actor": "host",
+      "images": true,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/native-after/local",
+      "originalCommit": "dce36aa",
+      "result": "captured",
+      "failure": "",
+      "role": "local",
+      "actor": "host",
+      "images": true,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/native-observer/client",
+      "originalCommit": "dce36aa",
+      "result": "captured",
+      "failure": "",
+      "role": "client",
+      "actor": "host",
+      "images": true,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    }
+  ],
+  "normalReportResults": [
+    {
+      "case": "local",
+      "result": "passed",
+      "exitCode": 0
+    },
+    {
+      "case": "observer",
+      "result": "passed",
+      "exitCode": 0
+    },
+    {
+      "case": "owner",
+      "result": "passed",
+      "exitCode": 0
+    },
+    {
+      "case": "long-loose",
+      "result": "passed",
+      "exitCode": 0
+    },
+    {
+      "case": "falling-contested",
+      "result": "passed",
+      "exitCode": 0
+    },
+    {
+      "case": "moving",
+      "result": "passed",
+      "exitCode": 0
+    },
+    {
+      "case": "moving-observer",
+      "result": "passed",
+      "exitCode": 0
+    },
+    {
+      "case": "moving-owner",
+      "result": "passed",
+      "exitCode": 0
+    },
+    {
+      "case": "reset-neutral",
+      "result": "passed",
+      "exitCode": 0
+    }
+  ],
+  "issues": [],
+  "files": [
+    {
+      "source": ".godot/427/baseline-falling/local/manifest.json",
+      "packaged": "baseline-falling/local/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "e80a89381740eb85daa871e61f93117310bd575ecf16c227d77bd2f5d30b7fab",
+      "packagedSha256": "e80a89381740eb85daa871e61f93117310bd575ecf16c227d77bd2f5d30b7fab",
+      "packagedBytes": 3716
+    },
+    {
+      "source": ".godot/427/baseline-falling/local/trace.jsonl",
+      "packaged": "baseline-falling/local/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "6fa7189a2f6915cfa5b870a11774c0283d6786bc407b2b6c188c3fb444ffa90b",
+      "packagedSha256": "b7dcf775fb93f716934ba325f5bb66c4dfa6ac3a6830f26ce5d6f116b51592ae",
+      "packagedBytes": 37244
+    },
+    {
+      "source": ".godot/427/native-after/local/frame-00063.png",
+      "packaged": "native-after/local/frame-00063.png",
+      "transformation": "copy",
+      "sourceSha256": "942db9c1b719e8c057bc9dd26a4a0c0f2618bcffd5f521668efd72c2611c5cc8",
+      "packagedSha256": "942db9c1b719e8c057bc9dd26a4a0c0f2618bcffd5f521668efd72c2611c5cc8",
+      "packagedBytes": 154139,
+      "imageMeaning": "original rendered PNG; no image manipulation"
+    },
+    {
+      "source": ".godot/427/native-after/local/frame-00070.png",
+      "packaged": "native-after/local/frame-00070.png",
+      "transformation": "copy",
+      "sourceSha256": "2bca36049a12248efc624031286028a8595ee014d87ddc7b47af52e97755b227",
+      "packagedSha256": "2bca36049a12248efc624031286028a8595ee014d87ddc7b47af52e97755b227",
+      "packagedBytes": 154516,
+      "imageMeaning": "original rendered PNG; no image manipulation"
+    },
+    {
+      "source": ".godot/427/native-after/local/frame-00090.png",
+      "packaged": "native-after/local/frame-00090.png",
+      "transformation": "copy",
+      "sourceSha256": "443fa3b13a79bb9d8467fa084adfb8b5bd7d2eb8496a7097bec8700769c87964",
+      "packagedSha256": "443fa3b13a79bb9d8467fa084adfb8b5bd7d2eb8496a7097bec8700769c87964",
+      "packagedBytes": 154494,
+      "imageMeaning": "original rendered PNG; no image manipulation"
+    },
+    {
+      "source": ".godot/427/native-after/local/manifest.json",
+      "packaged": "native-after/local/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "37a8968f16c455b3c904a16f416ed23bff2d0064db5991641f55724624a48e27",
+      "packagedSha256": "37a8968f16c455b3c904a16f416ed23bff2d0064db5991641f55724624a48e27",
+      "packagedBytes": 3796
+    },
+    {
+      "source": ".godot/427/native-after/local/trace.jsonl",
+      "packaged": "native-after/local/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "526fffc713ae97225b838d0cfc5de31319f0fd9d448e74e33563eb8dbede82ff",
+      "packagedSha256": "1e8626cd2caa78d21cc4e8ad01f1021779070afdd7ded7bc9bcb6abfcc361025",
+      "packagedBytes": 34230
+    },
+    {
+      "source": ".godot/427/native-before/local/frame-00063.png",
+      "packaged": "native-before/local/frame-00063.png",
+      "transformation": "copy",
+      "sourceSha256": "ce3dd144e44bda9da657085b63418cd45da7e4e77338054cb68c7715bf4b4161",
+      "packagedSha256": "ce3dd144e44bda9da657085b63418cd45da7e4e77338054cb68c7715bf4b4161",
+      "packagedBytes": 154457,
+      "imageMeaning": "original rendered PNG; no image manipulation"
+    },
+    {
+      "source": ".godot/427/native-before/local/frame-00070.png",
+      "packaged": "native-before/local/frame-00070.png",
+      "transformation": "copy",
+      "sourceSha256": "cf5a589d18f3701f5c99d058f6c583bf191f7d1a636befc180ebcc5c3d422f95",
+      "packagedSha256": "cf5a589d18f3701f5c99d058f6c583bf191f7d1a636befc180ebcc5c3d422f95",
+      "packagedBytes": 155233,
+      "imageMeaning": "original rendered PNG; no image manipulation"
+    },
+    {
+      "source": ".godot/427/native-before/local/frame-00090.png",
+      "packaged": "native-before/local/frame-00090.png",
+      "transformation": "copy",
+      "sourceSha256": "cc09ab96a2457555aa37dad5d0985c92c6bc1cbab79a81bd975a40cef629db10",
+      "packagedSha256": "cc09ab96a2457555aa37dad5d0985c92c6bc1cbab79a81bd975a40cef629db10",
+      "packagedBytes": 154073,
+      "imageMeaning": "original rendered PNG; no image manipulation"
+    },
+    {
+      "source": ".godot/427/native-before/local/manifest.json",
+      "packaged": "native-before/local/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "0933cbf91a44fcbfcee6f1f10bd939e567fc4e3cb8a71fdca7a42cffbee6d85a",
+      "packagedSha256": "0933cbf91a44fcbfcee6f1f10bd939e567fc4e3cb8a71fdca7a42cffbee6d85a",
+      "packagedBytes": 3831
+    },
+    {
+      "source": ".godot/427/native-before/local/trace.jsonl",
+      "packaged": "native-before/local/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "54f7a9180fb2c7fdfeffcfcb282ca102653740271edd71386e97f7a949cd15d9",
+      "packagedSha256": "284e60d191d4615a19375bef29dbc4dd859322c69e66b822adb795d773d7fc2e",
+      "packagedBytes": 42572
+    },
+    {
+      "source": ".godot/427/native-observer/client/frame-00134.png",
+      "packaged": "native-observer/client/frame-00134.png",
+      "transformation": "copy",
+      "sourceSha256": "a681153126e2c1ae70e1ece7ea89a446862de6b097850dd7f553472b376de840",
+      "packagedSha256": "a681153126e2c1ae70e1ece7ea89a446862de6b097850dd7f553472b376de840",
+      "packagedBytes": 157743,
+      "imageMeaning": "original rendered PNG; no image manipulation",
+      "firstCatchAge": 0,
+      "presentationTick": 126,
+      "traceSample": 134
+    },
+    {
+      "source": ".godot/427/native-observer/client/frame-00145.png",
+      "packaged": "native-observer/client/frame-00145.png",
+      "transformation": "copy",
+      "sourceSha256": "cf27c51f3e2b7a8afbe563ef0b7904169691fc7794941a9b1df275b5c00b3d5c",
+      "packagedSha256": "cf27c51f3e2b7a8afbe563ef0b7904169691fc7794941a9b1df275b5c00b3d5c",
+      "packagedBytes": 157878,
+      "imageMeaning": "original rendered PNG; no image manipulation",
+      "firstCatchAge": 7,
+      "presentationTick": 133,
+      "traceSample": 145
+    },
+    {
+      "source": ".godot/427/native-observer/client/frame-00183.png",
+      "packaged": "native-observer/client/frame-00183.png",
+      "transformation": "copy",
+      "sourceSha256": "a3c175b9fe4ffe594e3ea930cd8baa467c4cd63b5d33edadb231712794e43d06",
+      "packagedSha256": "a3c175b9fe4ffe594e3ea930cd8baa467c4cd63b5d33edadb231712794e43d06",
+      "packagedBytes": 157757,
+      "imageMeaning": "original rendered PNG; no image manipulation",
+      "firstCatchAge": 27,
+      "presentationTick": 153,
+      "traceSample": 183
+    },
+    {
+      "source": ".godot/427/native-observer/client/manifest.json",
+      "packaged": "native-observer/client/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "90e56b4c7254a22bf77946a0459e589592bcb1e85d11773b5385d1c806a93511",
+      "packagedSha256": "90e56b4c7254a22bf77946a0459e589592bcb1e85d11773b5385d1c806a93511",
+      "packagedBytes": 2944
+    },
+    {
+      "source": ".godot/427/native-observer/client/trace.jsonl",
+      "packaged": "native-observer/client/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "5def62230ec45b1c35cde9abba5e7d674aa1507b1810cf148fc311cb49ac1a2f",
+      "packagedSha256": "842c1524cdd067adace12b72ce61a4d91af35ef01fb8fbedb3a614cba0ba11cc",
+      "packagedBytes": 44353
+    },
+    {
+      "source": ".godot/427/probe-owner-completion-fix/client/manifest.json",
+      "packaged": "probe-owner-completion-fix/client/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "c62e7fd2be8330396348b51356a548ad5f4b480016de2e8dd2458c43b455da53",
+      "packagedSha256": "c62e7fd2be8330396348b51356a548ad5f4b480016de2e8dd2458c43b455da53",
+      "packagedBytes": 2371
+    },
+    {
+      "source": ".godot/427/probe-owner-completion-fix/client/trace.jsonl",
+      "packaged": "probe-owner-completion-fix/client/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "dd94192623137944dd47a5720f889137946f6fdd4bde4ecec16c6d3a7e8d6344",
+      "packagedSha256": "e46fc5d5c8dcc05384b925f212a1bcc0c76da02c15fe013bd7d12b02c1704046",
+      "packagedBytes": 37195
+    },
+    {
+      "source": ".godot/427/probe-owner-completion-fix/server/manifest.json",
+      "packaged": "probe-owner-completion-fix/server/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "0cb5dfb2a5e2bbab65b7e97b925e665253848824fab77992d978da55d17e271d",
+      "packagedSha256": "0cb5dfb2a5e2bbab65b7e97b925e665253848824fab77992d978da55d17e271d",
+      "packagedBytes": 3757
+    },
+    {
+      "source": ".godot/427/probe-owner-completion-fix/server/trace.jsonl",
+      "packaged": "probe-owner-completion-fix/server/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "005b6625c7bbc9e11b30ed9c0b370fcb5c4b29e2f0ace1ba2d2f7d5b09056699",
+      "packagedSha256": "ca886140dfbb1cd2c2a70b664c82018a2cc1b8522b5055deaec3f1d4e7377071",
+      "packagedBytes": 47019
+    },
+    {
+      "source": ".godot/427/proof-final/delayed-control.json",
+      "packaged": "proof-final/delayed-control.json",
+      "transformation": "copy",
+      "sourceSha256": "55cd6dd31c9232984dcf1f35e8c2a499fcc6133c0ce5a8fb45ed0a6c74ccc74a",
+      "packagedSha256": "55cd6dd31c9232984dcf1f35e8c2a499fcc6133c0ce5a8fb45ed0a6c74ccc74a",
+      "packagedBytes": 54047,
+      "expectedResult": "failed; intentional negative control"
+    },
+    {
+      "source": ".godot/427/proof-final/disconnected-control.json",
+      "packaged": "proof-final/disconnected-control.json",
+      "transformation": "copy",
+      "sourceSha256": "e0934c85df9d3a198073236819fa74aa6bda508ef0b7d9645dfa031f39bffab9",
+      "packagedSha256": "e0934c85df9d3a198073236819fa74aa6bda508ef0b7d9645dfa031f39bffab9",
+      "packagedBytes": 66661,
+      "expectedResult": "failed; intentional negative control"
+    },
+    {
+      "source": ".godot/427/proof-final/falling-contested-proof.json",
+      "packaged": "proof-final/falling-contested-proof.json",
+      "transformation": "reanalyzed unchanged capture with current analyzer; full exit window through end+7",
+      "sourceSha256": "b0ca43faeb576daa7319d52dcb1549167e4dada4907b55f96a9e7387af5c49c1",
+      "packagedSha256": "de8e51c0fa6ffddd553c119e3d80fd27151aa7f3979928f3a9fe78252c27ea45",
+      "packagedBytes": 77148,
+      "command": [
+        "tools/analyze_rebound_capture.py",
+        ".godot/427/proof-final/falling-contested",
+        "--output",
+        "docs/analysis/evidence/0427/proof-final/falling-contested-proof.json"
+      ]
+    },
+    {
+      "source": ".godot/427/proof-final/falling-contested/local/manifest.json",
+      "packaged": "proof-final/falling-contested/local/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "abe7e18ef53133248a9e5cc3c0cf4d1ed9a6616d00bd0eb3e7fc61bb2fe80ede",
+      "packagedSha256": "abe7e18ef53133248a9e5cc3c0cf4d1ed9a6616d00bd0eb3e7fc61bb2fe80ede",
+      "packagedBytes": 4093
+    },
+    {
+      "source": ".godot/427/proof-final/falling-contested/local/trace.jsonl",
+      "packaged": "proof-final/falling-contested/local/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "252a19f88d035c82dcde96dc65859f1f7ea182e0720674cec9e5ec634e730247",
+      "packagedSha256": "de6a33c3d105cb9f9f1f84bb96169793b6db12ef0e4863c4f37fafd34993207e",
+      "packagedBytes": 27529
+    },
+    {
+      "source": ".godot/427/proof-final/feint-local/local/manifest.json",
+      "packaged": "proof-final/feint-local/local/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "720b40a6bd66fc8f8716f517347e53f9d4486673aaa07e582e3a359806792101",
+      "packagedSha256": "720b40a6bd66fc8f8716f517347e53f9d4486673aaa07e582e3a359806792101",
+      "packagedBytes": 6020
+    },
+    {
+      "source": ".godot/427/proof-final/feint-local/local/trace.jsonl",
+      "packaged": "proof-final/feint-local/local/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "6929fa392f3bc65b37a7c5ed1801123596711363b8dab1106b8470676f140d29",
+      "packagedSha256": "aaa88a08a9133ca4b79ea5d46c7e7c9e373f673a9df598fc898f2d39a7531129",
+      "packagedBytes": 28526
+    },
+    {
+      "source": ".godot/427/proof-final/feint-owner/client/manifest.json",
+      "packaged": "proof-final/feint-owner/client/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "599b7794a99ea1faf4df5a1d98362aa63413667dbc29a9ca7e1ad61916ee2e04",
+      "packagedSha256": "599b7794a99ea1faf4df5a1d98362aa63413667dbc29a9ca7e1ad61916ee2e04",
+      "packagedBytes": 5214
+    },
+    {
+      "source": ".godot/427/proof-final/feint-owner/client/trace.jsonl",
+      "packaged": "proof-final/feint-owner/client/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "bc44f96cdda4903ac58b5b1be4227cadc274a3e9ca0ead303a6d1c87feaf4adf",
+      "packagedSha256": "fe3cac3dbf0f97b97e812e205f3e178fb4b584c44988dcaee232f8218811c8a3",
+      "packagedBytes": 44475
+    },
+    {
+      "source": ".godot/427/proof-final/feint-owner/server/manifest.json",
+      "packaged": "proof-final/feint-owner/server/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "efc61b44ccd27b5e6a4ddf8228616f7de4bfa6dc2f6965a0bbad19cccddc18d2",
+      "packagedSha256": "efc61b44ccd27b5e6a4ddf8228616f7de4bfa6dc2f6965a0bbad19cccddc18d2",
+      "packagedBytes": 4128
+    },
+    {
+      "source": ".godot/427/proof-final/feint-owner/server/trace.jsonl",
+      "packaged": "proof-final/feint-owner/server/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "80c9f9804746e7517587863387a926256ffdab4fa14df36fe016af3a87bb68a3",
+      "packagedSha256": "57c79dddd732f9acb89a58dcaf0d5e2d179193eed653ac33cfcf26aa54c5a36e",
+      "packagedBytes": 40129
+    },
+    {
+      "source": ".godot/427/proof-final/immediate-local/local/manifest.json",
+      "packaged": "proof-final/immediate-local/local/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "23b3900ae9c767deba7ec6b9b88651c8cfc91c00d1fe228d39315965e12b15ac",
+      "packagedSha256": "23b3900ae9c767deba7ec6b9b88651c8cfc91c00d1fe228d39315965e12b15ac",
+      "packagedBytes": 5237
+    },
+    {
+      "source": ".godot/427/proof-final/immediate-local/local/trace.jsonl",
+      "packaged": "proof-final/immediate-local/local/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "89bf94700f31bdd03b08f3afdc1db2b2579d336594fb5ae1f7c1a8329df40d3f",
+      "packagedSha256": "6b79258456da871cd0be66eecb33fc97f531825aa66213472abaa9d4cef110ee",
+      "packagedBytes": 55566
+    },
+    {
+      "source": ".godot/427/proof-final/immediate-owner/client/manifest.json",
+      "packaged": "proof-final/immediate-owner/client/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "def088055cadefa89711e363f7b62ecf9b9a1c6f772dfd2a0d05756ba530b524",
+      "packagedSha256": "def088055cadefa89711e363f7b62ecf9b9a1c6f772dfd2a0d05756ba530b524",
+      "packagedBytes": 4414
+    },
+    {
+      "source": ".godot/427/proof-final/immediate-owner/client/trace.jsonl",
+      "packaged": "proof-final/immediate-owner/client/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "e54d85d772d54dd0437f7687416bad3618417491f670fdcf3c53d4424d0e4e25",
+      "packagedSha256": "f7da18b563b5bb1ba232766aa19d084d8dfc343585978723b67144c0230a2cae",
+      "packagedBytes": 75626
+    },
+    {
+      "source": ".godot/427/proof-final/immediate-owner/server/manifest.json",
+      "packaged": "proof-final/immediate-owner/server/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "d3adc554378de4cfee175a14de0a9fcee1e8b3324a3005e36b759c55a577b10c",
+      "packagedSha256": "d3adc554378de4cfee175a14de0a9fcee1e8b3324a3005e36b759c55a577b10c",
+      "packagedBytes": 4157
+    },
+    {
+      "source": ".godot/427/proof-final/immediate-owner/server/trace.jsonl",
+      "packaged": "proof-final/immediate-owner/server/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "883469f3edd94d969d935f09385d4b56576c93127f2e9b37152118fd8602802a",
+      "packagedSha256": "ecaa0920d4b881cd2537c8b0d99b15fcbb8333c76e4d00ea1e78bb43eb27a5d3",
+      "packagedBytes": 71321
+    },
+    {
+      "source": ".godot/427/proof-final/legacy-pose-control.json",
+      "packaged": "proof-final/legacy-pose-control.json",
+      "transformation": "copy",
+      "sourceSha256": "739f5d2e02e1a9d1008aa5a0e76ca2cffc86f4231dce4b20ba9d3be7af596f33",
+      "packagedSha256": "739f5d2e02e1a9d1008aa5a0e76ca2cffc86f4231dce4b20ba9d3be7af596f33",
+      "packagedBytes": 67572,
+      "expectedResult": "failed; intentional negative control"
+    },
+    {
+      "source": ".godot/427/proof-final/legacy-pose/local/manifest.json",
+      "packaged": "proof-final/legacy-pose/local/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "9db9cf6ffe045827f6cc02ea1bf894eaf5f7a3aa4252cb6ebea2ce1589dff950",
+      "packagedSha256": "9db9cf6ffe045827f6cc02ea1bf894eaf5f7a3aa4252cb6ebea2ce1589dff950",
+      "packagedBytes": 4097
+    },
+    {
+      "source": ".godot/427/proof-final/legacy-pose/local/trace.jsonl",
+      "packaged": "proof-final/legacy-pose/local/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "a0c064fe1fa7f440ee0b2d46b84c823c340d7ae1daf08a824447cf2e19a534f7",
+      "packagedSha256": "ae89ba07b0a3654a434fbae466762b72780c724a2c1df5220ea4dd5b4d5359f6",
+      "packagedBytes": 37427
+    },
+    {
+      "source": ".godot/427/proof-final/local-proof.json",
+      "packaged": "proof-final/local-proof.json",
+      "transformation": "reanalyzed unchanged capture with current analyzer; full exit window through end+7",
+      "sourceSha256": "cdb8a4aa33c91ab6dc03f460d36ee102cbc2b4cc2b73810e8b995fc923b05aa0",
+      "packagedSha256": "2230c392e2082b4aaf1cfb1588b84509ad7474f19cfefa5ded9fb00016e8fba7",
+      "packagedBytes": 76896,
+      "command": [
+        "tools/analyze_rebound_capture.py",
+        ".godot/427/proof-final/local",
+        "--output",
+        "docs/analysis/evidence/0427/proof-final/local-proof.json"
+      ]
+    },
+    {
+      "source": ".godot/427/proof-final/local/local/manifest.json",
+      "packaged": "proof-final/local/local/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "b2e9e9631035f478ee21aff351cc4e4fe2f0808ff4ee1f0fe5a0f06e5da969cc",
+      "packagedSha256": "b2e9e9631035f478ee21aff351cc4e4fe2f0808ff4ee1f0fe5a0f06e5da969cc",
+      "packagedBytes": 4057
+    },
+    {
+      "source": ".godot/427/proof-final/local/local/trace.jsonl",
+      "packaged": "proof-final/local/local/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "50376fa7580f31d972e5f27923329b8dc3d8733d6faf88ad405a39b45e1a1260",
+      "packagedSha256": "a2c08cb9b20bd0f71e8d1553b7cb837f7a4aaa30b608d0d725b1f7d97dc33a55",
+      "packagedBytes": 26804
+    },
+    {
+      "source": ".godot/427/proof-final/long-loose-proof.json",
+      "packaged": "proof-final/long-loose-proof.json",
+      "transformation": "reanalyzed unchanged capture with current analyzer; full exit window through end+7",
+      "sourceSha256": "c021754de169064803d82182c89a823b699763e2b5c4308d2ec9452f7929a53f",
+      "packagedSha256": "6b6282e3adb1c620a17e31cf1b7b12291a71ff244deaf49918f78a73be438e72",
+      "packagedBytes": 76582,
+      "command": [
+        "tools/analyze_rebound_capture.py",
+        ".godot/427/proof-final/long-loose",
+        "--output",
+        "docs/analysis/evidence/0427/proof-final/long-loose-proof.json"
+      ]
+    },
+    {
+      "source": ".godot/427/proof-final/long-loose/local/manifest.json",
+      "packaged": "proof-final/long-loose/local/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "69704ac1a2061e0f59f7eccd7236a7c17365479dbccefafef6dfb15e9724a352",
+      "packagedSha256": "69704ac1a2061e0f59f7eccd7236a7c17365479dbccefafef6dfb15e9724a352",
+      "packagedBytes": 4130
+    },
+    {
+      "source": ".godot/427/proof-final/long-loose/local/trace.jsonl",
+      "packaged": "proof-final/long-loose/local/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "ce06f88293f80947ddc73ad8d9675b9bc7a531c62123817192ad770fd2ad32bc",
+      "packagedSha256": "96bf082d4adc655f17e48b9d10edc8e6a93980c0ef6afb00e140acc780ccb285",
+      "packagedBytes": 33511
+    },
+    {
+      "source": ".godot/427/proof-final/moving-observer-proof.json",
+      "packaged": "proof-final/moving-observer-proof.json",
+      "transformation": "reanalyzed unchanged capture with current analyzer; full exit window through end+7",
+      "sourceSha256": "9e834c5480ac8303af4a6d6f321be5d71c0e5d4926234fa5639d595233c654b1",
+      "packagedSha256": "3658384e1009d33c794d3e769285c7d3a58a9d9e9c61ceb0370efaeb4c576bdc",
+      "packagedBytes": 140141,
+      "command": [
+        "tools/analyze_rebound_capture.py",
+        ".godot/427/proof-final/moving-observer",
+        "--output",
+        "docs/analysis/evidence/0427/proof-final/moving-observer-proof.json"
+      ]
+    },
+    {
+      "source": ".godot/427/proof-final/moving-observer/client/manifest.json",
+      "packaged": "proof-final/moving-observer/client/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "0d074fb40a0b24932a4c25e738779531e258b26af6981161eebb16a55c4d7673",
+      "packagedSha256": "0d074fb40a0b24932a4c25e738779531e258b26af6981161eebb16a55c4d7673",
+      "packagedBytes": 3215
+    },
+    {
+      "source": ".godot/427/proof-final/moving-observer/client/trace.jsonl",
+      "packaged": "proof-final/moving-observer/client/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "1c269002586471143aa7e488bc28f17e198be90d20b5ad7a9a7e9701299678bd",
+      "packagedSha256": "e43e827a0ba9848350eae8e4307420bac0a3af385687ff21da4c834cfd97f636",
+      "packagedBytes": 73751
+    },
+    {
+      "source": ".godot/427/proof-final/moving-observer/server/manifest.json",
+      "packaged": "proof-final/moving-observer/server/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "0789b0ef662073fc018b59fe812ab1214951eb503cea2aa11ea151903ab8e022",
+      "packagedSha256": "0789b0ef662073fc018b59fe812ab1214951eb503cea2aa11ea151903ab8e022",
+      "packagedBytes": 4100
+    },
+    {
+      "source": ".godot/427/proof-final/moving-observer/server/trace.jsonl",
+      "packaged": "proof-final/moving-observer/server/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "222b1e983405ff77675f173d213932a4461cd5027547a83ee1f948f68764a0c9",
+      "packagedSha256": "81a104101336dce28ee9019af2e4d35b014847af90a5690fe69508fa283d97a3",
+      "packagedBytes": 72065
+    },
+    {
+      "source": ".godot/427/proof-final/moving-owner-proof.json",
+      "packaged": "proof-final/moving-owner-proof.json",
+      "transformation": "reanalyzed unchanged capture with current analyzer; full exit window through end+7",
+      "sourceSha256": "bf9a97426d48b7b110b406bbbfe406a51d7b548bcb4aaf10886114073fae787c",
+      "packagedSha256": "2c6b68061b93d4f35baf7091e7419b73316f7e1c1eb6ad7e9f987fccd3569701",
+      "packagedBytes": 139999,
+      "command": [
+        "tools/analyze_rebound_capture.py",
+        ".godot/427/proof-final/moving-owner",
+        "--output",
+        "docs/analysis/evidence/0427/proof-final/moving-owner-proof.json"
+      ]
+    },
+    {
+      "source": ".godot/427/proof-final/moving-owner/client/manifest.json",
+      "packaged": "proof-final/moving-owner/client/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "a5463f4fefa815a4e3fe3eda81d66d71bbff67ffc4c2396435f0a54ec47042de",
+      "packagedSha256": "a5463f4fefa815a4e3fe3eda81d66d71bbff67ffc4c2396435f0a54ec47042de",
+      "packagedBytes": 3251
+    },
+    {
+      "source": ".godot/427/proof-final/moving-owner/client/trace.jsonl",
+      "packaged": "proof-final/moving-owner/client/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "4d27a3e87de746fb99960b3221f4c1a11a0966c80f1c99e765c7b252ab1f12d6",
+      "packagedSha256": "67ed41a270b160addeac625e9d7f03ae3616428437dddc590da848480a763622",
+      "packagedBytes": 79078
+    },
+    {
+      "source": ".godot/427/proof-final/moving-owner/server/manifest.json",
+      "packaged": "proof-final/moving-owner/server/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "43deea8399c24b62361fa74fb1778f3bebafbdf0c476ff967591cbc200c1ecc0",
+      "packagedSha256": "43deea8399c24b62361fa74fb1778f3bebafbdf0c476ff967591cbc200c1ecc0",
+      "packagedBytes": 4156
+    },
+    {
+      "source": ".godot/427/proof-final/moving-owner/server/trace.jsonl",
+      "packaged": "proof-final/moving-owner/server/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "2d29c74ed7e63bf2162da8b9adc85aecfd5a3fef6ca6a578b2984c6072cced40",
+      "packagedSha256": "d667248e0201eb14f29daafe96e9e28f08034ecca8fd65a526273aeb28599a41",
+      "packagedBytes": 74794
+    },
+    {
+      "source": ".godot/427/proof-final/moving-proof.json",
+      "packaged": "proof-final/moving-proof.json",
+      "transformation": "reanalyzed unchanged capture with current analyzer; full exit window through end+7",
+      "sourceSha256": "f38371f2beef430da58c173086620577116a0f7ba6fd937e82c57ffa3f1cbba5",
+      "packagedSha256": "f4461ca338f4397b07ccc55732cb64086f1d94349670afeffe323751b4943d91",
+      "packagedBytes": 70025,
+      "command": [
+        "tools/analyze_rebound_capture.py",
+        ".godot/427/proof-final/moving",
+        "--output",
+        "docs/analysis/evidence/0427/proof-final/moving-proof.json"
+      ]
+    },
+    {
+      "source": ".godot/427/proof-final/moving/local/manifest.json",
+      "packaged": "proof-final/moving/local/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "b0758bd3da256a64463c11da0736d60ff62bb9b432a6acb04140f933cc54c254",
+      "packagedSha256": "b0758bd3da256a64463c11da0736d60ff62bb9b432a6acb04140f933cc54c254",
+      "packagedBytes": 4082
+    },
+    {
+      "source": ".godot/427/proof-final/moving/local/trace.jsonl",
+      "packaged": "proof-final/moving/local/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "b45c80648450109cb1d8be8e28d67369635b8f94b890dbaae23f9908564383a6",
+      "packagedSha256": "3bfcb0f261bf48d3f80965856cee6140767e869633b3573b39582e00b2c59de1",
+      "packagedBytes": 58057
+    },
+    {
+      "source": ".godot/427/proof-final/observer-proof.json",
+      "packaged": "proof-final/observer-proof.json",
+      "transformation": "reanalyzed unchanged capture with current analyzer; full exit window through end+7",
+      "sourceSha256": "eac1360d06cc1fdfc934c017a029c4fc05f94076dcba8a3fcd49ffd0c048cd53",
+      "packagedSha256": "c0a7835ea4c2c0cca169025208b6e3f2ab8d0a8355db06b8cb035b8907dbb9c4",
+      "packagedBytes": 153923,
+      "command": [
+        "tools/analyze_rebound_capture.py",
+        ".godot/427/proof-final/observer",
+        "--output",
+        "docs/analysis/evidence/0427/proof-final/observer-proof.json"
+      ]
+    },
+    {
+      "source": ".godot/427/proof-final/observer/client/manifest.json",
+      "packaged": "proof-final/observer/client/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "ce54a0beb0fc6cf5cf821caaccd0ec3c84048a3fdbeb22cfaba1905187668e99",
+      "packagedSha256": "ce54a0beb0fc6cf5cf821caaccd0ec3c84048a3fdbeb22cfaba1905187668e99",
+      "packagedBytes": 3179
+    },
+    {
+      "source": ".godot/427/proof-final/observer/client/trace.jsonl",
+      "packaged": "proof-final/observer/client/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "4f74e0fc338760da6a711e06c77d52332f086c93e47781936ce36b1fa9dc0346",
+      "packagedSha256": "127318e187b3a635525b0a3240c5c461217c28e19be17318aa87da85d21a7e6d",
+      "packagedBytes": 35513
+    },
+    {
+      "source": ".godot/427/proof-final/observer/server/manifest.json",
+      "packaged": "proof-final/observer/server/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "6e9923dbb8efa17bcc7caf581288b4fd7c766994d1670e710d86446ce653b81b",
+      "packagedSha256": "6e9923dbb8efa17bcc7caf581288b4fd7c766994d1670e710d86446ce653b81b",
+      "packagedBytes": 4069
+    },
+    {
+      "source": ".godot/427/proof-final/observer/server/trace.jsonl",
+      "packaged": "proof-final/observer/server/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "c5e2982ed0d7e4a4c8f000a842011798a05bde7860708bfbd6ba09c0646b2d3c",
+      "packagedSha256": "533a66222cf4d58ef35bf268de8eff9809f363dc5f560194bbe5a2ab94cb3400",
+      "packagedBytes": 31059
+    },
+    {
+      "source": ".godot/427/proof-final/owner-proof.json",
+      "packaged": "proof-final/owner-proof.json",
+      "transformation": "reanalyzed unchanged capture with current analyzer; full exit window through end+7",
+      "sourceSha256": "58e10ce05bf06b9e5959c646835dbfa5284d5c3f5a0edcf5f991ee4937136914",
+      "packagedSha256": "53d19c2196856b32eddb9cc89a39199c97fceb8dd01f11c29c03bb617bfa9ddd",
+      "packagedBytes": 153471,
+      "command": [
+        "tools/analyze_rebound_capture.py",
+        ".godot/427/proof-final/owner",
+        "--output",
+        "docs/analysis/evidence/0427/proof-final/owner-proof.json"
+      ]
+    },
+    {
+      "source": ".godot/427/proof-final/owner/client/manifest.json",
+      "packaged": "proof-final/owner/client/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "5813ae601e3a7adfc05fc51e6b0e30bb94fc4746dc3e3c2bd9ac16959fa31d3d",
+      "packagedSha256": "5813ae601e3a7adfc05fc51e6b0e30bb94fc4746dc3e3c2bd9ac16959fa31d3d",
+      "packagedBytes": 3219
+    },
+    {
+      "source": ".godot/427/proof-final/owner/client/trace.jsonl",
+      "packaged": "proof-final/owner/client/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "a87412c181512e75e76024cac5f9328de093b258a756cea91642e906aadb96bd",
+      "packagedSha256": "14a6cdf609eb599561d569db8cccbf93e47d43f9b34d7fce350ff9ecdd3f7510",
+      "packagedBytes": 41303
+    },
+    {
+      "source": ".godot/427/proof-final/owner/server/manifest.json",
+      "packaged": "proof-final/owner/server/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "f1f164091ecf513372b2de7d804ddb468f7fd361d236263ed0a0dd0d8f5bfdb1",
+      "packagedSha256": "f1f164091ecf513372b2de7d804ddb468f7fd361d236263ed0a0dd0d8f5bfdb1",
+      "packagedBytes": 4124
+    },
+    {
+      "source": ".godot/427/proof-final/owner/server/trace.jsonl",
+      "packaged": "proof-final/owner/server/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "7120f60c9b328194cc20918a416253825d00e291a536230b39aea3b13467922b",
+      "packagedSha256": "b967730425c4c8934dfcc62430fbda9cdb7ecf436f5455935f4948b0ec79ad32",
+      "packagedBytes": 38611
+    },
+    {
+      "source": ".godot/427/proof-final/reset-neutral-proof.json",
+      "packaged": "proof-final/reset-neutral-proof.json",
+      "transformation": "reanalyzed unchanged capture with current analyzer; full exit window through end+7",
+      "sourceSha256": "f8ebe4cbd68f63e854de145192a71349024599bb3f0f53e3fcb51fdacc08685b",
+      "packagedSha256": "2b21cd7f8353c88f88359b5476ecc8e7bf9a0184e2ae07a9fd126dd5e49fbd17",
+      "packagedBytes": 153914,
+      "command": [
+        "tools/analyze_rebound_capture.py",
+        ".godot/427/proof-final/reset-neutral",
+        "--output",
+        "docs/analysis/evidence/0427/proof-final/reset-neutral-proof.json"
+      ]
+    },
+    {
+      "source": ".godot/427/proof-final/reset-neutral/client/manifest.json",
+      "packaged": "proof-final/reset-neutral/client/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "8edfda204188a7d4baf3f384653099bebafb2c5e47a109a8e7726b4fdaee3b4c",
+      "packagedSha256": "8edfda204188a7d4baf3f384653099bebafb2c5e47a109a8e7726b4fdaee3b4c",
+      "packagedBytes": 3459
+    },
+    {
+      "source": ".godot/427/proof-final/reset-neutral/client/trace.jsonl",
+      "packaged": "proof-final/reset-neutral/client/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "d3a4b45ad3791be05462c0c874c845e0cb1b572682a2e3fdc693ea9af9fe3988",
+      "packagedSha256": "cf6b8c817d73320c150078a5f9aa936638ad2ebe9d6c54023c51f3fa31df2df5",
+      "packagedBytes": 35953
+    },
+    {
+      "source": ".godot/427/proof-final/reset-neutral/server/manifest.json",
+      "packaged": "proof-final/reset-neutral/server/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "0c1631233175d0920958d4c40748cc9cdb496085ea2be2d0259277e33af1b4db",
+      "packagedSha256": "0c1631233175d0920958d4c40748cc9cdb496085ea2be2d0259277e33af1b4db",
+      "packagedBytes": 4110
+    },
+    {
+      "source": ".godot/427/proof-final/reset-neutral/server/trace.jsonl",
+      "packaged": "proof-final/reset-neutral/server/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "b3a1fb0dc55f7ca8698fb55c874a2b8f3c91b4aa27480535a13a8b46581ffd2e",
+      "packagedSha256": "d50952d30f50be319f928afac363ac8598762b058109b20493cd15bcd4d60eef",
+      "packagedBytes": 30924
+    }
+  ]
+}

@@ -1,0 +1,1534 @@
+{
+  "result": "passed",
+  "proofPassed": true,
+  "measureOnly": false,
+  "mutation": "none",
+  "cases": [
+    {
+      "case": ".godot\\427\\proof-final\\moving\\local",
+      "role": "local",
+      "actor": "host",
+      "resourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B",
+      "validCapture": true,
+      "metrics": {
+        "rawSamples": 220,
+        "uniqueSourceSamples": 220,
+        "recoveryCount": 2,
+        "catchIntervals": 2,
+        "recoveryTicks": [
+          62,
+          152
+        ],
+        "onsetClock": "authority physicsFrame",
+        "contactLimitM": 0.025,
+        "continuityBoundsM": {
+          "Head": 0.24,
+          "LeftHand": 0.3,
+          "LeftHandMiddle1": 0.3,
+          "LeftHandIndex1": 0.3,
+          "LeftHandPinky1": 0.3,
+          "RightHand": 0.3,
+          "RightHandMiddle1": 0.3,
+          "RightHandIndex1": 0.3,
+          "RightHandPinky1": 0.3,
+          "LeftFoot": 0.24,
+          "LeftToeBase": 0.24,
+          "RightFoot": 0.24,
+          "RightToeBase": 0.24
+        },
+        "ownershipBallBypass": false,
+        "intervals": [
+          {
+            "ordinal": 1,
+            "firstTick": 63,
+            "lastTick": 92,
+            "recoveryTick": 62,
+            "onsetDelayTicks": 1,
+            "catchSamples": 30,
+            "missingSourceTicks": [],
+            "posePhysicsMismatchTicks": [],
+            "incoherentPresentationTicks": [],
+            "missingFinalBonesTicks": [],
+            "missingDisplayHeadingTicks": [],
+            "contactSamples": 0,
+            "missingPalmContactTicks": [],
+            "maxContactErrorM": null,
+            "contact": [],
+            "maxBodyDisplacementM": {
+              "Head": 0.08164036602116227,
+              "LeftHand": 0.05047530181321961,
+              "LeftHandMiddle1": 0.05415093237852198,
+              "LeftHandIndex1": 0.05495706495073361,
+              "LeftHandPinky1": 0.05145933660170681,
+              "RightHand": 0.06116492906424203,
+              "RightHandMiddle1": 0.0824836998206345,
+              "RightHandIndex1": 0.0854107765344697,
+              "RightHandPinky1": 0.07309934415207056,
+              "LeftFoot": 0.13945659109428996,
+              "LeftToeBase": 0.14374819714955397,
+              "RightFoot": 0.10853227432466694,
+              "RightToeBase": 0.11649586952639979
+            },
+            "edges": [
+              {
+                "fromTick": 62,
+                "toTick": 63,
+                "displacementM": {
+                  "Head": 3.9847448878067413e-07,
+                  "LeftHand": 4.2303927170969895e-07,
+                  "LeftHandMiddle1": 1.0257041962940057e-07,
+                  "LeftHandIndex1": 3.5828808072433703e-07,
+                  "LeftHandPinky1": 5.456264325177505e-08,
+                  "RightHand": 6.642192598772277e-08,
+                  "RightHandMiddle1": 1.212384571232555e-07,
+                  "RightHandIndex1": 1.0671206088939311e-07,
+                  "RightHandPinky1": 2.6026965641667124e-07,
+                  "LeftFoot": 1.1974622473862958e-07,
+                  "LeftToeBase": 3.2604487551085503e-06,
+                  "RightFoot": 3.1507717412585534e-07,
+                  "RightToeBase": 2.9744252478441825e-07
+                }
+              },
+              {
+                "fromTick": 63,
+                "toTick": 64,
+                "displacementM": {
+                  "Head": 0.08164036602116227,
+                  "LeftHand": 0.04606840673072982,
+                  "LeftHandMiddle1": 0.04604297043391937,
+                  "LeftHandIndex1": 0.045885020941236074,
+                  "LeftHandPinky1": 0.046291055951546776,
+                  "RightHand": 0.02240572461333636,
+                  "RightHandMiddle1": 0.02251778562207163,
+                  "RightHandIndex1": 0.02248102700577551,
+                  "RightHandPinky1": 0.022605830949621476,
+                  "LeftFoot": 0.1392351986990493,
+                  "LeftToeBase": 0.14374819714955397,
+                  "RightFoot": 0.0387911597840144,
+                  "RightToeBase": 0.030994466380583133
+                }
+              },
+              {
+                "fromTick": 64,
+                "toTick": 65,
+                "displacementM": {
+                  "Head": 0.06551345847998138,
+                  "LeftHand": 0.04613823494094898,
+                  "LeftHandMiddle1": 0.04610733734058307,
+                  "LeftHandIndex1": 0.04594907906881547,
+                  "LeftHandPinky1": 0.04635673595114987,
+                  "RightHand": 0.022781192767791645,
+                  "RightHandMiddle1": 0.0228232875845794,
+                  "RightHandIndex1": 0.022787163617247527,
+                  "RightHandPinky1": 0.02292740520424885,
+                  "LeftFoot": 0.13925704640703512,
+                  "LeftToeBase": 0.14295345500881787,
+                  "RightFoot": 0.03878851416572762,
+                  "RightToeBase": 0.02545803334864001
+                }
+              },
+              {
+                "fromTick": 65,
+                "toTick": 66,
+                "displacementM": {
+                  "Head": 0.04853127857893653,
+                  "LeftHand": 0.043062728542507527,
+                  "LeftHandMiddle1": 0.043552387793845806,
+                  "LeftHandIndex1": 0.04338751336466519,
+                  "LeftHandPinky1": 0.04370966179517923,
+                  "RightHand": 0.023596408523540082,
+                  "RightHandMiddle1": 0.023896485671443222,
+                  "RightHandIndex1": 0.023871103872928106,
+                  "RightHandPinky1": 0.02382614311873983,
+                  "LeftFoot": 0.13931057544867625,
+                  "LeftToeBase": 0.14219091274413362,
+                  "RightFoot": 0.03882929989815663,
+                  "RightToeBase": 0.026979561048653993
+                }
+              },
+              {
+                "fromTick": 66,
+                "toTick": 67,
+                "displacementM": {
+                  "Head": 0.036031037979839,
+                  "LeftHand": 0.04427274494077752,
+                  "LeftHandMiddle1": 0.04471598356095657,
+                  "LeftHandIndex1": 0.044529427202173295,
+                  "LeftHandPinky1": 0.04492001720397522,
+                  "RightHand": 0.02483569490527738,
+                  "RightHandMiddle1": 0.024638456657943907,
+                  "RightHandIndex1": 0.02453094983396876,
+                  "RightHandPinky1": 0.02493464100130606,
+                  "LeftFoot": 0.1393538823377253,
+                  "LeftToeBase": 0.14139433381060318,
+                  "RightFoot": 0.0388556843127031,
+                  "RightToeBase": 0.03436406042710747
+                }
+              },
+              {
+                "fromTick": 67,
+                "toTick": 68,
+                "displacementM": {
+                  "Head": 0.03636126464410421,
+                  "LeftHand": 0.04981743178705146,
+                  "LeftHandMiddle1": 0.049941136355227275,
+                  "LeftHandIndex1": 0.049880780072345005,
+                  "LeftHandPinky1": 0.05001396905190372,
+                  "RightHand": 0.03263559025683743,
+                  "RightHandMiddle1": 0.03257550505950828,
+                  "RightHandIndex1": 0.032264714783066216,
+                  "RightHandPinky1": 0.03316713192886112,
+                  "LeftFoot": 0.13940858227509723,
+                  "LeftToeBase": 0.14060994115366557,
+                  "RightFoot": 0.03877652918501598,
+                  "RightToeBase": 0.04364672735228614
+                }
+              },
+              {
+                "fromTick": 68,
+                "toTick": 69,
+                "displacementM": {
+                  "Head": 0.04920182540859644,
+                  "LeftHand": 0.05047530181321961,
+                  "LeftHandMiddle1": 0.05096431011482946,
+                  "LeftHandIndex1": 0.0505857343192726,
+                  "LeftHandPinky1": 0.05145933660170681,
+                  "RightHand": 0.03789768750302306,
+                  "RightHandMiddle1": 0.038015582568212775,
+                  "RightHandIndex1": 0.03754697506770023,
+                  "RightHandPinky1": 0.03880710483475179,
+                  "LeftFoot": 0.13945659109428996,
+                  "LeftToeBase": 0.13981343339627522,
+                  "RightFoot": 0.0387606028390854,
+                  "RightToeBase": 0.05249341694233855
+                }
+              },
+              {
+                "fromTick": 69,
+                "toTick": 70,
+                "displacementM": {
+                  "Head": 0.0008166734953895612,
+                  "LeftHand": 0.0027492130723670667,
+                  "LeftHandMiddle1": 0.0036683763884121303,
+                  "LeftHandIndex1": 0.003641338700904241,
+                  "LeftHandPinky1": 0.0035407772599043152,
+                  "RightHand": 0.03110365828054572,
+                  "RightHandMiddle1": 0.0369620772641235,
+                  "RightHandIndex1": 0.03693514615972556,
+                  "RightHandPinky1": 0.0356357380773284,
+                  "LeftFoot": 0.00010760229227127602,
+                  "LeftToeBase": 0.00021423783088670814,
+                  "RightFoot": 0.0001366193809064469,
+                  "RightToeBase": 0.00012486850413346722
+                }
+              },
+              {
+                "fromTick": 70,
+                "toTick": 71,
+                "displacementM": {
+                  "Head": 0.0008150609901751978,
+                  "LeftHand": 0.0027521970057425,
+                  "LeftHandMiddle1": 0.003670652862446814,
+                  "LeftHandIndex1": 0.0036429143931547337,
+                  "LeftHandPinky1": 0.0035447999391306963,
+                  "RightHand": 0.030429705526610097,
+                  "RightHandMiddle1": 0.03643791347036399,
+                  "RightHandIndex1": 0.036349645497082056,
+                  "RightHandPinky1": 0.03519299612535428,
+                  "LeftFoot": 0.00010914449901444507,
+                  "LeftToeBase": 0.00021557293909201352,
+                  "RightFoot": 0.00013518242960659668,
+                  "RightToeBase": 0.00012528465346124229
+                }
+              },
+              {
+                "fromTick": 71,
+                "toTick": 72,
+                "displacementM": {
+                  "Head": 0.0004991442606465658,
+                  "LeftHand": 0.003059926960633611,
+                  "LeftHandMiddle1": 0.0039525939059168805,
+                  "LeftHandIndex1": 0.003976014112647511,
+                  "LeftHandPinky1": 0.003727959851300028,
+                  "RightHand": 0.030132394528048848,
+                  "RightHandMiddle1": 0.042063704689502844,
+                  "RightHandIndex1": 0.04267234036608362,
+                  "RightHandPinky1": 0.03848765850632333,
+                  "LeftFoot": 0.00015527117234180878,
+                  "LeftToeBase": 8.749729451023873e-05,
+                  "RightFoot": 0.00011286002303161489,
+                  "RightToeBase": 4.269669598720654e-05
+                }
+              },
+              {
+                "fromTick": 72,
+                "toTick": 73,
+                "displacementM": {
+                  "Head": 0.0004984040967662128,
+                  "LeftHand": 0.003062034391392981,
+                  "LeftHandMiddle1": 0.003955315691621471,
+                  "LeftHandIndex1": 0.003978281106182971,
+                  "LeftHandPinky1": 0.0037310270197408626,
+                  "RightHand": 0.029245296353665132,
+                  "RightHandMiddle1": 0.0413381816130132,
+                  "RightHandIndex1": 0.04190676934195542,
+                  "RightHandPinky1": 0.03777564031756644,
+                  "LeftFoot": 0.00015611637165677473,
+                  "LeftToeBase": 8.778731605793906e-05,
+                  "RightFoot": 0.00010957776012893741,
+                  "RightToeBase": 4.605442688953409e-05
+                }
+              },
+              {
+                "fromTick": 73,
+                "toTick": 74,
+                "displacementM": {
+                  "Head": 0.053170149824757526,
+                  "LeftHand": 0.04583959054310392,
+                  "LeftHandMiddle1": 0.05415093237852198,
+                  "LeftHandIndex1": 0.05495706495073361,
+                  "LeftHandPinky1": 0.050768519466615,
+                  "RightHand": 0.06116492906424203,
+                  "RightHandMiddle1": 0.0824836998206345,
+                  "RightHandIndex1": 0.0854107765344697,
+                  "RightHandPinky1": 0.07309934415207056,
+                  "LeftFoot": 0.048413406113349586,
+                  "LeftToeBase": 0.04820142991200965,
+                  "RightFoot": 0.040279159070107415,
+                  "RightToeBase": 0.07232560942746587
+                }
+              },
+              {
+                "fromTick": 74,
+                "toTick": 75,
+                "displacementM": {
+                  "Head": 0.0540781051464713,
+                  "LeftHand": 0.045770095438818915,
+                  "LeftHandMiddle1": 0.05345597372955501,
+                  "LeftHandIndex1": 0.054355106818109525,
+                  "LeftHandPinky1": 0.049996865010811145,
+                  "RightHand": 0.05895557751081741,
+                  "RightHandMiddle1": 0.07897262636229654,
+                  "RightHandIndex1": 0.08213432198899194,
+                  "RightHandPinky1": 0.0692468669000273,
+                  "LeftFoot": 0.05252707914265285,
+                  "LeftToeBase": 0.05141082179611023,
+                  "RightFoot": 0.046908820136669055,
+                  "RightToeBase": 0.08176680321532652
+                }
+              },
+              {
+                "fromTick": 75,
+                "toTick": 76,
+                "displacementM": {
+                  "Head": 0.05445553669859918,
+                  "LeftHand": 0.0449924338666016,
+                  "LeftHandMiddle1": 0.05221937049847362,
+                  "LeftHandIndex1": 0.05330093238459763,
+                  "LeftHandPinky1": 0.04848969558039316,
+                  "RightHand": 0.048064182588065545,
+                  "RightHandMiddle1": 0.06766051331147963,
+                  "RightHandIndex1": 0.07080535552386842,
+                  "RightHandPinky1": 0.05774890692745277,
+                  "LeftFoot": 0.056929624501893615,
+                  "LeftToeBase": 0.05505710233223403,
+                  "RightFoot": 0.0588948757047605,
+                  "RightToeBase": 0.09404885322141952
+                }
+              },
+              {
+                "fromTick": 76,
+                "toTick": 77,
+                "displacementM": {
+                  "Head": 0.05489484348279939,
+                  "LeftHand": 0.044591275243266865,
+                  "LeftHandMiddle1": 0.05102777651054425,
+                  "LeftHandIndex1": 0.05220532910011557,
+                  "LeftHandPinky1": 0.04724957296323133,
+                  "RightHand": 0.0460030383942071,
+                  "RightHandMiddle1": 0.0633028948707253,
+                  "RightHandIndex1": 0.06665569991139222,
+                  "RightHandPinky1": 0.05321782853855388,
+                  "LeftFoot": 0.06139116728179645,
+                  "LeftToeBase": 0.05911472033275719,
+                  "RightFoot": 0.07048610785377911,
+                  "RightToeBase": 0.10468326926056311
+                }
+              },
+              {
+                "fromTick": 77,
+                "toTick": 78,
+                "displacementM": {
+                  "Head": 0.054618061019630584,
+                  "LeftHand": 0.043434743976826874,
+                  "LeftHandMiddle1": 0.04884981877425742,
+                  "LeftHandIndex1": 0.05011737009791434,
+                  "LeftHandPinky1": 0.04511358350609326,
+                  "RightHand": 0.0373471090701395,
+                  "RightHandMiddle1": 0.04835785939779056,
+                  "RightHandIndex1": 0.05113797972353737,
+                  "RightHandPinky1": 0.040577485616465674,
+                  "LeftFoot": 0.06615442344925843,
+                  "LeftToeBase": 0.06379273534627282,
+                  "RightFoot": 0.08196334712470613,
+                  "RightToeBase": 0.1090457937185791
+                }
+              },
+              {
+                "fromTick": 78,
+                "toTick": 79,
+                "displacementM": {
+                  "Head": 0.054612446494214456,
+                  "LeftHand": 0.04265976331099969,
+                  "LeftHandMiddle1": 0.04725000286725213,
+                  "LeftHandIndex1": 0.048593640396105156,
+                  "LeftHandPinky1": 0.04351871876219528,
+                  "RightHand": 0.03567850109588431,
+                  "RightHandMiddle1": 0.04521709961668166,
+                  "RightHandIndex1": 0.04809434981796659,
+                  "RightHandPinky1": 0.037429471305446375,
+                  "LeftFoot": 0.07086113258522378,
+                  "LeftToeBase": 0.06872097655429917,
+                  "RightFoot": 0.09475248210426937,
+                  "RightToeBase": 0.11649586952639979
+                }
+              },
+              {
+                "fromTick": 79,
+                "toTick": 80,
+                "displacementM": {
+                  "Head": 0.05398086657287365,
+                  "LeftHand": 0.04075708080655019,
+                  "LeftHandMiddle1": 0.04431025776976333,
+                  "LeftHandIndex1": 0.045608196631005786,
+                  "LeftHandPinky1": 0.04087809168201918,
+                  "RightHand": 0.03153059188212606,
+                  "RightHandMiddle1": 0.03436357795003849,
+                  "RightHandIndex1": 0.03699500655108705,
+                  "RightHandPinky1": 0.028683874099597644,
+                  "LeftFoot": 0.07578749558274668,
+                  "LeftToeBase": 0.07412400830953489,
+                  "RightFoot": 0.09861612354601779,
+                  "RightToeBase": 0.10908818901854864
+                }
+              },
+              {
+                "fromTick": 80,
+                "toTick": 81,
+                "displacementM": {
+                  "Head": 0.053623545789636864,
+                  "LeftHand": 0.039709128163449174,
+                  "LeftHandMiddle1": 0.04249309691634796,
+                  "LeftHandIndex1": 0.04385811736743989,
+                  "LeftHandPinky1": 0.039086755385579305,
+                  "RightHand": 0.030655994183023803,
+                  "RightHandMiddle1": 0.032975166290748856,
+                  "RightHandIndex1": 0.03565764229516574,
+                  "RightHandPinky1": 0.027272743020981965,
+                  "LeftFoot": 0.08075573250806177,
+                  "LeftToeBase": 0.07972919483340259,
+                  "RightFoot": 0.10853227432466694,
+                  "RightToeBase": 0.1126941233062256
+                }
+              },
+              {
+                "fromTick": 81,
+                "toTick": 82,
+                "displacementM": {
+                  "Head": 0.006398430976426902,
+                  "LeftHand": 0.005917519513318376,
+                  "LeftHandMiddle1": 0.00627351866390796,
+                  "LeftHandIndex1": 0.006499725551383414,
+                  "LeftHandPinky1": 0.005792437294688749,
+                  "RightHand": 0.010281606610253024,
+                  "RightHandMiddle1": 0.010757671280946629,
+                  "RightHandIndex1": 0.010777636927452993,
+                  "RightHandPinky1": 0.010565554300148907,
+                  "LeftFoot": 0.023181984437117144,
+                  "LeftToeBase": 0.023180920311474045,
+                  "RightFoot": 0.03105225056854076,
+                  "RightToeBase": 0.03620912062782572
+                }
+              },
+              {
+                "fromTick": 82,
+                "toTick": 83,
+                "displacementM": {
+                  "Head": 0.006378490856714025,
+                  "LeftHand": 0.005919640082369684,
+                  "LeftHandMiddle1": 0.0062823683619793996,
+                  "LeftHandIndex1": 0.006508634355569371,
+                  "LeftHandPinky1": 0.0058016855743824895,
+                  "RightHand": 0.010248983738849738,
+                  "RightHandMiddle1": 0.010719766803060289,
+                  "RightHandIndex1": 0.010742522180587358,
+                  "RightHandPinky1": 0.010523825931784435,
+                  "LeftFoot": 0.02352983567999408,
+                  "LeftToeBase": 0.023530844787076146,
+                  "RightFoot": 0.028838262146949557,
+                  "RightToeBase": 0.03318417826882048
+                }
+              },
+              {
+                "fromTick": 83,
+                "toTick": 84,
+                "displacementM": {
+                  "Head": 0.005315468883501872,
+                  "LeftHand": 0.0029890288930352286,
+                  "LeftHandMiddle1": 0.003954700393519148,
+                  "LeftHandIndex1": 0.004065859743288878,
+                  "LeftHandPinky1": 0.003544594290465169,
+                  "RightHand": 0.005571978514460072,
+                  "RightHandMiddle1": 0.0057323538989230635,
+                  "RightHandIndex1": 0.005062607388490674,
+                  "RightHandPinky1": 0.006470855436686991,
+                  "LeftFoot": 0.02318737590412296,
+                  "LeftToeBase": 0.023203176079542007,
+                  "RightFoot": 0.015382989305115986,
+                  "RightToeBase": 0.020180560493991445
+                }
+              },
+              {
+                "fromTick": 84,
+                "toTick": 85,
+                "displacementM": {
+                  "Head": 0.005312836368955085,
+                  "LeftHand": 0.002991878305229289,
+                  "LeftHandMiddle1": 0.003960238275824076,
+                  "LeftHandIndex1": 0.00407049401898647,
+                  "LeftHandPinky1": 0.0035535327312554306,
+                  "RightHand": 0.005417827824745977,
+                  "RightHandMiddle1": 0.004861955336241017,
+                  "RightHandIndex1": 0.004197928161284113,
+                  "RightHandPinky1": 0.005715085220055686,
+                  "LeftFoot": 0.02339572351179295,
+                  "LeftToeBase": 0.023411713938668175,
+                  "RightFoot": 0.015448671264289436,
+                  "RightToeBase": 0.020230044817302995
+                }
+              },
+              {
+                "fromTick": 85,
+                "toTick": 86,
+                "displacementM": {
+                  "Head": 0.006577903490847178,
+                  "LeftHand": 0.0023382641263124775,
+                  "LeftHandMiddle1": 0.003889733052639846,
+                  "LeftHandIndex1": 0.0038836498802153996,
+                  "LeftHandPinky1": 0.0036500924936909112,
+                  "RightHand": 0.0038967944681497116,
+                  "RightHandMiddle1": 0.011290712766694327,
+                  "RightHandIndex1": 0.011706301996125745,
+                  "RightHandPinky1": 0.009208309506635533,
+                  "LeftFoot": 0.023084776545950203,
+                  "LeftToeBase": 0.02306204237502877,
+                  "RightFoot": 0.023178088048436872,
+                  "RightToeBase": 0.023156516890553827
+                }
+              },
+              {
+                "fromTick": 86,
+                "toTick": 87,
+                "displacementM": {
+                  "Head": 0.0065816244545193175,
+                  "LeftHand": 0.0023400243817960444,
+                  "LeftHandMiddle1": 0.0038909954752096906,
+                  "LeftHandIndex1": 0.0038801255191686056,
+                  "LeftHandPinky1": 0.003659369639282267,
+                  "RightHand": 0.0037975981884869245,
+                  "RightHandMiddle1": 0.010944528868000902,
+                  "RightHandIndex1": 0.011489159590801329,
+                  "RightHandPinky1": 0.008628214395806588,
+                  "LeftFoot": 0.02309233137485888,
+                  "LeftToeBase": 0.02307286956933491,
+                  "RightFoot": 0.022938663789255086,
+                  "RightToeBase": 0.022918127281104237
+                }
+              },
+              {
+                "fromTick": 87,
+                "toTick": 88,
+                "displacementM": {
+                  "Head": 0.006317605358933509,
+                  "LeftHand": 0.002377059844113985,
+                  "LeftHandMiddle1": 0.0036960321080854557,
+                  "LeftHandIndex1": 0.003633309208765181,
+                  "LeftHandPinky1": 0.0035156947336762493,
+                  "RightHand": 0.012142345366612663,
+                  "RightHandMiddle1": 0.018252812839463794,
+                  "RightHandIndex1": 0.019575201218985965,
+                  "RightHandPinky1": 0.014376506673583554,
+                  "LeftFoot": 0.022122560440834875,
+                  "LeftToeBase": 0.018073541678191602,
+                  "RightFoot": 0.0231591629122298,
+                  "RightToeBase": 0.02315934161379377
+                }
+              },
+              {
+                "fromTick": 88,
+                "toTick": 89,
+                "displacementM": {
+                  "Head": 0.00630577630702583,
+                  "LeftHand": 0.0023830300367391837,
+                  "LeftHandMiddle1": 0.0037023801821126586,
+                  "LeftHandIndex1": 0.0036357868246777647,
+                  "LeftHandPinky1": 0.0035271481407649244,
+                  "RightHand": 0.012643409399801981,
+                  "RightHandMiddle1": 0.018842530527771538,
+                  "RightHandIndex1": 0.02017033436348814,
+                  "RightHandPinky1": 0.014915958960429023,
+                  "LeftFoot": 0.02206231104155562,
+                  "LeftToeBase": 0.017922120246602193,
+                  "RightFoot": 0.022884320372665592,
+                  "RightToeBase": 0.02288436338717134
+                }
+              },
+              {
+                "fromTick": 89,
+                "toTick": 90,
+                "displacementM": {
+                  "Head": 0.004970722075917123,
+                  "LeftHand": 0.0023310779226357508,
+                  "LeftHandMiddle1": 0.0036251561444026,
+                  "LeftHandIndex1": 0.00353313325450652,
+                  "LeftHandPinky1": 0.0036606250519957747,
+                  "RightHand": 0.01606880731649055,
+                  "RightHandMiddle1": 0.023406934171386118,
+                  "RightHandIndex1": 0.02433751319057877,
+                  "RightHandPinky1": 0.020032049639205757,
+                  "LeftFoot": 0.04316229096619642,
+                  "LeftToeBase": 0.04388890588058249,
+                  "RightFoot": 0.02305205492497352,
+                  "RightToeBase": 0.02305167951626724
+                }
+              },
+              {
+                "fromTick": 90,
+                "toTick": 91,
+                "displacementM": {
+                  "Head": 0.004962758006703881,
+                  "LeftHand": 0.002328654513769407,
+                  "LeftHandMiddle1": 0.0036159389677509375,
+                  "LeftHandIndex1": 0.003518331564548786,
+                  "LeftHandPinky1": 0.0036599148078882435,
+                  "RightHand": 0.01673721891504067,
+                  "RightHandMiddle1": 0.024041482516258976,
+                  "RightHandIndex1": 0.02494755632244561,
+                  "RightHandPinky1": 0.020706333076305112,
+                  "LeftFoot": 0.04297106119649531,
+                  "LeftToeBase": 0.043811190686493924,
+                  "RightFoot": 0.022787355770001985,
+                  "RightToeBase": 0.022787468557411063
+                }
+              },
+              {
+                "fromTick": 91,
+                "toTick": 92,
+                "displacementM": {
+                  "Head": 0.0033367695834509927,
+                  "LeftHand": 0.002638775741229359,
+                  "LeftHandMiddle1": 0.004223019596982516,
+                  "LeftHandIndex1": 0.004217630104359523,
+                  "LeftHandPinky1": 0.004115180907092732,
+                  "RightHand": 0.018609750301656524,
+                  "RightHandMiddle1": 0.026923233354291125,
+                  "RightHandIndex1": 0.027716225541830196,
+                  "RightHandPinky1": 0.023677057213490598,
+                  "LeftFoot": 0.03746192888233077,
+                  "LeftToeBase": 0.04433310789625248,
+                  "RightFoot": 0.02298330532838325,
+                  "RightToeBase": 0.022983276084013557
+                }
+              },
+              {
+                "fromTick": 92,
+                "toTick": 93,
+                "displacementM": {
+                  "Head": 1.0530432071903548e-07,
+                  "LeftHand": 1.1180339872180492e-07,
+                  "LeftHandMiddle1": 4.2426406888113796e-08,
+                  "LeftHandIndex1": 5.656854250440096e-08,
+                  "LeftHandPinky1": 6.000000002392985e-08,
+                  "RightHand": 1.0000000005838672e-07,
+                  "RightHandMiddle1": 1.199999999368373e-07,
+                  "RightHandIndex1": 2.5612496953588897e-07,
+                  "RightHandPinky1": 2.236067978805357e-07,
+                  "LeftFoot": 9.501663015452298e-08,
+                  "LeftToeBase": 8.429116218062836e-08,
+                  "RightFoot": 2.1725560953845853e-07,
+                  "RightToeBase": 3.0999999993621286e-07
+                }
+              },
+              {
+                "fromTick": 93,
+                "toTick": 94,
+                "displacementM": {
+                  "Head": 0.00952024017454784,
+                  "LeftHand": 0.0072119826469842175,
+                  "LeftHandMiddle1": 0.009151471494639586,
+                  "LeftHandIndex1": 0.009192017997333449,
+                  "LeftHandPinky1": 0.008665525064588038,
+                  "RightHand": 0.04194596770445992,
+                  "RightHandMiddle1": 0.04919210374841164,
+                  "RightHandIndex1": 0.049513883952887264,
+                  "RightHandPinky1": 0.046683458207806165,
+                  "LeftFoot": 0.09166521584849831,
+                  "LeftToeBase": 0.09078832968318677,
+                  "RightFoot": 0.049627997157391156,
+                  "RightToeBase": 0.04962785068846968
+                }
+              },
+              {
+                "fromTick": 94,
+                "toTick": 95,
+                "displacementM": {
+                  "Head": 0.008764422422974356,
+                  "LeftHand": 0.007538914903459154,
+                  "LeftHandMiddle1": 0.009192117657389856,
+                  "LeftHandIndex1": 0.009310984867262714,
+                  "LeftHandPinky1": 0.00862579864200982,
+                  "RightHand": 0.04249006608991809,
+                  "RightHandMiddle1": 0.05115047360059361,
+                  "RightHandIndex1": 0.05130045156418834,
+                  "RightHandPinky1": 0.04866880459236724,
+                  "LeftFoot": 0.08413812126125092,
+                  "LeftToeBase": 0.08325308729407377,
+                  "RightFoot": 0.05714268819939387,
+                  "RightToeBase": 0.057143309878438596
+                }
+              },
+              {
+                "fromTick": 95,
+                "toTick": 96,
+                "displacementM": {
+                  "Head": 0.009760993677250317,
+                  "LeftHand": 0.008143128346035193,
+                  "LeftHandMiddle1": 0.009470333750159047,
+                  "LeftHandIndex1": 0.009644097712476945,
+                  "LeftHandPinky1": 0.008868004392877974,
+                  "RightHand": 0.043261174667130566,
+                  "RightHandMiddle1": 0.05332901868455622,
+                  "RightHandIndex1": 0.053275513803299625,
+                  "RightHandPinky1": 0.05094396715855343,
+                  "LeftFoot": 0.07670637457440273,
+                  "LeftToeBase": 0.07580921401536919,
+                  "RightFoot": 0.06481317453498482,
+                  "RightToeBase": 0.06481271593977622
+                }
+              },
+              {
+                "fromTick": 96,
+                "toTick": 97,
+                "displacementM": {
+                  "Head": 0.010897264326932067,
+                  "LeftHand": 0.008255061829689533,
+                  "LeftHandMiddle1": 0.008915757037402992,
+                  "LeftHandIndex1": 0.009102828805519663,
+                  "LeftHandPinky1": 0.008434170159369423,
+                  "RightHand": 0.039248290884317784,
+                  "RightHandMiddle1": 0.05024081652645127,
+                  "RightHandIndex1": 0.049992933753301785,
+                  "RightHandPinky1": 0.04813139293778876,
+                  "LeftFoot": 0.0691510193576649,
+                  "LeftToeBase": 0.06830668891262881,
+                  "RightFoot": 0.07248861644986472,
+                  "RightToeBase": 0.07248918847143176
+                }
+              },
+              {
+                "fromTick": 97,
+                "toTick": 98,
+                "displacementM": {
+                  "Head": 0.012399031135708737,
+                  "LeftHand": 0.008943426043105869,
+                  "LeftHandMiddle1": 0.009183280258823706,
+                  "LeftHandIndex1": 0.009346657436260541,
+                  "LeftHandPinky1": 0.008834217996336591,
+                  "RightHand": 0.03816378977477948,
+                  "RightHandMiddle1": 0.04993921094919276,
+                  "RightHandIndex1": 0.04948000348962378,
+                  "RightHandPinky1": 0.04811751631569491,
+                  "LeftFoot": 0.06179208054507955,
+                  "LeftToeBase": 0.06097264043403626,
+                  "RightFoot": 0.0803333031686842,
+                  "RightToeBase": 0.08033270755703305
+                }
+              },
+              {
+                "fromTick": 98,
+                "toTick": 99,
+                "displacementM": {
+                  "Head": 0.013114960182514637,
+                  "LeftHand": 0.008585114500255538,
+                  "LeftHandMiddle1": 0.008468496934149661,
+                  "LeftHandIndex1": 0.008524267787370254,
+                  "LeftHandPinky1": 0.00841107930908402,
+                  "RightHand": 0.027005045259180953,
+                  "RightHandMiddle1": 0.037218619600544074,
+                  "RightHandIndex1": 0.0364316922001105,
+                  "RightHandPinky1": 0.03654616133465215,
+                  "LeftFoot": 0.054303645724174614,
+                  "LeftToeBase": 0.053613337102832996,
+                  "RightFoot": 0.07534574889928349,
+                  "RightToeBase": 0.07412181197065121
+                }
+              }
+            ],
+            "movingDribble": {
+              "samples": 30,
+              "maxSpeedMps": 6.0,
+              "wristTravelM": 0.47421543999999993,
+              "contactClaim": "continuity and live dribble motion; palm contact is not required while the ball bounces"
+            }
+          },
+          {
+            "ordinal": 2,
+            "firstTick": 153,
+            "lastTick": 182,
+            "recoveryTick": 152,
+            "onsetDelayTicks": 1,
+            "catchSamples": 30,
+            "missingSourceTicks": [],
+            "posePhysicsMismatchTicks": [],
+            "incoherentPresentationTicks": [],
+            "missingFinalBonesTicks": [],
+            "missingDisplayHeadingTicks": [],
+            "contactSamples": 0,
+            "missingPalmContactTicks": [],
+            "maxContactErrorM": null,
+            "contact": [],
+            "maxBodyDisplacementM": {
+              "Head": 0.11712111186436465,
+              "LeftHand": 0.09072959871694827,
+              "LeftHandMiddle1": 0.0966843503869661,
+              "LeftHandIndex1": 0.09923215146324513,
+              "LeftHandPinky1": 0.09022548621986652,
+              "RightHand": 0.10085890538519621,
+              "RightHandMiddle1": 0.11014656118533332,
+              "RightHandIndex1": 0.11286453535194299,
+              "RightHandPinky1": 0.10335723432823885,
+              "LeftFoot": 0.11347125798793116,
+              "LeftToeBase": 0.10234234787654331,
+              "RightFoot": 0.14638159350011676,
+              "RightToeBase": 0.17397590964360743
+            },
+            "edges": [
+              {
+                "fromTick": 152,
+                "toTick": 153,
+                "displacementM": {
+                  "Head": 3.000000008412943e-07,
+                  "LeftHand": 6.708203928968467e-08,
+                  "LeftHandMiddle1": 7.211102559449193e-08,
+                  "LeftHandIndex1": 3.0413812734955795e-07,
+                  "LeftHandPinky1": 7.211102556369988e-08,
+                  "RightHand": 1.5000000010608388e-07,
+                  "RightHandMiddle1": 1.2206555621587374e-07,
+                  "RightHandIndex1": 1.4696938480690525e-07,
+                  "RightHandPinky1": 1.7204650531482543e-07,
+                  "LeftFoot": 8.544003746667733e-08,
+                  "LeftToeBase": 1.0208329933250165e-07,
+                  "RightFoot": 4.099999993874929e-07,
+                  "RightToeBase": 1.4866068766005668e-07
+                }
+              },
+              {
+                "fromTick": 153,
+                "toTick": 154,
+                "displacementM": {
+                  "Head": 0.015829157858282157,
+                  "LeftHand": 0.012803168283421585,
+                  "LeftHandMiddle1": 0.014801168873802093,
+                  "LeftHandIndex1": 0.015109136919222645,
+                  "LeftHandPinky1": 0.01382253268851991,
+                  "RightHand": 0.018453683002102903,
+                  "RightHandMiddle1": 0.019406819113932376,
+                  "RightHandIndex1": 0.020450695707307738,
+                  "RightHandPinky1": 0.017451164933519305,
+                  "LeftFoot": 0.04384191276199781,
+                  "LeftToeBase": 0.05386951421924347,
+                  "RightFoot": 0.0827417163690028,
+                  "RightToeBase": 0.0953445153454368
+                }
+              },
+              {
+                "fromTick": 154,
+                "toTick": 155,
+                "displacementM": {
+                  "Head": 0.03391806028220022,
+                  "LeftHand": 0.02720913800368553,
+                  "LeftHandMiddle1": 0.03134537643747969,
+                  "LeftHandIndex1": 0.03205628666067359,
+                  "LeftHandPinky1": 0.029137949928400686,
+                  "RightHand": 0.0297292431435597,
+                  "RightHandMiddle1": 0.0319436814847631,
+                  "RightHandIndex1": 0.033627137333155525,
+                  "RightHandPinky1": 0.0286341220606481,
+                  "LeftFoot": 0.049745120229233664,
+                  "LeftToeBase": 0.06629692432325562,
+                  "RightFoot": 0.0957209298285725,
+                  "RightToeBase": 0.12070606129442445
+                }
+              },
+              {
+                "fromTick": 155,
+                "toTick": 156,
+                "displacementM": {
+                  "Head": 0.05305592770058465,
+                  "LeftHand": 0.042223523215971503,
+                  "LeftHandMiddle1": 0.04794835755502884,
+                  "LeftHandIndex1": 0.04904338320318438,
+                  "LeftHandPinky1": 0.044624875400750386,
+                  "RightHand": 0.04541533194134022,
+                  "RightHandMiddle1": 0.04958467387005816,
+                  "RightHandIndex1": 0.0516717185687279,
+                  "RightHandPinky1": 0.04516860665470669,
+                  "LeftFoot": 0.06067997020964036,
+                  "LeftToeBase": 0.0800421002259992,
+                  "RightFoot": 0.10938978994970647,
+                  "RightToeBase": 0.14779228918328552
+                }
+              },
+              {
+                "fromTick": 156,
+                "toTick": 157,
+                "displacementM": {
+                  "Head": 0.07344816484894692,
+                  "LeftHand": 0.057947905381402716,
+                  "LeftHandMiddle1": 0.06477157260883194,
+                  "LeftHandIndex1": 0.06630495334951464,
+                  "LeftHandPinky1": 0.06030537136004575,
+                  "RightHand": 0.06198222557731031,
+                  "RightHandMiddle1": 0.06780597338337135,
+                  "RightHandIndex1": 0.07031563889484393,
+                  "RightHandPinky1": 0.0622674952708071,
+                  "LeftFoot": 0.07519527629415677,
+                  "LeftToeBase": 0.09159474852702493,
+                  "RightFoot": 0.12352601994986756,
+                  "RightToeBase": 0.1687798871229875
+                }
+              },
+              {
+                "fromTick": 157,
+                "toTick": 158,
+                "displacementM": {
+                  "Head": 0.09456466317150762,
+                  "LeftHand": 0.0740207928452974,
+                  "LeftHandMiddle1": 0.08101640927415693,
+                  "LeftHandIndex1": 0.08301746837655137,
+                  "LeftHandPinky1": 0.07550978377603057,
+                  "RightHand": 0.08246257040754572,
+                  "RightHandMiddle1": 0.0905035193828755,
+                  "RightHandIndex1": 0.09296597575072144,
+                  "RightHandPinky1": 0.08451573982292536,
+                  "LeftFoot": 0.09324971446692189,
+                  "LeftToeBase": 0.099227806952622,
+                  "RightFoot": 0.13434430267916436,
+                  "RightToeBase": 0.17397590964360743
+                }
+              },
+              {
+                "fromTick": 158,
+                "toTick": 159,
+                "displacementM": {
+                  "Head": 0.11712111186436465,
+                  "LeftHand": 0.09072959871694827,
+                  "LeftHandMiddle1": 0.0966843503869661,
+                  "LeftHandIndex1": 0.09923215146324513,
+                  "LeftHandPinky1": 0.09022548621986652,
+                  "RightHand": 0.10085890538519621,
+                  "RightHandMiddle1": 0.11014656118533332,
+                  "RightHandIndex1": 0.11286453535194299,
+                  "RightHandPinky1": 0.10335723432823885,
+                  "LeftFoot": 0.11347125798793116,
+                  "LeftToeBase": 0.10234234787654331,
+                  "RightFoot": 0.14638159350011676,
+                  "RightToeBase": 0.15292709759264062
+                }
+              },
+              {
+                "fromTick": 159,
+                "toTick": 160,
+                "displacementM": {
+                  "Head": 0.0037432749628555115,
+                  "LeftHand": 0.0036907252447860306,
+                  "LeftHandMiddle1": 0.004610408372844987,
+                  "LeftHandIndex1": 0.004337528540136698,
+                  "LeftHandPinky1": 0.004869000082090591,
+                  "RightHand": 0.03015757605345619,
+                  "RightHandMiddle1": 0.03534183984817979,
+                  "RightHandIndex1": 0.03529683880276656,
+                  "RightHandPinky1": 0.03417832776659057,
+                  "LeftFoot": 0.023575317645679675,
+                  "LeftToeBase": 0.023575295927658998,
+                  "RightFoot": 0.030039271208420218,
+                  "RightToeBase": 0.03883051038145237
+                }
+              },
+              {
+                "fromTick": 160,
+                "toTick": 161,
+                "displacementM": {
+                  "Head": 0.003742085534832682,
+                  "LeftHand": 0.0036737994493167407,
+                  "LeftHandMiddle1": 0.004591880049489595,
+                  "LeftHandIndex1": 0.004317496453339621,
+                  "LeftHandPinky1": 0.00485313736605533,
+                  "RightHand": 0.029392876875782504,
+                  "RightHandMiddle1": 0.03473741897748909,
+                  "RightHandIndex1": 0.03463993180204055,
+                  "RightHandPinky1": 0.033637830189321136,
+                  "LeftFoot": 0.023382846481509355,
+                  "LeftToeBase": 0.023382597311734837,
+                  "RightFoot": 0.03108501938109735,
+                  "RightToeBase": 0.03993383246616685
+                }
+              },
+              {
+                "fromTick": 161,
+                "toTick": 162,
+                "displacementM": {
+                  "Head": 0.0016626866282904574,
+                  "LeftHand": 0.0032097107114816806,
+                  "LeftHandMiddle1": 0.0041989962279811895,
+                  "LeftHandIndex1": 0.004107041410321998,
+                  "LeftHandPinky1": 0.004143014560848124,
+                  "RightHand": 0.029984436217579742,
+                  "RightHandMiddle1": 0.04161261487469389,
+                  "RightHandIndex1": 0.04226682532415362,
+                  "RightHandPinky1": 0.03799692059601698,
+                  "LeftFoot": 0.023568920792066694,
+                  "LeftToeBase": 0.023568801246209196,
+                  "RightFoot": 0.04473631777963957,
+                  "RightToeBase": 0.049557416299430126
+                }
+              },
+              {
+                "fromTick": 162,
+                "toTick": 163,
+                "displacementM": {
+                  "Head": 0.0016627086342772077,
+                  "LeftHand": 0.003202740596254923,
+                  "LeftHandMiddle1": 0.004192311183392732,
+                  "LeftHandIndex1": 0.004099785960669095,
+                  "LeftHandPinky1": 0.004137183766827331,
+                  "RightHand": 0.029082460039661022,
+                  "RightHandMiddle1": 0.040866750974600026,
+                  "RightHandIndex1": 0.04148620377776153,
+                  "RightHandPinky1": 0.037257029455365284,
+                  "LeftFoot": 0.023477357149077498,
+                  "LeftToeBase": 0.023477745962706596,
+                  "RightFoot": 0.04389319020907713,
+                  "RightToeBase": 0.04904793256617724
+                }
+              },
+              {
+                "fromTick": 163,
+                "toTick": 164,
+                "displacementM": {
+                  "Head": 0.000648425334388046,
+                  "LeftHand": 0.0030916109757858634,
+                  "LeftHandMiddle1": 0.00396368367644288,
+                  "LeftHandIndex1": 0.004046335875084973,
+                  "LeftHandPinky1": 0.0036297005255805947,
+                  "RightHand": 0.02666692406958485,
+                  "RightHandMiddle1": 0.043803472200843005,
+                  "RightHandIndex1": 0.0447803524493736,
+                  "RightHandPinky1": 0.03852940713916094,
+                  "LeftFoot": 0.023417430063728376,
+                  "LeftToeBase": 0.023417064522601925,
+                  "RightFoot": 0.05545799558133841,
+                  "RightToeBase": 0.0568879901261385
+                }
+              },
+              {
+                "fromTick": 164,
+                "toTick": 165,
+                "displacementM": {
+                  "Head": 0.0006487756553662541,
+                  "LeftHand": 0.0030956783895618478,
+                  "LeftHandMiddle1": 0.0039672648233385795,
+                  "LeftHandIndex1": 0.004050700404177051,
+                  "LeftHandPinky1": 0.003631864531724758,
+                  "RightHand": 0.025749241076989074,
+                  "RightHandMiddle1": 0.04278540600718862,
+                  "RightHandIndex1": 0.04376873534848473,
+                  "RightHandPinky1": 0.03743810777821952,
+                  "LeftFoot": 0.02343765657058181,
+                  "LeftToeBase": 0.023438024525450567,
+                  "RightFoot": 0.054042785776825114,
+                  "RightToeBase": 0.055795366587732514
+                }
+              },
+              {
+                "fromTick": 165,
+                "toTick": 166,
+                "displacementM": {
+                  "Head": 0.0022560235770044397,
+                  "LeftHand": 0.003998464351485327,
+                  "LeftHandMiddle1": 0.004621047283473819,
+                  "LeftHandIndex1": 0.00481911605050121,
+                  "LeftHandPinky1": 0.004164605594146852,
+                  "RightHand": 0.01834378082445386,
+                  "RightHandMiddle1": 0.03678100319853889,
+                  "RightHandIndex1": 0.03737870477859837,
+                  "RightHandPinky1": 0.03179441648556573,
+                  "LeftFoot": 0.02333490974953126,
+                  "LeftToeBase": 0.02333484593692196,
+                  "RightFoot": 0.05806638203730666,
+                  "RightToeBase": 0.05807056969309424
+                }
+              },
+              {
+                "fromTick": 166,
+                "toTick": 167,
+                "displacementM": {
+                  "Head": 0.0022559519104636033,
+                  "LeftHand": 0.004006842434049554,
+                  "LeftHandMiddle1": 0.0046271145939234554,
+                  "LeftHandIndex1": 0.004826899055926109,
+                  "LeftHandPinky1": 0.0041683171966635105,
+                  "RightHand": 0.017551511229509546,
+                  "RightHandMiddle1": 0.035604686904570235,
+                  "RightHandIndex1": 0.03618585136178082,
+                  "RightHandPinky1": 0.030619065131334302,
+                  "LeftFoot": 0.023457460034089356,
+                  "LeftToeBase": 0.0234575100326694,
+                  "RightFoot": 0.05889151349081745,
+                  "RightToeBase": 0.05890009101964677
+                }
+              },
+              {
+                "fromTick": 167,
+                "toTick": 168,
+                "displacementM": {
+                  "Head": 0.00364786442458342,
+                  "LeftHand": 0.00458606493042794,
+                  "LeftHandMiddle1": 0.0050737146355014215,
+                  "LeftHandIndex1": 0.005356386485159674,
+                  "LeftHandPinky1": 0.004537777523777255,
+                  "RightHand": 0.015624794063602754,
+                  "RightHandMiddle1": 0.027158336528219425,
+                  "RightHandIndex1": 0.027191184338170946,
+                  "RightHandPinky1": 0.02441524082415956,
+                  "LeftFoot": 0.023249244379605027,
+                  "LeftToeBase": 0.023249510924679816,
+                  "RightFoot": 0.053785866804887096,
+                  "RightToeBase": 0.054232622826329284
+                }
+              },
+              {
+                "fromTick": 168,
+                "toTick": 169,
+                "displacementM": {
+                  "Head": 0.003645485731401036,
+                  "LeftHand": 0.004596478111097388,
+                  "LeftHandMiddle1": 0.0050797135269815,
+                  "LeftHandIndex1": 0.005363077597946767,
+                  "LeftHandPinky1": 0.0045436421710010385,
+                  "RightHand": 0.01533213192848633,
+                  "RightHandMiddle1": 0.026517783581446342,
+                  "RightHandIndex1": 0.026536881762198806,
+                  "RightHandPinky1": 0.023809113502348503,
+                  "LeftFoot": 0.02346520197583068,
+                  "LeftToeBase": 0.023465068961208663,
+                  "RightFoot": 0.05556072417315276,
+                  "RightToeBase": 0.05538630339617854
+                }
+              },
+              {
+                "fromTick": 169,
+                "toTick": 170,
+                "displacementM": {
+                  "Head": 0.005130635035720578,
+                  "LeftHand": 0.005266505539966811,
+                  "LeftHandMiddle1": 0.0056646484822362,
+                  "LeftHandIndex1": 0.005944441127389737,
+                  "LeftHandPinky1": 0.005124483388460058,
+                  "RightHand": 0.0110491690507201,
+                  "RightHandMiddle1": 0.015882470065137242,
+                  "RightHandIndex1": 0.01588935237702905,
+                  "RightHandPinky1": 0.014619679061883916,
+                  "LeftFoot": 0.02319587929849113,
+                  "LeftToeBase": 0.023195531571265384,
+                  "RightFoot": 0.04423127992018073,
+                  "RightToeBase": 0.04632025124571466
+                }
+              },
+              {
+                "fromTick": 170,
+                "toTick": 171,
+                "displacementM": {
+                  "Head": 0.005120789177402312,
+                  "LeftHand": 0.0052692698234577005,
+                  "LeftHandMiddle1": 0.005670471323267567,
+                  "LeftHandIndex1": 0.0059496461352588435,
+                  "LeftHandPinky1": 0.005131110511624207,
+                  "RightHand": 0.011029492721159108,
+                  "RightHandMiddle1": 0.015699501168304545,
+                  "RightHandIndex1": 0.01573121754807906,
+                  "RightHandPinky1": 0.014420995709967384,
+                  "LeftFoot": 0.02348829319286866,
+                  "LeftToeBase": 0.023488844665935402,
+                  "RightFoot": 0.04398881397262694,
+                  "RightToeBase": 0.04494468731294658
+                }
+              },
+              {
+                "fromTick": 171,
+                "toTick": 172,
+                "displacementM": {
+                  "Head": 0.006398478212051684,
+                  "LeftHand": 0.005917359742359627,
+                  "LeftHandMiddle1": 0.006273332040980962,
+                  "LeftHandIndex1": 0.006499725551382865,
+                  "LeftHandPinky1": 0.005792503702450236,
+                  "RightHand": 0.010281893719447136,
+                  "RightHandMiddle1": 0.010757961027950975,
+                  "RightHandIndex1": 0.010777444727763857,
+                  "RightHandPinky1": 0.010565748408390512,
+                  "LeftFoot": 0.023182182559085926,
+                  "LeftToeBase": 0.023181514673699964,
+                  "RightFoot": 0.031052398668241797,
+                  "RightToeBase": 0.03620912062782547
+                }
+              },
+              {
+                "fromTick": 172,
+                "toTick": 173,
+                "displacementM": {
+                  "Head": 0.006378490856713952,
+                  "LeftHand": 0.005919587633847622,
+                  "LeftHandMiddle1": 0.006282368361979697,
+                  "LeftHandIndex1": 0.0065085767741111696,
+                  "LeftHandPinky1": 0.005801685574382779,
+                  "RightHand": 0.010248792685931133,
+                  "RightHandMiddle1": 0.010719477772820583,
+                  "RightHandIndex1": 0.0107428098200793,
+                  "RightHandPinky1": 0.010523922727409925,
+                  "LeftFoot": 0.023529835679993207,
+                  "LeftToeBase": 0.023530450876968704,
+                  "RightFoot": 0.028838262146949557,
+                  "RightToeBase": 0.033184064362535064
+                }
+              },
+              {
+                "fromTick": 173,
+                "toTick": 174,
+                "displacementM": {
+                  "Head": 0.005315468883501872,
+                  "LeftHand": 0.0029890288930352286,
+                  "LeftHandMiddle1": 0.003954700393518762,
+                  "LeftHandIndex1": 0.004065859743288878,
+                  "LeftHandPinky1": 0.003544419095422746,
+                  "RightHand": 0.005572077077320705,
+                  "RightHandMiddle1": 0.005732342993270588,
+                  "RightHandIndex1": 0.005062627841348731,
+                  "RightHandPinky1": 0.00647083233073621,
+                  "LeftFoot": 0.023187176041922764,
+                  "LeftToeBase": 0.023203176079542007,
+                  "RightFoot": 0.015382933468987895,
+                  "RightToeBase": 0.02018050846984888
+                }
+              },
+              {
+                "fromTick": 174,
+                "toTick": 175,
+                "displacementM": {
+                  "Head": 0.005312836368955161,
+                  "LeftHand": 0.0029919566780454592,
+                  "LeftHandMiddle1": 0.003960410292040404,
+                  "LeftHandIndex1": 0.004070409081235275,
+                  "LeftHandPinky1": 0.0035537059912296937,
+                  "RightHand": 0.005417629642066282,
+                  "RightHandMiddle1": 0.004861955336240914,
+                  "RightHandIndex1": 0.0041979632367734054,
+                  "RightHandPinky1": 0.005715118650780539,
+                  "LeftFoot": 0.023395723511793393,
+                  "LeftToeBase": 0.02341171393866862,
+                  "RightFoot": 0.015448671264289695,
+                  "RightToeBase": 0.020230044817303235
+                }
+              },
+              {
+                "fromTick": 175,
+                "toTick": 176,
+                "displacementM": {
+                  "Head": 0.006577903490847179,
+                  "LeftHand": 0.002338200742964348,
+                  "LeftHandMiddle1": 0.003889657757541122,
+                  "LeftHandIndex1": 0.003883807749116551,
+                  "LeftHandPinky1": 0.0036500271673642927,
+                  "RightHand": 0.003896885885806887,
+                  "RightHandMiddle1": 0.011290712766694327,
+                  "RightHandIndex1": 0.011706228810103364,
+                  "RightHandPinky1": 0.009208254584881836,
+                  "LeftFoot": 0.023084678196726934,
+                  "LeftToeBase": 0.023061944000400528,
+                  "RightFoot": 0.0231782850276093,
+                  "RightToeBase": 0.02315661540278539
+                }
+              },
+              {
+                "fromTick": 176,
+                "toTick": 177,
+                "displacementM": {
+                  "Head": 0.006581611537482821,
+                  "LeftHand": 0.0023400882456436263,
+                  "LeftHandMiddle1": 0.0038909954752093536,
+                  "LeftHandIndex1": 0.0038801255191682526,
+                  "LeftHandPinky1": 0.0036595014956823536,
+                  "RightHand": 0.0037975565342995357,
+                  "RightHandMiddle1": 0.01094460756868434,
+                  "RightHandIndex1": 0.011489237695900777,
+                  "RightHandPinky1": 0.008628349959291137,
+                  "LeftFoot": 0.02309213320865586,
+                  "LeftToeBase": 0.023072671367736247,
+                  "RightFoot": 0.022938564633962818,
+                  "RightToeBase": 0.02291792893332399
+                }
+              },
+              {
+                "fromTick": 177,
+                "toTick": 178,
+                "displacementM": {
+                  "Head": 0.006317589478687573,
+                  "LeftHand": 0.002377059844114489,
+                  "LeftHandMiddle1": 0.003696032108085712,
+                  "LeftHandIndex1": 0.0036333092087656757,
+                  "LeftHandPinky1": 0.003515574880499699,
+                  "RightHand": 0.012142345461734315,
+                  "RightHandMiddle1": 0.018252812839464037,
+                  "RightHandIndex1": 0.019575097487466178,
+                  "RightHandPinky1": 0.014376506673584012,
+                  "LeftFoot": 0.022122476086062298,
+                  "LeftToeBase": 0.018073472455047042,
+                  "RightFoot": 0.02315916291222892,
+                  "RightToeBase": 0.023159440245273465
+                }
+              },
+              {
+                "fromTick": 178,
+                "toTick": 179,
+                "displacementM": {
+                  "Head": 0.006305809793694149,
+                  "LeftHand": 0.0023829134596119054,
+                  "LeftHandMiddle1": 0.003702320848184438,
+                  "LeftHandIndex1": 0.0036356145703992115,
+                  "LeftHandPinky1": 0.00352714814076462,
+                  "RightHand": 0.01264340911625504,
+                  "RightHandMiddle1": 0.01884242486863088,
+                  "RightHandIndex1": 0.020170284557856313,
+                  "RightHandPinky1": 0.014915906537626184,
+                  "LeftFoot": 0.022062219611234602,
+                  "LeftToeBase": 0.01792190469686908,
+                  "RightFoot": 0.022884518760043934,
+                  "RightToeBase": 0.022884462580670773
+                }
+              },
+              {
+                "fromTick": 179,
+                "toTick": 180,
+                "displacementM": {
+                  "Head": 0.004970683284620857,
+                  "LeftHand": 0.0023311777026644937,
+                  "LeftHandMiddle1": 0.003625158622915711,
+                  "LeftHandIndex1": 0.003533113374079461,
+                  "LeftHandPinky1": 0.0036606792390620983,
+                  "RightHand": 0.016068857572786595,
+                  "RightHandMiddle1": 0.02340709837151121,
+                  "RightHandIndex1": 0.02433761759214731,
+                  "RightHandPinky1": 0.020032161509622358,
+                  "LeftFoot": 0.043162124874716296,
+                  "LeftToeBase": 0.04388879981857128,
+                  "RightFoot": 0.02305185680208887,
+                  "RightToeBase": 0.02305148139275802
+                }
+              },
+              {
+                "fromTick": 180,
+                "toTick": 181,
+                "displacementM": {
+                  "Head": 0.00496275800670397,
+                  "LeftHand": 0.002328705961365508,
+                  "LeftHandMiddle1": 0.0036159389677509484,
+                  "LeftHandIndex1": 0.0035183238463934413,
+                  "LeftHandPinky1": 0.0036598851800294474,
+                  "RightHand": 0.016737195408430782,
+                  "RightHandMiddle1": 0.02404137750170722,
+                  "RightHandIndex1": 0.0249475563224455,
+                  "RightHandPinky1": 0.020706333076305337,
+                  "LeftFoot": 0.04297110688500962,
+                  "LeftToeBase": 0.043811190686493924,
+                  "RightFoot": 0.022787156793874868,
+                  "RightToeBase": 0.022787468557411504
+                }
+              },
+              {
+                "fromTick": 181,
+                "toTick": 182,
+                "displacementM": {
+                  "Head": 0.003336792268488324,
+                  "LeftHand": 0.0026386972566970405,
+                  "LeftHandMiddle1": 0.00422299373507693,
+                  "LeftHandIndex1": 0.004217630104359472,
+                  "LeftHandPinky1": 0.004115180907092739,
+                  "RightHand": 0.01860986569806458,
+                  "RightHandMiddle1": 0.026923352340479646,
+                  "RightHandIndex1": 0.027716338414112553,
+                  "RightHandPinky1": 0.02367705721349061,
+                  "LeftFoot": 0.037462016188331324,
+                  "LeftToeBase": 0.04433310789625248,
+                  "RightFoot": 0.022983603880760036,
+                  "RightToeBase": 0.022983475119180405
+                }
+              },
+              {
+                "fromTick": 182,
+                "toTick": 183,
+                "displacementM": {
+                  "Head": 3.299999999650807e-08,
+                  "LeftHand": 1.1180339878138575e-07,
+                  "LeftHandMiddle1": 4.242640688811381e-08,
+                  "LeftHandIndex1": 5.656854250440097e-08,
+                  "LeftHandPinky1": 6.000000002392987e-08,
+                  "RightHand": 1.0000000005838672e-07,
+                  "RightHandMiddle1": 1.199999999368373e-07,
+                  "RightHandIndex1": 1.5999999991578306e-07,
+                  "RightHandPinky1": 2.0000000000575113e-07,
+                  "LeftFoot": 9.501663015452294e-08,
+                  "LeftToeBase": 2.170368631730787e-07,
+                  "RightFoot": 1.3114877073022794e-07,
+                  "RightToeBase": 1.268857755695775e-07
+                }
+              },
+              {
+                "fromTick": 183,
+                "toTick": 184,
+                "displacementM": {
+                  "Head": 0.009520240174547884,
+                  "LeftHand": 0.00721194549136356,
+                  "LeftHandMiddle1": 0.009151471494639461,
+                  "LeftHandIndex1": 0.009192017997333376,
+                  "LeftHandPinky1": 0.008665525064587782,
+                  "RightHand": 0.0419459063134128,
+                  "RightHandMiddle1": 0.04919210374841195,
+                  "RightHandIndex1": 0.04951388395288756,
+                  "RightHandPinky1": 0.04668353003030091,
+                  "LeftFoot": 0.09166501637676135,
+                  "LeftToeBase": 0.09078813117992414,
+                  "RightFoot": 0.049627797891242054,
+                  "RightToeBase": 0.04962795032163811
+                }
+              },
+              {
+                "fromTick": 184,
+                "toTick": 185,
+                "displacementM": {
+                  "Head": 0.008764399384917163,
+                  "LeftHand": 0.0075389614889321225,
+                  "LeftHandMiddle1": 0.009192117657390005,
+                  "LeftHandIndex1": 0.009310984867262902,
+                  "LeftHandPinky1": 0.008625798642009934,
+                  "RightHand": 0.04249006608991794,
+                  "RightHandMiddle1": 0.05115040076103986,
+                  "RightHandIndex1": 0.05130038080384588,
+                  "RightHandPinky1": 0.04866872921106531,
+                  "LeftFoot": 0.0841381212612507,
+                  "LeftToeBase": 0.08325308729407356,
+                  "RightFoot": 0.05714278808601467,
+                  "RightToeBase": 0.05714340976519791
+                }
+              },
+              {
+                "fromTick": 185,
+                "toTick": 186,
+                "displacementM": {
+                  "Head": 0.009760993677250317,
+                  "LeftHand": 0.008143288674116726,
+                  "LeftHandMiddle1": 0.009470387972485568,
+                  "LeftHandIndex1": 0.009644148001653629,
+                  "LeftHandPinky1": 0.00886800439287784,
+                  "RightHand": 0.043261105405317794,
+                  "RightHandMiddle1": 0.05332894348201356,
+                  "RightHandIndex1": 0.053275586848345526,
+                  "RightHandPinky1": 0.05094396715855377,
+                  "LeftFoot": 0.07670647382560758,
+                  "LeftToeBase": 0.07580931236172851,
+                  "RightFoot": 0.06481337447458174,
+                  "RightToeBase": 0.06481261597004158
+                }
+              },
+              {
+                "fromTick": 186,
+                "toTick": 187,
+                "displacementM": {
+                  "Head": 0.010897288844525746,
+                  "LeftHand": 0.008254943380302523,
+                  "LeftHandMiddle1": 0.008915757037402992,
+                  "LeftHandIndex1": 0.009102884845618968,
+                  "LeftHandPinky1": 0.008434170159369578,
+                  "RightHand": 0.03924821521763749,
+                  "RightHandMiddle1": 0.05024081652645092,
+                  "RightHandIndex1": 0.04999308860054537,
+                  "RightHandPinky1": 0.048131476187228975,
+                  "LeftFoot": 0.06915101935766448,
+                  "LeftToeBase": 0.06830668891262838,
+                  "RightFoot": 0.0724885164592686,
+                  "RightToeBase": 0.07248928846206726
+                }
+              },
+              {
+                "fromTick": 187,
+                "toTick": 188,
+                "displacementM": {
+                  "Head": 0.012399021922792006,
+                  "LeftHand": 0.008943426043105591,
+                  "LeftHandMiddle1": 0.009183280258823557,
+                  "LeftHandIndex1": 0.009346596874841719,
+                  "LeftHandPinky1": 0.008834292382347196,
+                  "RightHand": 0.038163949686760845,
+                  "RightHandMiddle1": 0.049939457611772334,
+                  "RightHandIndex1": 0.04947994760805748,
+                  "RightHandPinky1": 0.04811743022586739,
+                  "LeftFoot": 0.06179208054507998,
+                  "LeftToeBase": 0.060972543946175635,
+                  "RightFoot": 0.08033320318026466,
+                  "RightToeBase": 0.08033250758020506
+                }
+              },
+              {
+                "fromTick": 188,
+                "toTick": 189,
+                "displacementM": {
+                  "Head": 0.013114927880798417,
+                  "LeftHand": 0.00858511450025584,
+                  "LeftHandMiddle1": 0.00846864204720576,
+                  "LeftHandIndex1": 0.008524400107385819,
+                  "LeftHandPinky1": 0.008410998456408181,
+                  "RightHand": 0.027004950874985705,
+                  "RightHandMiddle1": 0.037218526076941844,
+                  "RightHandIndex1": 0.03643148149579551,
+                  "RightHandPinky1": 0.03654606457593468,
+                  "LeftFoot": 0.054303645724174614,
+                  "LeftToeBase": 0.05361319513351613,
+                  "RightFoot": 0.07534594701796438,
+                  "RightToeBase": 0.07412191004178598
+                }
+              }
+            ],
+            "movingDribble": {
+              "samples": 30,
+              "maxSpeedMps": 6.0,
+              "wristTravelM": 0.4611449000000001,
+              "contactClaim": "continuity and live dribble motion; palm contact is not required while the ball bounces"
+            }
+          }
+        ]
+      },
+      "result": "passed",
+      "failures": [],
+      "invalid": []
+    }
+  ]
+}

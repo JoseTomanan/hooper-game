@@ -37,7 +37,7 @@ def main():
                     ("moving", ["--moving"]),
                     ("moving-observer", ["--moving", "--remote"]),
                     ("moving-owner", ["--moving", "--remote", "--actor", "client"]),
-                    ("reset-neutral", ["--remote", "--reset-neutral"]))
+                    ("reset-neutral", ["--remote", "--reset-neutral", "--long-loose"]))
     for offset, (name, extra) in enumerate(normal_cases):
         capture = output / name
         subprocess.run([*launcher, "--port", str(args.port + offset), "--output", str(capture), *extra],
