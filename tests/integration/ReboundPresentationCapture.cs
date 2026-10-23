@@ -361,6 +361,7 @@ public partial class ReboundPresentationCapture : Node
         var subject = Subject;
         if (subject == null) return;
         AttachSkeleton(subject);
+        if (_skeleton == null) return;
         // SkeletonUpdated preserves final skeleton-relative bones before Godot
         // restores modifier input. Apply the model's CURRENT displayed transform
         // here: visual yaw and reconciliation can change after that signal.
@@ -373,7 +374,7 @@ public partial class ReboundPresentationCapture : Node
         foreach (var bone in _boneFinalLocal) _boneWorld[bone.Key] = drawnSkeleton * bone.Value;
         var sampledPose = new { physicsFrame = _posePhysics, renderFrame = Engine.GetProcessFrames(),
             presentationTick = _posePresentation, animation = _poseAnimation, playbackTime = _posePlayback,
-            hand = _poseHand, root = Vec(drawnSkeleton.Origin),
+            hand = _poseHand, root = Vec(drawnSkeleton.Origin), skeletonTransform = Transform(drawnSkeleton),
             bones = _boneWorld.ToDictionary(p => p.Key, p => Vec(p.Value)),
             bodyBones = _boneWorld.ToDictionary(p => p.Key,
                 p => Vec(inverseDrawnRotation * (p.Value - drawnSkeleton.Origin))) };
@@ -443,10 +444,11 @@ public partial class ReboundPresentationCapture : Node
         Input.ActionRelease("move_feint");
         _trace?.Dispose();
         if (_trace != null) File.WriteAllText(Path.Combine(_output, "manifest.json"), JsonSerializer.Serialize(new {
-            schema = "hooper-rebound-presentation/v1", result = failure == "" ? "captured" : "failed", failure,
+            schema = "hooper-rebound-presentation/v2", result = failure == "" ? "captured" : "failed", failure,
             role = _role, actor = _actor, subject = _subjectId, commit = _commit, requestedPreRecoveryHand = _hand,
             height = _height, moving = _moving, movementAction = "move_forward", contested = _contested, view = _view,
             legacyPose = _legacyPose, longLoose = _longLoose,
+            bodyPoseCoordinates = "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
             seedDelay = _seedDelay,
             action = _action, actionRequests = _actionRequests, acceptedActions = _acceptedActions,
             feintRequests = _feintRequests, acceptedFeints = _acceptedFeints,

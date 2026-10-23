@@ -28,7 +28,6 @@ public partial class ReboundPose : SkeletonModifier3D
 
     public bool AppliedForHarness { get; private set; }
     public int AgeForHarness => _age;
-    partial void AlterReboundClockForHarness(bool catchPose, int step);
 
     public override void _Ready()
     {
@@ -108,15 +107,7 @@ public partial class ReboundPose : SkeletonModifier3D
             Clear();
             return;
         }
-        if (!catchPose && !_wasCatch && !_exiting)
-        {
-            _discardIncoming = false;
-            // Preserve the incoming locomotion phase. Once travel selects Catch,
-            // playback time is zero: using it would restart the moving dribble
-            // on the opposite leg and make the entry bridge chase that phase jump.
-            _neutralTime = Player.PivotAnimationTime;
-            return;
-        }
+        if (!catchPose && !_wasCatch && !_exiting) { _discardIncoming = false; return; }
         if (step == 0 && _held != null) { Write(_held); return; }
 
         Transform3D[] fresh = Capture();
@@ -124,7 +115,7 @@ public partial class ReboundPose : SkeletonModifier3D
         {
             _anchor = (Transform3D[])_lastFinal.Clone();
             _age = _discardIncoming ? BridgeTicks : 0;
-            if (_discardIncoming) _neutralTime = Player.PivotAnimationTime;
+            _neutralTime = Player.PivotAnimationTime;
             _discardIncoming = false;
             _exiting = false;
             _bridge.ResetContinuity();
@@ -135,12 +126,7 @@ public partial class ReboundPose : SkeletonModifier3D
             // Keep this source clock continuous at the catch-to-neutral boundary.
             // The exit bridge targets the freshly evaluated neutral tree, rather
             // than abruptly substituting a neutral clip sampled at phase zero.
-            // During entry the pose bridge already moves the limbs. Advancing
-            // the destination gait as well can make it outrun that handoff when
-            // the owner is simultaneously accelerating. Resume the authored
-            // cycle from this phase once the incoming pose has reached it.
-            if (!catchPose || _age >= BridgeTicks)
-                _neutralTime += step / (double)Engine.PhysicsTicksPerSecond;
+            _neutralTime += step / (double)Engine.PhysicsTicksPerSecond;
             if (!catchPose && _wasCatch)
             {
                 _anchor = (Transform3D[])_lastFinal.Clone();
@@ -151,7 +137,6 @@ public partial class ReboundPose : SkeletonModifier3D
             else _age = Math.Min(BridgeTicks, _age + step);
         }
         _wasCatch = catchPose;
-        AlterReboundClockForHarness(catchPose, step);
         Transform3D[] target = catchPose ? SampleNeutral(fresh) : fresh;
         Transform3D[] result = _bridge.Blend(_anchor, target,
             Math.Clamp(_age / (float)BridgeTicks, 0, 1)).Pose;
