@@ -1562,12 +1562,14 @@ public partial class BallController : Node3D
 			// packet self-heals on the next tick.
 			AuthoritativeSnapshotBroadcastCountForHarness++;
 			Rpc(MethodName.ReceiveState,
-				(int)StateMachine.Current, GlobalPosition, CurrentVelocity(), StateMachine.HolderPeerId, IsCleared, HasDribbled);
+				(int)StateMachine.Current, GlobalPosition, CurrentVelocity(), StateMachine.HolderPeerId, IsCleared, HasDribbled,
+				_recoveryReceipt, _recoveryRecipient, RecoveryReceiptAge, _recoveryInputSequence);
 		}
 
 		PublishRemotePresentation();
 		ApplySmoothCorrection();
 		ApplyRemoteBallPresentation();
+		ApplyReboundHeldPresentation();
 
 		// Push the possession HUD only when something actually changed (#51) —
 		// one refresh per possession/clear event, not 60 per second. Runs on
@@ -2908,7 +2910,13 @@ public partial class BallController : Node3D
 
 		int recoverer = ResolveLooseBallRecovery();
 		if (recoverer != 0)
+		{
 			AwardPossession(recoverer);
+			// A persistent cosmetic receipt survives a one-tick Loose state being
+			// absent from an owning client's unreliable snapshots. It never gates play.
+			if (IsServer && StateMachine.HolderPeerId == recoverer)
+				RecordRecoveryPresentation(recoverer);
+		}
 	}
 
 	/// <summary>
@@ -3534,7 +3542,8 @@ public partial class BallController : Node3D
 	[Rpc(MultiplayerApi.RpcMode.Authority,
 		 CallLocal = false,
 		 TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
-	private void ReceiveState(int state, Vector3 pos, Vector3 vel, int holderPeerId, bool cleared, bool hasDribbled)
+	private void ReceiveState(int state, Vector3 pos, Vector3 vel, int holderPeerId, bool cleared, bool hasDribbled,
+		int recoveryReceipt = 0, int recoveryRecipient = 0, int recoveryAge = 0, int recoveryInputSequence = 0)
 	{
 		_serverState         = (BallState)state;
 		_serverPos           = pos;
@@ -3542,6 +3551,7 @@ public partial class BallController : Node3D
 		_serverHolderPeerId  = holderPeerId;
 		_serverCleared       = cleared;
 		_serverHasDribbled   = hasDribbled;
+		_pendingConfirmedRecovery = (recoveryReceipt, recoveryRecipient, recoveryAge, recoveryInputSequence);
 		ObserveSnapshotReceiptForHarness();
 		_hasNewState         = true;
 	}
@@ -3592,6 +3602,10 @@ public partial class BallController : Node3D
 		// already-accepted <=1-RTT cosmetic window, that staleness had no
 		// natural expiry, so it needed the same broadcast treatment.
 		HasDribbled = _serverHasDribbled;
+		// Publish cosmetic metadata only with the holder/clear state from the
+		// same packet. Players tick before Ball and must never consume a receipt
+		// against the previous possession while reconciliation is still pending.
+		ConfirmedRecovery = _pendingConfirmedRecovery;
 
 		Vector3 renderedPos = GlobalPosition;
 		GlobalPosition = _serverPos;
