@@ -208,6 +208,8 @@ def analyze(directory, mutate_disconnected=False, mutate_delayed=False):
                                            "continuity and live dribble motion; palm contact is not required while the ball bounces")
         metrics["intervals"].append(measure)
         prefix = f"catch {index + 1}: "
+        if len(group) != 30:
+            failures.append(prefix + "catch did not retain its 30-source-tick duration")
         if onset is None or not 0 <= onset <= 2:
             failures.append(prefix + "onset exceeds two source ticks after observed recovery")
         if missing:

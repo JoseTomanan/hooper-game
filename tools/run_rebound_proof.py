@@ -44,6 +44,10 @@ def main():
                        cwd=ROOT, check=True, timeout=220)
         subprocess.run([*analyzer, str(capture), "--verify", "--output", str(output / (name + "-proof.json"))],
                        cwd=ROOT, check=True, timeout=30)
+        if name == "owner":
+            owner = json.loads((capture / "client/manifest.json").read_text(encoding="utf-8"))
+            if owner.get("observedRecoveries") != 0 or owner.get("authoritativeRecoveriesReceived") != 2:
+                raise RuntimeError("owner fixture did not reproduce two recoveries without a live Loose edge")
     # These capture-side controls require actual accepted production actions;
     # they intentionally exclude the normal uninterrupted 30-tick catch proof.
     for offset, (name, extra) in enumerate((("immediate-local", ["--action", "immediate"]),
