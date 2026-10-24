@@ -1,0 +1,142 @@
+[
+  {
+    "case": "0-stationary-Left",
+    "beforeSource": ".godot/428/net-before-final/0-stationary-Left",
+    "afterSource": ".godot/428/net-after-final/0-stationary-Left"
+  },
+  {
+    "case": "0-stationary-Right",
+    "beforeSource": ".godot/428/net-before-final/0-stationary-Right",
+    "afterSource": ".godot/428/net-after-final/0-stationary-Right"
+  },
+  {
+    "case": "0-moving-Left",
+    "beforeSource": ".godot/428/net-before-final/0-moving-Left",
+    "afterSource": ".godot/428/net-after-final/0-moving-Left"
+  },
+  {
+    "case": "0-moving-Right",
+    "beforeSource": ".godot/428/net-before-final/0-moving-Right",
+    "afterSource": ".godot/428/net-after-final/0-moving-Right"
+  },
+  {
+    "case": "45-stationary-Left",
+    "beforeSource": ".godot/428/net-before-final/45-stationary-Left",
+    "afterSource": ".godot/428/net-after-final/45-stationary-Left"
+  },
+  {
+    "case": "45-stationary-Right",
+    "beforeSource": ".godot/428/net-before-final/45-stationary-Right",
+    "afterSource": ".godot/428/net-after-final/45-stationary-Right"
+  },
+  {
+    "case": "45-moving-Left",
+    "beforeSource": ".godot/428/net-before-final/45-moving-Left",
+    "afterSource": ".godot/428/net-after-final/45-moving-Left"
+  },
+  {
+    "case": "45-moving-Right",
+    "beforeSource": ".godot/428/net-before-final/45-moving-Right",
+    "afterSource": ".godot/428/net-after-final/45-moving-Right"
+  },
+  {
+    "case": "89-stationary-Left",
+    "beforeSource": ".godot/428/net-before-final/89-stationary-Left",
+    "afterSource": ".godot/428/net-after-final/89-stationary-Left"
+  },
+  {
+    "case": "89-stationary-Right",
+    "beforeSource": ".godot/428/net-before-final/89-stationary-Right",
+    "afterSource": ".godot/428/net-after-final/89-stationary-Right"
+  },
+  {
+    "case": "89-moving-Left",
+    "beforeSource": ".godot/428/net-before-final/89-moving-Left",
+    "afterSource": ".godot/428/net-after-final/89-moving-Left"
+  },
+  {
+    "case": "89-moving-Right",
+    "beforeSource": ".godot/428/net-before-final/89-moving-Right",
+    "afterSource": ".godot/428/net-after-final/89-moving-Right"
+  },
+  {
+    "case": "90-stationary-Left",
+    "beforeSource": ".godot/428/net-before-final/90-stationary-Left",
+    "afterSource": ".godot/428/net-after-final/90-stationary-Left"
+  },
+  {
+    "case": "90-stationary-Right",
+    "beforeSource": ".godot/428/net-before-final/90-stationary-Right",
+    "afterSource": ".godot/428/net-after-final/90-stationary-Right"
+  },
+  {
+    "case": "90-moving-Left",
+    "beforeSource": ".godot/428/net-before-final/90-moving-Left",
+    "afterSource": ".godot/428/net-after-final/90-moving-Left"
+  },
+  {
+    "case": "90-moving-Right",
+    "beforeSource": ".godot/428/net-before-final/90-moving-Right",
+    "afterSource": ".godot/428/net-after-final/90-moving-Right"
+  },
+  {
+    "case": "91-stationary-Left",
+    "beforeSource": ".godot/428/net-before-final/91-stationary-Left",
+    "afterSource": ".godot/428/net-after-final/91-stationary-Left"
+  },
+  {
+    "case": "91-stationary-Right",
+    "beforeSource": ".godot/428/net-before-final/91-stationary-Right",
+    "afterSource": ".godot/428/net-after-final/91-stationary-Right"
+  },
+  {
+    "case": "91-moving-Left",
+    "beforeSource": ".godot/428/net-before-supplement-v2/91-moving-Left",
+    "afterSource": ".godot/428/net-after-final/91-moving-Left"
+  },
+  {
+    "case": "91-moving-Right",
+    "beforeSource": ".godot/428/net-before-final/91-moving-Right",
+    "afterSource": ".godot/428/net-after-final/91-moving-Right"
+  },
+  {
+    "case": "135-stationary-Left",
+    "beforeSource": ".godot/428/net-before-final/135-stationary-Left",
+    "afterSource": ".godot/428/net-after-final/135-stationary-Left"
+  },
+  {
+    "case": "135-stationary-Right",
+    "beforeSource": ".godot/428/net-before-final/135-stationary-Right",
+    "afterSource": ".godot/428/net-after-final/135-stationary-Right"
+  },
+  {
+    "case": "135-moving-Left",
+    "beforeSource": ".godot/428/net-before-final/135-moving-Left",
+    "afterSource": ".godot/428/net-after-final/135-moving-Left"
+  },
+  {
+    "case": "135-moving-Right",
+    "beforeSource": ".godot/428/net-before-final/135-moving-Right",
+    "afterSource": ".godot/428/net-after-final/135-moving-Right"
+  },
+  {
+    "case": "180-stationary-Left",
+    "beforeSource": ".godot/428/net-before-final/180-stationary-Left",
+    "afterSource": ".godot/428/net-after-final/180-stationary-Left"
+  },
+  {
+    "case": "180-stationary-Right",
+    "beforeSource": ".godot/428/net-before-final/180-stationary-Right",
+    "afterSource": ".godot/428/net-after-final/180-stationary-Right"
+  },
+  {
+    "case": "180-moving-Left",
+    "beforeSource": ".godot/428/net-before-final/180-moving-Left",
+    "afterSource": ".godot/428/net-after-final/180-moving-Left"
+  },
+  {
+    "case": "180-moving-Right",
+    "beforeSource": ".godot/428/net-before-final/180-moving-Right",
+    "afterSource": ".godot/428/net-after-final/180-moving-Right"
+  }
+]

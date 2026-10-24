@@ -1,0 +1,68 @@
+{
+  "schema": "hooper-jumpshot-form/v1",
+  "result": "captured",
+  "failure": "",
+  "role": "server",
+  "variant": "normal",
+  "hand": "Right",
+  "commit": "e095924",
+  "view": "gameplay",
+  "samples": 637,
+  "releases": 1,
+  "events": [
+    {
+      "tick": 527,
+      "kind": "heading-fixture",
+      "initialAngle": 0,
+      "entry": "moving",
+      "rate": 900,
+      "fixedTarget": 3.1415927,
+      "velocity": [
+        0,
+        0,
+        -4.5000005
+      ]
+    },
+    {
+      "tick": 527,
+      "kind": "shoot-input",
+      "hand": "Right",
+      "heading": 3.1415927
+    },
+    {
+      "tick": 545,
+      "physicsFrame": 545,
+      "kind": "release",
+      "count": 1,
+      "phase": "Active",
+      "frame": 0,
+      "position": [
+        0.44289997,
+        1,
+        5.2374935
+      ],
+      "liveBall": [
+        0.44289997,
+        1,
+        5.2374935
+      ]
+    }
+  ],
+  "headingFixture": true,
+  "initialAngle": 0,
+  "headingEntry": "moving",
+  "headingRate": 900,
+  "sawProductionShotStartup": true,
+  "feintRequested": false,
+  "sawAcceptedFeintRecovery": false,
+  "paced": false,
+  "pacingMeaning": "unpaced",
+  "mutation": "none",
+  "mutationApplied": false,
+  "legacyFixtureSha256": "",
+  "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B",
+  "engine": "4.7.1-stable (official)",
+  "images": false,
+  "sampleTiming": "HEADLESS diagnostic state only",
+  "verdict": "diagnostic only; no feel acceptance"
+}

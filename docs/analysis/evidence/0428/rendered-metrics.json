@@ -1,0 +1,1242 @@
+{
+  "stationary-right": {
+    "before": {
+      "source": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\428\\render-before-fixed-180-right\\180-stationary-Right",
+      "frames": 102,
+      "phases": {
+        "Startup": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ],
+        "Active": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "Recovery": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      },
+      "nearestWristGapMetres": {
+        "min": 0.11751842204782337,
+        "max": 1.240907132051805
+      },
+      "separationSamples": [
+        {
+          "phase": "Startup",
+          "frame": 1,
+          "sourceTick": 103,
+          "leftWristMetres": 0.9143044992962097,
+          "rightWristMetres": 0.11751842204782337,
+          "nearestWristMetres": 0.11751842204782337
+        },
+        {
+          "phase": "Startup",
+          "frame": 2,
+          "sourceTick": 104,
+          "leftWristMetres": 0.9108053953304637,
+          "rightWristMetres": 0.5645739560273714,
+          "nearestWristMetres": 0.5645739560273714
+        },
+        {
+          "phase": "Startup",
+          "frame": 3,
+          "sourceTick": 105,
+          "leftWristMetres": 0.875294806041924,
+          "rightWristMetres": 0.3881863947415629,
+          "nearestWristMetres": 0.3881863947415629
+        },
+        {
+          "phase": "Startup",
+          "frame": 3,
+          "sourceTick": 105,
+          "leftWristMetres": 0.875294806041924,
+          "rightWristMetres": 0.3881863947415629,
+          "nearestWristMetres": 0.3881863947415629
+        },
+        {
+          "phase": "Startup",
+          "frame": 3,
+          "sourceTick": 105,
+          "leftWristMetres": 0.875294806041924,
+          "rightWristMetres": 0.3881863947415629,
+          "nearestWristMetres": 0.3881863947415629
+        },
+        {
+          "phase": "Startup",
+          "frame": 3,
+          "sourceTick": 105,
+          "leftWristMetres": 0.875294806041924,
+          "rightWristMetres": 0.3881863947415629,
+          "nearestWristMetres": 0.3881863947415629
+        },
+        {
+          "phase": "Startup",
+          "frame": 3,
+          "sourceTick": 105,
+          "leftWristMetres": 0.875294806041924,
+          "rightWristMetres": 0.3881863947415629,
+          "nearestWristMetres": 0.3881863947415629
+        },
+        {
+          "phase": "Startup",
+          "frame": 3,
+          "sourceTick": 105,
+          "leftWristMetres": 0.875294806041924,
+          "rightWristMetres": 0.3881863947415629,
+          "nearestWristMetres": 0.3881863947415629
+        },
+        {
+          "phase": "Startup",
+          "frame": 4,
+          "sourceTick": 106,
+          "leftWristMetres": 0.7185335980911547,
+          "rightWristMetres": 0.1693320917918777,
+          "nearestWristMetres": 0.1693320917918777
+        },
+        {
+          "phase": "Startup",
+          "frame": 5,
+          "sourceTick": 107,
+          "leftWristMetres": 0.5498804225636077,
+          "rightWristMetres": 0.3377154615460242,
+          "nearestWristMetres": 0.3377154615460242
+        },
+        {
+          "phase": "Startup",
+          "frame": 6,
+          "sourceTick": 108,
+          "leftWristMetres": 0.5332366352095814,
+          "rightWristMetres": 0.40974031613287654,
+          "nearestWristMetres": 0.40974031613287654
+        },
+        {
+          "phase": "Startup",
+          "frame": 7,
+          "sourceTick": 109,
+          "leftWristMetres": 0.5586017225083628,
+          "rightWristMetres": 0.44644835990445564,
+          "nearestWristMetres": 0.44644835990445564
+        },
+        {
+          "phase": "Startup",
+          "frame": 8,
+          "sourceTick": 110,
+          "leftWristMetres": 0.6015680158260966,
+          "rightWristMetres": 0.510805349398211,
+          "nearestWristMetres": 0.510805349398211
+        },
+        {
+          "phase": "Startup",
+          "frame": 9,
+          "sourceTick": 111,
+          "leftWristMetres": 0.6631337828536457,
+          "rightWristMetres": 0.5987890495410958,
+          "nearestWristMetres": 0.5987890495410958
+        },
+        {
+          "phase": "Startup",
+          "frame": 10,
+          "sourceTick": 112,
+          "leftWristMetres": 0.7367072874938567,
+          "rightWristMetres": 0.6925085984381926,
+          "nearestWristMetres": 0.6925085984381926
+        },
+        {
+          "phase": "Startup",
+          "frame": 11,
+          "sourceTick": 113,
+          "leftWristMetres": 0.8214251993449735,
+          "rightWristMetres": 0.7930404668718546,
+          "nearestWristMetres": 0.7930404668718546
+        },
+        {
+          "phase": "Startup",
+          "frame": 12,
+          "sourceTick": 114,
+          "leftWristMetres": 0.9068007214490623,
+          "rightWristMetres": 0.8921581268182114,
+          "nearestWristMetres": 0.8921581268182114
+        },
+        {
+          "phase": "Startup",
+          "frame": 12,
+          "sourceTick": 114,
+          "leftWristMetres": 0.9068007214490623,
+          "rightWristMetres": 0.8921581268182114,
+          "nearestWristMetres": 0.8921581268182114
+        },
+        {
+          "phase": "Startup",
+          "frame": 12,
+          "sourceTick": 114,
+          "leftWristMetres": 0.9068007214490623,
+          "rightWristMetres": 0.8921581268182114,
+          "nearestWristMetres": 0.8921581268182114
+        },
+        {
+          "phase": "Startup",
+          "frame": 12,
+          "sourceTick": 114,
+          "leftWristMetres": 0.9068007214490623,
+          "rightWristMetres": 0.8921581268182114,
+          "nearestWristMetres": 0.8921581268182114
+        },
+        {
+          "phase": "Startup",
+          "frame": 12,
+          "sourceTick": 114,
+          "leftWristMetres": 0.9068007214490623,
+          "rightWristMetres": 0.8921581268182114,
+          "nearestWristMetres": 0.8921581268182114
+        },
+        {
+          "phase": "Startup",
+          "frame": 13,
+          "sourceTick": 115,
+          "leftWristMetres": 0.9856084316252042,
+          "rightWristMetres": 0.992015256763554,
+          "nearestWristMetres": 0.9856084316252042
+        },
+        {
+          "phase": "Startup",
+          "frame": 14,
+          "sourceTick": 116,
+          "leftWristMetres": 1.054670828296544,
+          "rightWristMetres": 1.0811187479397166,
+          "nearestWristMetres": 1.054670828296544
+        },
+        {
+          "phase": "Startup",
+          "frame": 15,
+          "sourceTick": 117,
+          "leftWristMetres": 1.1118883327397144,
+          "rightWristMetres": 1.1623870646586267,
+          "nearestWristMetres": 1.1118883327397144
+        },
+        {
+          "phase": "Startup",
+          "frame": 16,
+          "sourceTick": 118,
+          "leftWristMetres": 1.1629566498516013,
+          "rightWristMetres": 1.2388340009302403,
+          "nearestWristMetres": 1.1629566498516013
+        },
+        {
+          "phase": "Startup",
+          "frame": 17,
+          "sourceTick": 119,
+          "leftWristMetres": 1.2077791529553756,
+          "rightWristMetres": 1.3055999119364756,
+          "nearestWristMetres": 1.2077791529553756
+        },
+        {
+          "phase": "Startup",
+          "frame": 17,
+          "sourceTick": 119,
+          "leftWristMetres": 1.2077791529553756,
+          "rightWristMetres": 1.3055999119364756,
+          "nearestWristMetres": 1.2077791529553756
+        },
+        {
+          "phase": "Startup",
+          "frame": 17,
+          "sourceTick": 119,
+          "leftWristMetres": 1.2077791529553756,
+          "rightWristMetres": 1.3055999119364756,
+          "nearestWristMetres": 1.2077791529553756
+        },
+        {
+          "phase": "Startup",
+          "frame": 17,
+          "sourceTick": 119,
+          "leftWristMetres": 1.2077791529553756,
+          "rightWristMetres": 1.3055999119364756,
+          "nearestWristMetres": 1.2077791529553756
+        },
+        {
+          "phase": "Startup",
+          "frame": 17,
+          "sourceTick": 119,
+          "leftWristMetres": 1.2077791529553756,
+          "rightWristMetres": 1.3055999119364756,
+          "nearestWristMetres": 1.2077791529553756
+        },
+        {
+          "phase": "Startup",
+          "frame": 17,
+          "sourceTick": 119,
+          "leftWristMetres": 1.2077791529553756,
+          "rightWristMetres": 1.3055999119364756,
+          "nearestWristMetres": 1.2077791529553756
+        },
+        {
+          "phase": "Active",
+          "frame": 0,
+          "sourceTick": 120,
+          "leftWristMetres": 1.240907132051805,
+          "rightWristMetres": 1.3575119209327484,
+          "nearestWristMetres": 1.240907132051805
+        }
+      ],
+      "camera": [
+        0,
+        8,
+        9.705208,
+        1,
+        0,
+        0,
+        0,
+        0.7071068,
+        -0.7071068,
+        0,
+        0.7071068,
+        0.7071068
+      ],
+      "viewport": [
+        960,
+        540
+      ],
+      "holds": 61,
+      "resets": 0
+    },
+    "after": {
+      "source": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\428\\render-after-fixed-180-right\\180-stationary-Right",
+      "frames": 60,
+      "phases": {
+        "Startup": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ],
+        "Active": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "Recovery": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      },
+      "nearestWristGapMetres": {
+        "min": 0.11751854626396462,
+        "max": 1.2409071339111637
+      },
+      "separationSamples": [
+        {
+          "phase": "Startup",
+          "frame": 1,
+          "sourceTick": 107,
+          "leftWristMetres": 0.9143044834264282,
+          "rightWristMetres": 0.11751854626396462,
+          "nearestWristMetres": 0.11751854626396462
+        },
+        {
+          "phase": "Startup",
+          "frame": 2,
+          "sourceTick": 108,
+          "leftWristMetres": 0.9108054759030073,
+          "rightWristMetres": 0.5645739556408804,
+          "nearestWristMetres": 0.5645739556408804
+        },
+        {
+          "phase": "Startup",
+          "frame": 3,
+          "sourceTick": 109,
+          "leftWristMetres": 0.8752951414219782,
+          "rightWristMetres": 0.388186528641887,
+          "nearestWristMetres": 0.388186528641887
+        },
+        {
+          "phase": "Startup",
+          "frame": 3,
+          "sourceTick": 109,
+          "leftWristMetres": 0.8752951414219782,
+          "rightWristMetres": 0.388186528641887,
+          "nearestWristMetres": 0.388186528641887
+        },
+        {
+          "phase": "Startup",
+          "frame": 3,
+          "sourceTick": 109,
+          "leftWristMetres": 0.8752951414219782,
+          "rightWristMetres": 0.388186528641887,
+          "nearestWristMetres": 0.388186528641887
+        },
+        {
+          "phase": "Startup",
+          "frame": 3,
+          "sourceTick": 109,
+          "leftWristMetres": 0.8752951414219782,
+          "rightWristMetres": 0.388186528641887,
+          "nearestWristMetres": 0.388186528641887
+        },
+        {
+          "phase": "Startup",
+          "frame": 3,
+          "sourceTick": 109,
+          "leftWristMetres": 0.8752951414219782,
+          "rightWristMetres": 0.388186528641887,
+          "nearestWristMetres": 0.388186528641887
+        },
+        {
+          "phase": "Startup",
+          "frame": 4,
+          "sourceTick": 110,
+          "leftWristMetres": 0.7185336836757548,
+          "rightWristMetres": 0.16933185164201353,
+          "nearestWristMetres": 0.16933185164201353
+        },
+        {
+          "phase": "Startup",
+          "frame": 5,
+          "sourceTick": 111,
+          "leftWristMetres": 0.5498804142519196,
+          "rightWristMetres": 0.33771531433670343,
+          "nearestWristMetres": 0.33771531433670343
+        },
+        {
+          "phase": "Startup",
+          "frame": 6,
+          "sourceTick": 112,
+          "leftWristMetres": 0.5332363248207329,
+          "rightWristMetres": 0.40974014332241104,
+          "nearestWristMetres": 0.40974014332241104
+        },
+        {
+          "phase": "Startup",
+          "frame": 7,
+          "sourceTick": 113,
+          "leftWristMetres": 0.5586016133420851,
+          "rightWristMetres": 0.44644818850257423,
+          "nearestWristMetres": 0.44644818850257423
+        },
+        {
+          "phase": "Startup",
+          "frame": 8,
+          "sourceTick": 114,
+          "leftWristMetres": 0.6015680816465924,
+          "rightWristMetres": 0.5108053770144944,
+          "nearestWristMetres": 0.5108053770144944
+        },
+        {
+          "phase": "Startup",
+          "frame": 9,
+          "sourceTick": 115,
+          "leftWristMetres": 0.66313380732304,
+          "rightWristMetres": 0.5987890727608534,
+          "nearestWristMetres": 0.5987890727608534
+        },
+        {
+          "phase": "Startup",
+          "frame": 10,
+          "sourceTick": 116,
+          "leftWristMetres": 0.7367073788923321,
+          "rightWristMetres": 0.692508593840494,
+          "nearestWristMetres": 0.692508593840494
+        },
+        {
+          "phase": "Startup",
+          "frame": 11,
+          "sourceTick": 117,
+          "leftWristMetres": 0.8214252025850758,
+          "rightWristMetres": 0.7930405325556631,
+          "nearestWristMetres": 0.7930405325556631
+        },
+        {
+          "phase": "Startup",
+          "frame": 12,
+          "sourceTick": 118,
+          "leftWristMetres": 0.9068007633815622,
+          "rightWristMetres": 0.8921581511715185,
+          "nearestWristMetres": 0.8921581511715185
+        },
+        {
+          "phase": "Startup",
+          "frame": 13,
+          "sourceTick": 119,
+          "leftWristMetres": 0.9856084684712738,
+          "rightWristMetres": 0.9920152441412298,
+          "nearestWristMetres": 0.9856084684712738
+        },
+        {
+          "phase": "Startup",
+          "frame": 14,
+          "sourceTick": 120,
+          "leftWristMetres": 1.0546708400656897,
+          "rightWristMetres": 1.0811188304633814,
+          "nearestWristMetres": 1.0546708400656897
+        },
+        {
+          "phase": "Startup",
+          "frame": 14,
+          "sourceTick": 120,
+          "leftWristMetres": 1.0546708400656897,
+          "rightWristMetres": 1.0811188304633814,
+          "nearestWristMetres": 1.0546708400656897
+        },
+        {
+          "phase": "Startup",
+          "frame": 14,
+          "sourceTick": 120,
+          "leftWristMetres": 1.0546708400656897,
+          "rightWristMetres": 1.0811188304633814,
+          "nearestWristMetres": 1.0546708400656897
+        },
+        {
+          "phase": "Startup",
+          "frame": 14,
+          "sourceTick": 120,
+          "leftWristMetres": 1.0546708400656897,
+          "rightWristMetres": 1.0811188304633814,
+          "nearestWristMetres": 1.0546708400656897
+        },
+        {
+          "phase": "Startup",
+          "frame": 15,
+          "sourceTick": 121,
+          "leftWristMetres": 1.1118883483814985,
+          "rightWristMetres": 1.162387050666319,
+          "nearestWristMetres": 1.1118883483814985
+        },
+        {
+          "phase": "Startup",
+          "frame": 16,
+          "sourceTick": 122,
+          "leftWristMetres": 1.162956658850767,
+          "rightWristMetres": 1.238834059260106,
+          "nearestWristMetres": 1.162956658850767
+        },
+        {
+          "phase": "Startup",
+          "frame": 17,
+          "sourceTick": 123,
+          "leftWristMetres": 1.207779161589481,
+          "rightWristMetres": 1.3055999118425785,
+          "nearestWristMetres": 1.207779161589481
+        },
+        {
+          "phase": "Active",
+          "frame": 0,
+          "sourceTick": 124,
+          "leftWristMetres": 1.2409071339111637,
+          "rightWristMetres": 1.3575120074157174,
+          "nearestWristMetres": 1.2409071339111637
+        }
+      ],
+      "camera": [
+        0,
+        8,
+        9.705208,
+        1,
+        0,
+        0,
+        0,
+        0.7071068,
+        -0.7071068,
+        0,
+        0.7071068,
+        0.7071068
+      ],
+      "viewport": [
+        960,
+        540
+      ],
+      "holds": 19,
+      "resets": 0
+    }
+  },
+  "moving-left": {
+    "before": {
+      "source": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\428\\render-before-moving-v4\\180-moving-Left",
+      "frames": 68,
+      "phases": {
+        "Startup": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ],
+        "Active": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "Recovery": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      },
+      "nearestWristGapMetres": {
+        "min": 0.10083047883403104,
+        "max": 1.311394305701432
+      },
+      "separationSamples": [
+        {
+          "phase": "Startup",
+          "frame": 1,
+          "sourceTick": 165,
+          "leftWristMetres": 0.10083047883403104,
+          "rightWristMetres": 0.9117357288704824,
+          "nearestWristMetres": 0.10083047883403104
+        },
+        {
+          "phase": "Startup",
+          "frame": 2,
+          "sourceTick": 166,
+          "leftWristMetres": 0.5535464137580198,
+          "rightWristMetres": 0.8562115996250287,
+          "nearestWristMetres": 0.5535464137580198
+        },
+        {
+          "phase": "Startup",
+          "frame": 3,
+          "sourceTick": 167,
+          "leftWristMetres": 0.35030328000585437,
+          "rightWristMetres": 0.835191704187559,
+          "nearestWristMetres": 0.35030328000585437
+        },
+        {
+          "phase": "Startup",
+          "frame": 4,
+          "sourceTick": 168,
+          "leftWristMetres": 0.28501385989286504,
+          "rightWristMetres": 0.7868458636608127,
+          "nearestWristMetres": 0.28501385989286504
+        },
+        {
+          "phase": "Startup",
+          "frame": 5,
+          "sourceTick": 169,
+          "leftWristMetres": 0.5348014382295733,
+          "rightWristMetres": 0.7270675459404924,
+          "nearestWristMetres": 0.5348014382295733
+        },
+        {
+          "phase": "Startup",
+          "frame": 6,
+          "sourceTick": 170,
+          "leftWristMetres": 0.6142949653322335,
+          "rightWristMetres": 0.7479260675911024,
+          "nearestWristMetres": 0.6142949653322335
+        },
+        {
+          "phase": "Startup",
+          "frame": 6,
+          "sourceTick": 170,
+          "leftWristMetres": 0.6142949653322335,
+          "rightWristMetres": 0.7479260675911024,
+          "nearestWristMetres": 0.6142949653322335
+        },
+        {
+          "phase": "Startup",
+          "frame": 6,
+          "sourceTick": 170,
+          "leftWristMetres": 0.6142949653322335,
+          "rightWristMetres": 0.7479260675911024,
+          "nearestWristMetres": 0.6142949653322335
+        },
+        {
+          "phase": "Startup",
+          "frame": 6,
+          "sourceTick": 170,
+          "leftWristMetres": 0.6142949653322335,
+          "rightWristMetres": 0.7479260675911024,
+          "nearestWristMetres": 0.6142949653322335
+        },
+        {
+          "phase": "Startup",
+          "frame": 6,
+          "sourceTick": 170,
+          "leftWristMetres": 0.6142949653322335,
+          "rightWristMetres": 0.7479260675911024,
+          "nearestWristMetres": 0.6142949653322335
+        },
+        {
+          "phase": "Startup",
+          "frame": 6,
+          "sourceTick": 170,
+          "leftWristMetres": 0.6142949653322335,
+          "rightWristMetres": 0.7479260675911024,
+          "nearestWristMetres": 0.6142949653322335
+        },
+        {
+          "phase": "Startup",
+          "frame": 7,
+          "sourceTick": 171,
+          "leftWristMetres": 0.6565212792709542,
+          "rightWristMetres": 0.7873306866350694,
+          "nearestWristMetres": 0.6565212792709542
+        },
+        {
+          "phase": "Startup",
+          "frame": 8,
+          "sourceTick": 172,
+          "leftWristMetres": 0.7084812668194551,
+          "rightWristMetres": 0.8393547403715786,
+          "nearestWristMetres": 0.7084812668194551
+        },
+        {
+          "phase": "Startup",
+          "frame": 9,
+          "sourceTick": 173,
+          "leftWristMetres": 0.7704721786270416,
+          "rightWristMetres": 0.9071422447105967,
+          "nearestWristMetres": 0.7704721786270416
+        },
+        {
+          "phase": "Startup",
+          "frame": 10,
+          "sourceTick": 174,
+          "leftWristMetres": 0.8405581404232012,
+          "rightWristMetres": 0.9880537717024565,
+          "nearestWristMetres": 0.8405581404232012
+        },
+        {
+          "phase": "Startup",
+          "frame": 11,
+          "sourceTick": 175,
+          "leftWristMetres": 0.9201529956083282,
+          "rightWristMetres": 1.0806532504200135,
+          "nearestWristMetres": 0.9201529956083282
+        },
+        {
+          "phase": "Startup",
+          "frame": 12,
+          "sourceTick": 176,
+          "leftWristMetres": 0.996400419805582,
+          "rightWristMetres": 1.175144296983694,
+          "nearestWristMetres": 0.996400419805582
+        },
+        {
+          "phase": "Startup",
+          "frame": 12,
+          "sourceTick": 176,
+          "leftWristMetres": 0.996400419805582,
+          "rightWristMetres": 1.175144296983694,
+          "nearestWristMetres": 0.996400419805582
+        },
+        {
+          "phase": "Startup",
+          "frame": 12,
+          "sourceTick": 176,
+          "leftWristMetres": 0.996400419805582,
+          "rightWristMetres": 1.175144296983694,
+          "nearestWristMetres": 0.996400419805582
+        },
+        {
+          "phase": "Startup",
+          "frame": 12,
+          "sourceTick": 176,
+          "leftWristMetres": 0.996400419805582,
+          "rightWristMetres": 1.175144296983694,
+          "nearestWristMetres": 0.996400419805582
+        },
+        {
+          "phase": "Startup",
+          "frame": 12,
+          "sourceTick": 176,
+          "leftWristMetres": 0.996400419805582,
+          "rightWristMetres": 1.175144296983694,
+          "nearestWristMetres": 0.996400419805582
+        },
+        {
+          "phase": "Startup",
+          "frame": 13,
+          "sourceTick": 177,
+          "leftWristMetres": 1.07095661462006,
+          "rightWristMetres": 1.2710439950707293,
+          "nearestWristMetres": 1.07095661462006
+        },
+        {
+          "phase": "Startup",
+          "frame": 14,
+          "sourceTick": 178,
+          "leftWristMetres": 1.135396337301006,
+          "rightWristMetres": 1.3577991685471675,
+          "nearestWristMetres": 1.135396337301006
+        },
+        {
+          "phase": "Startup",
+          "frame": 15,
+          "sourceTick": 179,
+          "leftWristMetres": 1.1867851292883391,
+          "rightWristMetres": 1.4375192500278455,
+          "nearestWristMetres": 1.1867851292883391
+        },
+        {
+          "phase": "Startup",
+          "frame": 16,
+          "sourceTick": 180,
+          "leftWristMetres": 1.233859751238515,
+          "rightWristMetres": 1.5130543195994024,
+          "nearestWristMetres": 1.233859751238515
+        },
+        {
+          "phase": "Startup",
+          "frame": 17,
+          "sourceTick": 181,
+          "leftWristMetres": 1.277118955140863,
+          "rightWristMetres": 1.58068106757016,
+          "nearestWristMetres": 1.277118955140863
+        },
+        {
+          "phase": "Startup",
+          "frame": 17,
+          "sourceTick": 181,
+          "leftWristMetres": 1.277118955140863,
+          "rightWristMetres": 1.58068106757016,
+          "nearestWristMetres": 1.277118955140863
+        },
+        {
+          "phase": "Startup",
+          "frame": 17,
+          "sourceTick": 181,
+          "leftWristMetres": 1.277118955140863,
+          "rightWristMetres": 1.58068106757016,
+          "nearestWristMetres": 1.277118955140863
+        },
+        {
+          "phase": "Startup",
+          "frame": 17,
+          "sourceTick": 181,
+          "leftWristMetres": 1.277118955140863,
+          "rightWristMetres": 1.58068106757016,
+          "nearestWristMetres": 1.277118955140863
+        },
+        {
+          "phase": "Startup",
+          "frame": 17,
+          "sourceTick": 181,
+          "leftWristMetres": 1.277118955140863,
+          "rightWristMetres": 1.58068106757016,
+          "nearestWristMetres": 1.277118955140863
+        },
+        {
+          "phase": "Active",
+          "frame": 0,
+          "sourceTick": 182,
+          "leftWristMetres": 1.311394305701432,
+          "rightWristMetres": 1.6354152726242317,
+          "nearestWristMetres": 1.311394305701432
+        }
+      ],
+      "camera": [
+        0,
+        8,
+        9.705208,
+        1,
+        0,
+        0,
+        0,
+        0.7071068,
+        -0.7071068,
+        0,
+        0.7071068,
+        0.7071068
+      ],
+      "viewport": [
+        960,
+        540
+      ],
+      "holds": 27,
+      "resets": 0
+    },
+    "after": {
+      "source": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\428\\render-after-moving-v3\\180-moving-Left",
+      "frames": 66,
+      "phases": {
+        "Startup": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17
+        ],
+        "Active": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "Recovery": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19
+        ]
+      },
+      "nearestWristGapMetres": {
+        "min": 0.10083043495683437,
+        "max": 1.311394396558324
+      },
+      "separationSamples": [
+        {
+          "phase": "Startup",
+          "frame": 1,
+          "sourceTick": 174,
+          "leftWristMetres": 0.10083043495683437,
+          "rightWristMetres": 0.9117357682370096,
+          "nearestWristMetres": 0.10083043495683437
+        },
+        {
+          "phase": "Startup",
+          "frame": 2,
+          "sourceTick": 175,
+          "leftWristMetres": 0.5535467212107344,
+          "rightWristMetres": 0.8562116671628909,
+          "nearestWristMetres": 0.5535467212107344
+        },
+        {
+          "phase": "Startup",
+          "frame": 3,
+          "sourceTick": 176,
+          "leftWristMetres": 0.3503033010618657,
+          "rightWristMetres": 0.8351916005663841,
+          "nearestWristMetres": 0.3503033010618657
+        },
+        {
+          "phase": "Startup",
+          "frame": 4,
+          "sourceTick": 177,
+          "leftWristMetres": 0.28501360557823285,
+          "rightWristMetres": 0.7868458187971553,
+          "nearestWristMetres": 0.28501360557823285
+        },
+        {
+          "phase": "Startup",
+          "frame": 4,
+          "sourceTick": 177,
+          "leftWristMetres": 0.28501360557823285,
+          "rightWristMetres": 0.7868458187971553,
+          "nearestWristMetres": 0.28501360557823285
+        },
+        {
+          "phase": "Startup",
+          "frame": 4,
+          "sourceTick": 177,
+          "leftWristMetres": 0.28501360557823285,
+          "rightWristMetres": 0.7868458187971553,
+          "nearestWristMetres": 0.28501360557823285
+        },
+        {
+          "phase": "Startup",
+          "frame": 4,
+          "sourceTick": 177,
+          "leftWristMetres": 0.28501360557823285,
+          "rightWristMetres": 0.7868458187971553,
+          "nearestWristMetres": 0.28501360557823285
+        },
+        {
+          "phase": "Startup",
+          "frame": 4,
+          "sourceTick": 177,
+          "leftWristMetres": 0.28501360557823285,
+          "rightWristMetres": 0.7868458187971553,
+          "nearestWristMetres": 0.28501360557823285
+        },
+        {
+          "phase": "Startup",
+          "frame": 5,
+          "sourceTick": 178,
+          "leftWristMetres": 0.5348015523787983,
+          "rightWristMetres": 0.727067473534795,
+          "nearestWristMetres": 0.5348015523787983
+        },
+        {
+          "phase": "Startup",
+          "frame": 6,
+          "sourceTick": 179,
+          "leftWristMetres": 0.6142952667818571,
+          "rightWristMetres": 0.7479263820095001,
+          "nearestWristMetres": 0.6142952667818571
+        },
+        {
+          "phase": "Startup",
+          "frame": 7,
+          "sourceTick": 180,
+          "leftWristMetres": 0.6565208804669124,
+          "rightWristMetres": 0.7873308502881995,
+          "nearestWristMetres": 0.6565208804669124
+        },
+        {
+          "phase": "Startup",
+          "frame": 8,
+          "sourceTick": 181,
+          "leftWristMetres": 0.7084811880039658,
+          "rightWristMetres": 0.8393549198721334,
+          "nearestWristMetres": 0.7084811880039658
+        },
+        {
+          "phase": "Startup",
+          "frame": 9,
+          "sourceTick": 182,
+          "leftWristMetres": 0.7704725210200946,
+          "rightWristMetres": 0.9071426547965008,
+          "nearestWristMetres": 0.7704725210200946
+        },
+        {
+          "phase": "Startup",
+          "frame": 10,
+          "sourceTick": 183,
+          "leftWristMetres": 0.8405581071153346,
+          "rightWristMetres": 0.9880536440183445,
+          "nearestWristMetres": 0.8405581071153346
+        },
+        {
+          "phase": "Startup",
+          "frame": 11,
+          "sourceTick": 184,
+          "leftWristMetres": 0.9201530750223139,
+          "rightWristMetres": 1.0806532904054407,
+          "nearestWristMetres": 0.9201530750223139
+        },
+        {
+          "phase": "Startup",
+          "frame": 12,
+          "sourceTick": 185,
+          "leftWristMetres": 0.9964004419295149,
+          "rightWristMetres": 1.17514433681798,
+          "nearestWristMetres": 0.9964004419295149
+        },
+        {
+          "phase": "Startup",
+          "frame": 13,
+          "sourceTick": 186,
+          "leftWristMetres": 1.0709566926728036,
+          "rightWristMetres": 1.2710440183669998,
+          "nearestWristMetres": 1.0709566926728036
+        },
+        {
+          "phase": "Startup",
+          "frame": 13,
+          "sourceTick": 186,
+          "leftWristMetres": 1.0709566926728036,
+          "rightWristMetres": 1.2710440183669998,
+          "nearestWristMetres": 1.0709566926728036
+        },
+        {
+          "phase": "Startup",
+          "frame": 13,
+          "sourceTick": 186,
+          "leftWristMetres": 1.0709566926728036,
+          "rightWristMetres": 1.2710440183669998,
+          "nearestWristMetres": 1.0709566926728036
+        },
+        {
+          "phase": "Startup",
+          "frame": 13,
+          "sourceTick": 186,
+          "leftWristMetres": 1.0709566926728036,
+          "rightWristMetres": 1.2710440183669998,
+          "nearestWristMetres": 1.0709566926728036
+        },
+        {
+          "phase": "Startup",
+          "frame": 13,
+          "sourceTick": 186,
+          "leftWristMetres": 1.0709566926728036,
+          "rightWristMetres": 1.2710440183669998,
+          "nearestWristMetres": 1.0709566926728036
+        },
+        {
+          "phase": "Startup",
+          "frame": 13,
+          "sourceTick": 186,
+          "leftWristMetres": 1.0709566926728036,
+          "rightWristMetres": 1.2710440183669998,
+          "nearestWristMetres": 1.0709566926728036
+        },
+        {
+          "phase": "Startup",
+          "frame": 14,
+          "sourceTick": 187,
+          "leftWristMetres": 1.135396360209069,
+          "rightWristMetres": 1.3577991685471675,
+          "nearestWristMetres": 1.135396360209069
+        },
+        {
+          "phase": "Startup",
+          "frame": 15,
+          "sourceTick": 188,
+          "leftWristMetres": 1.18678521660126,
+          "rightWristMetres": 1.4375193003275895,
+          "nearestWristMetres": 1.18678521660126
+        },
+        {
+          "phase": "Startup",
+          "frame": 16,
+          "sourceTick": 189,
+          "leftWristMetres": 1.233859751238515,
+          "rightWristMetres": 1.5130542978463803,
+          "nearestWristMetres": 1.233859751238515
+        },
+        {
+          "phase": "Startup",
+          "frame": 17,
+          "sourceTick": 190,
+          "leftWristMetres": 1.2771189755284167,
+          "rightWristMetres": 1.5806810996505487,
+          "nearestWristMetres": 1.2771189755284167
+        },
+        {
+          "phase": "Active",
+          "frame": 0,
+          "sourceTick": 191,
+          "leftWristMetres": 1.311394396558324,
+          "rightWristMetres": 1.6354152938322302,
+          "nearestWristMetres": 1.311394396558324
+        }
+      ],
+      "camera": [
+        0,
+        8,
+        9.705208,
+        1,
+        0,
+        0,
+        0,
+        0.7071068,
+        -0.7071068,
+        0,
+        0.7071068,
+        0.7071068
+      ],
+      "viewport": [
+        960,
+        540
+      ],
+      "holds": 25,
+      "resets": 0
+    }
+  }
+}

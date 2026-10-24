@@ -1,0 +1,11 @@
+{
+  "schema": "hooper-shot-heading-evidence/v1",
+  "source": ".godot/428",
+  "originals": 621,
+  "matrixCases": 28,
+  "selectedOriginalPngs": 24,
+  "bytesBeforePackageManifest": 42105171,
+  "sizeWarning": true,
+  "limitation": "State, final-pose and rendered evidence only; no visual/feel acceptance or ball-coupling fix.",
+  "compression": "Gzip level9 mtime0. Local JSON/logs are byte-preserving; capture traces are explicit row selections in retention.json, retaining every observed shot row and all final-pose bones."
+}

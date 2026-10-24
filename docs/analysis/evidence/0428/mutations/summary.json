@@ -1,0 +1,42 @@
+[
+  {
+    "stage": "baseline-green",
+    "expected_exit": 0,
+    "actual_exit": 0,
+    "expected_failure": "",
+    "failure_matched": true,
+    "verdict_lines": [
+      "[shot-heading] PASS angle=180 entry=stationary hand=Right release=23 failures="
+    ]
+  },
+  {
+    "stage": "disabled-turn",
+    "expected_exit": 1,
+    "actual_exit": 1,
+    "expected_failure": "Startup must advance toward target",
+    "failure_matched": true,
+    "verdict_lines": [
+      "[shot-heading] FAIL angle=180 entry=stationary hand=Right release=-1 failures=Startup must advance toward target"
+    ]
+  },
+  {
+    "stage": "instant-turn",
+    "expected_exit": 1,
+    "actual_exit": 1,
+    "expected_failure": "Startup step exceeds ordinary bound",
+    "failure_matched": true,
+    "verdict_lines": [
+      "[shot-heading] FAIL angle=180 entry=stationary hand=Right release=-1 failures=Startup step exceeds ordinary bound"
+    ]
+  },
+  {
+    "stage": "restored-green",
+    "expected_exit": 0,
+    "actual_exit": 0,
+    "expected_failure": "",
+    "failure_matched": true,
+    "verdict_lines": [
+      "[shot-heading] PASS angle=180 entry=stationary hand=Right release=23 failures="
+    ]
+  }
+]

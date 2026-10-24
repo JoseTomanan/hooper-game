@@ -1,0 +1,81 @@
+{
+  "schema": "hooper-jumpshot-form/v1",
+  "result": "captured",
+  "failure": "",
+  "role": "server",
+  "variant": "normal",
+  "hand": "Right",
+  "commit": "2a74b6c",
+  "view": "gameplay",
+  "samples": 644,
+  "releases": 1,
+  "events": [
+    {
+      "tick": 534,
+      "kind": "heading-fixture",
+      "initialAngle": 91,
+      "entry": "moving",
+      "rate": 900,
+      "fixedTarget": 3.1415927,
+      "velocity": [
+        0,
+        0,
+        -4.5000005
+      ]
+    },
+    {
+      "tick": 534,
+      "kind": "shoot-input",
+      "hand": "Right",
+      "heading": 4.729842
+    },
+    {
+      "tick": 535,
+      "kind": "accepted-begin-observed",
+      "phaseFrame": 1,
+      "heading": 4.729842,
+      "fixedTarget": 3.1415927,
+      "initiationSpeed": 4.5000005
+    },
+    {
+      "tick": 552,
+      "physicsFrame": 552,
+      "kind": "release",
+      "count": 1,
+      "phase": "Active",
+      "frame": 0,
+      "heading": 4.729842,
+      "residualAngle": 1.5882494,
+      "facingFactor": 1.4044445,
+      "fadeaway": true,
+      "initiationSpeed": 4.5000005,
+      "position": [
+        -0.5076535,
+        1,
+        5.303387
+      ],
+      "liveBall": [
+        -0.5076535,
+        1,
+        5.303387
+      ]
+    }
+  ],
+  "headingFixture": true,
+  "initialAngle": 91,
+  "headingEntry": "moving",
+  "headingRate": 900,
+  "sawProductionShotStartup": true,
+  "feintRequested": false,
+  "sawAcceptedFeintRecovery": false,
+  "paced": false,
+  "pacingMeaning": "unpaced",
+  "mutation": "none",
+  "mutationApplied": false,
+  "legacyFixtureSha256": "",
+  "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B",
+  "engine": "4.7.1-stable (official)",
+  "images": false,
+  "sampleTiming": "HEADLESS diagnostic state only",
+  "verdict": "diagnostic only; no feel acceptance"
+}
