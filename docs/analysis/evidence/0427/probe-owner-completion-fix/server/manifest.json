@@ -1,0 +1,148 @@
+{
+  "schema": "hooper-rebound-presentation/v1",
+  "result": "captured",
+  "failure": "",
+  "role": "server",
+  "actor": "client",
+  "subject": 505784233,
+  "commit": "b74c68c",
+  "requestedPreRecoveryHand": "Right",
+  "height": 0.12,
+  "moving": false,
+  "movementAction": "move_forward",
+  "contested": false,
+  "view": "gameplay",
+  "paced": false,
+  "pacingMeaning": "unpaced",
+  "images": false,
+  "samples": 252,
+  "observedRecoveries": 2,
+  "authoritativeRecoveriesReceived": 0,
+  "events": [
+    {
+      "tick": 69,
+      "physicsFrame": 69,
+      "kind": "fixture-start",
+      "detail": {
+        "subject": 505784233
+      }
+    },
+    {
+      "tick": 94,
+      "physicsFrame": 94,
+      "kind": "fixture-positioned",
+      "detail": {
+        "position": [
+          0,
+          0,
+          5
+        ],
+        "requestedPreRecoveryHand": "Right",
+        "meaning": "setup only; production possession contract may reset the hand on recovery"
+      }
+    },
+    {
+      "tick": 129,
+      "physicsFrame": 129,
+      "kind": "seed",
+      "detail": {
+        "ordinal": 1,
+        "position": [
+          0.3,
+          0.12,
+          4.7
+        ],
+        "state": "Loose",
+        "hand": "Right",
+        "awardCount": 0
+      }
+    },
+    {
+      "tick": 130,
+      "physicsFrame": 130,
+      "kind": "live-holder-edge",
+      "detail": {
+        "count": 1,
+        "holder": 505784233,
+        "state": "Held",
+        "position": [
+          0.3,
+          0.12,
+          4.7
+        ],
+        "hand": "Right",
+        "animation": "Locomotion",
+        "playbackTime": 0.19999994337558746,
+        "awardCount": 1
+      }
+    },
+    {
+      "tick": 199,
+      "physicsFrame": 199,
+      "kind": "fixture-positioned",
+      "detail": {
+        "position": [
+          0,
+          0,
+          5
+        ],
+        "requestedPreRecoveryHand": "Right",
+        "meaning": "setup only; production possession contract may reset the hand on recovery"
+      }
+    },
+    {
+      "tick": 219,
+      "physicsFrame": 219,
+      "kind": "seed",
+      "detail": {
+        "ordinal": 2,
+        "position": [
+          0.3,
+          0.12,
+          4.7
+        ],
+        "state": "Loose",
+        "hand": "Right",
+        "awardCount": 1
+      }
+    },
+    {
+      "tick": 220,
+      "physicsFrame": 220,
+      "kind": "live-holder-edge",
+      "detail": {
+        "count": 2,
+        "holder": 505784233,
+        "state": "Held",
+        "position": [
+          0.3,
+          0.12,
+          4.7
+        ],
+        "hand": "Right",
+        "animation": "Locomotion",
+        "playbackTime": 0,
+        "awardCount": 2
+      }
+    }
+  ],
+  "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B",
+  "engine": "4.7.1-stable (official)",
+  "commandLine": [
+    "res://tests/integration/ReboundPresentationCapture.tscn"
+  ],
+  "userArgs": [
+    "--capture-output=C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\427\\probe-owner-completion-fix\\server",
+    "--capture-role=server",
+    "--capture-actor=client",
+    "--capture-hand=Right",
+    "--capture-height=0.12",
+    "--capture-view=gameplay",
+    "--capture-port=23481",
+    "--capture-commit=b74c68c",
+    "--capture-images=false"
+  ],
+  "sampleTiming": "HEADLESS diagnostic state only; SkeletonUpdated final modifier pose / _Process state",
+  "fixture": "normal Main scene, production host/join and animation callback; explicit position/hand/Loose setup; owning movement uses production Input.ActionPress",
+  "verdict": "diagnostic only; no presentation correctness or feel acceptance"
+}

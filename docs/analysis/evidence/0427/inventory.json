@@ -1,0 +1,1206 @@
+{
+  "schema": "hooper-rebound-evidence-package/v1",
+  "packagingHead": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+  "analyzer": {
+    "path": "tools/analyze_rebound_capture.py",
+    "sha256": "ed8695c2acafa900624234b219e28daab6d2e6fd3aa5334f739c3fdfe05fdeca",
+    "exitWindow": "first catch tick -1 through last catch tick +21 inclusive; modifier inactive by last catch tick +20"
+  },
+  "traceEncoding": "complete original UTF-8 JSONL bytes in gzip; mtime=0; empty gzip filename",
+  "images": "nine selected original PNGs only; no image processing",
+  "withdrawnPhaseHypothesis": "The earlier v1 phase-failure claim mixed world bones from an earlier model transform with a later root/yaw. The phase-only repair was withdrawn after corrected v2 falsification. No phase-before/held result is accepted or packaged as negative proof. Current production proof covers the later bounded target handoff repair.",
+  "historicalDiagnostics": {
+    "phase-v2-control": "Unmodified temporary clock-restoration diagnostic and its original PASS report. This records falsification, not a current reproducible negative control; the flag was removed. Native-before and native-observer retain original v1 stationary diagnostic metadata; native-after is current v2."
+  },
+  "captures": [
+    {
+      "source": ".godot/427/proof-handoff-final/local/local",
+      "originalCommit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "result": "captured",
+      "failure": "",
+      "role": "local",
+      "actor": "host",
+      "images": false,
+      "schema": "hooper-rebound-presentation/v2",
+      "bodyPoseCoordinates": "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/observer/client",
+      "originalCommit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "result": "captured",
+      "failure": "",
+      "role": "client",
+      "actor": "host",
+      "images": false,
+      "schema": "hooper-rebound-presentation/v2",
+      "bodyPoseCoordinates": "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/observer/server",
+      "originalCommit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "result": "captured",
+      "failure": "",
+      "role": "server",
+      "actor": "host",
+      "images": false,
+      "schema": "hooper-rebound-presentation/v2",
+      "bodyPoseCoordinates": "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/owner/client",
+      "originalCommit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "result": "captured",
+      "failure": "",
+      "role": "client",
+      "actor": "client",
+      "images": false,
+      "schema": "hooper-rebound-presentation/v2",
+      "bodyPoseCoordinates": "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/owner/server",
+      "originalCommit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "result": "captured",
+      "failure": "",
+      "role": "server",
+      "actor": "client",
+      "images": false,
+      "schema": "hooper-rebound-presentation/v2",
+      "bodyPoseCoordinates": "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/long-loose/local",
+      "originalCommit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "result": "captured",
+      "failure": "",
+      "role": "local",
+      "actor": "host",
+      "images": false,
+      "schema": "hooper-rebound-presentation/v2",
+      "bodyPoseCoordinates": "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/falling-contested/local",
+      "originalCommit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "result": "captured",
+      "failure": "",
+      "role": "local",
+      "actor": "host",
+      "images": false,
+      "schema": "hooper-rebound-presentation/v2",
+      "bodyPoseCoordinates": "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/moving/local",
+      "originalCommit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "result": "captured",
+      "failure": "",
+      "role": "local",
+      "actor": "host",
+      "images": false,
+      "schema": "hooper-rebound-presentation/v2",
+      "bodyPoseCoordinates": "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/moving-observer/client",
+      "originalCommit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "result": "captured",
+      "failure": "",
+      "role": "client",
+      "actor": "host",
+      "images": false,
+      "schema": "hooper-rebound-presentation/v2",
+      "bodyPoseCoordinates": "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/moving-observer/server",
+      "originalCommit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "result": "captured",
+      "failure": "",
+      "role": "server",
+      "actor": "host",
+      "images": false,
+      "schema": "hooper-rebound-presentation/v2",
+      "bodyPoseCoordinates": "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/moving-owner/client",
+      "originalCommit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "result": "captured",
+      "failure": "",
+      "role": "client",
+      "actor": "client",
+      "images": false,
+      "schema": "hooper-rebound-presentation/v2",
+      "bodyPoseCoordinates": "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/moving-owner/server",
+      "originalCommit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "result": "captured",
+      "failure": "",
+      "role": "server",
+      "actor": "client",
+      "images": false,
+      "schema": "hooper-rebound-presentation/v2",
+      "bodyPoseCoordinates": "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/moving-owner-phase-shift/client",
+      "originalCommit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "result": "captured",
+      "failure": "",
+      "role": "client",
+      "actor": "client",
+      "images": false,
+      "schema": "hooper-rebound-presentation/v2",
+      "bodyPoseCoordinates": "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/moving-owner-phase-shift/server",
+      "originalCommit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "result": "captured",
+      "failure": "",
+      "role": "server",
+      "actor": "client",
+      "images": false,
+      "schema": "hooper-rebound-presentation/v2",
+      "bodyPoseCoordinates": "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/reset-neutral/client",
+      "originalCommit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "result": "captured",
+      "failure": "",
+      "role": "client",
+      "actor": "host",
+      "images": false,
+      "schema": "hooper-rebound-presentation/v2",
+      "bodyPoseCoordinates": "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/reset-neutral/server",
+      "originalCommit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "result": "captured",
+      "failure": "",
+      "role": "server",
+      "actor": "host",
+      "images": false,
+      "schema": "hooper-rebound-presentation/v2",
+      "bodyPoseCoordinates": "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/immediate-local/local",
+      "originalCommit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "result": "captured",
+      "failure": "",
+      "role": "local",
+      "actor": "host",
+      "images": false,
+      "schema": "hooper-rebound-presentation/v2",
+      "bodyPoseCoordinates": "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/feint-local/local",
+      "originalCommit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "result": "captured",
+      "failure": "",
+      "role": "local",
+      "actor": "host",
+      "images": false,
+      "schema": "hooper-rebound-presentation/v2",
+      "bodyPoseCoordinates": "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/immediate-owner/client",
+      "originalCommit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "result": "captured",
+      "failure": "",
+      "role": "client",
+      "actor": "client",
+      "images": false,
+      "schema": "hooper-rebound-presentation/v2",
+      "bodyPoseCoordinates": "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/immediate-owner/server",
+      "originalCommit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "result": "captured",
+      "failure": "",
+      "role": "server",
+      "actor": "client",
+      "images": false,
+      "schema": "hooper-rebound-presentation/v2",
+      "bodyPoseCoordinates": "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/feint-owner/client",
+      "originalCommit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "result": "captured",
+      "failure": "",
+      "role": "client",
+      "actor": "client",
+      "images": false,
+      "schema": "hooper-rebound-presentation/v2",
+      "bodyPoseCoordinates": "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/feint-owner/server",
+      "originalCommit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "result": "captured",
+      "failure": "",
+      "role": "server",
+      "actor": "client",
+      "images": false,
+      "schema": "hooper-rebound-presentation/v2",
+      "bodyPoseCoordinates": "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/legacy-pose/local",
+      "originalCommit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "result": "captured",
+      "failure": "",
+      "role": "local",
+      "actor": "host",
+      "images": false,
+      "schema": "hooper-rebound-presentation/v2",
+      "bodyPoseCoordinates": "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/probe-owner-completion-fix/client",
+      "originalCommit": "b74c68c",
+      "result": "captured",
+      "failure": "",
+      "role": "client",
+      "actor": "client",
+      "images": false,
+      "schema": "hooper-rebound-presentation/v1",
+      "bodyPoseCoordinates": null,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/probe-owner-completion-fix/server",
+      "originalCommit": "b74c68c",
+      "result": "captured",
+      "failure": "",
+      "role": "server",
+      "actor": "client",
+      "images": false,
+      "schema": "hooper-rebound-presentation/v1",
+      "bodyPoseCoordinates": null,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/baseline-falling/local",
+      "originalCommit": "b74c68c",
+      "result": "captured",
+      "failure": "",
+      "role": "local",
+      "actor": "host",
+      "images": false,
+      "schema": "hooper-rebound-presentation/v1",
+      "bodyPoseCoordinates": null,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/native-before/local",
+      "originalCommit": "dce36aa",
+      "result": "captured",
+      "failure": "",
+      "role": "local",
+      "actor": "host",
+      "images": true,
+      "schema": "hooper-rebound-presentation/v1",
+      "bodyPoseCoordinates": null,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/native-handoff-after/local",
+      "originalCommit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "result": "captured",
+      "failure": "",
+      "role": "local",
+      "actor": "host",
+      "images": true,
+      "schema": "hooper-rebound-presentation/v2",
+      "bodyPoseCoordinates": "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/native-observer/client",
+      "originalCommit": "dce36aa",
+      "result": "captured",
+      "failure": "",
+      "role": "client",
+      "actor": "host",
+      "images": true,
+      "schema": "hooper-rebound-presentation/v1",
+      "bodyPoseCoordinates": null,
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/phase-v2-control/client",
+      "originalCommit": "5246bff+clock-mutation",
+      "result": "captured",
+      "failure": "",
+      "role": "client",
+      "actor": "client",
+      "images": false,
+      "schema": "hooper-rebound-presentation/v2",
+      "bodyPoseCoordinates": "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    },
+    {
+      "source": ".godot/427/phase-v2-control/server",
+      "originalCommit": "5246bff+clock-mutation",
+      "result": "captured",
+      "failure": "",
+      "role": "server",
+      "actor": "client",
+      "images": false,
+      "schema": "hooper-rebound-presentation/v2",
+      "bodyPoseCoordinates": "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
+      "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B"
+    }
+  ],
+  "normalReportResults": [
+    {
+      "case": "local",
+      "result": "passed",
+      "exitCode": 0
+    },
+    {
+      "case": "observer",
+      "result": "passed",
+      "exitCode": 0
+    },
+    {
+      "case": "owner",
+      "result": "passed",
+      "exitCode": 0
+    },
+    {
+      "case": "long-loose",
+      "result": "passed",
+      "exitCode": 0
+    },
+    {
+      "case": "falling-contested",
+      "result": "passed",
+      "exitCode": 0
+    },
+    {
+      "case": "moving",
+      "result": "passed",
+      "exitCode": 0
+    },
+    {
+      "case": "moving-observer",
+      "result": "passed",
+      "exitCode": 0
+    },
+    {
+      "case": "moving-owner",
+      "result": "passed",
+      "exitCode": 0
+    },
+    {
+      "case": "moving-owner-phase-shift",
+      "result": "passed",
+      "exitCode": 0
+    },
+    {
+      "case": "reset-neutral",
+      "result": "passed",
+      "exitCode": 0
+    }
+  ],
+  "issues": [],
+  "files": [
+    {
+      "source": ".godot/427/baseline-falling/local/manifest.json",
+      "packaged": "baseline-falling/local/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "e80a89381740eb85daa871e61f93117310bd575ecf16c227d77bd2f5d30b7fab",
+      "packagedSha256": "e80a89381740eb85daa871e61f93117310bd575ecf16c227d77bd2f5d30b7fab",
+      "packagedBytes": 3716
+    },
+    {
+      "source": ".godot/427/baseline-falling/local/trace.jsonl",
+      "packaged": "baseline-falling/local/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "6fa7189a2f6915cfa5b870a11774c0283d6786bc407b2b6c188c3fb444ffa90b",
+      "packagedSha256": "b7dcf775fb93f716934ba325f5bb66c4dfa6ac3a6830f26ce5d6f116b51592ae",
+      "packagedBytes": 37244
+    },
+    {
+      "source": ".godot/427/native-handoff-after/local/frame-00063.png",
+      "packaged": "native-after/local/frame-00063.png",
+      "transformation": "copy",
+      "sourceSha256": "942db9c1b719e8c057bc9dd26a4a0c0f2618bcffd5f521668efd72c2611c5cc8",
+      "packagedSha256": "942db9c1b719e8c057bc9dd26a4a0c0f2618bcffd5f521668efd72c2611c5cc8",
+      "packagedBytes": 154139,
+      "imageMeaning": "original rendered PNG; no image manipulation"
+    },
+    {
+      "source": ".godot/427/native-handoff-after/local/frame-00070.png",
+      "packaged": "native-after/local/frame-00070.png",
+      "transformation": "copy",
+      "sourceSha256": "2bca36049a12248efc624031286028a8595ee014d87ddc7b47af52e97755b227",
+      "packagedSha256": "2bca36049a12248efc624031286028a8595ee014d87ddc7b47af52e97755b227",
+      "packagedBytes": 154516,
+      "imageMeaning": "original rendered PNG; no image manipulation"
+    },
+    {
+      "source": ".godot/427/native-handoff-after/local/frame-00090.png",
+      "packaged": "native-after/local/frame-00090.png",
+      "transformation": "copy",
+      "sourceSha256": "443fa3b13a79bb9d8467fa084adfb8b5bd7d2eb8496a7097bec8700769c87964",
+      "packagedSha256": "443fa3b13a79bb9d8467fa084adfb8b5bd7d2eb8496a7097bec8700769c87964",
+      "packagedBytes": 154494,
+      "imageMeaning": "original rendered PNG; no image manipulation"
+    },
+    {
+      "source": ".godot/427/native-handoff-after/local/manifest.json",
+      "packaged": "native-after/local/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "4b502c96fb9cf814fbfc9875c49ce58e85b4ae84739a83374d57939f518d1179",
+      "packagedSha256": "4b502c96fb9cf814fbfc9875c49ce58e85b4ae84739a83374d57939f518d1179",
+      "packagedBytes": 4381
+    },
+    {
+      "source": ".godot/427/native-handoff-after/local/trace.jsonl",
+      "packaged": "native-after/local/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "e98d986b1e99f6735ceb603850d18b2f2161899bc56d6ffa711ee5387012b58e",
+      "packagedSha256": "50890ccff45556e7f9b11a08eccadb908a0d2b390966c33645885b0736aaf561",
+      "packagedBytes": 53923
+    },
+    {
+      "source": ".godot/427/native-before/local/frame-00063.png",
+      "packaged": "native-before/local/frame-00063.png",
+      "transformation": "copy",
+      "sourceSha256": "ce3dd144e44bda9da657085b63418cd45da7e4e77338054cb68c7715bf4b4161",
+      "packagedSha256": "ce3dd144e44bda9da657085b63418cd45da7e4e77338054cb68c7715bf4b4161",
+      "packagedBytes": 154457,
+      "imageMeaning": "original rendered PNG; no image manipulation"
+    },
+    {
+      "source": ".godot/427/native-before/local/frame-00070.png",
+      "packaged": "native-before/local/frame-00070.png",
+      "transformation": "copy",
+      "sourceSha256": "cf5a589d18f3701f5c99d058f6c583bf191f7d1a636befc180ebcc5c3d422f95",
+      "packagedSha256": "cf5a589d18f3701f5c99d058f6c583bf191f7d1a636befc180ebcc5c3d422f95",
+      "packagedBytes": 155233,
+      "imageMeaning": "original rendered PNG; no image manipulation"
+    },
+    {
+      "source": ".godot/427/native-before/local/frame-00090.png",
+      "packaged": "native-before/local/frame-00090.png",
+      "transformation": "copy",
+      "sourceSha256": "cc09ab96a2457555aa37dad5d0985c92c6bc1cbab79a81bd975a40cef629db10",
+      "packagedSha256": "cc09ab96a2457555aa37dad5d0985c92c6bc1cbab79a81bd975a40cef629db10",
+      "packagedBytes": 154073,
+      "imageMeaning": "original rendered PNG; no image manipulation"
+    },
+    {
+      "source": ".godot/427/native-before/local/manifest.json",
+      "packaged": "native-before/local/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "0933cbf91a44fcbfcee6f1f10bd939e567fc4e3cb8a71fdca7a42cffbee6d85a",
+      "packagedSha256": "0933cbf91a44fcbfcee6f1f10bd939e567fc4e3cb8a71fdca7a42cffbee6d85a",
+      "packagedBytes": 3831
+    },
+    {
+      "source": ".godot/427/native-before/local/trace.jsonl",
+      "packaged": "native-before/local/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "54f7a9180fb2c7fdfeffcfcb282ca102653740271edd71386e97f7a949cd15d9",
+      "packagedSha256": "284e60d191d4615a19375bef29dbc4dd859322c69e66b822adb795d773d7fc2e",
+      "packagedBytes": 42572
+    },
+    {
+      "source": ".godot/427/native-observer/client/frame-00134.png",
+      "packaged": "native-observer/client/frame-00134.png",
+      "transformation": "copy",
+      "sourceSha256": "a681153126e2c1ae70e1ece7ea89a446862de6b097850dd7f553472b376de840",
+      "packagedSha256": "a681153126e2c1ae70e1ece7ea89a446862de6b097850dd7f553472b376de840",
+      "packagedBytes": 157743,
+      "imageMeaning": "original rendered PNG; no image manipulation",
+      "firstCatchAge": 0,
+      "presentationTick": 126,
+      "traceSample": 134
+    },
+    {
+      "source": ".godot/427/native-observer/client/frame-00145.png",
+      "packaged": "native-observer/client/frame-00145.png",
+      "transformation": "copy",
+      "sourceSha256": "cf27c51f3e2b7a8afbe563ef0b7904169691fc7794941a9b1df275b5c00b3d5c",
+      "packagedSha256": "cf27c51f3e2b7a8afbe563ef0b7904169691fc7794941a9b1df275b5c00b3d5c",
+      "packagedBytes": 157878,
+      "imageMeaning": "original rendered PNG; no image manipulation",
+      "firstCatchAge": 7,
+      "presentationTick": 133,
+      "traceSample": 145
+    },
+    {
+      "source": ".godot/427/native-observer/client/frame-00183.png",
+      "packaged": "native-observer/client/frame-00183.png",
+      "transformation": "copy",
+      "sourceSha256": "a3c175b9fe4ffe594e3ea930cd8baa467c4cd63b5d33edadb231712794e43d06",
+      "packagedSha256": "a3c175b9fe4ffe594e3ea930cd8baa467c4cd63b5d33edadb231712794e43d06",
+      "packagedBytes": 157757,
+      "imageMeaning": "original rendered PNG; no image manipulation",
+      "firstCatchAge": 27,
+      "presentationTick": 153,
+      "traceSample": 183
+    },
+    {
+      "source": ".godot/427/native-observer/client/manifest.json",
+      "packaged": "native-observer/client/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "90e56b4c7254a22bf77946a0459e589592bcb1e85d11773b5385d1c806a93511",
+      "packagedSha256": "90e56b4c7254a22bf77946a0459e589592bcb1e85d11773b5385d1c806a93511",
+      "packagedBytes": 2944
+    },
+    {
+      "source": ".godot/427/native-observer/client/trace.jsonl",
+      "packaged": "native-observer/client/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "5def62230ec45b1c35cde9abba5e7d674aa1507b1810cf148fc311cb49ac1a2f",
+      "packagedSha256": "842c1524cdd067adace12b72ce61a4d91af35ef01fb8fbedb3a614cba0ba11cc",
+      "packagedBytes": 44353
+    },
+    {
+      "source": ".godot/427/phase-v2-control-proof.json",
+      "packaged": "phase-v2-control-proof.json",
+      "transformation": "copy",
+      "sourceSha256": "ebb232aac13c09a3714e2256f0c787a16a2b5afe114d3b589652afa45b48010e",
+      "packagedSha256": "ebb232aac13c09a3714e2256f0c787a16a2b5afe114d3b589652afa45b48010e",
+      "packagedBytes": 139878,
+      "evidenceScope": "historical diagnostic only; temporary old-clock restoration probe with corrected v2 coordinates; PASS falsified the phase-only hypothesis; flag removed from current CLI; original report predates current +21 exit gates"
+    },
+    {
+      "source": ".godot/427/phase-v2-control/client/manifest.json",
+      "packaged": "phase-v2-control/client/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "d8093dbbb3176528258e168f80156d5e7cc76dc2ffbb66f7ee2b1c6aa07681a7",
+      "packagedSha256": "d8093dbbb3176528258e168f80156d5e7cc76dc2ffbb66f7ee2b1c6aa07681a7",
+      "packagedBytes": 3562
+    },
+    {
+      "source": ".godot/427/phase-v2-control/client/trace.jsonl",
+      "packaged": "phase-v2-control/client/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "ccd5132bc03e5d3af53bd393d713d7cba89cbcae247b5c9f85d8f7cd05d50296",
+      "packagedSha256": "ea064b8e883d11dd0143fa0e2ec6cf34a552c2822ad4b6b84f6caf056d33d7e5",
+      "packagedBytes": 127154
+    },
+    {
+      "source": ".godot/427/phase-v2-control/server/manifest.json",
+      "packaged": "phase-v2-control/server/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "ed33355625e990ad97402feeccdebc5d7b143654f90d5cbe1d5c5471bc50956e",
+      "packagedSha256": "ed33355625e990ad97402feeccdebc5d7b143654f90d5cbe1d5c5471bc50956e",
+      "packagedBytes": 4466
+    },
+    {
+      "source": ".godot/427/phase-v2-control/server/trace.jsonl",
+      "packaged": "phase-v2-control/server/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "18ca652df3ca389399d52d1acdcd2635bdfe6fac4c5c384818738e9731b0fccc",
+      "packagedSha256": "5c08c6445a65c9c80915042eeed34c1b8ef2ec5cd3f3b77d6b60f918dd3db09c",
+      "packagedBytes": 122991
+    },
+    {
+      "source": ".godot/427/probe-owner-completion-fix/client/manifest.json",
+      "packaged": "probe-owner-completion-fix/client/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "c62e7fd2be8330396348b51356a548ad5f4b480016de2e8dd2458c43b455da53",
+      "packagedSha256": "c62e7fd2be8330396348b51356a548ad5f4b480016de2e8dd2458c43b455da53",
+      "packagedBytes": 2371
+    },
+    {
+      "source": ".godot/427/probe-owner-completion-fix/client/trace.jsonl",
+      "packaged": "probe-owner-completion-fix/client/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "dd94192623137944dd47a5720f889137946f6fdd4bde4ecec16c6d3a7e8d6344",
+      "packagedSha256": "e46fc5d5c8dcc05384b925f212a1bcc0c76da02c15fe013bd7d12b02c1704046",
+      "packagedBytes": 37195
+    },
+    {
+      "source": ".godot/427/probe-owner-completion-fix/server/manifest.json",
+      "packaged": "probe-owner-completion-fix/server/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "0cb5dfb2a5e2bbab65b7e97b925e665253848824fab77992d978da55d17e271d",
+      "packagedSha256": "0cb5dfb2a5e2bbab65b7e97b925e665253848824fab77992d978da55d17e271d",
+      "packagedBytes": 3757
+    },
+    {
+      "source": ".godot/427/probe-owner-completion-fix/server/trace.jsonl",
+      "packaged": "probe-owner-completion-fix/server/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "005b6625c7bbc9e11b30ed9c0b370fcb5c4b29e2f0ace1ba2d2f7d5b09056699",
+      "packagedSha256": "ca886140dfbb1cd2c2a70b664c82018a2cc1b8522b5055deaec3f1d4e7377071",
+      "packagedBytes": 47019
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/delayed-control.json",
+      "packaged": "proof-final/delayed-control.json",
+      "transformation": "copy",
+      "sourceSha256": "8cbf6b21109f3091efebdd2f3c90fa189193dd256ad75de5f519bb965c6b3e8b",
+      "packagedSha256": "8cbf6b21109f3091efebdd2f3c90fa189193dd256ad75de5f519bb965c6b3e8b",
+      "packagedBytes": 85889,
+      "expectedResult": "failed; intentional negative control"
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/disconnected-control.json",
+      "packaged": "proof-final/disconnected-control.json",
+      "transformation": "copy",
+      "sourceSha256": "b5865cc47739e7c79f939258a4801982fb9bafe69ea32c0c9791ca13bf289371",
+      "packagedSha256": "b5865cc47739e7c79f939258a4801982fb9bafe69ea32c0c9791ca13bf289371",
+      "packagedBytes": 98139,
+      "expectedResult": "failed; intentional negative control"
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/falling-contested-proof.json",
+      "packaged": "proof-final/falling-contested-proof.json",
+      "transformation": "reanalyzed unchanged capture with current analyzer; full exit window through end+21",
+      "sourceSha256": "d19578b6370e9b8701494907ba5f0b206eea8e5b729974bd06704e59baeae71b",
+      "packagedSha256": "874389c92a73fb79305a5bf3e0e9fcbc0751ddbee480b7dd6449148bffef7ff1",
+      "packagedBytes": 98197,
+      "command": [
+        "tools/analyze_rebound_capture.py",
+        ".godot/427/proof-handoff-final/falling-contested",
+        "--output",
+        "docs/analysis/evidence/0427/proof-final/falling-contested-proof.json"
+      ]
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/falling-contested/local/manifest.json",
+      "packaged": "proof-final/falling-contested/local/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "c792b8316895645ba2e637ada642ada49b4847d2421558957cb04384177b70b7",
+      "packagedSha256": "c792b8316895645ba2e637ada642ada49b4847d2421558957cb04384177b70b7",
+      "packagedBytes": 4384
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/falling-contested/local/trace.jsonl",
+      "packaged": "proof-final/falling-contested/local/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "abebdb129c77d477cb93050ede9bb1d947d844e9c6a2bb26355b4ff270a0fcea",
+      "packagedSha256": "665f9d1ec57c3ddb9bdba47a7a905b18faf5d7fa639951dc599e2d88a06cf535",
+      "packagedBytes": 43776
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/feint-local/local/manifest.json",
+      "packaged": "proof-final/feint-local/local/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "9f8c22b62f1c39cf0a7fae799b610b069ba98843c665d2e96002165623e6e137",
+      "packagedSha256": "9f8c22b62f1c39cf0a7fae799b610b069ba98843c665d2e96002165623e6e137",
+      "packagedBytes": 6311
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/feint-local/local/trace.jsonl",
+      "packaged": "proof-final/feint-local/local/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "cf333dd340ee3325546f7b4e4020a408ce86f09cb33699962bcd65880461d16e",
+      "packagedSha256": "7e5832ac27d39b675441aec22021b0ee287f5a210a4536bfa4c3f95f41b1b891",
+      "packagedBytes": 45477
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/feint-owner/client/manifest.json",
+      "packaged": "proof-final/feint-owner/client/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "738b19fffa6a180f74f92587e4198982678927c4408af8077a0cc8694697acc1",
+      "packagedSha256": "738b19fffa6a180f74f92587e4198982678927c4408af8077a0cc8694697acc1",
+      "packagedBytes": 5511
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/feint-owner/client/trace.jsonl",
+      "packaged": "proof-final/feint-owner/client/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "abe2e6f995d6781a4e195d4352730499e6e3c673924aef54c7c1e4edcc23c74a",
+      "packagedSha256": "05ded5d8f051f76db94cae59ff6ebb938f8f452686bc3ec8545667f73d6f7d9f",
+      "packagedBytes": 66611
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/feint-owner/server/manifest.json",
+      "packaged": "proof-final/feint-owner/server/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "b05083f7ee605b3159628600d655e5f7941fb8513e9f7132455107b534d6672b",
+      "packagedSha256": "b05083f7ee605b3159628600d655e5f7941fb8513e9f7132455107b534d6672b",
+      "packagedBytes": 4425
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/feint-owner/server/trace.jsonl",
+      "packaged": "proof-final/feint-owner/server/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "23e3c8b5c1b3b54ecebd17a0d9c11deb2da7b8c910d8c51025e4037086d8d01e",
+      "packagedSha256": "50af3a218fc5634f52cdbf36f21cd7d8212183e493ed2077507ff148dea833a2",
+      "packagedBytes": 64529
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/immediate-local/local/manifest.json",
+      "packaged": "proof-final/immediate-local/local/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "dac0ba9f96a754499547b42c162522af4c1ebf7c5b5ef101f44ba0584b177284",
+      "packagedSha256": "dac0ba9f96a754499547b42c162522af4c1ebf7c5b5ef101f44ba0584b177284",
+      "packagedBytes": 5528
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/immediate-local/local/trace.jsonl",
+      "packaged": "proof-final/immediate-local/local/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "7f0d02dfeeccd3f3eb39134a6d366306bef56932c5cfc7a9e9915ac69f2ea7e7",
+      "packagedSha256": "aad11d4ea19e66f88552ba99bf593e1b35416ef806f1964eee9c5678286b40c2",
+      "packagedBytes": 85380
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/immediate-owner/client/manifest.json",
+      "packaged": "proof-final/immediate-owner/client/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "ec1e1e7c4d3619f176e8e0b27afbfa69d7ac2b309cd214313d0041da4db653da",
+      "packagedSha256": "ec1e1e7c4d3619f176e8e0b27afbfa69d7ac2b309cd214313d0041da4db653da",
+      "packagedBytes": 4711
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/immediate-owner/client/trace.jsonl",
+      "packaged": "proof-final/immediate-owner/client/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "50c211b5fcd1f4b8d9e6542ed39aa6ee0b4297dcbf79f0ffe714dcdde9f6a02d",
+      "packagedSha256": "1bd9b422dcd8c4656311ec3cca27fbc66e382effa5a8a1a58021cd38c1cc52ee",
+      "packagedBytes": 116129
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/immediate-owner/server/manifest.json",
+      "packaged": "proof-final/immediate-owner/server/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "44ae5ee8985439008c082d131500d64fa6bc9191f3ce63649eddb5d9b3782904",
+      "packagedSha256": "44ae5ee8985439008c082d131500d64fa6bc9191f3ce63649eddb5d9b3782904",
+      "packagedBytes": 4453
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/immediate-owner/server/trace.jsonl",
+      "packaged": "proof-final/immediate-owner/server/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "bfee1288700ace5c67c299f716d44bd7c126d961854142173390004368b42cbd",
+      "packagedSha256": "e54ac2884859541b4bd453d8a2c418eb05dda212d05fa792179613cd6cd8dd4c",
+      "packagedBytes": 112187
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/legacy-pose-control.json",
+      "packaged": "proof-final/legacy-pose-control.json",
+      "transformation": "copy",
+      "sourceSha256": "552e437c9fb6a9394c2f744eee255c90bda26764ba918e35ac0b8eb4eb7d577c",
+      "packagedSha256": "552e437c9fb6a9394c2f744eee255c90bda26764ba918e35ac0b8eb4eb7d577c",
+      "packagedBytes": 97511,
+      "expectedResult": "failed; intentional negative control"
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/legacy-pose/local/manifest.json",
+      "packaged": "proof-final/legacy-pose/local/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "ba8cb8291f6ba0b4ccb1f7bcabb1a895c94158a62cd2342eae6b7d63ffa243b9",
+      "packagedSha256": "ba8cb8291f6ba0b4ccb1f7bcabb1a895c94158a62cd2342eae6b7d63ffa243b9",
+      "packagedBytes": 4388
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/legacy-pose/local/trace.jsonl",
+      "packaged": "proof-final/legacy-pose/local/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "011785da6b1b19c9f16e539c6f571f236365438f42cd4751456736f0e572997b",
+      "packagedSha256": "d33a7fd54fd0f1f15c31d429d1676d529580d03e75760672fb9eb1de72db5edf",
+      "packagedBytes": 58004
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/local-proof.json",
+      "packaged": "proof-final/local-proof.json",
+      "transformation": "reanalyzed unchanged capture with current analyzer; full exit window through end+21",
+      "sourceSha256": "f61f4417e39c78ce1f10e2604dfcf5c27d5d436de410e42ffc8a144eca641494",
+      "packagedSha256": "fabe1db9a8264d790af6ef3ccbd446b62bec6a4905d3f19945d3cf9ea83766fa",
+      "packagedBytes": 98090,
+      "command": [
+        "tools/analyze_rebound_capture.py",
+        ".godot/427/proof-handoff-final/local",
+        "--output",
+        "docs/analysis/evidence/0427/proof-final/local-proof.json"
+      ]
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/local/local/manifest.json",
+      "packaged": "proof-final/local/local/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "2b56c64bd1cc860af448f2eb574e98005914ea3f503a69e6e1d8bbd6240a053c",
+      "packagedSha256": "2b56c64bd1cc860af448f2eb574e98005914ea3f503a69e6e1d8bbd6240a053c",
+      "packagedBytes": 4348
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/local/local/trace.jsonl",
+      "packaged": "proof-final/local/local/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "5daa0201ddb424d5972bf3cff73ba0c9ab8f5f184c6ec7a08271c72b7e24f6a0",
+      "packagedSha256": "77e9bf7e2f48339ee48499f880482f361153a6a508d34a5016dc4ec291ed11ee",
+      "packagedBytes": 43077
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/long-loose-proof.json",
+      "packaged": "proof-final/long-loose-proof.json",
+      "transformation": "reanalyzed unchanged capture with current analyzer; full exit window through end+21",
+      "sourceSha256": "001902f33254ba4a24e40c07a48ea00e539984bc8bd94670735c02bcb0b0c9a5",
+      "packagedSha256": "c944c9087f43772911ca87e72966cc6b2950d0ff48aba15da60f3ef43b73650a",
+      "packagedBytes": 97766,
+      "command": [
+        "tools/analyze_rebound_capture.py",
+        ".godot/427/proof-handoff-final/long-loose",
+        "--output",
+        "docs/analysis/evidence/0427/proof-final/long-loose-proof.json"
+      ]
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/long-loose/local/manifest.json",
+      "packaged": "proof-final/long-loose/local/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "69d7b81b147db97410fdf84e4685f3436ca08f0e89499e82c67ef83c5a296e86",
+      "packagedSha256": "69d7b81b147db97410fdf84e4685f3436ca08f0e89499e82c67ef83c5a296e86",
+      "packagedBytes": 4421
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/long-loose/local/trace.jsonl",
+      "packaged": "proof-final/long-loose/local/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "62dc9041ae6d14297dcf0ec51b665e3cec2d2f2ee8bac87323a98805de6bb406",
+      "packagedSha256": "ede535408fdc585a3cd18874a2fd4d0f03d34a3d377450185db4c1dc979e9e36",
+      "packagedBytes": 53526
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/moving-observer-proof.json",
+      "packaged": "proof-final/moving-observer-proof.json",
+      "transformation": "reanalyzed unchanged capture with current analyzer; full exit window through end+21",
+      "sourceSha256": "8d67c7bab5203ec18772cb6db90bee2512669256a649a6632bf125aace2f860b",
+      "packagedSha256": "b974721e1c379d7a0917edc3f9b51ac8601032818864049203844c9a221d1c6e",
+      "packagedBytes": 189731,
+      "command": [
+        "tools/analyze_rebound_capture.py",
+        ".godot/427/proof-handoff-final/moving-observer",
+        "--output",
+        "docs/analysis/evidence/0427/proof-final/moving-observer-proof.json"
+      ]
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/moving-observer/client/manifest.json",
+      "packaged": "proof-final/moving-observer/client/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "126330c11cd7694a7c6f9abf50aa2a9b0068a953e0e6fab84198efb3ea4404bf",
+      "packagedSha256": "126330c11cd7694a7c6f9abf50aa2a9b0068a953e0e6fab84198efb3ea4404bf",
+      "packagedBytes": 3506
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/moving-observer/client/trace.jsonl",
+      "packaged": "proof-final/moving-observer/client/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "1dd53882dfa9d4da5455583ecbc4a6be63553392fd0df82b3ffe4c7f02a30aa0",
+      "packagedSha256": "3124435d24189bcd726a9b87b3264a25debae1e3aef6d9319795dcc96ff6a879",
+      "packagedBytes": 115606
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/moving-observer/server/manifest.json",
+      "packaged": "proof-final/moving-observer/server/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "7c4085fb72a7963040f6c4552ee5b3dfd708605fb990ac4e9b18d2571b98d645",
+      "packagedSha256": "7c4085fb72a7963040f6c4552ee5b3dfd708605fb990ac4e9b18d2571b98d645",
+      "packagedBytes": 4398
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/moving-observer/server/trace.jsonl",
+      "packaged": "proof-final/moving-observer/server/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "5435be858453f9fe85558491bf6cc35fbfebada6be94149a80e2813b989785e9",
+      "packagedSha256": "b9399e2e28b49864c8cc1f81605e9be661590b491e87f995a87c24c4bc6397c6",
+      "packagedBytes": 118005
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/moving-owner-phase-shift-proof.json",
+      "packaged": "proof-final/moving-owner-phase-shift-proof.json",
+      "transformation": "reanalyzed unchanged capture with current analyzer; full exit window through end+21",
+      "sourceSha256": "aac63b088c552a4a7d6e096b96f237f2af0809f7a7ab33989254e346900923ca",
+      "packagedSha256": "56b77a1e55ab0aa2ccf9d1a6cd77a57a38582cff5c92bee4077d8cf4de1dbeaf",
+      "packagedBytes": 189550,
+      "command": [
+        "tools/analyze_rebound_capture.py",
+        ".godot/427/proof-handoff-final/moving-owner-phase-shift",
+        "--output",
+        "docs/analysis/evidence/0427/proof-final/moving-owner-phase-shift-proof.json"
+      ]
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/moving-owner-phase-shift/client/manifest.json",
+      "packaged": "proof-final/moving-owner-phase-shift/client/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "261b5f44f7840251726a6a19da7d941ad79645ec1035e634ccd0a32569851b33",
+      "packagedSha256": "261b5f44f7840251726a6a19da7d941ad79645ec1035e634ccd0a32569851b33",
+      "packagedBytes": 3558
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/moving-owner-phase-shift/client/trace.jsonl",
+      "packaged": "proof-final/moving-owner-phase-shift/client/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "33fb18a3bb329e4483430c8ce1f7a43d6cf6c296e7987b88d9ce4f7ff3b25217",
+      "packagedSha256": "97399c1b6dad85922d760bf66228855daf5daefe464e1a940d58216e161f1f3e",
+      "packagedBytes": 127795
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/moving-owner-phase-shift/server/manifest.json",
+      "packaged": "proof-final/moving-owner-phase-shift/server/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "f76806ff722f4f51f3b66fb0585246889aeb6e2c7a643769696c687cb38551f9",
+      "packagedSha256": "f76806ff722f4f51f3b66fb0585246889aeb6e2c7a643769696c687cb38551f9",
+      "packagedBytes": 4464
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/moving-owner-phase-shift/server/trace.jsonl",
+      "packaged": "proof-final/moving-owner-phase-shift/server/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "532047ccfed1b5e47018075697a7dbafc7723a7f4076eaffbcf6a6dc3478cf81",
+      "packagedSha256": "464aa1d9bda7e7915bc341c3f2837525c0a655f3f49043fc240e21ba7b38d15d",
+      "packagedBytes": 124344
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/moving-owner-proof.json",
+      "packaged": "proof-final/moving-owner-proof.json",
+      "transformation": "reanalyzed unchanged capture with current analyzer; full exit window through end+21",
+      "sourceSha256": "36b6f07cc2feb06403c752bc2e59458dbc260d9cc0fed5ff14f3373a3bee2e0d",
+      "packagedSha256": "ac612fbce795f3b304871b83dc6c4fab1cac103801296da41214b79e8c7fd875",
+      "packagedBytes": 189658,
+      "command": [
+        "tools/analyze_rebound_capture.py",
+        ".godot/427/proof-handoff-final/moving-owner",
+        "--output",
+        "docs/analysis/evidence/0427/proof-final/moving-owner-proof.json"
+      ]
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/moving-owner/client/manifest.json",
+      "packaged": "proof-final/moving-owner/client/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "4c9e77afa3dc366fa6c7dd08681912bf1ae555623bdd7c6c376a10a343cc9fef",
+      "packagedSha256": "4c9e77afa3dc366fa6c7dd08681912bf1ae555623bdd7c6c376a10a343cc9fef",
+      "packagedBytes": 3542
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/moving-owner/client/trace.jsonl",
+      "packaged": "proof-final/moving-owner/client/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "6bfe083cd59cab4f70e2bafaafb23d7423a74c6d1747bc2e38f4fac93457fe2e",
+      "packagedSha256": "4b75649e25ccd3a478c2f1979dae15ca750c150ad757d34fdf232610dcccb4eb",
+      "packagedBytes": 127716
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/moving-owner/server/manifest.json",
+      "packaged": "proof-final/moving-owner/server/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "a23fb379c8164a342e122d4a3f7793bd92d4d06ecc2a38ce1eb5e1ae7d011f07",
+      "packagedSha256": "a23fb379c8164a342e122d4a3f7793bd92d4d06ecc2a38ce1eb5e1ae7d011f07",
+      "packagedBytes": 4449
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/moving-owner/server/trace.jsonl",
+      "packaged": "proof-final/moving-owner/server/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "e8f8270c6d4a51dcecd8a71886cb69e54fef3498574564528ffc8e68b0171530",
+      "packagedSha256": "2d954fa7b9b62e19e3974003e95f36770607cbae05cf21832e0aff6682df7217",
+      "packagedBytes": 124185
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/moving-proof.json",
+      "packaged": "proof-final/moving-proof.json",
+      "transformation": "reanalyzed unchanged capture with current analyzer; full exit window through end+21",
+      "sourceSha256": "7e3a7b5fb95f789a77c008616811222a5af5a729342e0c49cac60fbc217fbac8",
+      "packagedSha256": "c797736f3835362330024bf6bf5fd2f0962a16ff5f64782573663bcb576540a8",
+      "packagedBytes": 94814,
+      "command": [
+        "tools/analyze_rebound_capture.py",
+        ".godot/427/proof-handoff-final/moving",
+        "--output",
+        "docs/analysis/evidence/0427/proof-final/moving-proof.json"
+      ]
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/moving/local/manifest.json",
+      "packaged": "proof-final/moving/local/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "d2a5cd9826e8d85478992731b06f718a09cc17f01a7015a00d95686c37f5a6d5",
+      "packagedSha256": "d2a5cd9826e8d85478992731b06f718a09cc17f01a7015a00d95686c37f5a6d5",
+      "packagedBytes": 4378
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/moving/local/trace.jsonl",
+      "packaged": "proof-final/moving/local/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "8ba6d2e614934c65eb67e874081d2851cc0ead8641b90cd5db5b9827bfc4ff70",
+      "packagedSha256": "784ccb2930ea392043853316276c226906adfe52b5f6494d8e3163a49dff3ab2",
+      "packagedBytes": 95887
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/observer-proof.json",
+      "packaged": "proof-final/observer-proof.json",
+      "transformation": "reanalyzed unchanged capture with current analyzer; full exit window through end+21",
+      "sourceSha256": "7586fda9df980f41b73cdfcd7543a94011f97093b1b7f4eab86c87e24e76236d",
+      "packagedSha256": "c0de91f8d7eb30cc5e719cb45211383c911ceea6c024804e4213a190a7ce3498",
+      "packagedBytes": 196294,
+      "command": [
+        "tools/analyze_rebound_capture.py",
+        ".godot/427/proof-handoff-final/observer",
+        "--output",
+        "docs/analysis/evidence/0427/proof-final/observer-proof.json"
+      ]
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/observer/client/manifest.json",
+      "packaged": "proof-final/observer/client/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "2a85603119b746539c7fcd3ceb14fe77515819feae431fe8d63de636717adb45",
+      "packagedSha256": "2a85603119b746539c7fcd3ceb14fe77515819feae431fe8d63de636717adb45",
+      "packagedBytes": 3470
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/observer/client/trace.jsonl",
+      "packaged": "proof-final/observer/client/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "594ebc451d310408af07d7c0ab680f12130ce6feb2afc36b46bb7364ac4e2ecb",
+      "packagedSha256": "5cd4c73e6e2f63559e3547b420ada109e51a170da06a167cd1c3d6bad95767f1",
+      "packagedBytes": 51960
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/observer/server/manifest.json",
+      "packaged": "proof-final/observer/server/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "0656588712f1cef8826701df3ea40a5bd9f65500e9b47563b4bcee6a936c6d18",
+      "packagedSha256": "0656588712f1cef8826701df3ea40a5bd9f65500e9b47563b4bcee6a936c6d18",
+      "packagedBytes": 4362
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/observer/server/trace.jsonl",
+      "packaged": "proof-final/observer/server/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "65677a8aeac0ef078e9f99dbb1d641386411c9e766e29e259a045544e74aaf93",
+      "packagedSha256": "1467da772193508ed64324c309229113c427df0b1bdc9c62453738f0bbd49685",
+      "packagedBytes": 50005
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/owner-proof.json",
+      "packaged": "proof-final/owner-proof.json",
+      "transformation": "reanalyzed unchanged capture with current analyzer; full exit window through end+21",
+      "sourceSha256": "d2ce41e0693ef9a5c5adef75548b5eb1274883c7a3c40dc60c713a000bce6d09",
+      "packagedSha256": "bd13e1ce5b432c15f7e7e1de14263a28e084e842a6a15e2ecc31a0b284dc216f",
+      "packagedBytes": 195998,
+      "command": [
+        "tools/analyze_rebound_capture.py",
+        ".godot/427/proof-handoff-final/owner",
+        "--output",
+        "docs/analysis/evidence/0427/proof-final/owner-proof.json"
+      ]
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/owner/client/manifest.json",
+      "packaged": "proof-final/owner/client/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "821229eaba350c1e83c98601808832b889e347923205111db392c2063df94fc6",
+      "packagedSha256": "821229eaba350c1e83c98601808832b889e347923205111db392c2063df94fc6",
+      "packagedBytes": 3510
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/owner/client/trace.jsonl",
+      "packaged": "proof-final/owner/client/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "516b6d5762605733fe7572e89015635d081a4e07280be1d3ce48bdda698098a8",
+      "packagedSha256": "6e3a5a24e1f3c6ebf8f5a3de470b9e54ae73c80cf39ef087d8639d7db5e86b88",
+      "packagedBytes": 66036
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/owner/server/manifest.json",
+      "packaged": "proof-final/owner/server/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "07d125612e1ead04206cad5fb56f4c99b22b31d970df9752b8db13cb3946f4c4",
+      "packagedSha256": "07d125612e1ead04206cad5fb56f4c99b22b31d970df9752b8db13cb3946f4c4",
+      "packagedBytes": 4417
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/owner/server/trace.jsonl",
+      "packaged": "proof-final/owner/server/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "763b21aad4228bda7ea3ad28675930c2292303379908d605ed79707b82236639",
+      "packagedSha256": "61bec4018a540c0b6177a77cf50c278eb14c0706964740214984ea532215f99d",
+      "packagedBytes": 63050
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/reset-neutral-proof.json",
+      "packaged": "proof-final/reset-neutral-proof.json",
+      "transformation": "reanalyzed unchanged capture with current analyzer; full exit window through end+21",
+      "sourceSha256": "e7b6f88f5d1871a043f0d1c0dbc7fc459ec87b8c15e41ed50234e7ae6e9491c7",
+      "packagedSha256": "45528d043b32d9451b14bb2a21645d78c3172771a99b25605cea424393b06e63",
+      "packagedBytes": 195665,
+      "command": [
+        "tools/analyze_rebound_capture.py",
+        ".godot/427/proof-handoff-final/reset-neutral",
+        "--output",
+        "docs/analysis/evidence/0427/proof-final/reset-neutral-proof.json"
+      ]
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/reset-neutral/client/manifest.json",
+      "packaged": "proof-final/reset-neutral/client/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "71dfeb584ad016493bcbed86ed24ec70f4b3b42792e44387d2849d8d8fc363e8",
+      "packagedSha256": "71dfeb584ad016493bcbed86ed24ec70f4b3b42792e44387d2849d8d8fc363e8",
+      "packagedBytes": 4622
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/reset-neutral/client/trace.jsonl",
+      "packaged": "proof-final/reset-neutral/client/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "613b5840c51041b0e5779e8555be396d4badd608e245a0ef1ad2ca1a62049cfb",
+      "packagedSha256": "0d99b21fc106b55a15ca504f8b0453446658e1898c99ec4934b7fdf4a3893c01",
+      "packagedBytes": 62151
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/reset-neutral/server/manifest.json",
+      "packaged": "proof-final/reset-neutral/server/manifest.json",
+      "transformation": "copy",
+      "sourceSha256": "e1e5dbea1c675654cefa67f9c5c0b0fea798b70c240efeeb6b214a9f4b5e2510",
+      "packagedSha256": "e1e5dbea1c675654cefa67f9c5c0b0fea798b70c240efeeb6b214a9f4b5e2510",
+      "packagedBytes": 4471
+    },
+    {
+      "source": ".godot/427/proof-handoff-final/reset-neutral/server/trace.jsonl",
+      "packaged": "proof-final/reset-neutral/server/trace.jsonl.gz",
+      "transformation": "gzip-mtime-zero",
+      "sourceSha256": "5ebab2eb0c56f8e9cdda525cb0ed9c551e80716b12503209ad71c49b3146b494",
+      "packagedSha256": "f6d990be35569e49d9bcc305bd76bd4995152c03eb001c2768579296d6a7e489",
+      "packagedBytes": 60086
+    }
+  ]
+}

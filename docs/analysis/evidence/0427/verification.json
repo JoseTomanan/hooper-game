@@ -1,0 +1,308 @@
+{
+  "schema": "hooper-rebound-verification/v1",
+  "recordedAtHead": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+  "finalProductionCommit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+  "records": [
+    {
+      "kind": "ordinary-build",
+      "sourceCommit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "command": "dotnet build 'HOOPER GAME.csproj' --configuration Debug -p:IncludeIntegrationHarness=false -nologo -v quiet",
+      "commandProvenance": "root-reported standard final build command; matching observed build log",
+      "result": "passed",
+      "exitCode": 0,
+      "warnings": 0,
+      "errors": 0,
+      "log": {
+        "path": ".godot/427/build-production-handoff-final.log",
+        "sha256": "c6e139c27b5687891534d9a9f1d018434ff00272a5e2170a989870a45f762f4d",
+        "bytes": 166
+      }
+    },
+    {
+      "kind": "harness-build",
+      "sourceCommit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "command": "dotnet build 'HOOPER GAME.csproj' --configuration Debug -p:IncludeIntegrationHarness=true -nologo -v quiet",
+      "commandProvenance": "root-reported standard final build command; matching observed build log",
+      "result": "passed",
+      "exitCode": 0,
+      "warnings": 0,
+      "errors": 0,
+      "log": {
+        "path": ".godot/427/build-harness-handoff-final.log",
+        "sha256": "08a859f1c7ede56a85c7ff39ef448aa41037d1efcd359d6f223802947c6fcf3e",
+        "bytes": 166
+      }
+    },
+    {
+      "kind": "unit-tests",
+      "sourceCommit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "coreCommand": "dotnet test 'tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj' --configuration Debug",
+      "commandProvenance": "core command supplied by root; formatting flags not asserted",
+      "result": "passed",
+      "exitCode": 0,
+      "counts": {
+        "passed": 1273,
+        "skipped": 5,
+        "failed": 0,
+        "total": 1278
+      },
+      "log": {
+        "path": ".godot/427/unit-handoff-final.log",
+        "sha256": "4bb0cf295fee0c38b37649a6d25ba85c39b924423fda36374aa2d42f2a9f7590",
+        "bytes": 3424
+      }
+    },
+    {
+      "kind": "preliminary-exhaustive-harness",
+      "sourceProductionCommit": "dce36aa",
+      "coreCommand": "python tools/harness_catalog.py run --all --godot <resolved GODOT>",
+      "commandProvenance": "root-reported core command; exact original argv not retained",
+      "result": "partial; environment launch failures",
+      "counts": {
+        "passed": 351,
+        "run": 403,
+        "failedLaunches": 52
+      },
+      "limitation": "The 52 multiprocess entries failed to launch through default WSL bash; these were not gameplay assertion verdicts. This is preliminary coverage of dce36aa, not the final e1e146d production.",
+      "log": {
+        "path": ".godot/427/exhaustive-dce36aa.log",
+        "sha256": "7593aed94a87759187b627975f4e3e64bdb785fb01756fec64ad6856264d1826",
+        "bytes": 1852716
+      }
+    },
+    {
+      "kind": "preliminary-multiprocess-harness",
+      "sourceProductionCommit": "dce36aa",
+      "command": "$env:PATH = 'C:\\Program Files\\Git\\bin;' + $env:PATH; $reboundGodotExe = [Environment]::GetEnvironmentVariable('GODOT', 'User'); python tools/harness_catalog.py run --tag multiprocess --bash 'C:\\Program Files\\Git\\bin\\bash.exe' --godot $reboundGodotExe --run-id 427-net-final",
+      "result": "passed",
+      "exitCode": 0,
+      "counts": {
+        "passed": 53,
+        "run": 53
+      },
+      "limitation": "Explicit Git Bash resolved the earlier launch problem. This completed before the final bounded target-correction repair; it is not a final-production 404-case claim.",
+      "log": {
+        "path": ".godot/427/multiprocess-final.log",
+        "sha256": "b05d58bbacac7ba00ad2a83f655321afd763f82e8fa16467c2a79ee4e41ef19f",
+        "bytes": 182094
+      }
+    },
+    {
+      "kind": "repository-contract-tests",
+      "executionHead": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "sourceContractFixCommit": "395b50a",
+      "coreCommand": "python -m unittest discover -s tests/repository -p test_*.py -v",
+      "environment": "C:\\Program Files\\Git\\bin prepended to PATH",
+      "processWrapper": "Python subprocess.run with combined stdout/stderr; returncode observed directly",
+      "result": "passed",
+      "exitCode": 0,
+      "counts": {
+        "run": 101,
+        "passed": 100,
+        "skipped": 1,
+        "failed": 0
+      },
+      "durationSeconds": 23.006,
+      "log": {
+        "path": ".godot/427/repository-handoff-final.log",
+        "sha256": "44ed8019f39832237b504a0658409775bf0ff55f075f2864102433fee0f68bf6",
+        "bytes": 18696
+      }
+    },
+    {
+      "kind": "catalog-contract-focus",
+      "sourceCommit": "395b50a",
+      "coreCommand": "python -m unittest discover -s tests/repository -p test_harness_catalog.py -v",
+      "commandProvenance": "equivalent core invocation; exact root argv not retained; result verified from retained log",
+      "result": "passed",
+      "counts": {
+        "run": 26,
+        "failed": 0
+      },
+      "log": {
+        "path": ".godot/427/catalog-contract-final.log",
+        "sha256": "403b3cb9b8c833374d3a071e9159f2e6f6b33f93740d45676a4bec4646d7daa7",
+        "bytes": 11492
+      }
+    },
+    {
+      "kind": "final-rebound-production-proof",
+      "sourceCommit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "command": "$reboundGodotExe = [Environment]::GetEnvironmentVariable('GODOT', 'User'); python tools/run_rebound_proof.py --godot $reboundGodotExe --port 25000 --output .godot/427/proof-handoff-final",
+      "result": "passed",
+      "exitCode": 0,
+      "normalVariants": [
+        {
+          "variant": "falling-contested",
+          "roles": 1
+        },
+        {
+          "variant": "local",
+          "roles": 1
+        },
+        {
+          "variant": "long-loose",
+          "roles": 1
+        },
+        {
+          "variant": "moving-observer",
+          "roles": 2
+        },
+        {
+          "variant": "moving-owner-phase-shift",
+          "roles": 2
+        },
+        {
+          "variant": "moving-owner",
+          "roles": 2
+        },
+        {
+          "variant": "moving",
+          "roles": 1
+        },
+        {
+          "variant": "observer",
+          "roles": 2
+        },
+        {
+          "variant": "owner",
+          "roles": 2
+        },
+        {
+          "variant": "reset-neutral",
+          "roles": 2
+        }
+      ],
+      "normalRoleReports": 16,
+      "actionControls": [
+        {
+          "variant": "immediate-local",
+          "roles": [
+            {
+              "role": "local",
+              "actor": "host",
+              "acceptedActions": 2,
+              "acceptedFeints": 0,
+              "successfulShotReleases": 2
+            }
+          ]
+        },
+        {
+          "variant": "feint-local",
+          "roles": [
+            {
+              "role": "local",
+              "actor": "host",
+              "acceptedActions": 2,
+              "acceptedFeints": 2,
+              "successfulShotReleases": 0
+            }
+          ]
+        },
+        {
+          "variant": "immediate-owner",
+          "roles": [
+            {
+              "role": "client",
+              "actor": "client",
+              "acceptedActions": 2,
+              "acceptedFeints": 0,
+              "successfulShotReleases": 2
+            },
+            {
+              "role": "server",
+              "actor": "client",
+              "acceptedActions": 0,
+              "acceptedFeints": 0,
+              "successfulShotReleases": 2
+            }
+          ]
+        },
+        {
+          "variant": "feint-owner",
+          "roles": [
+            {
+              "role": "client",
+              "actor": "client",
+              "acceptedActions": 2,
+              "acceptedFeints": 2,
+              "successfulShotReleases": 0
+            },
+            {
+              "role": "server",
+              "actor": "client",
+              "acceptedActions": 0,
+              "acceptedFeints": 0,
+              "successfulShotReleases": 0
+            }
+          ]
+        }
+      ],
+      "negativeControls": {
+        "legacy-pose": "expected failure; contact detector",
+        "disconnected": "expected failure; contact detector",
+        "delayed": "expected failure; onset detector"
+      },
+      "exitCoverage": "last catch tick +21 inclusive; modifier inactive by +20",
+      "log": {
+        "path": ".godot/427/proof-handoff-final.stdout.log",
+        "sha256": "d441d43320353610e3a9ba013c4264ea0f16aae84f23f71339058a5489b1c863",
+        "bytes": 7482
+      }
+    },
+    {
+      "kind": "current-native-rendered-capture",
+      "sourceCommit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "command": "python tools/run_rebound_capture.py --godot <resolved GODOT> --long-loose --port 25050 --output .godot/427/native-handoff-after --commit e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "analyzerCommand": "python tools/analyze_rebound_capture.py .godot/427/native-handoff-after/local --verify --output .godot/427/native-handoff-after-proof.json",
+      "result": "capture and ordinary proof passed",
+      "exitCode": 0,
+      "images": "selected original frame-00063.png, frame-00070.png, frame-00090.png; no image manipulation",
+      "log": {
+        "path": ".godot/427/native-handoff-after.stdout.log",
+        "sha256": "c53b8a2b246ae515c49ea8bc3d39f680f07a3d7e3192123b18f458e3832dc083",
+        "bytes": 216
+      }
+    }
+  ],
+  "reviews": [
+    {
+      "kind": "independent code review",
+      "reviewedCommit": "c6f74ba",
+      "result": "root reports no high-confidence introduced correctness defects",
+      "evidenceType": "agent report, not CI",
+      "scope": "historical review before the final handoff repair"
+    },
+    {
+      "kind": "fresh doubt-driven review",
+      "reviewedCommit": "e1e146d",
+      "result": "root reports one actionable new-catch reset finding was fixed; other findings validated",
+      "evidenceType": "agent report, not CI"
+    },
+    {
+      "kind": "final independent code and evidence review",
+      "reviewedCommit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+      "result": "root reports no high-confidence introduced correctness defects",
+      "evidenceType": "independent agent report, not CI",
+      "checkedProof": {
+        "normalRoleReports": 16,
+        "catchIntervals": 32,
+        "exitWindowTicks": 21,
+        "allFirstModifierReleaseByTicksAfterCatch": 13,
+        "modifierInactiveAtTailOffsets": [
+          20,
+          21
+        ],
+        "worldBodyMatrixReconstructionRows": 3899,
+        "maximumMatrixReconstructionErrorM": 4.65e-07
+      }
+    }
+  ],
+  "ciStatus": {
+    "status": "final full CI pending at verification recording",
+    "history": "An earlier CI run exposed two stale catalog expectations, fixed in 395b50a. Earlier v1 moving-owner continuity measurements mixed model transforms and were not accepted as current proof. A separate old server exit 134 teardown failure is not counted as a pass.",
+    "limitation": "Final authoritative full integration CI must establish the complete suite on final production; prior 351 single-process and 53 multiprocess local results are preliminary dce36aa coverage."
+  },
+  "measurementScope": "v2 bodyBones remove the current drawn model orthonormal rotation and translation while retaining world metres. They measure articulation continuity, not whole-model root/yaw continuity.",
+  "nativeArchiveScope": "native-before and native-observer retain original stationary v1 diagnostic metadata; native-after is current v2. No v1 moving report is accepted as current continuity proof."
+}

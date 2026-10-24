@@ -1,0 +1,164 @@
+{
+  "schema": "hooper-rebound-presentation/v2",
+  "result": "captured",
+  "failure": "",
+  "role": "local",
+  "actor": "host",
+  "subject": 1,
+  "commit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+  "requestedPreRecoveryHand": "Right",
+  "height": 0.12,
+  "moving": false,
+  "movementAction": "move_left",
+  "contested": false,
+  "view": "gameplay",
+  "legacyPose": true,
+  "longLoose": false,
+  "bodyPoseCoordinates": "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
+  "seedDelay": 0,
+  "action": "none",
+  "actionRequests": 0,
+  "acceptedActions": 0,
+  "feintRequests": 0,
+  "acceptedFeints": 0,
+  "successfulShotReleases": 0,
+  "controlFailure": "",
+  "resetNeutral": false,
+  "resetPerformed": false,
+  "paced": false,
+  "pacingMeaning": "unpaced",
+  "images": false,
+  "samples": 220,
+  "observedRecoveries": 2,
+  "authoritativeRecoveriesReceived": 0,
+  "events": [
+    {
+      "tick": 1,
+      "physicsFrame": 1,
+      "kind": "fixture-start",
+      "detail": {
+        "subject": 1
+      }
+    },
+    {
+      "tick": 26,
+      "physicsFrame": 26,
+      "kind": "fixture-positioned",
+      "detail": {
+        "position": [
+          0,
+          0,
+          5
+        ],
+        "requestedPreRecoveryHand": "Right",
+        "meaning": "setup only; production possession contract may reset the hand on recovery"
+      }
+    },
+    {
+      "tick": 61,
+      "physicsFrame": 61,
+      "kind": "seed",
+      "detail": {
+        "ordinal": 1,
+        "position": [
+          0.3,
+          0.12,
+          4.7
+        ],
+        "state": "Loose",
+        "hand": "Right",
+        "awardCount": 0
+      }
+    },
+    {
+      "tick": 62,
+      "physicsFrame": 62,
+      "kind": "live-holder-edge",
+      "detail": {
+        "count": 1,
+        "holder": 1,
+        "state": "Held",
+        "position": [
+          0.3,
+          0.12,
+          4.7
+        ],
+        "hand": "Right",
+        "animation": "Locomotion",
+        "playbackTime": 0,
+        "awardCount": 1
+      }
+    },
+    {
+      "tick": 131,
+      "physicsFrame": 131,
+      "kind": "fixture-positioned",
+      "detail": {
+        "position": [
+          0,
+          0,
+          5
+        ],
+        "requestedPreRecoveryHand": "Right",
+        "meaning": "setup only; production possession contract may reset the hand on recovery"
+      }
+    },
+    {
+      "tick": 151,
+      "physicsFrame": 151,
+      "kind": "seed",
+      "detail": {
+        "ordinal": 2,
+        "position": [
+          0.3,
+          0.12,
+          4.7
+        ],
+        "state": "Loose",
+        "hand": "Right",
+        "awardCount": 1
+      }
+    },
+    {
+      "tick": 152,
+      "physicsFrame": 152,
+      "kind": "live-holder-edge",
+      "detail": {
+        "count": 2,
+        "holder": 1,
+        "state": "Held",
+        "position": [
+          0.3,
+          0.12,
+          4.7
+        ],
+        "hand": "Right",
+        "animation": "Locomotion",
+        "playbackTime": 0,
+        "awardCount": 2
+      }
+    }
+  ],
+  "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B",
+  "engine": "4.7.1-stable (official)",
+  "commandLine": [
+    "res://tests/integration/ReboundPresentationCapture.tscn"
+  ],
+  "userArgs": [
+    "--capture-output=C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\427\\proof-handoff-final\\legacy-pose\\local",
+    "--capture-role=local",
+    "--capture-actor=host",
+    "--capture-hand=Right",
+    "--capture-height=0.12",
+    "--capture-view=gameplay",
+    "--capture-action=none",
+    "--capture-seed-delay=0",
+    "--capture-port=25014",
+    "--capture-commit=e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+    "--capture-images=false",
+    "--capture-legacy-pose=true"
+  ],
+  "sampleTiming": "HEADLESS diagnostic state only; SkeletonUpdated final modifier pose / _Process state",
+  "fixture": "normal Main scene, production host/join and animation callback; explicit position/hand/Loose setup; owning movement uses production Input.ActionPress",
+  "verdict": "diagnostic only; no presentation correctness or feel acceptance"
+}

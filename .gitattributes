@@ -1,2 +1,5 @@
 # Normalize EOL for all files that Git considers text files.
 * text=auto eol=lf
+
+# These checksummed observations retain the original capture bytes, including EOL.
+docs/analysis/evidence/0427/** -text -whitespace

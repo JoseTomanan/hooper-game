@@ -124,6 +124,7 @@ jobs:
             .godot/committed-replay/**
             .godot/production-contact/**
             .godot/stance-net/**
+            .godot/427/**
           include-hidden-files: true
           if-no-files-found: warn
 

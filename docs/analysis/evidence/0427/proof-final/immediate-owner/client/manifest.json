@@ -1,0 +1,175 @@
+{
+  "schema": "hooper-rebound-presentation/v2",
+  "result": "captured",
+  "failure": "",
+  "role": "client",
+  "actor": "client",
+  "subject": 1335763012,
+  "commit": "e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+  "requestedPreRecoveryHand": "Right",
+  "height": 0.12,
+  "moving": false,
+  "movementAction": "move_left",
+  "contested": false,
+  "view": "gameplay",
+  "legacyPose": false,
+  "longLoose": false,
+  "bodyPoseCoordinates": "final skeleton-relative bones sampled at SkeletonUpdated; current drawn Skeleton3D global transform applied at capture; bodyBones remove its orthonormal rotation and translation while retaining world metres",
+  "seedDelay": 0,
+  "action": "immediate",
+  "actionRequests": 2,
+  "acceptedActions": 2,
+  "feintRequests": 0,
+  "acceptedFeints": 0,
+  "successfulShotReleases": 2,
+  "controlFailure": "",
+  "resetNeutral": false,
+  "resetPerformed": false,
+  "paced": false,
+  "pacingMeaning": "unpaced",
+  "images": false,
+  "samples": 247,
+  "observedRecoveries": 0,
+  "authoritativeRecoveriesReceived": 2,
+  "events": [
+    {
+      "tick": 29,
+      "physicsFrame": 29,
+      "kind": "fixture-start",
+      "detail": {
+        "subject": 1335763012
+      }
+    },
+    {
+      "tick": 90,
+      "physicsFrame": 90,
+      "kind": "seed-received",
+      "detail": {
+        "ordinal": 1,
+        "sourceTick": 142
+      }
+    },
+    {
+      "tick": 91,
+      "physicsFrame": 91,
+      "kind": "authoritative-recovery-received",
+      "detail": {
+        "count": 1,
+        "sourceTick": 143
+      }
+    },
+    {
+      "tick": 92,
+      "physicsFrame": 92,
+      "kind": "confirmed-recovery-received",
+      "detail": {
+        "receipt": 1,
+        "recipient": 1335763012,
+        "age": 0,
+        "inputSequence": 66
+      }
+    },
+    {
+      "tick": 92,
+      "physicsFrame": 92,
+      "kind": "action-input",
+      "detail": {
+        "action": "immediate",
+        "trigger": "confirmed-recovery-receipt",
+        "ordinal": 1,
+        "request": 1,
+        "phase": "Inactive",
+        "frame": 0,
+        "confirmedReceipt": 1,
+        "holder": 1335763012
+      }
+    },
+    {
+      "tick": 93,
+      "physicsFrame": 93,
+      "kind": "accepted-action-startup",
+      "detail": {
+        "ordinal": 1,
+        "count": 1,
+        "frame": 1,
+        "actionInputTick": 92
+      }
+    },
+    {
+      "tick": 180,
+      "physicsFrame": 180,
+      "kind": "seed-received",
+      "detail": {
+        "ordinal": 2,
+        "sourceTick": 232
+      }
+    },
+    {
+      "tick": 181,
+      "physicsFrame": 181,
+      "kind": "authoritative-recovery-received",
+      "detail": {
+        "count": 2,
+        "sourceTick": 233
+      }
+    },
+    {
+      "tick": 182,
+      "physicsFrame": 182,
+      "kind": "confirmed-recovery-received",
+      "detail": {
+        "receipt": 2,
+        "recipient": 1335763012,
+        "age": 0,
+        "inputSequence": 156
+      }
+    },
+    {
+      "tick": 182,
+      "physicsFrame": 182,
+      "kind": "action-input",
+      "detail": {
+        "action": "immediate",
+        "trigger": "confirmed-recovery-receipt",
+        "ordinal": 2,
+        "request": 2,
+        "phase": "Inactive",
+        "frame": 0,
+        "confirmedReceipt": 2,
+        "holder": 1335763012
+      }
+    },
+    {
+      "tick": 183,
+      "physicsFrame": 183,
+      "kind": "accepted-action-startup",
+      "detail": {
+        "ordinal": 2,
+        "count": 2,
+        "frame": 1,
+        "actionInputTick": 182
+      }
+    }
+  ],
+  "animationResourceSha256": "7D50B57E043E7DB710A51EE8C2BA88534FB9B756A3A393465B97C7B43FEA5C2B",
+  "engine": "4.7.1-stable (official)",
+  "commandLine": [
+    "res://tests/integration/ReboundPresentationCapture.tscn"
+  ],
+  "userArgs": [
+    "--capture-output=C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\427\\proof-handoff-final\\immediate-owner\\client",
+    "--capture-role=client",
+    "--capture-actor=client",
+    "--capture-hand=Right",
+    "--capture-height=0.12",
+    "--capture-view=gameplay",
+    "--capture-action=immediate",
+    "--capture-seed-delay=0",
+    "--capture-port=25012",
+    "--capture-commit=e1e146d3cc4d7286e0f7356f3ef05e599291d5f8",
+    "--capture-images=false"
+  ],
+  "sampleTiming": "HEADLESS diagnostic state only; SkeletonUpdated final modifier pose / _Process state",
+  "fixture": "normal Main scene, production host/join and animation callback; explicit position/hand/Loose setup; owning movement uses production Input.ActionPress",
+  "verdict": "diagnostic only; no presentation correctness or feel acceptance"
+}

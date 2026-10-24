@@ -1572,6 +1572,11 @@ public partial class PlayerController : CharacterBody3D
 				Name = "PivotPose", Player = this,
 				AnimationPlayer = GetNodeOrNull<AnimationPlayer>("AnimationPlayer")
 			});
+			protectionSkeleton.AddChild(new ReboundPose
+			{
+				Name = "ReboundPose", Player = this,
+				AnimationPlayer = GetNodeOrNull<AnimationPlayer>("AnimationPlayer")
+			});
 		}
 
 		_gameManager = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
@@ -2183,6 +2188,7 @@ public partial class PlayerController : CharacterBody3D
 			return false;
 
 		if (!_machine.Begin(move)) return false;
+		InterruptReboundPresentation();
 		_pivot = HeadingMath.PivotState.None;
 		if (move is TurnaroundShot)
 		{
@@ -3064,7 +3070,8 @@ public partial class PlayerController : CharacterBody3D
 			int curHolder = ball.StateMachine.HolderPeerId;
 			bool becameHolder = curHolder == OwnPeerId && _prevObservedHolderPeerId != OwnPeerId;
 
-			if (becameHolder && _prevObservedBallState == BallState.Loose && !ball.IsCleared)
+			bool confirmedRecovery = ConsumeConfirmedRebound(ball);
+			if ((becameHolder && _prevObservedBallState == BallState.Loose && !ball.IsCleared) || confirmedRecovery)
 			{
 				_reboundGrabTicksRemaining = ReboundGrabDisplayTicks;
 				armedThisTick = true;
@@ -3072,6 +3079,7 @@ public partial class PlayerController : CharacterBody3D
 
 			_prevObservedBallState = ball.State;
 			_prevObservedHolderPeerId = curHolder;
+			if (curHolder != OwnPeerId) _reboundGrabTicksRemaining = 0;
 		}
 
 		// A committed move permanently interrupts the flourish (#284): drop the
