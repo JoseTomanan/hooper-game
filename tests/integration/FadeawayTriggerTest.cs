@@ -40,18 +40,16 @@ namespace HOOPERGAME.Tests.Integration;
 // ── Scenario "mid-pivot" ─────────────────────────────────────────────────
 // Shooter's Heading is forced to exactly 180° off the rim direction
 // (back-to-basket — the same worst case ShotFacingTests exercises) BEFORE
-// JumpShot begins, and never touched again (no movement input in this
-// harness, so Heading cannot drift). At the verdict frame (past release +
-// margin), asserts DisplayFadeaway() == true AND MoveAnimResolver.Resolve
-// (with that flag) == FadeawayActive.
+// JumpShot begins. #428 now turns this ordinary-rate shot during Startup.
+// Assert the actual squared-up release premise and ordinary presentation.
+// JumpShotHeadingTest's explicit lower-rate fixture retains fadeaway coverage.
 //
 // ── Scenario "squared-up" ─────────────────────────────────────────────────
 // The control this is checked against (mirrors ContestScatterTest's
 // contest-active/no-contest pairing): identical shooter setup, but Heading
 // is forced to point EXACTLY at the rim instead. Asserts DisplayFadeaway()
 // == false and the resolved anim state is the ordinary Active, never
-// FadeawayActive — proving "mid-pivot"'s true isn't a hardcoded/always-on
-// default.
+// FadeawayActive — an already-squared-up control for the turn case.
 public partial class FadeawayTriggerTest : Node
 {
     private const double TimeoutSeconds = 15.0;
@@ -164,20 +162,14 @@ public partial class FadeawayTriggerTest : Node
         MoveAnimState resolved = MoveAnimResolver.Resolve(_shooter.PhaseForHarness, displayFadeaway);
         bool pass;
 
-        if (IsMidPivotScenario)
+        // #428: even the back-facing Begin now squares up during normal
+        // Startup. Prove its actual release-angle premise before presentation.
+        float releaseAngle = ShotFacing.AngleFromTarget(_shooter.Heading, _shooter.GlobalPosition, RimCenter);
+        if (releaseAngle > 1e-4f || _ball.SuccessfulShotReleasesForHarness != 1)
         {
-            pass = displayFadeaway && resolved == MoveAnimState.FadeawayActive;
-            if (pass)
-            {
-                GD.Print("[fadeaway-trigger] PASS — scenario=mid-pivot, DisplayFadeaway()=true, resolved=FadeawayActive.");
-            }
-            else
-            {
-                Fail($"scenario=mid-pivot expected DisplayFadeaway()==true and resolved==FadeawayActive, " +
-                     $"got DisplayFadeaway()={displayFadeaway}, resolved={resolved}, phase={_shooter.PhaseForHarness}.");
-            }
+            Fail($"release premise: angle={releaseAngle}, releases={_ball.SuccessfulShotReleasesForHarness}");
+            Finish(); return;
         }
-        else
         {
             pass = !displayFadeaway && resolved == MoveAnimState.Active;
             if (pass)
