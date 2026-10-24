@@ -427,6 +427,17 @@ PostPlayTest.tscn|contact-unset
 PostPresentationTest.tscn|presentation
 CommittedClipHookupAudit.tscn|
 """
+_ADDITIONAL_SINGLE_ROWS += "".join(
+    f"JumpShotHeadingTest.tscn|matrix-{angle}-{entry}-{hand}\n"
+    for angle in (0, 45, 89, 90, 91, 135, 180)
+    for entry in ("stationary", "moving")
+    for hand in ("left", "right")
+) + "".join(
+    f"JumpShotHeadingTest.tscn|{scenario}\n"
+    for scenario in ("bounded", "opposite", "unfinished", "feint-early", "feint-late",
+                     "illegal-early", "illegal-late", "loss", "oob", "missing", "degenerate",
+                     "retarget", "contact-retarget", "release-below", "release-at", "release-above")
+)
 _ADDITIONAL_MULTIPROCESS_ROWS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
     ("net-jumpshot-form", "tests/integration/run-net-jumpshot-form.sh godot", "JumpshotFormCapture.tscn", (".godot/418/catalog-net-*/**/*",)),
     ("net-rebound-presentation", "tests/integration/run-net-rebound-presentation.sh godot", "ReboundPresentationCapture.tscn", (".godot/427/catalog-*/**/*",)),
@@ -459,6 +470,13 @@ _ADDITIONAL_MULTIPROCESS_ROWS: tuple[tuple[str, str, str, tuple[str, ...]], ...]
     (f"defensive-stance-{delay}ms",
      f"tests/integration/run-net-defensive-stance.sh godot {delay}",
      "NetDefensiveStanceTest.tscn", (f".godot/stance-net/catalog-{delay}-none-*/**/*",))
+    for delay in (0, 30)
+)
+
+_ADDITIONAL_MULTIPROCESS_ROWS += tuple(
+    (f"normal-shot-heading-{delay}ms",
+     f"tests/integration/run-net-shot-heading.sh godot {delay}",
+     "NetShotHeadingTest.tscn", (f".godot/shot-net/catalog-{delay}-none-*/**/*",))
     for delay in (0, 30)
 )
 
@@ -514,6 +532,11 @@ def _multiprocess_cases(rows: Iterable[tuple[str, str, str, tuple[str, ...]]]) -
 
 
 _CONTROL_COMPONENTS = (
+    ("jump-shot-heading-test-bounded", "jump-shot-heading-test-loss", "jump-shot-heading-test-oob",
+     "jump-shot-heading-test-feint-early", "jump-shot-heading-test-feint-late", "jump-shot-heading-test-missing"),
+    ("jump-shot-heading-test-bounded", "jump-shot-heading-test-unfinished",
+     "jump-shot-heading-test-release-below", "jump-shot-heading-test-release-at", "jump-shot-heading-test-release-above"),
+    ("jump-shot-heading-test-bounded", "jump-shot-heading-test-contact-retarget", "jump-shot-heading-test-retarget"),
     ("jumpshot-form-test-normal-right", "jumpshot-form-test-normal-left", "jumpshot-form-test-control-idle", "jumpshot-form-test-control-goalkeeper"),
     ("jumpshot-form-test-normal-right", "jumpshot-form-test-feint-early", "jumpshot-form-test-feint-late"),
     ("post-play-test-accuracy", "post-play-test-accuracy-unsquared"),

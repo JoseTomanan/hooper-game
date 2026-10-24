@@ -3,3 +3,4 @@
 
 # These checksummed observations retain the original capture bytes, including EOL.
 docs/analysis/evidence/0427/** -text -whitespace
+docs/analysis/evidence/0428/** -text -whitespace

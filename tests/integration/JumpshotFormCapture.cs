@@ -19,6 +19,10 @@ public partial class JumpshotFormCapture : Node
     private int _tick, _start = -1, _shotTick = -1, _swapTick = -1, _samples, _releases;
     private bool _ready, _sentReady, _done, _finished, _feinted, _images, _sawShot, _sawFeintRecovery;
     private bool _paced, _legacyShot, _legacyApplied;
+    private bool _headingFixture;
+    private float _headingAngle, _headingRate, _fixedHeadingTarget;
+    private string _headingEntry;
+    private int _headingMoveStart = -1;
     private NetworkManager _network;
     private Node _players;
     private BallController _ball;
@@ -45,6 +49,10 @@ public partial class JumpshotFormCapture : Node
         _images = Read("--capture-images", "true") != "false";
         _paced = Read("--capture-paced", "false") == "true";
         _legacyShot = Read("--capture-legacy-shot", "false") == "true";
+        _headingFixture = Read("--capture-heading-angle", "") != "";
+        _headingAngle = float.Parse(Read("--capture-heading-angle", "0"), System.Globalization.CultureInfo.InvariantCulture);
+        _headingRate = float.Parse(Read("--capture-heading-rate", "900"), System.Globalization.CultureInfo.InvariantCulture);
+        _headingEntry = Read("--capture-heading-entry", "stationary");
         _output = ProjectSettings.GlobalizePath(Read("--capture-output", ""));
         if (!new[] { "normal", "early", "late", "fadeaway" }.Contains(_variant) || !new[] { "Right", "Left" }.Contains(_hand) ||
             !new[] { "local", "server", "client" }.Contains(_role) || !new[] { "gameplay", "front", "side" }.Contains(_view) || Directory.Exists(_output))
@@ -81,9 +89,23 @@ public partial class JumpshotFormCapture : Node
         if (_wall.Elapsed.TotalSeconds > 80 || _tick > 6000) { Finish("timeout"); return; }
         var p = _players?.GetNodeOrNull<PlayerController>("1");
         if (p == null) return;
+        // #428's production rate finishes the ordinary turn. This retained
+        // comparison explicitly exercises an unfinished turn at a fixture rate.
+        if (_variant == "fadeaway") p.MaxTurnRateDeg = 90f;
+        if (_headingFixture) p.MaxTurnRateDeg = _headingRate;
         if (_legacyShot && !_legacyApplied) ApplyLegacyShot(p);
         ObserveRelease(p);
-        if (p.DisplayMoveId() == "jumpshot" && p.DisplayMove().phase == MovePhase.Startup) _sawShot = true;
+        if (p.DisplayMoveId() == "jumpshot" && p.DisplayMove().phase == MovePhase.Startup)
+        {
+            if (!_sawShot && _role != "client")
+            {
+                if (_headingFixture && _headingEntry == "moving" && p.ShotInitiationSpeed < .1f)
+                { Finish("moving-entry fixture did not have nonzero pre-plant speed"); return; }
+                _events.Add(new { tick = _tick, kind = "accepted-begin-observed", phaseFrame = p.FrameInPhaseForHarness,
+                    heading = p.Heading, fixedTarget = _fixedHeadingTarget, initiationSpeed = p.ShotInitiationSpeed });
+            }
+            _sawShot = true;
+        }
         if (_feinted && p.CurrentMoveIdForHarness == "jumpshot" && p.PhaseForHarness == MovePhase.Recovery && p.FrameInPhaseForHarness >= 12)
             _sawFeintRecovery = true;
         if (_role == "client")
@@ -108,9 +130,26 @@ public partial class JumpshotFormCapture : Node
                 return;
             }
             if (p.PhaseForHarness != MovePhase.Inactive || (_swapTick >= 0 && _tick - _swapTick < 65)) return;
+            if (_headingFixture && _headingEntry == "moving")
+            {
+                if (_headingMoveStart < 0) _headingMoveStart = _tick;
+                // Six ticks in the established forward direction retain normal
+                // shot range. Reversing here would spend the fixture in a pivot
+                // plant and falsely label zero-velocity entry as moving.
+                if (_tick - _headingMoveStart < 6) { Input.ActionPress("move_forward"); return; }
+                Input.ActionRelease("move_forward");
+            }
             if (_variant == "fadeaway" && t < 105) { Input.ActionPress("move_backward"); return; }
             Input.ActionRelease("move_backward");
-            if (_variant != "fadeaway" && p.Velocity.Length() > .03f) return;
+            if (_variant != "fadeaway" && !(_headingFixture && _headingEntry == "moving") && p.Velocity.Length() > .03f) return;
+            if (_headingFixture)
+            {
+                var toward = _ball.RimCenter - p.GlobalPosition;
+                _fixedHeadingTarget = Mathf.Atan2(toward.X, toward.Z);
+                p.SetHeadingForHarness(_fixedHeadingTarget + Mathf.DegToRad(_headingAngle));
+                _events.Add(new { tick = _tick, kind = "heading-fixture", initialAngle = _headingAngle,
+                    entry = _headingEntry, rate = _headingRate, fixedTarget = _fixedHeadingTarget, velocity = Vec(p.Velocity) });
+            }
             _shotTick = _tick;
             Input.ActionPress("ball_shoot");
             _events.Add(new { tick = _tick, kind = "shoot-input", hand = p.HandSide.ToString(), heading = p.Heading });
@@ -208,6 +247,9 @@ public partial class JumpshotFormCapture : Node
             move = p.DisplayMoveId(), phase = p.DisplayMove().phase.ToString(), frame = p.AnimationDisplaySnapshot.FrameInPhase,
             authoritativePhase = p.PhaseForHarness.ToString(), authoritativeFrame = p.FrameInPhaseForHarness,
             hand = p.DisplayHandSide.ToString(), heading = p.DisplayHeading, root = Vec(p.DisplayRootPosition), fadeaway = p.DisplayFadeaway(),
+            fixedHeadingTarget = _fixedHeadingTarget, headingFixture = _headingFixture,
+            facingFactor = ShotFacing.Multiplier(p.DisplayHeading, p.DisplayRootPosition, _ball.RimCenter, _ball.FacingScatterK),
+            initiationSpeed = p.ShotInitiationSpeed,
             ball = Vec(_ball.RenderedWorldPosition), liveBall = Vec(_ball.GlobalPosition), ballState = _ball.State.ToString(),
             releaseCount = releases, releasePosition = Vec(_ball.LastReleasePositionForHarness),
             selectedPresentationTick = view?.Tick ?? -1, ballPresentationTick = _ball.RenderedPresentationTick,
@@ -226,6 +268,7 @@ public partial class JumpshotFormCapture : Node
         if (_trace != null) File.WriteAllText(Path.Combine(_output, "manifest.json"), JsonSerializer.Serialize(new {
             schema = "hooper-jumpshot-form/v1", result = failure == "" ? "captured" : "failed", failure, role = _role, variant = _variant,
             hand = _hand, commit = _commit, view = _view, samples = _samples, releases = _releases, events = _events,
+            headingFixture = _headingFixture, initialAngle = _headingAngle, headingEntry = _headingEntry, headingRate = _headingRate,
             sawProductionShotStartup = _sawShot, feintRequested = _feinted, sawAcceptedFeintRecovery = _sawFeintRecovery,
             paced = _paced, pacingMeaning = _paced ? "80ms producer wall-clock delay; fixed simulation steps; not real-time" : "unpaced",
             mutation = _legacyShot ? "legacy-normal-shot-three-clips" : "none", mutationApplied = _legacyApplied,
@@ -257,6 +300,9 @@ public partial class JumpshotFormCapture : Node
         if (count == _releases) return;
         _events.Add(new { tick = _tick, physicsFrame = Engine.GetPhysicsFrames(), kind = "release", count,
             phase = p.PhaseForHarness.ToString(), frame = p.FrameInPhaseForHarness,
+            heading = p.Heading, residualAngle = ShotFacing.AngleFromTarget(p.Heading, p.GlobalPosition, _ball.RimCenter),
+            facingFactor = ShotFacing.Multiplier(p.Heading, p.GlobalPosition, _ball.RimCenter, _ball.FacingScatterK),
+            fadeaway = p.DisplayFadeaway(), initiationSpeed = p.ShotInitiationSpeed,
             position = Vec(_ball.LastReleasePositionForHarness), liveBall = Vec(_ball.GlobalPosition) });
         _releases = count;
     }
