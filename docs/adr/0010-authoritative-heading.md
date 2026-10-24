@@ -416,3 +416,41 @@ post state is restored before replay, and effective state is broadcast for
 remote display. No stale frame-counter equality gate is added. The existing
 latest-raw-opponent approximation remains; no moving-opponent history is
 claimed. Magnitudes remain provisional for #238 and feel remains #173.
+
+## Amendment 2026-10-24 — Normal JumpShot Startup turn (#428)
+
+The maintainer approved normal shots turning toward the rim in #428's
+2026-10-23 Agent Brief. At accepted Begin, each simulating role snapshots a
+horizontal rim-facing target from its own position and rim. Missing or
+degenerate context retains finite current heading. The server derives its
+target independently; client aim is never authority. Stick input, contact
+displacement and ownership loss cannot retarget that instance.
+
+Normal JumpShot advances heading once per simulated Startup tick using the
+ordinary configured non-linear MaxTurnRateDeg / BackTurnSlowFactor profile
+(initially 900 degrees/s and 0.95), with positive yaw for an exact half-turn.
+It retains the instant plant, 18/4/20 timeline, first-Active release and legal
+feint window [3,12) with 8-tick feint Recovery. Active/Recovery do not continue
+the turn. A fake retains reached heading; loss/OOB voids payload without
+interrupting the committed timeline or remaining Startup turn.
+
+The maintainer explicitly chose release-based accuracy and presentation:
+a shot begun facing away becomes ordinary if it squares up before release.
+Unfinished turns release on schedule with their actual residual heading.
+ADR-0009's facing formula and the >=90-degree fadeaway classifier remain
+unchanged, as does the pre-plant movement-speed sample. There is no Begin-angle
+penalty or retained off-balance flag.
+
+Prediction records historical shot phase, target and Begin instance token.
+Authoritative target confirmation repairs only that instance before fixed-step
+motion replay, retaining later unconfirmed instances. Explicit request results
+reject only their matching instance; stale phase counters never gate target
+correction. Replay does not advance the live machine or re-emit shot payloads.
+Remote visuals use ADR-0027's existing coherent heading/animation/ball frame,
+including holds and resets. The existing latest-opponent and other committed
+positional replay limitations remain; this is not a general replay redesign.
+
+Rejected: cosmetic-only yaw, instant snap, preserving Begin-angle penalties,
+stretching phases to finish a turn, new aim/tuning axes, or borrowing the post
+turnaround's admission/timing/turn rule. The known fixed-offset ball/hand
+separation is not repaired by turning. Feel remains #185/#173 and tuning #238.

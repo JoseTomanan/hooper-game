@@ -51,7 +51,8 @@ public sealed class PredictionBuffer
 		bool PostureHeld = false, bool StanceEligible = false,
 		bool PostHeld = false, bool PostEligible = false, Vector3 RimSample = default,
 		MovePhase TurnaroundPhase = MovePhase.Inactive, float TurnaroundTarget = 0, int TurnaroundToken = 0,
-		bool TranslationLocked = false);
+		bool TranslationLocked = false,
+		MovePhase ShotPhase = MovePhase.Inactive, float ShotTarget = 0, int ShotToken = 0);
 	private readonly Queue<(int seq, InputFrame input)> _pending = new();
 
 	/// <param name="capacity">Maximum buffered inputs before the oldest is evicted. Defaults to 120 (~2 s at 60 Hz), matching PlayerController's original PendingCap.</param>
@@ -76,7 +77,8 @@ public sealed class PredictionBuffer
 		bool postureHeld = false, bool stanceEligible = false,
 		bool postHeld = false, bool postEligible = false, Vector3 rimSample = default,
 		MovePhase turnaroundPhase = MovePhase.Inactive, float turnaroundTarget = 0, int turnaroundToken = 0,
-		bool translationLocked = false)
+		bool translationLocked = false,
+		MovePhase shotPhase = MovePhase.Inactive, float shotTarget = 0, int shotToken = 0)
 	{
 		LastSequence++;
 
@@ -84,7 +86,8 @@ public sealed class PredictionBuffer
 			_pending.Dequeue(); // oldest evicted; 2-s silence required to hit this
 
 		_pending.Enqueue((LastSequence, new InputFrame(input, sprint, protect, postureHeld, stanceEligible,
-			postHeld, postEligible, rimSample, turnaroundPhase, turnaroundTarget, turnaroundToken, translationLocked)));
+			postHeld, postEligible, rimSample, turnaroundPhase, turnaroundTarget, turnaroundToken, translationLocked,
+			shotPhase, shotTarget, shotToken)));
 		return LastSequence;
 	}
 
@@ -99,6 +102,35 @@ public sealed class PredictionBuffer
 			var entry = _pending.Dequeue();
 			if (entry.input.TurnaroundToken == token && entry.input.TurnaroundPhase != MovePhase.Inactive)
 				entry.input = entry.input with { TurnaroundTarget = target };
+			_pending.Enqueue(entry);
+		}
+	}
+
+	/// <summary>Confirm only this accepted normal-shot instance, including
+	/// samples buffered across release/feint. Later speculative shots keep their aim.</summary>
+	public void ConfirmShotTarget(int token, float target)
+	{
+		if (token == 0) return;
+		int count = _pending.Count;
+		for (int index = 0; index < count; index++)
+		{
+			var entry = _pending.Dequeue();
+			if (entry.input.ShotToken == token && entry.input.ShotPhase != MovePhase.Inactive)
+				entry.input = entry.input with { ShotTarget = target };
+			_pending.Enqueue(entry);
+		}
+	}
+
+	/// <summary>A rejected Begin must never regenerate a turn during replay.</summary>
+	public void RejectShot(int token)
+	{
+		if (token == 0) return;
+		int count = _pending.Count;
+		for (int index = 0; index < count; index++)
+		{
+			var entry = _pending.Dequeue();
+			if (entry.input.ShotToken == token)
+				entry.input = entry.input with { ShotPhase = MovePhase.Inactive, ShotTarget = 0, ShotToken = 0 };
 			_pending.Enqueue(entry);
 		}
 	}

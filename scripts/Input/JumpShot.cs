@@ -9,10 +9,10 @@ namespace Hooper.Moves;
 /// is as legible to the defender as a crossover's wind-up already is
 /// (ADR-0003).
 ///
-/// Unlike Crossover, this move carries no directional payload — there is
-/// nothing extra to reconstruct on the wire beyond the move identity itself
-/// (PlayerController.MoveParamOf already returns 0 for any non-Crossover
-/// move). The ball's actual release is NOT this class's responsibility: it
+/// Its fixed rim-facing target is derived independently at accepted Begin
+/// (#428), then confirmed for that prediction instance. MoveParam remains
+/// the release fadeaway flag; target context has a separate wire field.
+/// The ball's actual release is NOT this class's responsibility: it
 /// fires on the holder's JustEnteredActive tick, read by
 /// BallController.CheckJumpShotRelease via PlayerController.JustReleasedJumpShot
 /// (JumpShotReleaseResolver) — this class only carries identity + timing.
@@ -40,6 +40,11 @@ namespace Hooper.Moves;
 /// </summary>
 public sealed class JumpShot : CommittedMove
 {
+    /// <summary>Accepted Begin context; authority repairs only the matching
+    /// predicted instance. Later input, position and ownership never retarget it.</summary>
+    public float TargetHeading { get; internal set; }
+    public int BeginToken { get; internal set; }
+
     /// <summary>Default jump-shot frame data. Tunable per instance if needed.</summary>
     public static readonly MoveFrameData DefaultFrameData =
         new(startupFrames: 18, activeFrames: 4, recoveryFrames: 20,
