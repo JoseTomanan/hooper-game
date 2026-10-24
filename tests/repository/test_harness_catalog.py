@@ -88,8 +88,16 @@ class HarnessCatalogCliTests(unittest.TestCase):
                 'bindings', 'pivot', 'dispatch', 'turnaround', 'accuracy', 'accuracy-unsquared',
                 'lost-payload', 'turnaround-steal', 'turnaround-oob', 'replay',
                 'turnaround-replay', 'turnaround-rejected', 'contact-set', 'contact-unset')]
-            + ['post-presentation-test-presentation', 'committed-clip-hookup-audit',
-               'net-jumpshot-form',
+            + ['post-presentation-test-presentation', 'committed-clip-hookup-audit']
+            + [f'jump-shot-heading-test-matrix-{angle}-{entry}-{hand}'
+               for angle in (0, 45, 89, 90, 91, 135, 180)
+               for entry in ('stationary', 'moving')
+               for hand in ('left', 'right')]
+            + [f'jump-shot-heading-test-{scenario}' for scenario in (
+                'bounded', 'opposite', 'unfinished', 'feint-early', 'feint-late',
+                'illegal-early', 'illegal-late', 'loss', 'oob', 'missing', 'degenerate',
+                'retarget', 'contact-retarget', 'release-below', 'release-at', 'release-above')]
+            + ['net-jumpshot-form',
                'net-rebound-presentation',
                'net-moving-crossover-host', 'net-moving-crossover-client',
                'net-moving-crossover-client-reset-race',
@@ -105,6 +113,7 @@ class HarnessCatalogCliTests(unittest.TestCase):
                for contact in ('contact', 'no-contact')
                for delay in (0, 30)]
             + [f'defensive-stance-{delay}ms' for delay in (0, 30)]
+            + [f'normal-shot-heading-{delay}ms' for delay in (0, 30)]
             + [f'dedicated-post-play-{delay}ms' for delay in (0, 30)],
             [line.split('\t')[0] for line in lines[baseline_tail + 1:]],
         )
@@ -328,7 +337,11 @@ class HarnessCatalogShardTests(unittest.TestCase):
         for case_id in ('net-moving-crossover-host', 'net-moving-crossover-client', 'net-moving-crossover-client-reset-race'):
             self.assertEqual(catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS, weights[case_id])
         self.assertEqual(catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS, weights['net-rebound-presentation'])
-        self.assertAlmostEqual(976.0 + 3 * catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS, sum(weights.values()))
+        self.assertAlmostEqual(
+            976.0 + 44 * catalog.DEFAULT_SINGLE_WEIGHT_SECONDS
+            + 5 * catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS,
+            sum(weights.values()),
+        )
 
         base = catalog.CATALOG[0]
         new_single = replace(base, id='new-single', scenes=(catalog.SceneMetadata('res://tests/integration/Unknown.tscn'),))

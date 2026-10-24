@@ -204,10 +204,9 @@ namespace HOOPERGAME.Tests.Integration;
 // Same reasoning as FadeawayTriggerTest: forcing Heading directly isolates
 // "does the classification correctly key off Heading-at-release" from "can
 // HeadingMath.RotateToward turn a player to a given yaw" (already proven
-// elsewhere by PivotPlantTest/DriveGatherTest). A Heading forced before Begin
-// cannot drift mid-shot HERE because (a) no stick input reaches this harness, so
-// Move() has nothing to turn toward, and (b) JumpShot's own branch in
-// TickCommittedMoveBehavior never writes Heading.
+// elsewhere by PivotPlantTest/DriveGatherTest). #428 now turns normal shots
+// during Startup. The fadeaway asset cases use an explicit lower-rate fixture
+// and verify their actual residual release angle before judging the clips.
 //
 // Stated deliberately narrowly: "a committed move freezes Heading" is NOT a
 // general rule of this codebase. Spin's Active phase overwrites Heading every
@@ -487,11 +486,9 @@ public partial class JumpshotAnimTest : Node
         }
     }
 
-    // Heading forced BEFORE Begin, exactly like FadeawayTriggerTest — the shooter
-    // never moves after this (no stick input reaches CheckAutoStartDribble in this
-    // harness, and JumpShot's own TickCommittedMoveBehavior branch never writes
-    // Heading), so Heading cannot drift mid-shot. See the header for why that is
-    // scoped to JumpShot rather than to committed moves in general.
+    // Heading is forced before Begin; #428's bounded Startup turn then runs.
+    // Fadeaway cases deliberately lower the fixture rate to leave a real
+    // residual release angle; production rates square the shot up.
     private void ApplyScenarioHeading()
     {
         // Target yaw: direction from shooter to rim — the SAME Atan2(dx, dz)
@@ -511,10 +508,24 @@ public partial class JumpshotAnimTest : Node
             ? squaredUpYaw + Mathf.Pi
             : squaredUpYaw;
         _shooter.SetHeadingForHarness(headingYaw);
+        // #428 production rates square up a back-facing Begin. Preserve these
+        // asset regressions with an explicit unfinished-turn fixture instead.
+        if (_scenario is "fadeaway-active" or "fadeaway-leans-back")
+            _shooter.MaxTurnRateDeg = 90f;
     }
 
     private void Observe()
     {
+        if (_shooter.PhaseForHarness == MovePhase.Active && _shooter.FrameInPhaseForHarness == 0)
+        {
+            float releaseAngle = ShotFacing.AngleFromTarget(_shooter.Heading, _shooter.GlobalPosition, RimCenter);
+            bool unfinished = _scenario is "fadeaway-active" or "fadeaway-leans-back";
+            if (unfinished ? releaseAngle < Mathf.Pi / 2 : releaseAngle > 1e-4f)
+            {
+                Fail($"{_scenario}: actual release-angle premise changed: {releaseAngle}");
+                Finish(1); return;
+            }
+        }
         string node = _shooter.ActiveAnimNodeForHarness;
 
         if (!_sawJumpshotStartup && node == "JumpshotStartup") _sawJumpshotStartup = true;

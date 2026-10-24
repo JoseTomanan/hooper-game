@@ -474,6 +474,13 @@ _ADDITIONAL_MULTIPROCESS_ROWS: tuple[tuple[str, str, str, tuple[str, ...]], ...]
 )
 
 _ADDITIONAL_MULTIPROCESS_ROWS += tuple(
+    (f"normal-shot-heading-{delay}ms",
+     f"tests/integration/run-net-shot-heading.sh godot {delay}",
+     "NetShotHeadingTest.tscn", (f".godot/shot-net/catalog-{delay}-none-*/**/*",))
+    for delay in (0, 30)
+)
+
+_ADDITIONAL_MULTIPROCESS_ROWS += tuple(
     (f"dedicated-post-play-{delay}ms",
      f"tests/integration/run-net-post-play.sh godot {delay}",
      "NetPostPlayTest.tscn", (f".godot/post-net/catalog-{delay}-none-*/**/*",))
