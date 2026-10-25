@@ -14,11 +14,13 @@ def projections(pose):
     # Capture transforms world bones by the inverse DISPLAY heading/root.
     # Therefore body +Z is forward independent of foot angles or torso bend.
     values = {name: pose["bones"]["mixamorig_" + name]["body"][2]
-              for name in TORSO + LEGS}
+              for name in TORSO + ("Hips",) + LEGS}
     front = max(values[name] for name in TORSO)
     leads = {name: values[name] - front for name in LEGS}
+    hip_leads = {name: values[name] - values["Hips"] for name in LEGS}
     return dict(forwardM=values, upperTorsoFrontM=front, leadsM=leads,
-                minimumLeadM=min(leads.values()))
+                minimumLeadM=min(leads.values()), leadsFromHipsM=hip_leads,
+                minimumHipLeadM=min(hip_leads.values()))
 
 
 def form(rows, remote):
@@ -46,6 +48,8 @@ def form(rows, remote):
             failures.append("missing final Active pose " + str(frame))
         elif measured[frame]["minimumLeadM"] <= measured[frame]["coordinateResolutionM"]:
             failures.append("both legs must lead upper torso at Active:" + str(frame))
+        if frame in measured and measured[frame]["minimumHipLeadM"] <= measured[frame]["coordinateResolutionM"]:
+            failures.append("both legs must advance from hips at Active:" + str(frame))
     return dict(failures=failures, samples=list(measured.values()), coreFrames=[2, 3])
 
 

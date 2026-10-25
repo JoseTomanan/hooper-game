@@ -18,7 +18,7 @@ class FadeawayProjectionTests(unittest.TestCase):
         # Body +Z is supplied by the capture's heading inverse, not inferred
         # from the legs under test. This fixture is an oracle test, not footage.
         return {"bones": {"mixamorig_" + name: {"body": [0, 0, z]}
-                          for name, z in {"Spine2": -.2, "Neck": -.1,
+                          for name, z in {"Hips": 0, "Spine2": -.2, "Neck": -.1,
                                           "RightLeg": .2, "RightFoot": .1,
                                           "LeftLeg": .3, "LeftFoot": .2}.items()}}
 
@@ -63,6 +63,20 @@ class FadeawayProjectionTests(unittest.TestCase):
                 rows[2]["pose"]["bones"]["mixamorig_" + bone]["body"][2] = -.3
                 self.assertIn("both legs must lead upper torso at Active:2",
                               fadeaway.form(rows, False)["failures"])
+
+    def test_spine_only_bend_cannot_stand_in_for_forward_legs(self):
+        rows = self.rows()
+        for row in rows:
+            bones = row["pose"]["bones"]
+            for bone in ("Spine2", "Neck"):
+                bones["mixamorig_" + bone]["body"][2] = -.5
+            for bone in ("RightLeg", "RightFoot", "LeftLeg", "LeftFoot"):
+                bones["mixamorig_" + bone]["body"][2] = -.1
+        # Every leg projection leads the bent torso, but all trail the hips:
+        # the lower body has made no forward contribution to the silhouette.
+        self.assertGreater(fadeaway.projections(rows[2]["pose"])["minimumLeadM"], 0)
+        self.assertIn("both legs must advance from hips at Active:2",
+                      fadeaway.form(rows, False)["failures"])
 
 
 if __name__ == "__main__":

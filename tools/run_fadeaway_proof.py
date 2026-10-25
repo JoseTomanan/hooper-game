@@ -37,7 +37,8 @@ def main():
     status = subprocess.run([*analyzer, str(output / "upright"), "--output", str(negative)], cwd=ROOT).returncode
     cases = json.loads(negative.read_text())["cases"]
     failures = [f for c in cases for f in c["failures"]]
-    if status != 1 or not failures or any(not f.startswith("both legs must lead upper torso") for f in failures):
+    form_failures = ("both legs must lead upper torso", "both legs must advance from hips")
+    if status != 1 or not failures or any(not f.startswith(form_failures) for f in failures):
         raise RuntimeError("ordinary substitute did not fail specifically on two-leg form: " + repr(failures))
     # Reuse the established boundary counterfactual against the observed
     # positive motion envelope. The old clip's much larger discontinuity can
