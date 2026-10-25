@@ -89,6 +89,7 @@ class HarnessCatalogCliTests(unittest.TestCase):
                 'lost-payload', 'turnaround-steal', 'turnaround-oob', 'replay',
                 'turnaround-replay', 'turnaround-rejected', 'contact-set', 'contact-unset')]
             + ['post-presentation-test-presentation', 'committed-clip-hookup-audit']
+            + ['pivot-plant-test-movement-matrix']
             + [f'jump-shot-heading-test-matrix-{angle}-{entry}-{hand}'
                for angle in (0, 45, 89, 90, 91, 135, 180)
                for entry in ('stationary', 'moving')
@@ -333,6 +334,7 @@ class HarnessCatalogShardTests(unittest.TestCase):
             elif case.id in ('dedicated-post-play-0ms', 'dedicated-post-play-30ms'):
                 self.assertEqual(catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS, weights[case.id])
         self.assertEqual(250.0, weights['pivot-continuity'])
+        self.assertEqual(3.0 / 5, weights['pivot-plant-test-movement-matrix'])
         self.assertEqual(catalog.DEFAULT_SINGLE_WEIGHT_SECONDS, weights['moving-crossover-lateral-test-suite'])
         for case_id in ('net-moving-crossover-host', 'net-moving-crossover-client', 'net-moving-crossover-client-reset-race'):
             self.assertEqual(catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS, weights[case_id])
@@ -340,7 +342,7 @@ class HarnessCatalogShardTests(unittest.TestCase):
         for case_id in ('fadeaway-form', 'net-fadeaway-form'):
             self.assertEqual(catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS, weights[case_id])
         self.assertAlmostEqual(
-            976.0 + 44 * catalog.DEFAULT_SINGLE_WEIGHT_SECONDS
+            976.0 + 3.0 / 5 + 44 * catalog.DEFAULT_SINGLE_WEIGHT_SECONDS
             + 7 * catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS,
             sum(weights.values()),
         )

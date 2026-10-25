@@ -427,6 +427,8 @@ PostPlayTest.tscn|contact-unset
 PostPresentationTest.tscn|presentation
 CommittedClipHookupAudit.tscn|
 """
+_ADDITIONAL_SINGLE_ROWS += "PivotPlantTest.tscn|movement-matrix\n"
+
 _ADDITIONAL_SINGLE_ROWS += "".join(
     f"JumpShotHeadingTest.tscn|matrix-{angle}-{entry}-{hand}\n"
     for angle in (0, 45, 89, 90, 91, 135, 180)

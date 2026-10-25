@@ -129,7 +129,7 @@ public static class HeadingMath
     /// predicted locally and reconciled by the caller exactly like Heading
     /// itself (ADR-0002). <c>HasLatch</c> tracks whether a facing target is
     /// currently "owed": the player has committed to turning to face it
-    /// before movement resumes, and hasn't reached it yet.
+    /// before full-speed locomotion resumes, and hasn't reached it yet (#430).
     /// </summary>
     public readonly record struct PivotState(bool HasLatch, float LatchedYaw)
     {
@@ -141,16 +141,16 @@ public static class HeadingMath
     /// <param name="NewYaw">The new heading in radians, normalized to [-π, π].</param>
     /// <param name="Pivot">The pivot state to persist and pass into the next tick.</param>
     /// <param name="IsPivotingInPlace">
-    /// True while the player is committed to turning-in-place and must not
-    /// move yet (a large flick or a >threshold held turn); false once facing
-    /// is close enough (or was never far enough) that movement may proceed.
+    /// Historical flag name: true while a latched ordinary turn is owed. #430
+    /// permits reduced-speed travel during this interval; stance/post keep
+    /// their separate establishment gates. False once the target is reached.
     /// </param>
     public readonly record struct HeadingStep(float NewYaw, PivotState Pivot, bool IsPivotingInPlace);
 
     /// <summary>
     /// Issue #172: a large facing change (a "flick," or simply pointing the
-    /// stick well behind you) now demands the player plant and pivot in
-    /// place before they can move — a committed read, not a free instant
+    /// stick well behind you) latches an owed turn before full-speed locomotion
+    /// can resume (#430 permits bounded slow travel during it) — a committed read, not a free instant
     /// snap-turn (ADR-0003's anti-goal is exactly this kind of arcade
     /// decoupling of facing from movement). Below <paramref name="pivotThresholdDeg"/>
     /// the turn is "forward-ish": <see cref="RotateToward"/>'s ordinary
@@ -227,7 +227,7 @@ public static class HeadingMath
             // with it — including a mid-pivot direction change ≤threshold
             // from the current heading, which re-aims the latch (a small
             // remaining arc that completes and ungates within a tick or two
-            // at the nominal rate). Planted until the (possibly re-aimed)
+            // at the nominal rate). Latched until the (possibly re-aimed)
             // latch is reached within AngleEpsilon; the completion tick
             // clears the latch and ungates on that same tick.
             float rotated = RotateTowardYaw(currentYaw, desiredYaw, delta, maxTurnRateDeg, backTurnSlowFactor);
