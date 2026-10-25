@@ -104,3 +104,13 @@ Proof must discriminate dropped input, instant rotation, erased pivot debt,
 contact bypass, fallback moves, duplicate release and accuracy exemption.
 Full harness/network proof still gates closure; this record alone is not
 implementation evidence.
+
+## Clarification 2026-10-24 — Normal-shot exclusion and #428
+
+The original exclusion of explicit JumpShot/Layup requests from the post
+turnaround remains: neither gains post admission, the 48-tick Startup,
+360-degrees/s constant-rate turn or any post accuracy benefit. #428 separately
+approves normal JumpShot's own fixed-target Startup turn at the ordinary
+non-linear heading rate, recorded in ADR-0010's 2026-10-24 amendment. Its
+18/4/20 timing and pump-fake remain. Layup is unchanged. Both shot families
+continue to evaluate ordinary accuracy from actual release heading.

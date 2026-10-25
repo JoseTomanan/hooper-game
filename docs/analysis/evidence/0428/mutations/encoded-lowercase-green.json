@@ -1,0 +1,4461 @@
+{
+  "scenario": "matrix",
+  "initialAngle": 180,
+  "entry": "moving",
+  "hand": "Left",
+  "diagnostic": false,
+  "beginTick": 5,
+  "releaseTick": 23,
+  "releases": 1,
+  "releaseHeading": 3.1415927,
+  "releaseAngle": 0,
+  "releaseFadeaway": false,
+  "failures": [],
+  "samples": [
+    {
+      "kind": "begin",
+      "tick": 5,
+      "heading": 0,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Startup",
+      "frame": 0,
+      "hand": "Left",
+      "speed": 3,
+      "rate": 900,
+      "slow": 0.95
+    },
+    {
+      "kind": "tick",
+      "tick": 6,
+      "heading": 0.24870944,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Startup",
+      "frame": 1,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 2.8928833,
+      "step": 0.24870944,
+      "fadeaway": false,
+      "releases": 0,
+      "facingFactor": 1,
+      "movementFactor": 1,
+      "move": "jumpshot",
+      "animation": "JumpshotStartup",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 7,
+      "heading": 0.49845517,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Startup",
+      "frame": 2,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 2.6431375,
+      "step": 0.24974573,
+      "fadeaway": false,
+      "releases": 0,
+      "facingFactor": 1,
+      "movementFactor": 1,
+      "move": "jumpshot",
+      "animation": "JumpshotStartup",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 8,
+      "heading": 0.7492415,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Startup",
+      "frame": 3,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 2.3923512,
+      "step": 0.2507863,
+      "fadeaway": false,
+      "releases": 0,
+      "facingFactor": 1,
+      "movementFactor": 1,
+      "move": "jumpshot",
+      "animation": "JumpshotStartup",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 9,
+      "heading": 1.0010728,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Startup",
+      "frame": 4,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 2.14052,
+      "step": 0.2518313,
+      "fadeaway": false,
+      "releases": 0,
+      "facingFactor": 1,
+      "movementFactor": 1,
+      "move": "jumpshot",
+      "animation": "JumpshotStartup",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 10,
+      "heading": 1.2539533,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Startup",
+      "frame": 5,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 1.8876394,
+      "step": 0.25288057,
+      "fadeaway": false,
+      "releases": 0,
+      "facingFactor": 1,
+      "movementFactor": 1,
+      "move": "jumpshot",
+      "animation": "JumpshotStartup",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 11,
+      "heading": 1.5078876,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Startup",
+      "frame": 6,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 1.6337051,
+      "step": 0.25393426,
+      "fadeaway": false,
+      "releases": 0,
+      "facingFactor": 1,
+      "movementFactor": 1,
+      "move": "jumpshot",
+      "animation": "JumpshotStartup",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 12,
+      "heading": 1.7628798,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Startup",
+      "frame": 7,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 1.3787129,
+      "step": 0.25499225,
+      "fadeaway": false,
+      "releases": 0,
+      "facingFactor": 1,
+      "movementFactor": 1,
+      "move": "jumpshot",
+      "animation": "JumpshotStartup",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 13,
+      "heading": 2.0189347,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Startup",
+      "frame": 8,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 1.122658,
+      "step": 0.25605488,
+      "fadeaway": false,
+      "releases": 0,
+      "facingFactor": 1,
+      "movementFactor": 1,
+      "move": "jumpshot",
+      "animation": "JumpshotStartup",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 14,
+      "heading": 2.2760563,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Startup",
+      "frame": 9,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0.86553645,
+      "step": 0.25712156,
+      "fadeaway": false,
+      "releases": 0,
+      "facingFactor": 1,
+      "movementFactor": 1,
+      "move": "jumpshot",
+      "animation": "JumpshotStartup",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 15,
+      "heading": 2.5342493,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Startup",
+      "frame": 10,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0.60734344,
+      "step": 0.25819302,
+      "fadeaway": false,
+      "releases": 0,
+      "facingFactor": 1,
+      "movementFactor": 1,
+      "move": "jumpshot",
+      "animation": "JumpshotStartup",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 16,
+      "heading": 2.793518,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Startup",
+      "frame": 11,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0.34807467,
+      "step": 0.25926876,
+      "fadeaway": false,
+      "releases": 0,
+      "facingFactor": 1,
+      "movementFactor": 1,
+      "move": "jumpshot",
+      "animation": "JumpshotStartup",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 17,
+      "heading": 3.053867,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Startup",
+      "frame": 12,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0.08772564,
+      "step": 0.26034904,
+      "fadeaway": false,
+      "releases": 0,
+      "facingFactor": 1,
+      "movementFactor": 1,
+      "move": "jumpshot",
+      "animation": "JumpshotStartup",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 18,
+      "heading": 3.1415927,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Startup",
+      "frame": 13,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0,
+      "step": 0.08772564,
+      "fadeaway": false,
+      "releases": 0,
+      "facingFactor": 1,
+      "movementFactor": 1,
+      "move": "jumpshot",
+      "animation": "JumpshotStartup",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 19,
+      "heading": 3.1415927,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Startup",
+      "frame": 14,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0,
+      "step": 0,
+      "fadeaway": false,
+      "releases": 0,
+      "facingFactor": 1,
+      "movementFactor": 1,
+      "move": "jumpshot",
+      "animation": "JumpshotStartup",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 20,
+      "heading": 3.1415927,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Startup",
+      "frame": 15,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0,
+      "step": 0,
+      "fadeaway": false,
+      "releases": 0,
+      "facingFactor": 1,
+      "movementFactor": 1,
+      "move": "jumpshot",
+      "animation": "JumpshotStartup",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 21,
+      "heading": 3.1415927,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Startup",
+      "frame": 16,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0,
+      "step": 0,
+      "fadeaway": false,
+      "releases": 0,
+      "facingFactor": 1,
+      "movementFactor": 1,
+      "move": "jumpshot",
+      "animation": "JumpshotStartup",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 22,
+      "heading": 3.1415927,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Startup",
+      "frame": 17,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0,
+      "step": 0,
+      "fadeaway": false,
+      "releases": 0,
+      "facingFactor": 1,
+      "movementFactor": 1,
+      "move": "jumpshot",
+      "animation": "JumpshotStartup",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 23,
+      "heading": 3.1415927,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Active",
+      "frame": 0,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0,
+      "step": 0,
+      "fadeaway": false,
+      "releases": 1,
+      "facingFactor": 1,
+      "movementFactor": 1.4,
+      "move": "jumpshot",
+      "animation": "JumpshotActive",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 24,
+      "heading": 3.1415927,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Active",
+      "frame": 1,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0,
+      "step": 0,
+      "fadeaway": false,
+      "releases": 1,
+      "facingFactor": 1,
+      "movementFactor": 1.4,
+      "move": "jumpshot",
+      "animation": "JumpshotActive",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 25,
+      "heading": 3.1415927,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Active",
+      "frame": 2,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0,
+      "step": 0,
+      "fadeaway": false,
+      "releases": 1,
+      "facingFactor": 1,
+      "movementFactor": 1.4,
+      "move": "jumpshot",
+      "animation": "JumpshotActive",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 26,
+      "heading": 3.1415927,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Active",
+      "frame": 3,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0,
+      "step": 0,
+      "fadeaway": false,
+      "releases": 1,
+      "facingFactor": 1,
+      "movementFactor": 1.4,
+      "move": "jumpshot",
+      "animation": "JumpshotActive",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 27,
+      "heading": 3.1415927,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Recovery",
+      "frame": 0,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0,
+      "step": 0,
+      "fadeaway": false,
+      "releases": 1,
+      "facingFactor": 1,
+      "movementFactor": 1.4,
+      "move": "jumpshot",
+      "animation": "JumpshotRecovery",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 28,
+      "heading": 3.1415927,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Recovery",
+      "frame": 1,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0,
+      "step": 0,
+      "fadeaway": false,
+      "releases": 1,
+      "facingFactor": 1,
+      "movementFactor": 1.4,
+      "move": "jumpshot",
+      "animation": "JumpshotRecovery",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 29,
+      "heading": 3.1415927,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Recovery",
+      "frame": 2,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0,
+      "step": 0,
+      "fadeaway": false,
+      "releases": 1,
+      "facingFactor": 1,
+      "movementFactor": 1.4,
+      "move": "jumpshot",
+      "animation": "JumpshotRecovery",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 30,
+      "heading": 3.1415927,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Recovery",
+      "frame": 3,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0,
+      "step": 0,
+      "fadeaway": false,
+      "releases": 1,
+      "facingFactor": 1,
+      "movementFactor": 1.4,
+      "move": "jumpshot",
+      "animation": "JumpshotRecovery",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 31,
+      "heading": 3.1415927,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Recovery",
+      "frame": 4,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0,
+      "step": 0,
+      "fadeaway": false,
+      "releases": 1,
+      "facingFactor": 1,
+      "movementFactor": 1.4,
+      "move": "jumpshot",
+      "animation": "JumpshotRecovery",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 32,
+      "heading": 3.1415927,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Recovery",
+      "frame": 5,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0,
+      "step": 0,
+      "fadeaway": false,
+      "releases": 1,
+      "facingFactor": 1,
+      "movementFactor": 1.4,
+      "move": "jumpshot",
+      "animation": "JumpshotRecovery",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 33,
+      "heading": 3.1415927,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Recovery",
+      "frame": 6,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0,
+      "step": 0,
+      "fadeaway": false,
+      "releases": 1,
+      "facingFactor": 1,
+      "movementFactor": 1.4,
+      "move": "jumpshot",
+      "animation": "JumpshotRecovery",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 34,
+      "heading": 3.1415927,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Recovery",
+      "frame": 7,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0,
+      "step": 0,
+      "fadeaway": false,
+      "releases": 1,
+      "facingFactor": 1,
+      "movementFactor": 1.4,
+      "move": "jumpshot",
+      "animation": "JumpshotRecovery",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 35,
+      "heading": 3.1415927,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Recovery",
+      "frame": 8,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0,
+      "step": 0,
+      "fadeaway": false,
+      "releases": 1,
+      "facingFactor": 1,
+      "movementFactor": 1.4,
+      "move": "jumpshot",
+      "animation": "JumpshotRecovery",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 36,
+      "heading": 3.1415927,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Recovery",
+      "frame": 9,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0,
+      "step": 0,
+      "fadeaway": false,
+      "releases": 1,
+      "facingFactor": 1,
+      "movementFactor": 1.4,
+      "move": "jumpshot",
+      "animation": "JumpshotRecovery",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 37,
+      "heading": 3.1415927,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Recovery",
+      "frame": 10,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0,
+      "step": 0,
+      "fadeaway": false,
+      "releases": 1,
+      "facingFactor": 1,
+      "movementFactor": 1.4,
+      "move": "jumpshot",
+      "animation": "JumpshotRecovery",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 38,
+      "heading": 3.1415927,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Recovery",
+      "frame": 11,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0,
+      "step": 0,
+      "fadeaway": false,
+      "releases": 1,
+      "facingFactor": 1,
+      "movementFactor": 1.4,
+      "move": "jumpshot",
+      "animation": "JumpshotRecovery",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 39,
+      "heading": 3.1415927,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Recovery",
+      "frame": 12,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0,
+      "step": 0,
+      "fadeaway": false,
+      "releases": 1,
+      "facingFactor": 1,
+      "movementFactor": 1.4,
+      "move": "jumpshot",
+      "animation": "JumpshotRecovery",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 40,
+      "heading": 3.1415927,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Recovery",
+      "frame": 13,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0,
+      "step": 0,
+      "fadeaway": false,
+      "releases": 1,
+      "facingFactor": 1,
+      "movementFactor": 1.4,
+      "move": "jumpshot",
+      "animation": "JumpshotRecovery",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 41,
+      "heading": 3.1415927,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Recovery",
+      "frame": 14,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0,
+      "step": 0,
+      "fadeaway": false,
+      "releases": 1,
+      "facingFactor": 1,
+      "movementFactor": 1.4,
+      "move": "jumpshot",
+      "animation": "JumpshotRecovery",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 42,
+      "heading": 3.1415927,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Recovery",
+      "frame": 15,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0,
+      "step": 0,
+      "fadeaway": false,
+      "releases": 1,
+      "facingFactor": 1,
+      "movementFactor": 1.4,
+      "move": "jumpshot",
+      "animation": "JumpshotRecovery",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 43,
+      "heading": 3.1415927,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Recovery",
+      "frame": 16,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0,
+      "step": 0,
+      "fadeaway": false,
+      "releases": 1,
+      "facingFactor": 1,
+      "movementFactor": 1.4,
+      "move": "jumpshot",
+      "animation": "JumpshotRecovery",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 44,
+      "heading": 3.1415927,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Recovery",
+      "frame": 17,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0,
+      "step": 0,
+      "fadeaway": false,
+      "releases": 1,
+      "facingFactor": 1,
+      "movementFactor": 1.4,
+      "move": "jumpshot",
+      "animation": "JumpshotRecovery",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 45,
+      "heading": 3.1415927,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Recovery",
+      "frame": 18,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0,
+      "step": 0,
+      "fadeaway": false,
+      "releases": 1,
+      "facingFactor": 1,
+      "movementFactor": 1.4,
+      "move": "jumpshot",
+      "animation": "JumpshotRecovery",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 46,
+      "heading": 3.1415927,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Recovery",
+      "frame": 19,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0,
+      "step": 0,
+      "fadeaway": false,
+      "releases": 1,
+      "facingFactor": 1,
+      "movementFactor": 1.4,
+      "move": "jumpshot",
+      "animation": "JumpshotRecovery",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 47,
+      "heading": 3.1415927,
+      "target": 3.1415927,
+      "instanceTarget": null,
+      "token": 0,
+      "phase": "Inactive",
+      "frame": 0,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0,
+      "step": 0,
+      "fadeaway": false,
+      "releases": 1,
+      "facingFactor": 1,
+      "movementFactor": 1.4,
+      "move": "",
+      "animation": "Locomotion",
+      "initiationSpeed": 3
+    },
+    {
+      "kind": "tick",
+      "tick": 48,
+      "heading": 3.1415927,
+      "target": 3.1415927,
+      "instanceTarget": null,
+      "token": 0,
+      "phase": "Inactive",
+      "frame": 0,
+      "position": [
+        0,
+        0,
+        5
+      ],
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "angle": 0,
+      "step": 0,
+      "fadeaway": false,
+      "releases": 1,
+      "facingFactor": 1,
+      "movementFactor": 1.4,
+      "move": "",
+      "animation": "Locomotion",
+      "initiationSpeed": 3
+    }
+  ],
+  "poses": [
+    {
+      "tick": 5,
+      "physics": 5,
+      "heading": 0,
+      "phase": "Startup",
+      "frame": 0,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            -6.757012E-08,
+            -0.0020806193,
+            5.0000005
+          ],
+          "rotation": [
+            0.9768092,
+            -4.302996E-05,
+            8.759651E-06,
+            0.2141117
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.27807954,
+            -0.29143488,
+            5.360605
+          ],
+          "rotation": [
+            0.87986255,
+            0.07877953,
+            -0.45457107,
+            0.114021204
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            -0.3453575,
+            0.062294006,
+            5.332809
+          ],
+          "rotation": [
+            0.5197235,
+            -0.15009871,
+            0.4593591,
+            0.7045191
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.09824583,
+            -0.69145393,
+            4.8061996
+          ],
+          "rotation": [
+            -0.05052726,
+            0.38495928,
+            0.8923957,
+            -0.22996366
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            -0.09801669,
+            -0.6888726,
+            4.940589
+          ],
+          "rotation": [
+            0.77443844,
+            0.087232664,
+            0.44590864,
+            0.4402284
+          ]
+        }
+      }
+    },
+    {
+      "tick": 6,
+      "physics": 6,
+      "heading": 0.24870944,
+      "phase": "Startup",
+      "frame": 1,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            5.3763827E-08,
+            -0.0020806193,
+            5.0000005
+          ],
+          "rotation": [
+            0.96926725,
+            0.026514532,
+            -0.1211493,
+            0.21246363
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.3582873,
+            -0.29143488,
+            5.281059
+          ],
+          "rotation": [
+            0.8166857,
+            0.09231376,
+            -0.5601941,
+            0.10336935
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            -0.25280917,
+            0.062294006,
+            5.4075794
+          ],
+          "rotation": [
+            0.5726865,
+            -0.06155498,
+            0.3913483,
+            0.71769613
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.0475484,
+            -0.69112265,
+            4.788013
+          ],
+          "rotation": [
+            0.060549766,
+            0.35346213,
+            0.8917714,
+            -0.2759386
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            -0.10961964,
+            -0.68853503,
+            4.966583
+          ],
+          "rotation": [
+            0.82383215,
+            0.14109115,
+            0.34642228,
+            0.4258938
+          ]
+        }
+      }
+    },
+    {
+      "tick": 7,
+      "physics": 7,
+      "heading": 0.49845517,
+      "phase": "Startup",
+      "frame": 2,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            -0.015061217,
+            -0.23204166,
+            5.0272574
+          ],
+          "rotation": [
+            0.2580583,
+            0.2256402,
+            -0.11148824,
+            0.93277156
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.3327368,
+            -0.40478754,
+            4.995066
+          ],
+          "rotation": [
+            0.6118139,
+            0.20277965,
+            -0.59259236,
+            0.48311332
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            -0.09531185,
+            -0.447828,
+            5.315721
+          ],
+          "rotation": [
+            0.74253243,
+            0.37821168,
+            0.46455348,
+            0.29965252
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.32142732,
+            -0.86856735,
+            4.916992
+          ],
+          "rotation": [
+            0.18703872,
+            0.41564444,
+            0.88035893,
+            -0.13124184
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            -0.2412197,
+            -0.8688555,
+            5.1695495
+          ],
+          "rotation": [
+            0.115465075,
+            0.43307024,
+            0.8937009,
+            -0.020414038
+          ]
+        }
+      }
+    },
+    {
+      "tick": 8,
+      "physics": 8,
+      "heading": 0.7492415,
+      "phase": "Startup",
+      "frame": 3,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            -0.010932379,
+            -0.23467553,
+            5.0395927
+          ],
+          "rotation": [
+            0.23699757,
+            0.33585805,
+            -0.14940603,
+            0.8992827
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.5623463,
+            -0.33320498,
+            5.072138
+          ],
+          "rotation": [
+            0.5689616,
+            0.30924734,
+            -0.44801444,
+            0.6163861
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.08747718,
+            -0.3591864,
+            5.548162
+          ],
+          "rotation": [
+            0.761499,
+            0.49536034,
+            0.11750027,
+            0.40116224
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.28969085,
+            -0.8709667,
+            4.838351
+          ],
+          "rotation": [
+            0.29362983,
+            0.40456432,
+            0.84634274,
+            -0.18388365
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            -0.19360334,
+            -0.8731711,
+            5.220471
+          ],
+          "rotation": [
+            0.22492953,
+            0.44371226,
+            0.8640052,
+            -0.07759631
+          ]
+        }
+      }
+    },
+    {
+      "tick": 9,
+      "physics": 9,
+      "heading": 1.0010728,
+      "phase": "Startup",
+      "frame": 4,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.001880711,
+            -0.22503787,
+            5.0506186
+          ],
+          "rotation": [
+            0.20157251,
+            0.44590896,
+            -0.16189212,
+            0.85692745
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.72363895,
+            0.040483356,
+            5.1718335
+          ],
+          "rotation": [
+            0.39944935,
+            0.5021552,
+            -0.22893602,
+            0.7320305
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.34991586,
+            0.0052987337,
+            5.6199484
+          ],
+          "rotation": [
+            0.4745796,
+            0.512197,
+            -0.18853374,
+            0.6905675
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.23807803,
+            -0.8743249,
+            4.769393
+          ],
+          "rotation": [
+            0.39437476,
+            0.38952813,
+            0.79782164,
+            -0.2371013
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            -0.13579486,
+            -0.87752074,
+            5.257979
+          ],
+          "rotation": [
+            0.3292469,
+            0.4456262,
+            0.8209609,
+            -0.13797466
+          ]
+        }
+      }
+    },
+    {
+      "tick": 10,
+      "physics": 10,
+      "heading": 1.2539533,
+      "phase": "Startup",
+      "frame": 5,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.021245679,
+            -0.20878339,
+            5.0568423
+          ],
+          "rotation": [
+            0.16342926,
+            0.5529001,
+            -0.15678236,
+            0.8018801
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.55501556,
+            0.30474222,
+            5.171728
+          ],
+          "rotation": [
+            0.16318089,
+            0.52592117,
+            -0.10492803,
+            0.8281117
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.39768833,
+            0.26814675,
+            5.376194
+          ],
+          "rotation": [
+            0.11579543,
+            0.6194372,
+            -0.08956279,
+            0.77127653
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.1702466,
+            -0.8776332,
+            4.71603
+          ],
+          "rotation": [
+            0.48813993,
+            0.36686075,
+            0.73710644,
+            -0.28949395
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            -0.07062244,
+            -0.8809117,
+            5.281072
+          ],
+          "rotation": [
+            0.4273851,
+            0.4352903,
+            0.7671091,
+            -0.19851446
+          ]
+        }
+      }
+    },
+    {
+      "tick": 11,
+      "physics": 11,
+      "heading": 1.5078876,
+      "phase": "Startup",
+      "frame": 6,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.046895377,
+            -0.18566567,
+            5.056357
+          ],
+          "rotation": [
+            0.126955,
+            0.6542425,
+            -0.13823569,
+            0.7326255
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.47232312,
+            0.36498713,
+            5.0817447
+          ],
+          "rotation": [
+            0.045062494,
+            0.57762426,
+            -0.055550613,
+            0.81316274
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.3823747,
+            0.33149815,
+            5.2449555
+          ],
+          "rotation": [
+            -0.002219787,
+            0.7363006,
+            0.0017835854,
+            0.6766486
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.09211728,
+            -0.87986284,
+            4.6818123
+          ],
+          "rotation": [
+            0.5746427,
+            0.33286807,
+            0.66708446,
+            -0.3376136
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.00040991604,
+            -0.8825438,
+            5.289729
+          ],
+          "rotation": [
+            0.5192134,
+            0.41115937,
+            0.7045928,
+            -0.25478306
+          ]
+        }
+      }
+    },
+    {
+      "tick": 12,
+      "physics": 12,
+      "heading": 1.7628798,
+      "phase": "Startup",
+      "frame": 7,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.077497736,
+            -0.1568352,
+            5.0461345
+          ],
+          "rotation": [
+            0.09482627,
+            0.7466633,
+            -0.112315126,
+            0.6487583
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.47776672,
+            0.41506255,
+            4.9747906
+          ],
+          "rotation": [
+            0.037628874,
+            0.6763423,
+            -0.06082466,
+            0.7331068
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.43058476,
+            0.38434756,
+            5.157445
+          ],
+          "rotation": [
+            -0.001978718,
+            0.81635636,
+            0.0020536047,
+            0.5775415
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.012204763,
+            -0.8773811,
+            4.6690664
+          ],
+          "rotation": [
+            0.658843,
+            0.27883896,
+            0.5903876,
+            -0.37365404
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.079882875,
+            -0.87572813,
+            5.282299
+          ],
+          "rotation": [
+            0.61135364,
+            0.35682237,
+            0.64480454,
+            -0.28836024
+          ]
+        }
+      }
+    },
+    {
+      "tick": 13,
+      "physics": 13,
+      "heading": 2.0189347,
+      "phase": "Startup",
+      "frame": 8,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.1134913,
+            -0.11753422,
+            5.0218573
+          ],
+          "rotation": [
+            0.065354966,
+            0.8280135,
+            -0.08073483,
+            0.5510029
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.45618048,
+            0.48059797,
+            4.8675075
+          ],
+          "rotation": [
+            0.030156571,
+            0.7703225,
+            -0.064835906,
+            0.6336325
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.4562009,
+            0.46210372,
+            5.0576367
+          ],
+          "rotation": [
+            -0.0017376201,
+            0.8830666,
+            0.0022723868,
+            0.469239
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            -0.057753406,
+            -0.8654068,
+            4.6741943
+          ],
+          "rotation": [
+            0.75122714,
+            0.19224963,
+            0.505265,
+            -0.37868878
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.16202147,
+            -0.8651408,
+            5.2521405
+          ],
+          "rotation": [
+            0.70185643,
+            0.28656378,
+            0.58011436,
+            -0.29790282
+          ]
+        }
+      }
+    },
+    {
+      "tick": 14,
+      "physics": 14,
+      "heading": 2.2760563,
+      "phase": "Startup",
+      "frame": 9,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.14918733,
+            -0.0651111,
+            4.9777713
+          ],
+          "rotation": [
+            0.044052213,
+            0.8956887,
+            -0.050954293,
+            0.43955064
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.4082423,
+            0.56080246,
+            4.765284
+          ],
+          "rotation": [
+            0.023381729,
+            0.85904396,
+            -0.06758073,
+            0.5068824
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.45694512,
+            0.5604819,
+            4.953982
+          ],
+          "rotation": [
+            -0.0013805053,
+            0.93520206,
+            0.0025115123,
+            0.35410294
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            -0.117447965,
+            -0.8551347,
+            4.697013
+          ],
+          "rotation": [
+            0.8372305,
+            0.100483514,
+            0.40287662,
+            -0.35586318
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.23163795,
+            -0.86141026,
+            5.196492
+          ],
+          "rotation": [
+            0.78091514,
+            0.22641762,
+            0.4951715,
+            -0.30612385
+          ]
+        }
+      }
+    },
+    {
+      "tick": 15,
+      "physics": 15,
+      "heading": 2.5342493,
+      "phase": "Startup",
+      "frame": 10,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.17270589,
+            -0.0002503991,
+            4.9137664
+          ],
+          "rotation": [
+            0.035598427,
+            0.94817495,
+            -0.031751238,
+            0.31414786
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.3378833,
+            0.64940906,
+            4.6739078
+          ],
+          "rotation": [
+            0.01749013,
+            0.9331544,
+            -0.06934705,
+            0.3522896
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.44168562,
+            0.66381955,
+            4.8537526
+          ],
+          "rotation": [
+            -0.0010107998,
+            0.97226906,
+            0.0026749957,
+            0.23384765
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            -0.16073099,
+            -0.83060867,
+            4.751356
+          ],
+          "rotation": [
+            0.9017688,
+            0.020875508,
+            0.27790394,
+            -0.33037344
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.27373514,
+            -0.85119843,
+            5.1236277
+          ],
+          "rotation": [
+            0.84166425,
+            0.18029964,
+            0.38525203,
+            -0.3326774
+          ]
+        }
+      }
+    },
+    {
+      "tick": 16,
+      "physics": 16,
+      "heading": 2.793518,
+      "phase": "Startup",
+      "frame": 11,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.17239639,
+            0.07251656,
+            4.8408303
+          ],
+          "rotation": [
+            0.039398603,
+            0.98397833,
+            -0.021957044,
+            0.17248859
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.24621734,
+            0.74647427,
+            4.6022754
+          ],
+          "rotation": [
+            0.012356459,
+            0.9824624,
+            -0.07048638,
+            0.17218183
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.4105118,
+            0.7726617,
+            4.7566233
+          ],
+          "rotation": [
+            0.007774297,
+            0.9932026,
+            -0.032126095,
+            0.11160645
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            -0.16788837,
+            -0.7689738,
+            4.837119
+          ],
+          "rotation": [
+            0.94532436,
+            -0.073454,
+            0.12049425,
+            -0.2940195
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.29126635,
+            -0.80405295,
+            5.043383
+          ],
+          "rotation": [
+            0.89603233,
+            0.11070624,
+            0.2580442,
+            -0.34392357
+          ]
+        }
+      }
+    },
+    {
+      "tick": 17,
+      "physics": 17,
+      "heading": 3.053867,
+      "phase": "Startup",
+      "frame": 12,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.1419594,
+            0.14259446,
+            4.7786765
+          ],
+          "rotation": [
+            0.033022664,
+            0.99902534,
+            -0.02390212,
+            0.016929146
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.13369465,
+            0.838889,
+            4.5623503
+          ],
+          "rotation": [
+            0.0014258145,
+            0.9969518,
+            -0.073633,
+            -0.025755001
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.35865614,
+            0.87619686,
+            4.6742625
+          ],
+          "rotation": [
+            0.012552543,
+            0.99145544,
+            -0.1295648,
+            -0.008456641
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            -0.13991518,
+            -0.69957185,
+            4.919495
+          ],
+          "rotation": [
+            0.9457919,
+            -0.14829761,
+            -0.11843004,
+            -0.26355228
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.28385305,
+            -0.7306168,
+            4.9683223
+          ],
+          "rotation": [
+            0.93816924,
+            0.018625608,
+            0.11955566,
+            -0.3243424
+          ]
+        }
+      }
+    },
+    {
+      "tick": 18,
+      "physics": 18,
+      "heading": 3.1415927,
+      "phase": "Startup",
+      "frame": 13,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.13731709,
+            0.20750797,
+            4.750091
+          ],
+          "rotation": [
+            0.032353975,
+            0.99877703,
+            -0.01893361,
+            -0.032235775
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.09751337,
+            0.92401123,
+            4.5648856
+          ],
+          "rotation": [
+            0.008156137,
+            0.98678565,
+            -0.071753904,
+            -0.14504781
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.35477903,
+            0.9781616,
+            4.660464
+          ],
+          "rotation": [
+            0.010223397,
+            0.96195966,
+            -0.2705865,
+            -0.036222454
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            -0.08552056,
+            -0.63915104,
+            4.9432445
+          ],
+          "rotation": [
+            0.9195863,
+            -0.1757905,
+            -0.25244683,
+            -0.24439579
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.27517,
+            -0.65730095,
+            4.9483933
+          ],
+          "rotation": [
+            0.95676315,
+            -0.042559385,
+            0.054486316,
+            -0.28253186
+          ]
+        }
+      }
+    },
+    {
+      "tick": 19,
+      "physics": 19,
+      "heading": 3.1415927,
+      "phase": "Startup",
+      "frame": 14,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.1514341,
+            0.25959313,
+            4.7358937
+          ],
+          "rotation": [
+            0.0320178,
+            0.99920917,
+            -0.0034603951,
+            -0.023321884
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.09810621,
+            0.99722123,
+            4.573066
+          ],
+          "rotation": [
+            0.01570601,
+            0.97345895,
+            -0.06689143,
+            -0.21830386
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.37909096,
+            1.0684085,
+            4.6733313
+          ],
+          "rotation": [
+            0.0049689324,
+            0.90072757,
+            -0.4339732,
+            -0.018232843
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            -0.03953675,
+            -0.5930868,
+            4.932868
+          ],
+          "rotation": [
+            0.9096881,
+            -0.16365531,
+            -0.29346296,
+            -0.24405728
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.27826178,
+            -0.5932709,
+            4.9517446
+          ],
+          "rotation": [
+            0.9652679,
+            -0.078285955,
+            0.026989926,
+            -0.24779171
+          ]
+        }
+      }
+    },
+    {
+      "tick": 20,
+      "physics": 20,
+      "heading": 3.1415927,
+      "phase": "Startup",
+      "frame": 15,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.16596629,
+            0.30173373,
+            4.722102
+          ],
+          "rotation": [
+            0.03311016,
+            0.9992567,
+            0.008879882,
+            -0.017632863
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.09539055,
+            1.0570724,
+            4.5696664
+          ],
+          "rotation": [
+            0.020497099,
+            0.9557985,
+            -0.06855906,
+            -0.28518197
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.40182126,
+            1.1509595,
+            4.679076
+          ],
+          "rotation": [
+            -5.9965623E-05,
+            0.80300313,
+            -0.59597486,
+            0.00010374459
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            -0.004823134,
+            -0.5566345,
+            4.908504
+          ],
+          "rotation": [
+            0.9143865,
+            -0.1311614,
+            -0.2958023,
+            -0.24330021
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.29565054,
+            -0.5413196,
+            4.9502106
+          ],
+          "rotation": [
+            0.96779084,
+            -0.08547068,
+            0.0015889294,
+            -0.23679766
+          ]
+        }
+      }
+    },
+    {
+      "tick": 21,
+      "physics": 21,
+      "heading": 3.1415927,
+      "phase": "Startup",
+      "frame": 16,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.18190025,
+            0.33861136,
+            4.7088737
+          ],
+          "rotation": [
+            0.03614415,
+            0.99905574,
+            0.008370209,
+            -0.022610037
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.0940453,
+            1.1108863,
+            4.5613623
+          ],
+          "rotation": [
+            0.024375917,
+            0.93795747,
+            -0.0672764,
+            -0.33928677
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.4238755,
+            1.2289762,
+            4.6782746
+          ],
+          "rotation": [
+            0.011494609,
+            -0.67604494,
+            0.7366953,
+            -0.010545652
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.024421062,
+            -0.52523386,
+            4.8765483
+          ],
+          "rotation": [
+            0.92439246,
+            -0.08967467,
+            -0.2780268,
+            -0.24527161
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.32426843,
+            -0.50112164,
+            4.9407578
+          ],
+          "rotation": [
+            0.9661336,
+            -0.06140764,
+            -0.011027585,
+            -0.25038642
+          ]
+        }
+      }
+    },
+    {
+      "tick": 22,
+      "physics": 22,
+      "heading": 3.1415927,
+      "phase": "Startup",
+      "frame": 17,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.19786541,
+            0.37159455,
+            4.698296
+          ],
+          "rotation": [
+            0.0371434,
+            0.99893284,
+            -0.0014935991,
+            -0.027410423
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.09529687,
+            1.1586056,
+            4.5538907
+          ],
+          "rotation": [
+            0.027338212,
+            0.9219699,
+            -0.066130124,
+            -0.38059288
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.44596475,
+            1.2969894,
+            4.6750717
+          ],
+          "rotation": [
+            0.021275518,
+            -0.53782433,
+            0.8426793,
+            -0.013560407
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.051139113,
+            -0.4982875,
+            4.840154
+          ],
+          "rotation": [
+            0.92740303,
+            -0.04415237,
+            -0.25100866,
+            -0.2738044
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.35391575,
+            -0.47055393,
+            4.923374
+          ],
+          "rotation": [
+            0.9630348,
+            -0.02477506,
+            0.00013873377,
+            -0.26823542
+          ]
+        }
+      }
+    },
+    {
+      "tick": 23,
+      "physics": 23,
+      "heading": 3.1415927,
+      "phase": "Active",
+      "frame": 0,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.2139985,
+            0.39672422,
+            4.6897717
+          ],
+          "rotation": [
+            0.036720037,
+            0.99909043,
+            -0.0064921,
+            -0.020684168
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.09952664,
+            1.1947656,
+            4.545602
+          ],
+          "rotation": [
+            0.02941675,
+            0.90946513,
+            -0.0652317,
+            -0.40957615
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.46720195,
+            1.3499033,
+            4.6691055
+          ],
+          "rotation": [
+            0.026872626,
+            -0.41160056,
+            0.9108875,
+            -0.0121168895
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.07066965,
+            -0.4784783,
+            4.800328
+          ],
+          "rotation": [
+            0.9204698,
+            -0.013454795,
+            -0.22977106,
+            -0.31584737
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.38694227,
+            -0.4510994,
+            4.9005876
+          ],
+          "rotation": [
+            0.9621016,
+            -0.0103240535,
+            0.0138885975,
+            -0.27214175
+          ]
+        }
+      }
+    },
+    {
+      "tick": 24,
+      "physics": 24,
+      "heading": 3.1415927,
+      "phase": "Active",
+      "frame": 1,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.2513123,
+            0.4250151,
+            4.676003
+          ],
+          "rotation": [
+            0.033542488,
+            0.99936706,
+            -0.011678335,
+            0.0020183127
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.1223913,
+            1.2350748,
+            4.5244923
+          ],
+          "rotation": [
+            0.03109125,
+            0.89858603,
+            -0.06444971,
+            -0.43292347
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.5052046,
+            1.4054389,
+            4.6482015
+          ],
+          "rotation": [
+            0.029269299,
+            -0.28679094,
+            0.9575061,
+            -0.008735809
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.091103874,
+            -0.4567151,
+            4.723744
+          ],
+          "rotation": [
+            0.89945745,
+            0.00023617264,
+            -0.21257462,
+            -0.38182238
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.4597845,
+            -0.42934835,
+            4.852224
+          ],
+          "rotation": [
+            0.95760274,
+            -0.01673757,
+            0.033880234,
+            -0.28560287
+          ]
+        }
+      }
+    },
+    {
+      "tick": 25,
+      "physics": 25,
+      "heading": 3.1415927,
+      "phase": "Active",
+      "frame": 2,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.27014562,
+            0.4291525,
+            4.6696935
+          ],
+          "rotation": [
+            0.03141872,
+            0.99941134,
+            -0.009945273,
+            0.009538213
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.13908146,
+            1.2395098,
+            4.5131555
+          ],
+          "rotation": [
+            0.03109187,
+            0.8985863,
+            -0.064452425,
+            -0.4329225
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.5223439,
+            1.4093649,
+            4.638421
+          ],
+          "rotation": [
+            0.029267848,
+            -0.28678942,
+            0.95750666,
+            -0.008732748
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.09991018,
+            -0.45318294,
+            4.6931567
+          ],
+          "rotation": [
+            0.8960952,
+            -0.008423076,
+            -0.20586194,
+            -0.39314532
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.49460736,
+            -0.42639542,
+            4.8271575
+          ],
+          "rotation": [
+            0.95379764,
+            -0.008345544,
+            0.03794713,
+            -0.29792687
+          ]
+        }
+      }
+    },
+    {
+      "tick": 26,
+      "physics": 26,
+      "heading": 3.1415927,
+      "phase": "Active",
+      "frame": 3,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.28882936,
+            0.42731595,
+            4.662302
+          ],
+          "rotation": [
+            0.02812947,
+            0.9994467,
+            -0.0057361573,
+            0.016796695
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.15415776,
+            1.2369454,
+            4.5028133
+          ],
+          "rotation": [
+            0.031087901,
+            0.89858675,
+            -0.064453274,
+            -0.43292174
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.5388217,
+            1.4052677,
+            4.6306276
+          ],
+          "rotation": [
+            0.029267248,
+            -0.2867922,
+            0.95750594,
+            -0.008722158
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.10979419,
+            -0.45450377,
+            4.6667843
+          ],
+          "rotation": [
+            0.8949156,
+            -0.020113593,
+            -0.19776464,
+            -0.3995131
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.5284749,
+            -0.4285761,
+            4.8009577
+          ],
+          "rotation": [
+            0.9489665,
+            0.009024781,
+            0.043462284,
+            -0.31223735
+          ]
+        }
+      }
+    },
+    {
+      "tick": 27,
+      "physics": 27,
+      "heading": 3.1415927,
+      "phase": "Recovery",
+      "frame": 0,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.30750525,
+            0.41988516,
+            4.6531506
+          ],
+          "rotation": [
+            0.023617866,
+            0.9993762,
+            -0.00083968986,
+            0.026243469
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.16860726,
+            1.2278564,
+            4.4945946
+          ],
+          "rotation": [
+            0.031081976,
+            0.898585,
+            -0.064450055,
+            -0.43292618
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.55572724,
+            1.3925915,
+            4.623142
+          ],
+          "rotation": [
+            0.029270696,
+            -0.28680044,
+            0.9575035,
+            -0.008707868
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.12170751,
+            -0.461334,
+            4.6430383
+          ],
+          "rotation": [
+            0.89334446,
+            -0.028721828,
+            -0.18382287,
+            -0.40904754
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.56234074,
+            -0.43716896,
+            4.772736
+          ],
+          "rotation": [
+            0.943299,
+            0.027498854,
+            0.05030803,
+            -0.32695562
+          ]
+        }
+      }
+    },
+    {
+      "tick": 28,
+      "physics": 28,
+      "heading": 3.1415927,
+      "phase": "Recovery",
+      "frame": 1,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.32636043,
+            0.40427423,
+            4.6424932
+          ],
+          "rotation": [
+            0.019014478,
+            0.99920636,
+            0.0047440496,
+            0.034678824
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.18327338,
+            1.2102492,
+            4.490043
+          ],
+          "rotation": [
+            0.031078817,
+            0.89858466,
+            -0.064450234,
+            -0.43292713
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.57345235,
+            1.3692989,
+            4.6145906
+          ],
+          "rotation": [
+            0.029271297,
+            -0.2868031,
+            0.9575028,
+            -0.008699779
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.13490143,
+            -0.47628224,
+            4.6247325
+          ],
+          "rotation": [
+            0.89097995,
+            -0.015191227,
+            -0.16681893,
+            -0.42201352
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.5959809,
+            -0.45245683,
+            4.7434306
+          ],
+          "rotation": [
+            0.93764687,
+            0.033854727,
+            0.051347468,
+            -0.34210473
+          ]
+        }
+      }
+    },
+    {
+      "tick": 29,
+      "physics": 29,
+      "heading": 3.1415927,
+      "phase": "Recovery",
+      "frame": 2,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.34081462,
+            0.38847792,
+            4.633672
+          ],
+          "rotation": [
+            0.0155250095,
+            0.99904406,
+            0.0093887625,
+            0.039772406
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.19513349,
+            1.192632,
+            4.489478
+          ],
+          "rotation": [
+            0.031073343,
+            0.89857954,
+            -0.06444311,
+            -0.43293926
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.5880501,
+            1.3436089,
+            4.6060796
+          ],
+          "rotation": [
+            0.029277908,
+            -0.28680938,
+            0.9575009,
+            -0.008675019
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.14733636,
+            -0.4918958,
+            4.6153326
+          ],
+          "rotation": [
+            0.88975203,
+            -0.008427969,
+            -0.15607946,
+            -0.42884678
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.6207276,
+            -0.46741444,
+            4.7218103
+          ],
+          "rotation": [
+            0.93402237,
+            0.035836495,
+            0.05253087,
+            -0.3515089
+          ]
+        }
+      }
+    },
+    {
+      "tick": 30,
+      "physics": 30,
+      "heading": 3.1415927,
+      "phase": "Recovery",
+      "frame": 3,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.355216,
+            0.37071812,
+            4.624338
+          ],
+          "rotation": [
+            0.01189554,
+            0.99882704,
+            0.01517495,
+            0.044415254
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.20687398,
+            1.1723738,
+            4.4902487
+          ],
+          "rotation": [
+            0.031063681,
+            0.8985805,
+            -0.06444392,
+            -0.4329378
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.60169953,
+            1.3142037,
+            4.5999975
+          ],
+          "rotation": [
+            0.029203156,
+            -0.28680816,
+            0.95750356,
+            -0.00867251
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.1610125,
+            -0.50964904,
+            4.6078267
+          ],
+          "rotation": [
+            0.8889934,
+            -0.004320824,
+            -0.1485043,
+            -0.43314967
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.64522946,
+            -0.48385596,
+            4.700736
+          ],
+          "rotation": [
+            0.9301753,
+            0.03828947,
+            0.05542693,
+            -0.3608819
+          ]
+        }
+      }
+    },
+    {
+      "tick": 31,
+      "physics": 31,
+      "heading": 3.1415927,
+      "phase": "Recovery",
+      "frame": 4,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.36956635,
+            0.3494197,
+            4.613777
+          ],
+          "rotation": [
+            0.007759109,
+            0.998486,
+            0.02438658,
+            0.048691224
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.21777149,
+            1.1468132,
+            4.4930906
+          ],
+          "rotation": [
+            0.031065403,
+            0.89858115,
+            -0.064444415,
+            -0.4329363
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.61267203,
+            1.2782886,
+            4.603755
+          ],
+          "rotation": [
+            0.029225383,
+            -0.2868066,
+            0.9575032,
+            -0.008690162
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.17718849,
+            -0.53128487,
+            4.6028757
+          ],
+          "rotation": [
+            0.8895321,
+            -0.0060956827,
+            -0.14912087,
+            -0.43180838
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.66964304,
+            -0.50325906,
+            4.680414
+          ],
+          "rotation": [
+            0.9249599,
+            0.044299174,
+            0.06379519,
+            -0.37204432
+          ]
+        }
+      }
+    },
+    {
+      "tick": 32,
+      "physics": 32,
+      "heading": 3.1415927,
+      "phase": "Recovery",
+      "frame": 5,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.38402957,
+            0.32418764,
+            4.602649
+          ],
+          "rotation": [
+            0.0034978671,
+            0.9981296,
+            0.033703394,
+            0.05088381
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.19257894,
+            1.120534,
+            4.397543
+          ],
+          "rotation": [
+            0.071882166,
+            0.9555548,
+            -0.20735067,
+            -0.19685951
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.6509793,
+            1.1913655,
+            4.474386
+          ],
+          "rotation": [
+            0.10190178,
+            0.1975969,
+            0.95902574,
+            -0.17561646
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.19466618,
+            -0.55700934,
+            4.6001973
+          ],
+          "rotation": [
+            0.8904329,
+            -0.0072307875,
+            -0.15316904,
+            -0.42850468
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.69435656,
+            -0.5260321,
+            4.661466
+          ],
+          "rotation": [
+            0.91891503,
+            0.05219214,
+            0.079178296,
+            -0.3828863
+          ]
+        }
+      }
+    },
+    {
+      "tick": 33,
+      "physics": 33,
+      "heading": 3.1415927,
+      "phase": "Recovery",
+      "frame": 6,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.39858082,
+            0.2964319,
+            4.591394
+          ],
+          "rotation": [
+            -0.000442229,
+            0.9977223,
+            0.042743403,
+            0.0521822
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.2755341,
+            0.98199,
+            4.2804546
+          ],
+          "rotation": [
+            0.119335026,
+            0.8733953,
+            -0.29408875,
+            0.36939356
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.64336115,
+            0.9499558,
+            4.302819
+          ],
+          "rotation": [
+            -0.22306281,
+            -0.7328812,
+            -0.37587777,
+            0.52138674
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.21293527,
+            -0.5851271,
+            4.598855
+          ],
+          "rotation": [
+            0.8917325,
+            -0.0069686873,
+            -0.15841287,
+            -0.4238749
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.71920496,
+            -0.55089813,
+            4.6436453
+          ],
+          "rotation": [
+            0.9120288,
+            0.06105211,
+            0.097605556,
+            -0.39363602
+          ]
+        }
+      }
+    },
+    {
+      "tick": 34,
+      "physics": 34,
+      "heading": 3.1415927,
+      "phase": "Recovery",
+      "frame": 7,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.41344288,
+            0.26331246,
+            4.5817432
+          ],
+          "rotation": [
+            -0.0005202737,
+            0.99730223,
+            0.048485212,
+            0.05511009
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.36821043,
+            0.8212353,
+            4.307322
+          ],
+          "rotation": [
+            0.07344307,
+            0.70967954,
+            -0.24517491,
+            0.656392
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.6123712,
+            0.7315035,
+            4.2926636
+          ],
+          "rotation": [
+            -0.1762375,
+            -0.66923815,
+            0.016824676,
+            0.7216492
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.23128395,
+            -0.61742055,
+            4.599392
+          ],
+          "rotation": [
+            0.8953624,
+            0.0039868793,
+            -0.15858519,
+            -0.41612625
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.7441978,
+            -0.580207,
+            4.629922
+          ],
+          "rotation": [
+            0.90536684,
+            0.071499616,
+            0.111907534,
+            -0.4033303
+          ]
+        }
+      }
+    },
+    {
+      "tick": 35,
+      "physics": 35,
+      "heading": 3.1415927,
+      "phase": "Recovery",
+      "frame": 8,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.42909962,
+            0.22643077,
+            4.5736675
+          ],
+          "rotation": [
+            0.0034047875,
+            0.99678904,
+            0.052475266,
+            0.06038516
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.3663373,
+            0.6975658,
+            4.3137593
+          ],
+          "rotation": [
+            0.039289236,
+            0.7153048,
+            -0.2679211,
+            0.64421564
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.61541855,
+            0.6045823,
+            4.293209
+          ],
+          "rotation": [
+            -0.20186707,
+            -0.6541048,
+            0.046902407,
+            0.7274591
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.25054085,
+            -0.6519295,
+            4.598395
+          ],
+          "rotation": [
+            0.9035018,
+            0.015838636,
+            -0.15376532,
+            -0.3997373
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.76930344,
+            -0.61293316,
+            4.618128
+          ],
+          "rotation": [
+            0.9010629,
+            0.08556987,
+            0.11992726,
+            -0.4078982
+          ]
+        }
+      }
+    },
+    {
+      "tick": 36,
+      "physics": 36,
+      "heading": 3.1415927,
+      "phase": "Recovery",
+      "frame": 9,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.44549906,
+            0.18603313,
+            4.567063
+          ],
+          "rotation": [
+            0.011070552,
+            0.99612653,
+            0.054824773,
+            0.067849815
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.36884046,
+            0.57477725,
+            4.3263016
+          ],
+          "rotation": [
+            -0.0023930427,
+            0.71599966,
+            -0.30665836,
+            0.6271359
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.61421114,
+            0.47984254,
+            4.30246
+          ],
+          "rotation": [
+            -0.24004847,
+            -0.62846404,
+            0.08505462,
+            0.7349663
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.2702241,
+            -0.6881678,
+            4.596198
+          ],
+          "rotation": [
+            0.91539776,
+            0.028129663,
+            -0.14366664,
+            -0.37498745
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.7945424,
+            -0.6485775,
+            4.608472
+          ],
+          "rotation": [
+            0.8991623,
+            0.10313537,
+            0.12248617,
+            -0.40726826
+          ]
+        }
+      }
+    },
+    {
+      "tick": 37,
+      "physics": 37,
+      "heading": 3.1415927,
+      "phase": "Recovery",
+      "frame": 10,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.46179694,
+            0.13504612,
+            4.5643535
+          ],
+          "rotation": [
+            0.017181052,
+            0.9951765,
+            0.05279271,
+            0.08087927
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.3820534,
+            0.46843803,
+            4.324783
+          ],
+          "rotation": [
+            -0.04033656,
+            0.7003085,
+            -0.344574,
+            0.6238668
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.62994987,
+            0.37211847,
+            4.3098116
+          ],
+          "rotation": [
+            -0.28031564,
+            -0.6207651,
+            0.12039588,
+            0.722204
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.29347268,
+            -0.7408323,
+            4.5697174
+          ],
+          "rotation": [
+            0.9370324,
+            0.010549252,
+            -0.120200686,
+            -0.32773596
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.8137271,
+            -0.69300544,
+            4.5965323
+          ],
+          "rotation": [
+            0.9044791,
+            0.11831563,
+            0.12231783,
+            -0.3910976
+          ]
+        }
+      }
+    },
+    {
+      "tick": 38,
+      "physics": 38,
+      "heading": 3.1415927,
+      "phase": "Recovery",
+      "frame": 11,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.4783164,
+            0.08068776,
+            4.5625772
+          ],
+          "rotation": [
+            0.02200134,
+            0.99429333,
+            0.04916443,
+            0.09208491
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.39685097,
+            0.36759079,
+            4.326343
+          ],
+          "rotation": [
+            -0.07314415,
+            0.68150127,
+            -0.3804314,
+            0.6208687
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.6436757,
+            0.27184963,
+            4.3201127
+          ],
+          "rotation": [
+            -0.3158517,
+            -0.61262655,
+            0.15240504,
+            0.70830727
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.31616148,
+            -0.7911444,
+            4.5448065
+          ],
+          "rotation": [
+            0.9505255,
+            -0.017536312,
+            -0.09833614,
+            -0.2941492
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.83501333,
+            -0.73944706,
+            4.583189
+          ],
+          "rotation": [
+            0.9112761,
+            0.12660687,
+            0.12131309,
+            -0.37259862
+          ]
+        }
+      }
+    },
+    {
+      "tick": 39,
+      "physics": 39,
+      "heading": 3.1415927,
+      "phase": "Recovery",
+      "frame": 12,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.4952238,
+            0.021667361,
+            4.561992
+          ],
+          "rotation": [
+            0.024785267,
+            0.99377406,
+            0.043276317,
+            0.09962954
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.4099426,
+            0.27447343,
+            4.3258867
+          ],
+          "rotation": [
+            -0.09913147,
+            0.6642549,
+            -0.40803513,
+            0.6184221
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.6571391,
+            0.17990875,
+            4.327718
+          ],
+          "rotation": [
+            -0.3447779,
+            -0.60696596,
+            0.17752272,
+            0.6936903
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.3388271,
+            -0.8311049,
+            4.524933
+          ],
+          "rotation": [
+            0.95334655,
+            -0.0560539,
+            -0.08000548,
+            -0.2856351
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.8600683,
+            -0.789675,
+            4.567085
+          ],
+          "rotation": [
+            0.92011297,
+            0.12384548,
+            0.118558295,
+            -0.352134
+          ]
+        }
+      }
+    },
+    {
+      "tick": 40,
+      "physics": 40,
+      "heading": 3.1415927,
+      "phase": "Recovery",
+      "frame": 13,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.5123341,
+            -0.03868425,
+            4.566227
+          ],
+          "rotation": [
+            0.021975411,
+            0.9936703,
+            0.03451242,
+            0.104620114
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.416198,
+            0.19274962,
+            4.32872
+          ],
+          "rotation": [
+            -0.11722224,
+            0.65336263,
+            -0.41730687,
+            0.62066996
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.66471535,
+            0.102897525,
+            4.335172
+          ],
+          "rotation": [
+            -0.35545215,
+            -0.6070089,
+            0.19581522,
+            0.68326455
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.34951136,
+            -0.85157514,
+            4.5336084
+          ],
+          "rotation": [
+            0.93478286,
+            -0.08980426,
+            -0.066630684,
+            -0.33715954
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.8728827,
+            -0.8388078,
+            4.575548
+          ],
+          "rotation": [
+            0.9003924,
+            0.12110299,
+            0.100493565,
+            -0.4056213
+          ]
+        }
+      }
+    },
+    {
+      "tick": 41,
+      "physics": 41,
+      "heading": 3.1415927,
+      "phase": "Recovery",
+      "frame": 14,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.5293315,
+            -0.09701359,
+            4.573942
+          ],
+          "rotation": [
+            0.014865383,
+            0.99356014,
+            0.01893012,
+            0.110720195
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.42277932,
+            0.118148446,
+            4.3298836
+          ],
+          "rotation": [
+            -0.13000214,
+            0.64408964,
+            -0.41936234,
+            0.626405
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.67308074,
+            0.034158945,
+            4.3404803
+          ],
+          "rotation": [
+            -0.35909197,
+            -0.60861754,
+            0.2124905,
+            0.6748966
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.3584157,
+            -0.8576106,
+            4.547981
+          ],
+          "rotation": [
+            0.9088722,
+            -0.1135847,
+            -0.05283322,
+            -0.39781725
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.88075525,
+            -0.8791306,
+            4.5883236
+          ],
+          "rotation": [
+            0.8722957,
+            0.117697716,
+            0.08219161,
+            -0.46743128
+          ]
+        }
+      }
+    },
+    {
+      "tick": 42,
+      "physics": 42,
+      "heading": 3.1415927,
+      "phase": "Recovery",
+      "frame": 15,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.54575306,
+            -0.14709318,
+            4.5895033
+          ],
+          "rotation": [
+            -0.002264519,
+            0.99225754,
+            -0.017887864,
+            0.12288181
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.4352489,
+            0.058095694,
+            4.3202896
+          ],
+          "rotation": [
+            -0.12986557,
+            0.63419384,
+            -0.41491336,
+            0.6393591
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.6866891,
+            -0.02134049,
+            4.337741
+          ],
+          "rotation": [
+            -0.35716647,
+            -0.60950273,
+            0.22952141,
+            0.6695211
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.35897315,
+            -0.86935544,
+            4.5601597
+          ],
+          "rotation": [
+            0.88911486,
+            -0.111018084,
+            -0.04513154,
+            -0.4417159
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.8796147,
+            -0.88904464,
+            4.596647
+          ],
+          "rotation": [
+            0.85575795,
+            0.11845847,
+            0.076497935,
+            -0.49778914
+          ]
+        }
+      }
+    },
+    {
+      "tick": 43,
+      "physics": 43,
+      "heading": 3.1415927,
+      "phase": "Recovery",
+      "frame": 16,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.55800295,
+            -0.18713278,
+            4.604578
+          ],
+          "rotation": [
+            -0.014681814,
+            0.9896089,
+            -0.049776923,
+            0.13409302
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.45042843,
+            0.0032535791,
+            4.307046
+          ],
+          "rotation": [
+            -0.14518863,
+            0.62399817,
+            -0.41223893,
+            0.64776975
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.7037264,
+            -0.06802809,
+            4.3286853
+          ],
+          "rotation": [
+            -0.35529098,
+            -0.6191623,
+            0.2404939,
+            0.6576998
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.3590916,
+            -0.87841845,
+            4.570036
+          ],
+          "rotation": [
+            0.87204844,
+            -0.10795284,
+            -0.040384978,
+            -0.47565407
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.878935,
+            -0.8916324,
+            4.599581
+          ],
+          "rotation": [
+            -0.84978944,
+            -0.117558174,
+            -0.07509949,
+            0.5083288
+          ]
+        }
+      }
+    },
+    {
+      "tick": 44,
+      "physics": 44,
+      "heading": 3.1415927,
+      "phase": "Recovery",
+      "frame": 17,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.56795144,
+            -0.2208823,
+            4.619186
+          ],
+          "rotation": [
+            -0.024757018,
+            0.98613596,
+            -0.07884462,
+            0.14389765
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.46649736,
+            -0.049348414,
+            4.2921762
+          ],
+          "rotation": [
+            -0.16844468,
+            0.61413413,
+            -0.4106461,
+            0.6525606
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.72261006,
+            -0.110419154,
+            4.3164277
+          ],
+          "rotation": [
+            -0.3530501,
+            -0.63312805,
+            0.24886696,
+            0.642316
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.36040384,
+            -0.886448,
+            4.577677
+          ],
+          "rotation": [
+            -0.8573125,
+            0.1043877,
+            0.03725938,
+            0.5027228
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.8795231,
+            -0.8905687,
+            4.6004643
+          ],
+          "rotation": [
+            -0.8498207,
+            -0.11615973,
+            -0.075467184,
+            0.5085436
+          ]
+        }
+      }
+    },
+    {
+      "tick": 45,
+      "physics": 45,
+      "heading": 3.1415927,
+      "phase": "Recovery",
+      "frame": 18,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.5773346,
+            -0.24407554,
+            4.6313004
+          ],
+          "rotation": [
+            -0.037507217,
+            0.9832504,
+            -0.106414035,
+            0.14313653
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.4746886,
+            -0.092317045,
+            4.2707415
+          ],
+          "rotation": [
+            -0.18095344,
+            0.6039158,
+            -0.40746412,
+            0.66069245
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.7320511,
+            -0.14501864,
+            4.2989855
+          ],
+          "rotation": [
+            -0.35042086,
+            -0.639938,
+            0.26213038,
+            0.6316426
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.36018464,
+            -0.8879932,
+            4.578127
+          ],
+          "rotation": [
+            -0.85529196,
+            0.103636004,
+            0.03661616,
+            0.5063542
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.87930495,
+            -0.89057136,
+            4.6002417
+          ],
+          "rotation": [
+            -0.8497188,
+            -0.11855365,
+            -0.0751693,
+            0.5082053
+          ]
+        }
+      }
+    },
+    {
+      "tick": 46,
+      "physics": 46,
+      "heading": 3.1415927,
+      "phase": "Recovery",
+      "frame": 19,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.5859487,
+            -0.26479995,
+            4.642259
+          ],
+          "rotation": [
+            -0.049413234,
+            0.9799624,
+            -0.13245697,
+            0.1403111
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.48342672,
+            -0.13262022,
+            4.248197
+          ],
+          "rotation": [
+            -0.19490115,
+            0.593799,
+            -0.4071014,
+            0.6660967
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.74138653,
+            -0.1778661,
+            4.2796965
+          ],
+          "rotation": [
+            -0.35050818,
+            -0.6434338,
+            0.27668673,
+            0.6217567
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.36018565,
+            -0.888448,
+            4.578459
+          ],
+          "rotation": [
+            -0.85434407,
+            0.10313631,
+            0.03622923,
+            0.5080814
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.87903756,
+            -0.8902271,
+            4.600395
+          ],
+          "rotation": [
+            -0.8497085,
+            -0.1197769,
+            -0.07497699,
+            0.50796413
+          ]
+        }
+      }
+    },
+    {
+      "tick": 47,
+      "physics": 47,
+      "heading": 3.1415927,
+      "phase": "Inactive",
+      "frame": 0,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            0.5937998,
+            -0.28307498,
+            4.6520705
+          ],
+          "rotation": [
+            -0.06047696,
+            0.97639734,
+            -0.1569781,
+            0.13545713
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.49275404,
+            -0.1693176,
+            4.224382
+          ],
+          "rotation": [
+            -0.21053816,
+            0.5839925,
+            -0.40893507,
+            0.66887856
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            0.7515302,
+            -0.207852,
+            4.258584
+          ],
+          "rotation": [
+            -0.35302934,
+            -0.6445487,
+            0.2925174,
+            0.6118504
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.36006206,
+            -0.88810253,
+            4.57842
+          ],
+          "rotation": [
+            -0.8544794,
+            0.10299932,
+            0.035805114,
+            0.50791156
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            0.87882125,
+            -0.8900911,
+            4.600643
+          ],
+          "rotation": [
+            -0.84972477,
+            -0.120042026,
+            -0.07522597,
+            0.5078375
+          ]
+        }
+      }
+    }
+  ]
+}

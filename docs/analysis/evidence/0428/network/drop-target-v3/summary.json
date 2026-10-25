@@ -1,0 +1,72 @@
+[
+  {
+    "mutation": "drop-target",
+    "requested_delay_ms": 30,
+    "repeat": 0,
+    "observer_delivery_pause_ms": 100,
+    "passed": false,
+    "error": "Godot peer failed; inspect retained logs",
+    "relay": {
+      "driver": {
+        "client_to_server": {
+          "enqueued": 1231,
+          "forwarded": 1231,
+          "discarded_at_teardown": 0,
+          "min_ms": 30.009699999936856,
+          "mean_ms": 31.602399268901916,
+          "max_ms": 44.094000000768574
+        },
+        "server_to_client": {
+          "enqueued": 2459,
+          "forwarded": 2459,
+          "discarded_at_teardown": 0,
+          "min_ms": 30.007100000148057,
+          "mean_ms": 31.57063184219066,
+          "max_ms": 44.51429999971879
+        }
+      },
+      "observer": {
+        "client_to_server": {
+          "enqueued": 1233,
+          "forwarded": 1232,
+          "discarded_at_teardown": 1,
+          "min_ms": 30.01840000069933,
+          "mean_ms": 32.53238068180644,
+          "max_ms": 45.37469999922905
+        },
+        "server_to_client": {
+          "enqueued": 2468,
+          "forwarded": 2468,
+          "discarded_at_teardown": 0,
+          "min_ms": 30.009699999936856,
+          "mean_ms": 32.171181199349355,
+          "max_ms": 133.637799999633
+        }
+      }
+    },
+    "observations": {
+      "server": [
+        "[shot-net] READY server",
+        "[shot-net] observer-delivery-pause 100ms",
+        "[shot-net] authority stage=0 successfulReleases=1 heading=0.42421833 target=NaN ack=145",
+        "[shot-net] authority stage=1 successfulReleases=0 heading=0.12445839 target=NaN ack=295",
+        "[shot-net] authority stage=2 successfulReleases=0 heading=0.19925795 target=NaN ack=445",
+        "[shot-net] authority stage=3 successfulReleases=0 heading=0 target=NaN ack=595"
+      ],
+      "driver": [
+        "[shot-net] predicted-begin stage=0 tick=21 token=21 target=-2.896614 position=(1.5, 0, 6)",
+        "[shot-net] predicted-begin stage=1 tick=21 token=171 target=-2.896614 position=(1.5, 0, 6)",
+        "[shot-net] early-network-feint4 requested frame=4",
+        "[shot-net] predicted-begin stage=2 tick=21 token=322 target=-2.896614 position=(1.5, 0, 6)",
+        "[shot-net] later-network-feint7 requested frame=7",
+        "[shot-net] predicted-begin stage=3 tick=21 token=471 target=-2.896614 position=(1.5, 0, 6)",
+        "[harness] FAIL shot-net driver: System.InvalidOperationException: synthetic older-A confirmation corrupted historical replay or live unconfirmed B"
+      ],
+      "observer": [
+        "[shot-net] observer startup=34 active=4 recovery=34 holds=4 resets=0; phase/heading/actual AnimationTree/ball same server tick"
+      ]
+    },
+    "elapsed_seconds": 14.382935999999972,
+    "native_logs": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\428\\mutation-project\\.godot\\shot-net\\native\\e0e030b461d0"
+  }
+]

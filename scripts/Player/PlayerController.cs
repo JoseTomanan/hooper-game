@@ -1718,7 +1718,8 @@ public partial class PlayerController : CharacterBody3D
 		else Rpc(MethodName.ReceiveState, 0, GlobalPosition, Velocity,
 			(int)_machine.Phase, _machine.FrameInPhase, MoveIdOf(_machine.CurrentMove), MoveParamOf(_machine.CurrentMove),
 			Heading, (int)HandSide, _machine.WasRecoveryEnteredEarly, _pivot.HasLatch, _pivot.LatchedYaw,
-			IsBeaten(PhysicsTick), IsProtecting, IsInDefensiveStance, IsPosting, DisplayPostEstablished, _turnaroundToken);
+			IsBeaten(PhysicsTick), IsProtecting, IsInDefensiveStance, IsPosting, DisplayPostEstablished, _turnaroundToken,
+			_lastShotToken, _lastShotTarget);
 	}
 
 	/// <summary>
@@ -1794,7 +1795,8 @@ public partial class PlayerController : CharacterBody3D
 		else Rpc(MethodName.ReceiveState, _serverAckedSeq, GlobalPosition, Velocity,
 			(int)_machine.Phase, _machine.FrameInPhase, MoveIdOf(_machine.CurrentMove), MoveParamOf(_machine.CurrentMove),
 			Heading, (int)HandSide, _machine.WasRecoveryEnteredEarly, _pivot.HasLatch, _pivot.LatchedYaw,
-			IsBeaten(PhysicsTick), IsProtecting, IsInDefensiveStance, IsPosting, DisplayPostEstablished, _turnaroundToken);
+			IsBeaten(PhysicsTick), IsProtecting, IsInDefensiveStance, IsPosting, DisplayPostEstablished, _turnaroundToken,
+			_lastShotToken, _lastShotTarget);
 	}
 
 	/// <summary>
@@ -1843,7 +1845,10 @@ public partial class PlayerController : CharacterBody3D
 			_requestedPost, PostEligible(), PostRimSample(),
 			_machine.CurrentMove is TurnaroundShot ? _machine.Phase : MovePhase.Inactive,
 			_turnaroundTargetHeading, _machine.CurrentMove is TurnaroundShot ? _turnaroundToken : 0,
-			TranslationLocked());
+			TranslationLocked(),
+			_machine.CurrentMove is JumpShot ? _machine.Phase : MovePhase.Inactive,
+			_machine.CurrentMove is JumpShot bufferedShot ? bufferedShot.TargetHeading : 0,
+			_machine.CurrentMove is JumpShot tokenShot ? tokenShot.BeginToken : 0);
 
 		if (_machine.IsActive)
 		{
@@ -2188,6 +2193,13 @@ public partial class PlayerController : CharacterBody3D
 			return false;
 
 		if (!_machine.Begin(move)) return false;
+		if (move is JumpShot normalShot)
+		{
+			normalShot.TargetHeading = SnapshotShotTarget();
+			normalShot.BeginToken = IsServer ? 0 : _buffer.LastSequence + 1;
+			_lastShotToken = normalShot.BeginToken;
+			_lastShotTarget = normalShot.TargetHeading;
+		}
 		InterruptReboundPresentation();
 		_pivot = HeadingMath.PivotState.None;
 		if (move is TurnaroundShot)
@@ -2338,6 +2350,9 @@ public partial class PlayerController : CharacterBody3D
 		}
 
 		ApplyRequestedMove(moveId, param, clientWasAlreadyDribbling, turnaroundToken);
+		if (moveId == "jumpshot" && turnaroundToken > 0)
+			RpcId(senderId, MethodName.ReceiveShotBeginResult, turnaroundToken,
+				_machine.CurrentMove is JumpShot shot && shot.BeginToken == turnaroundToken, _lastShotTarget);
 	}
 
 	/// <summary>
@@ -2449,7 +2464,11 @@ public partial class PlayerController : CharacterBody3D
 			// Capture the server-authoritative pre-plant speed at begin for the
 			// movement scatter penalty (#137) — see ShotInitiationSpeed.
 			if (BeginCommittedMove(new JumpShot(), clientWasAlreadyDribbling)) // #225: cradle-family move
+			{
+				((JumpShot)_machine.CurrentMove).BeginToken = turnaroundToken;
+				_lastShotToken = turnaroundToken;
 				CaptureShotInitiationSpeed();
+			}
 		}
 		else if (moveId == "layup")
 		{
@@ -2679,7 +2698,8 @@ public partial class PlayerController : CharacterBody3D
 	private void ReceiveState(int ackSeq, Vector3 pos, Vector3 vel,
 		int movePhase, int frameInPhase, string moveId, float moveParam, float heading, int handSide,
 		bool endedActiveEarly, bool pivotHasLatch, float pivotLatchedYaw, bool isBeaten, bool protect = false, bool stance = false,
-		bool post = false, bool postEstablished = false, int turnaroundToken = 0)
+		bool post = false, bool postEstablished = false, int turnaroundToken = 0,
+		int shotToken = 0, float shotTarget = 0)
 	{
 		_serverPos       = pos;
 		_serverVel       = vel;
@@ -2713,6 +2733,8 @@ public partial class PlayerController : CharacterBody3D
 		_serverPost = post;
 		_serverPostEstablished = postEstablished;
 		_serverTurnaroundToken = turnaroundToken;
+		_serverShotToken = shotToken;
+		_serverShotTarget = shotTarget;
 		_hasNewState     = true;
 		_hasContactSnapshot = true;
 	}
@@ -2822,7 +2844,9 @@ public partial class PlayerController : CharacterBody3D
 		// require tracking "is there an unconfirmed Begin in flight" the way
 		// the seq/ack system does for movement — more machinery than this
 		// milestone calls for; documented here as an accepted trade-off.
-		if (CommittedMoveMachine.ShouldForceInactive(_machine.Phase, _machine.IsActive, _serverMovePhase))
+		// #428 normal shots have explicit instance-scoped request results.
+		// Inactive for a previous shot cannot reject a newer speculative Begin.
+		if (_machine.CurrentMove is not JumpShot && CommittedMoveMachine.ShouldForceInactive(_machine.Phase, _machine.IsActive, _serverMovePhase))
 		{
 			if (_machine.CurrentMove is TurnaroundShot) _buffer.RejectTurnaround(_turnaroundToken);
 			_machine.ForceState(MovePhase.Inactive, frameInPhase: 0, move: null);
@@ -2857,7 +2881,7 @@ public partial class PlayerController : CharacterBody3D
 		// Only reachable when Step 0 above did NOT already force Inactive
 		// (mutually exclusive: Step 0 fires on serverSaysInactive, this one
 		// requires serverPhase == Recovery).
-		else if (CommittedMoveMachine.ShouldForceRecovery(
+		else if (_machine.CurrentMove is not JumpShot && CommittedMoveMachine.ShouldForceRecovery(
 			_machine.Phase, _serverMovePhase, _serverEndedActiveEarly,
 			MoveIdOf(_machine.CurrentMove), _serverMoveId))
 		{
@@ -2873,6 +2897,10 @@ public partial class PlayerController : CharacterBody3D
 		}
 
 		// Step 1: prune confirmed inputs.
+		ConfirmShotTarget(_serverShotToken, _serverShotTarget);
+		if (_machine.CurrentMove is JumpShot releaseShot && releaseShot.BeginToken == _serverShotToken
+			&& _serverMoveId == "jumpshot" && _serverMovePhase is MovePhase.Active or MovePhase.Recovery)
+			releaseShot.IsFadeaway = _serverMoveParam != 0f;
 		if (_serverMoveId == "turnaround" && _serverTurnaroundToken != 0)
 		{
 			_buffer.ConfirmTurnaroundTarget(_serverTurnaroundToken, _serverMoveParam);
@@ -2926,7 +2954,9 @@ public partial class PlayerController : CharacterBody3D
 		ContactOpponent? replayOpponent = GetContactOpponent(server: false);
 		foreach (PredictionBuffer.InputFrame input in _buffer.ReplayInputs())
 		{
-			if (input.TurnaroundPhase != MovePhase.Inactive)
+			if (input.ShotPhase != MovePhase.Inactive)
+				TickShotHeadingMotion(input.ShotPhase, input.ShotTarget, fixedDelta, replayOpponent);
+			else if (input.TurnaroundPhase != MovePhase.Inactive)
 				TickTurnaroundMotion(input.TurnaroundPhase, input.TurnaroundTarget, fixedDelta, replayOpponent);
 			else Move(input.Movement, fixedDelta, replayOpponent, input.Sprint, input.Protect,
 				input.PostureHeld && input.StanceEligible, input.PostHeld, input.PostEligible, input.RimSample, input.TranslationLocked);
@@ -3778,7 +3808,8 @@ public partial class PlayerController : CharacterBody3D
 				// types (ADR-0022: the layup feeds the same accuracy model).
 				CaptureShotInitiationSpeed();
 				if (!isServer)
-					RpcId(1, MethodName.RequestBeginMove, isLayup ? "layup" : "jumpshot", 0f, wasAlreadyDribblingForShot, 0); // #225: cradle-family move
+					RpcId(1, MethodName.RequestBeginMove, isLayup ? "layup" : "jumpshot", 0f, wasAlreadyDribblingForShot,
+						shot is JumpShot requestedShot ? requestedShot.BeginToken : 0);
 			}
 			}
 		}
@@ -3924,6 +3955,11 @@ public partial class PlayerController : CharacterBody3D
 		switch (_machine.Phase)
 		{
 			case MovePhase.Startup:
+				if (_machine.CurrentMove is JumpShot shot)
+				{
+					TickShotHeadingMotion(MovePhase.Startup, shot.TargetHeading, delta, opponent);
+					break;
+				}
 				// #198's hybrid gather is scoped to the burst-family moves that
 				// explicitly opt into it (ADR-0003 amendment) — every other
 				// committed move (Hesitation, StealMove, JumpShot, …) keeps the

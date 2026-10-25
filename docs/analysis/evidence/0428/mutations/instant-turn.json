@@ -1,0 +1,108 @@
+{
+  "scenario": "bounded",
+  "initialAngle": 180,
+  "entry": "stationary",
+  "hand": "Right",
+  "diagnostic": false,
+  "beginTick": 5,
+  "releaseTick": -1,
+  "releases": 0,
+  "releaseHeading": 0,
+  "releaseAngle": 0,
+  "releaseFadeaway": false,
+  "failures": [
+    "Startup step exceeds ordinary bound"
+  ],
+  "samples": [
+    {
+      "kind": "begin",
+      "tick": 5,
+      "heading": 0,
+      "target": 3.1415927,
+      "instanceTarget": 3.1415927,
+      "token": 0,
+      "phase": "Startup",
+      "frame": 0,
+      "hand": "Right",
+      "speed": 0,
+      "rate": 900,
+      "slow": 0.95
+    }
+  ],
+  "poses": [
+    {
+      "tick": 5,
+      "physics": 5,
+      "heading": 0,
+      "phase": "Startup",
+      "frame": 0,
+      "bones": {
+        "mixamorig_Hips": {
+          "position": [
+            -6.757012E-08,
+            -0.0020806193,
+            5.0000005
+          ],
+          "rotation": [
+            0.9768092,
+            -4.302996E-05,
+            8.759651E-06,
+            0.2141117
+          ]
+        },
+        "mixamorig_LeftHand": {
+          "position": [
+            0.27807954,
+            -0.29143488,
+            5.360605
+          ],
+          "rotation": [
+            0.87986255,
+            0.07877953,
+            -0.45457107,
+            0.114021204
+          ]
+        },
+        "mixamorig_RightHand": {
+          "position": [
+            -0.3453575,
+            0.062294006,
+            5.332809
+          ],
+          "rotation": [
+            0.5197235,
+            -0.15009871,
+            0.4593591,
+            0.7045191
+          ]
+        },
+        "mixamorig_LeftFoot": {
+          "position": [
+            0.09824583,
+            -0.69145393,
+            4.8061996
+          ],
+          "rotation": [
+            -0.05052726,
+            0.38495928,
+            0.8923957,
+            -0.22996366
+          ]
+        },
+        "mixamorig_RightFoot": {
+          "position": [
+            -0.09801669,
+            -0.6888726,
+            4.940589
+          ],
+          "rotation": [
+            0.77443844,
+            0.087232664,
+            0.44590864,
+            0.4402284
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,152 @@
+[
+  {
+    "mutation": "none",
+    "requested_delay_ms": 0,
+    "repeat": 0,
+    "observer_delivery_pause_ms": 100,
+    "passed": true,
+    "error": null,
+    "relay": {
+      "driver": {
+        "client_to_server": {
+          "enqueued": 1240,
+          "forwarded": 1240,
+          "discarded_at_teardown": 0,
+          "min_ms": 0.012700000297627412,
+          "mean_ms": 0.0276386290674817,
+          "max_ms": 0.1567999988765223
+        },
+        "server_to_client": {
+          "enqueued": 2462,
+          "forwarded": 2462,
+          "discarded_at_teardown": 0,
+          "min_ms": 0.008400000297115184,
+          "mean_ms": 0.01693155970177114,
+          "max_ms": 0.1554000009491574
+        }
+      },
+      "observer": {
+        "client_to_server": {
+          "enqueued": 1226,
+          "forwarded": 1226,
+          "discarded_at_teardown": 0,
+          "min_ms": 0.013700000636163168,
+          "mean_ms": 0.028096247990245814,
+          "max_ms": 0.1109000004362315
+        },
+        "server_to_client": {
+          "enqueued": 2455,
+          "forwarded": 2455,
+          "discarded_at_teardown": 0,
+          "min_ms": 0.0073999999585794285,
+          "mean_ms": 0.5973105091704036,
+          "max_ms": 101.60349999932805
+        }
+      }
+    },
+    "observations": {
+      "server": [
+        "[shot-net] READY server",
+        "[shot-net] observer-delivery-pause 100ms",
+        "[shot-net] authority stage=0 successfulReleases=1 heading=0.42421833 target=NaN ack=150",
+        "[shot-net] authority stage=1 successfulReleases=0 heading=0.09954597 target=NaN ack=299",
+        "[shot-net] authority stage=2 successfulReleases=0 heading=0.19925795 target=NaN ack=449",
+        "[shot-net] authority stage=3 successfulReleases=0 heading=0 target=NaN ack=600",
+        "[harness] PASS shot-net server: authoritative releases normal=1 fakes=0 rejected=0; two client gates"
+      ],
+      "driver": [
+        "[shot-net] predicted-begin stage=0 tick=21 token=21 target=-2.896614 position=(1.5, 0, 6)",
+        "[shot-net] predicted-begin stage=1 tick=21 token=172 target=-2.896614 position=(1.5, 0, 6)",
+        "[shot-net] early-network-feint4 requested frame=4",
+        "[shot-net] predicted-begin stage=2 tick=21 token=322 target=-2.896614 position=(1.5, 0, 6)",
+        "[shot-net] later-network-feint7 requested frame=7",
+        "[shot-net] predicted-begin stage=3 tick=21 token=472 target=-2.896614 position=(1.5, 0, 6)",
+        "[shot-net] synthetic-ordering old-confirm/new-unconfirmed + late-reject PASS; no payload or phase advance",
+        "[shot-net] synthetic-release matching flag correction + older/unrelated flag exclusion PASS; no phase/payload replay",
+        "[shot-net] owner genuineCorrections=571 startupReplaySteps=26 maxError=7.450581E-09 headingCorrection=0.04984396 targetRepair=True rejected=True; positional/contact replay limitations retained",
+        "[harness] PASS shot-net driver: real ENet prediction/correction and coherent observer proof"
+      ],
+      "observer": [
+        "[shot-net] observer startup=32 active=4 recovery=34 holds=3 resets=0; phase/heading/actual AnimationTree/ball same server tick",
+        "[harness] PASS shot-net observer: real ENet prediction/correction and coherent observer proof"
+      ]
+    },
+    "elapsed_seconds": 14.572203899999295,
+    "native_logs": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\428\\mutation-project\\.godot\\shot-net\\native\\7ea1e4782baa"
+  },
+  {
+    "mutation": "none",
+    "requested_delay_ms": 30,
+    "repeat": 0,
+    "observer_delivery_pause_ms": 100,
+    "passed": true,
+    "error": null,
+    "relay": {
+      "driver": {
+        "client_to_server": {
+          "enqueued": 1234,
+          "forwarded": 1234,
+          "discarded_at_teardown": 0,
+          "min_ms": 30.034900000828202,
+          "mean_ms": 33.78646353321911,
+          "max_ms": 42.25350000160688
+        },
+        "server_to_client": {
+          "enqueued": 2462,
+          "forwarded": 2462,
+          "discarded_at_teardown": 0,
+          "min_ms": 30.01339999900665,
+          "mean_ms": 33.73723330625224,
+          "max_ms": 44.65209999943909
+        }
+      },
+      "observer": {
+        "client_to_server": {
+          "enqueued": 1224,
+          "forwarded": 1224,
+          "discarded_at_teardown": 0,
+          "min_ms": 30.036399999517016,
+          "mean_ms": 33.44342565358251,
+          "max_ms": 45.54839999946125
+        },
+        "server_to_client": {
+          "enqueued": 2460,
+          "forwarded": 2460,
+          "discarded_at_teardown": 0,
+          "min_ms": 30.01620000031835,
+          "mean_ms": 34.353175772387814,
+          "max_ms": 136.90039999892178
+        }
+      }
+    },
+    "observations": {
+      "server": [
+        "[shot-net] READY server",
+        "[shot-net] observer-delivery-pause 100ms",
+        "[shot-net] authority stage=0 successfulReleases=1 heading=0.42421833 target=NaN ack=145",
+        "[shot-net] authority stage=1 successfulReleases=0 heading=0.09954597 target=NaN ack=296",
+        "[shot-net] authority stage=2 successfulReleases=0 heading=0.19925795 target=NaN ack=446",
+        "[shot-net] authority stage=3 successfulReleases=0 heading=0 target=NaN ack=595",
+        "[harness] PASS shot-net server: authoritative releases normal=1 fakes=0 rejected=0; two client gates"
+      ],
+      "driver": [
+        "[shot-net] predicted-begin stage=0 tick=21 token=21 target=-2.896614 position=(1.5, 0, 6)",
+        "[shot-net] predicted-begin stage=1 tick=21 token=171 target=-2.6779451 position=(3, 0, 6)",
+        "[shot-net] early-network-feint4 requested frame=4",
+        "[shot-net] predicted-begin stage=2 tick=21 token=322 target=-2.896614 position=(1.5, 0, 6)",
+        "[shot-net] later-network-feint7 requested frame=7",
+        "[shot-net] predicted-begin stage=3 tick=21 token=472 target=-2.6779451 position=(3, 0, 6)",
+        "[shot-net] synthetic-ordering old-confirm/new-unconfirmed + late-reject PASS; no payload or phase advance",
+        "[shot-net] synthetic-release matching flag correction + older/unrelated flag exclusion PASS; no phase/payload replay",
+        "[shot-net] owner genuineCorrections=443 startupReplaySteps=121 maxError=1.4901161E-08 headingCorrection=0.2498835 targetRepair=True rejected=True; positional/contact replay limitations retained",
+        "[harness] PASS shot-net driver: real ENet prediction/correction and coherent observer proof"
+      ],
+      "observer": [
+        "[shot-net] observer startup=32 active=4 recovery=34 holds=3 resets=0; phase/heading/actual AnimationTree/ball same server tick",
+        "[harness] PASS shot-net observer: real ENet prediction/correction and coherent observer proof"
+      ]
+    },
+    "elapsed_seconds": 12.829641700000138,
+    "native_logs": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\428\\mutation-project\\.godot\\shot-net\\native\\de900deb9597"
+  }
+]

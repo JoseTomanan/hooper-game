@@ -61,6 +61,8 @@ public partial class JumpshotFormTest : Node
         AddChild(new JumpshotFormReleaseObserver { ProcessPhysicsPriority = 100, Observe = ObserveRelease });
         _actor.Position = new Vector3(0, 0, 5); other.Position = new Vector3(12, 0, 12);
         _actor.SetHeadingForHarness(_scenario == "fadeaway" ? 0 : Mathf.Pi);
+        // Explicit unfinished-turn control; production 900/.95 squares up.
+        if (_scenario == "fadeaway") _actor.MaxTurnRateDeg = 90f;
         _skeleton = FindSkeleton(_actor) ?? throw new InvalidOperationException("production skeleton missing");
         // skeleton_updated is emitted after ALL SkeletonModifier3D processing;
         // pose_updated explicitly excludes modifiers. Never force/recompute a
@@ -133,6 +135,10 @@ public partial class JumpshotFormTest : Node
             Require(_actor.PhaseForHarness == MovePhase.Active && _actor.FrameInPhaseForHarness == 0,
                 "release did not occur at first Active tick");
             Require(p.IsFinite(), "nonfinite release event position");
+            float releaseAngle = ShotFacing.AngleFromTarget(_actor.Heading, _actor.GlobalPosition, _ball.RimCenter);
+            Require(_scenario == "fadeaway" ? releaseAngle >= Mathf.Pi / 2 : releaseAngle < 1e-4f,
+                $"actual release-angle premise changed: {releaseAngle}");
+            Require(_actor.DisplayFadeaway() == (_scenario == "fadeaway"), "release classification mismatch");
             _events.Add(new { tick = _tick, kind = "release", count = _releaseCount,
                 phase = _actor.PhaseForHarness.ToString(), frame = _actor.FrameInPhaseForHarness,
                 position = new[] { p.X, p.Y, p.Z }, previousFinalPose = _samples.LastOrDefault() });

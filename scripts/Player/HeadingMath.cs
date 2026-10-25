@@ -261,17 +261,30 @@ public static class HeadingMath
     /// (which rotates toward either the live desiredYaw or a latched pivot
     /// target) can never drift apart onto two different rate schedules.
     /// </summary>
+    /// <summary>Normal-shot fixed-target turn. Uses the ordinary non-linear
+    /// schedule, with positive yaw for equivalent exact half-turns on every role.</summary>
+    public static float RotateTowardFixedYaw(float currentYaw, float targetYaw,
+        double delta, float maxTurnRateDeg, float backTurnSlowFactor)
+    {
+        if (!float.IsFinite(currentYaw)) currentYaw = 0f;
+        if (!float.IsFinite(targetYaw)) return currentYaw;
+        return RotateTowardYaw(currentYaw, targetYaw, delta, maxTurnRateDeg,
+            backTurnSlowFactor, positiveHalfTurn: true);
+    }
+
     private static float RotateTowardYaw(
         float currentYaw,
         float targetYaw,
         double delta,
         float maxTurnRateDeg,
-        float backTurnSlowFactor)
+        float backTurnSlowFactor, bool positiveHalfTurn = false)
     {
         // Shortest angular path in [-π, π].
         // Wrapping is important: without it a turn from +π to −π would travel
         // a full 2π arc the wrong way instead of a zero-cost crossing.
         float diff = AngleDiff(currentYaw, targetYaw);
+        if (positiveHalfTurn && MathF.Abs(MathF.Abs(diff) - MathF.PI) <= 1e-6f)
+            diff = MathF.PI;
 
         // Already within epsilon — no movement needed.
         if (MathF.Abs(diff) < AngleEpsilon)
