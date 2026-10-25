@@ -1,9 +1,9 @@
 extends SceneTree
-# Rebuild #418's basketball normal-shot family and the distinct #318 fadeaway.
+# Rebuild #418's basketball normal-shot family and #429's fadeaway silhouette.
 # Run after headless Blender author_jumpshot.py and Godot import.
 # Normal action windows are exact 60 Hz ticks, not elevation-curve guesses.
 # The original source retains provenance and landmark diagnostics; the
-# separately authored fadeaway is unchanged. Full body tracks are mandatory.
+# fadeaway shares exact normal Active endpoints. Full body tracks are mandatory.
 # API: https://docs.godotengine.org/en/4.7/classes/class_animation.html
 
 const LIB_PATH := "res://assets/locomotion.res"
@@ -11,7 +11,7 @@ const SRC_FBX := "res://assets/Goalkeeper Catch Stationary.fbx"
 const SRC_CLIP := "mixamo_com"
 const AUTHORED_NORMAL_FBX := "res://assets/jumpshot_authored.fbx"
 const AUTHORED_NORMAL_CLIP := "jumpshot"
-# #318 default: use the single authored off-balance release while retaining
+# Use the authored off-balance release while retaining
 # the former source-slice-plus-lean route as a measurable recovery path.
 const AUTHORED_FADEAWAY_FBX := "res://assets/fadeaway_authored.fbx"
 const AUTHORED_FADEAWAY_CLIP := "fadeaway"
@@ -146,9 +146,7 @@ func _initialize() -> void:
 	var startup := _slice(src, t_gather, t_peak, STARTUP_TICKS)
 	var active := _slice(src, t_peak, t_active_end, ACTIVE_TICKS)
 	var recovery := _slice(src, t_active_end, t_settle, RECOVERY_TICKS)
-	# #318's authored fadeaway imports some immutable channels as omissions.
-	# Its original complete fallback is part of that asset's established pose;
-	# filling those channels from the new normal shot would silently reauthor it.
+	# Keep the original source for #418's unchanged-channel restoration.
 	var legacy_active := active
 	var legacy_startup := startup
 	var legacy_recovery := recovery
@@ -212,8 +210,15 @@ func _initialize() -> void:
 		# A single Godot AnimationTree state then resets that non-authored limb to
 		# the T-pose. The squared-up active is the shared base pose for this one
 		# release variant, so inherit only missing channels from it; authored tracks
-		# always win and retain the lean, hips, arms, and airborne legs.
-		_fill_missing_rotation_tracks(fadeaway, legacy_active)
+		# always win and retain the lean, hips and leg pose. #429 is authored
+		# over the current normal release, so its omissions inherit that base.
+		_fill_missing_rotation_tracks(fadeaway, active)
+		# Import basis conversion can perturb a numerically equal Blender
+		# endpoint. Use the exact normal keys so the variant rejoins its family
+		# without spending a gameplay tick on an unrelated correction pose.
+		if not _restore_fadeaway_endpoints(fadeaway, active):
+			quit(1)
+			return
 		fadeaway_expected_rot = _rotation_track_count(fadeaway)
 		print("[rebuild-jumpshot] authored fadeaway '%s': len=%.4f tracks=%d" % [AUTHORED_FADEAWAY_CLIP, authored.length, authored.get_track_count()])
 	else:
@@ -230,7 +235,7 @@ func _initialize() -> void:
 	# AGAINST the facing axis. A sign error here drafts a lean-FORWARD, which
 	# reads as a drive/floater — a different move, not merely a rough-looking
 	# one. (Mirror of rebuild_dribble_clips.gd's forward-lean proof, inverted.)
-	var head_shift := _head_shift_along(active, fadeaway, _facing)
+	var head_shift := _head_shift_along(active, fadeaway, _facing, 2.0 / TPS if USE_AUTHORED_FADEAWAY else 0.0)
 	print("[rebuild-jumpshot] fadeaway head displacement along facing = %+.4f m (want negative)" % head_shift)
 	# The legacy composition and its source share this tool's FK basis, so this
 	# remains a useful sign gate there. An authored FBX crosses Blender's import
@@ -515,6 +520,30 @@ func _fill_missing_rotation_tracks(authored: Animation, fallback: Animation) -> 
 			authored.rotation_track_insert_key(out, fallback.track_get_key_time(i, k), fallback.track_get_key_value(i, k))
 
 
+func _restore_fadeaway_endpoints(fadeaway: Animation, normal: Animation) -> bool:
+	# Match complete paths and types: a bone-name-only match could copy from a
+	# different skeleton node. Copy actual keys, never interpolate/renormalize
+	# an endpoint that must remain byte-identical to its normal counterpart.
+	for track in fadeaway.get_track_count():
+		var type := fadeaway.track_get_type(track)
+		if type not in [Animation.TYPE_POSITION_3D, Animation.TYPE_ROTATION_3D]:
+			continue
+		var path := fadeaway.track_get_path(track)
+		var base := normal.find_track(path, type)
+		if base < 0 or normal.track_get_key_count(base) < 2 or fadeaway.track_get_key_count(track) < 2:
+			push_error("[rebuild-jumpshot] fadeaway endpoint has no complete normal counterpart: %s type=%d" % [path, type])
+			return false
+		var last := fadeaway.track_get_key_count(track) - 1
+		var base_last := normal.track_get_key_count(base) - 1
+		if fadeaway.track_get_key_time(track, 0) != 0.0 or normal.track_get_key_time(base, 0) != 0.0 \
+			or fadeaway.track_get_key_time(track, last) != fadeaway.length or normal.track_get_key_time(base, base_last) != normal.length:
+			push_error("[rebuild-jumpshot] incomplete fadeaway/normal endpoint times: %s" % path)
+			return false
+		fadeaway.track_set_key_value(track, 0, normal.track_get_key_value(base, 0))
+		fadeaway.track_set_key_value(track, last, normal.track_get_key_value(base, base_last))
+	return true
+
+
 # Largest per-bone angular difference between two clips at matched phase — the
 # honest measure of "are these silhouettes actually distinct".
 func _max_pose_delta(a: Animation, b: Animation) -> float:
@@ -539,9 +568,9 @@ func _max_pose_delta(a: Animation, b: Animation) -> float:
 	return worst
 
 
-# How far the head moved along `axis` from `before`'s frame 0 to `after`'s.
-func _head_shift_along(before: Animation, after: Animation, axis: Vector3) -> float:
-	return (_pose_origin(after, 0.0, "mixamorig_Head") - _pose_origin(before, 0.0, "mixamorig_Head")).dot(axis)
+# How far the head moved along `axis` at the same time in both clips.
+func _head_shift_along(before: Animation, after: Animation, axis: Vector3, time: float = 0.0) -> float:
+	return (_pose_origin(after, time, "mixamorig_Head") - _pose_origin(before, time, "mixamorig_Head")).dot(axis)
 
 
 # Global origin of `bone` with `anim` applied at time `t`, by manual forward
