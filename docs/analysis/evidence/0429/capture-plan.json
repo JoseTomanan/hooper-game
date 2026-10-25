@@ -1,0 +1,134 @@
+[
+  {
+    "name": "local-gameplay-right-normal",
+    "before": ".godot/418/429-base-local-gameplay/right-normal-1",
+    "after": ".godot/418/429-after-local-gameplay/right-normal-1",
+    "remote": false
+  },
+  {
+    "name": "local-gameplay-right-early",
+    "before": ".godot/418/429-base-local-gameplay/right-early-1",
+    "after": ".godot/418/429-after-local-gameplay/right-early-1",
+    "remote": false
+  },
+  {
+    "name": "local-gameplay-right-late",
+    "before": ".godot/418/429-base-local-gameplay/right-late-1",
+    "after": ".godot/418/429-after-local-gameplay/right-late-1",
+    "remote": false
+  },
+  {
+    "name": "local-gameplay-right-fadeaway",
+    "before": ".godot/418/429-base-local-gameplay/right-fadeaway-1",
+    "after": ".godot/418/429-after-local-gameplay/right-fadeaway-1",
+    "remote": false
+  },
+  {
+    "name": "local-gameplay-left-normal",
+    "before": ".godot/418/429-base-local-gameplay/left-normal-1",
+    "after": ".godot/418/429-after-local-gameplay/left-normal-1",
+    "remote": false
+  },
+  {
+    "name": "local-gameplay-left-early",
+    "before": ".godot/418/429-base-local-gameplay/left-early-1",
+    "after": ".godot/418/429-after-local-gameplay/left-early-1",
+    "remote": false
+  },
+  {
+    "name": "local-gameplay-left-late",
+    "before": ".godot/418/429-base-local-gameplay/left-late-1",
+    "after": ".godot/418/429-after-local-gameplay/left-late-1",
+    "remote": false
+  },
+  {
+    "name": "local-gameplay-left-fadeaway",
+    "before": ".godot/418/429-base-local-gameplay/left-fadeaway-1",
+    "after": ".godot/418/429-after-local-gameplay/left-fadeaway-1",
+    "remote": false
+  },
+  {
+    "name": "remote-gameplay-right-normal",
+    "before": ".godot/418/429-finish-remote-gameplay-right-normal-attempt1-before/right-normal-1",
+    "after": ".godot/418/429-after-remote-gameplay/right-normal-1",
+    "remote": true
+  },
+  {
+    "name": "remote-gameplay-right-early",
+    "before": ".godot/418/429-base-remote-gameplay/right-early-1",
+    "after": ".godot/418/429-after-remote-gameplay/right-early-1",
+    "remote": true
+  },
+  {
+    "name": "remote-gameplay-right-late",
+    "before": ".godot/418/429-base-remote-gameplay/right-late-1",
+    "after": ".godot/418/429-after-remote-gameplay/right-late-1",
+    "remote": true
+  },
+  {
+    "name": "remote-gameplay-right-fadeaway",
+    "before": ".godot/418/429-base-remote-gameplay/right-fadeaway-1",
+    "after": ".godot/418/429-after-remote-gameplay/right-fadeaway-1",
+    "remote": true
+  },
+  {
+    "name": "remote-gameplay-left-normal",
+    "before": ".godot/418/429-finish-remote-gameplay-left-normal-attempt1-before/left-normal-1",
+    "after": ".godot/418/429-after-remote-gameplay/left-normal-1",
+    "remote": true
+  },
+  {
+    "name": "remote-gameplay-left-early",
+    "before": ".godot/418/429-base-remote-gameplay/left-early-1",
+    "after": ".godot/418/429-after-remote-gameplay/left-early-1",
+    "remote": true
+  },
+  {
+    "name": "remote-gameplay-left-late",
+    "before": ".godot/418/429-base-remote-gameplay/left-late-1",
+    "after": ".godot/418/429-after-remote-gameplay/left-late-1",
+    "remote": true
+  },
+  {
+    "name": "remote-gameplay-left-fadeaway",
+    "before": ".godot/418/429-base-remote-gameplay/left-fadeaway-1",
+    "after": ".godot/418/429-finish-remote-gameplay-left-fadeaway-attempt1-after/left-fadeaway-1",
+    "remote": true
+  },
+  {
+    "name": "local-side-right-normal",
+    "before": ".godot/418/429-base-local-side/right-normal-1",
+    "after": ".godot/418/429-after-local-side/right-normal-1",
+    "remote": false
+  },
+  {
+    "name": "local-side-right-fadeaway",
+    "before": ".godot/418/429-base-local-side/right-fadeaway-1",
+    "after": ".godot/418/429-after-local-side/right-fadeaway-1",
+    "remote": false
+  },
+  {
+    "name": "local-side-left-normal",
+    "before": ".godot/418/429-base-local-side/left-normal-1",
+    "after": ".godot/418/429-finish-local-side-left-normal-attempt1-after/left-normal-1",
+    "remote": false
+  },
+  {
+    "name": "local-side-left-fadeaway",
+    "before": ".godot/418/429-base-local-side/left-fadeaway-1",
+    "after": ".godot/418/429-finish-local-side-left-fadeaway-attempt1-after/left-fadeaway-1",
+    "remote": false
+  },
+  {
+    "name": "remote-side-right-fadeaway",
+    "before": ".godot/418/429-finish160-remote-side-right-fadeaway-attempt1-before/right-fadeaway-1",
+    "after": ".godot/418/429-finish160-remote-side-right-fadeaway-attempt3-after/right-fadeaway-1",
+    "remote": true
+  },
+  {
+    "name": "remote-side-left-fadeaway",
+    "before": ".godot/418/429-finish160-remote-side-left-fadeaway-attempt1-before/left-fadeaway-1",
+    "after": ".godot/418/429-finish160-remote-side-left-fadeaway-attempt2-after/left-fadeaway-1",
+    "remote": true
+  }
+]

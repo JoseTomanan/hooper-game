@@ -97,7 +97,7 @@ class HarnessCatalogCliTests(unittest.TestCase):
                 'bounded', 'opposite', 'unfinished', 'feint-early', 'feint-late',
                 'illegal-early', 'illegal-late', 'loss', 'oob', 'missing', 'degenerate',
                 'retarget', 'contact-retarget', 'release-below', 'release-at', 'release-above')]
-            + ['net-jumpshot-form',
+            + ['fadeaway-form', 'net-fadeaway-form', 'net-jumpshot-form',
                'net-rebound-presentation',
                'net-moving-crossover-host', 'net-moving-crossover-client',
                'net-moving-crossover-client-reset-race',
@@ -337,9 +337,11 @@ class HarnessCatalogShardTests(unittest.TestCase):
         for case_id in ('net-moving-crossover-host', 'net-moving-crossover-client', 'net-moving-crossover-client-reset-race'):
             self.assertEqual(catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS, weights[case_id])
         self.assertEqual(catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS, weights['net-rebound-presentation'])
+        for case_id in ('fadeaway-form', 'net-fadeaway-form'):
+            self.assertEqual(catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS, weights[case_id])
         self.assertAlmostEqual(
             976.0 + 44 * catalog.DEFAULT_SINGLE_WEIGHT_SECONDS
-            + 5 * catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS,
+            + 7 * catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS,
             sum(weights.values()),
         )
 

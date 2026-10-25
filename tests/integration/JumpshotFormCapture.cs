@@ -19,7 +19,10 @@ public partial class JumpshotFormCapture : Node
     private int _tick, _start = -1, _shotTick = -1, _swapTick = -1, _samples, _releases;
     private bool _ready, _sentReady, _done, _finished, _feinted, _images, _sawShot, _sawFeintRecovery;
     private bool _paced, _legacyShot, _legacyApplied;
+    private int _pacingMs;
     private bool _headingFixture;
+    private string _fadeawaySubstitute;
+    private bool _fadeawaySubstituteApplied;
     private float _headingAngle, _headingRate, _fixedHeadingTarget;
     private string _headingEntry;
     private int _headingMoveStart = -1;
@@ -48,7 +51,12 @@ public partial class JumpshotFormCapture : Node
         _commit = Read("--capture-commit", "unknown");
         _images = Read("--capture-images", "true") != "false";
         _paced = Read("--capture-paced", "false") == "true";
+        _pacingMs = int.Parse(Read("--capture-pacing-ms", "80"));
+        if (_pacingMs is not (80 or 160)) throw new ArgumentException("unsupported diagnostic pacing");
         _legacyShot = Read("--capture-legacy-shot", "false") == "true";
+        _fadeawaySubstitute = Read("--capture-fadeaway-substitute", "");
+        if (_fadeawaySubstitute is not ("" or "before429" or "normal"))
+            throw new ArgumentException("unknown fadeaway substitute");
         _headingFixture = Read("--capture-heading-angle", "") != "";
         _headingAngle = float.Parse(Read("--capture-heading-angle", "0"), System.Globalization.CultureInfo.InvariantCulture);
         _headingRate = float.Parse(Read("--capture-heading-rate", "900"), System.Globalization.CultureInfo.InvariantCulture);
@@ -94,6 +102,7 @@ public partial class JumpshotFormCapture : Node
         if (_variant == "fadeaway") p.MaxTurnRateDeg = 90f;
         if (_headingFixture) p.MaxTurnRateDeg = _headingRate;
         if (_legacyShot && !_legacyApplied) ApplyLegacyShot(p);
+        if (_fadeawaySubstitute != "" && !_fadeawaySubstituteApplied) ApplyFadeawaySubstitute(p);
         ObserveRelease(p);
         if (p.DisplayMoveId() == "jumpshot" && p.DisplayMove().phase == MovePhase.Startup)
         {
@@ -150,6 +159,17 @@ public partial class JumpshotFormCapture : Node
                 _events.Add(new { tick = _tick, kind = "heading-fixture", initialAngle = _headingAngle,
                     entry = _headingEntry, rate = _headingRate, fixedTarget = _fixedHeadingTarget, velocity = Vec(p.Velocity) });
             }
+            else if (_variant == "fadeaway")
+            {
+                // (#429) The Left-hand swap can outlast t=105, which used to
+                // skip the backward movement and silently capture a normal
+                // shot. Set the explicit unfinished-turn fixture at the shot,
+                // independently of how long reaching either hand took.
+                var toward = _ball.RimCenter - p.GlobalPosition;
+                p.SetHeadingForHarness(Mathf.Atan2(toward.X, toward.Z) + Mathf.Pi);
+                _events.Add(new { tick = _tick, kind = "fadeaway-heading-fixture",
+                    rate = p.MaxTurnRateDeg, heading = p.Heading });
+            }
             _shotTick = _tick;
             Input.ActionPress("ball_shoot");
             _events.Add(new { tick = _tick, kind = "shoot-input", hand = p.HandSide.ToString(), heading = p.Heading });
@@ -177,7 +197,7 @@ public partial class JumpshotFormCapture : Node
         // lets the real ENet observer draw each source tick. This is diagnostic
         // coverage evidence, never a real-time network/performance claim.
         // https://docs.godotengine.org/en/4.7/classes/class_os.html#class-os-method-delay-msec
-        if (!_finished && _paced && _role == "server") OS.DelayMsec(80);
+        if (!_finished && _paced && _role == "server") OS.DelayMsec(_pacingMs);
         if (!_images && DisplayServer.GetName() == "headless") Sample();
     }
 
@@ -270,8 +290,12 @@ public partial class JumpshotFormCapture : Node
             hand = _hand, commit = _commit, view = _view, samples = _samples, releases = _releases, events = _events,
             headingFixture = _headingFixture, initialAngle = _headingAngle, headingEntry = _headingEntry, headingRate = _headingRate,
             sawProductionShotStartup = _sawShot, feintRequested = _feinted, sawAcceptedFeintRecovery = _sawFeintRecovery,
-            paced = _paced, pacingMeaning = _paced ? "80ms producer wall-clock delay; fixed simulation steps; not real-time" : "unpaced",
+            paced = _paced, pacingMs = _paced ? _pacingMs : 0,
+            pacingMeaning = _paced ? $"{_pacingMs}ms producer wall-clock delay; fixed simulation steps; not real-time" : "unpaced",
             mutation = _legacyShot ? "legacy-normal-shot-three-clips" : "none", mutationApplied = _legacyApplied,
+            fadeawaySubstitute = _fadeawaySubstitute, fadeawaySubstituteApplied = _fadeawaySubstituteApplied,
+            fadeawayFixtureSha256 = _fadeawaySubstitute == "before429" ? Convert.ToHexString(SHA256.HashData(
+                File.ReadAllBytes(ProjectSettings.GlobalizePath("res://tests/fixtures/fadeaway_before_429.res")))) : "",
             legacyFixtureSha256 = _legacyShot ? Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(ProjectSettings.GlobalizePath("res://tests/fixtures/jumpshot_goalkeeper.res")))) : "",
             animationResourceSha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(ProjectSettings.GlobalizePath("res://assets/locomotion.res")))),
             engine = Engine.GetVersionInfo()["string"].AsString(), images = _images,
@@ -293,6 +317,22 @@ public partial class JumpshotFormCapture : Node
         player.RemoveAnimationLibrary("locomotion"); player.AddAnimationLibrary("locomotion", library);
         _legacyApplied = true;
         _events.Add(new { tick = _tick, kind = "fixture-mutation", detail = "legacy normal shot clips in duplicated subject AnimationLibrary" });
+    }
+    private void ApplyFadeawaySubstitute(PlayerController subject)
+    {
+        // (#429) Replace only the actual selection asset. Classification and
+        // the production FadeawayActive state remain live in this control.
+        // https://docs.godotengine.org/en/4.7/classes/class_resource.html#class-resource-method-duplicate
+        var player = subject.GetNode<AnimationPlayer>("AnimationPlayer");
+        var library = (AnimationLibrary)player.GetAnimationLibrary("locomotion").Duplicate(true);
+        var replacement = _fadeawaySubstitute == "before429"
+            ? GD.Load<AnimationLibrary>("res://tests/fixtures/fadeaway_before_429.res").GetAnimation("fadeawayactive")
+            : library.GetAnimation("jumpshotactive");
+        library.RemoveAnimation("fadeawayactive");
+        library.AddAnimation("fadeawayactive", replacement);
+        player.RemoveAnimationLibrary("locomotion"); player.AddAnimationLibrary("locomotion", library);
+        _fadeawaySubstituteApplied = true;
+        _events.Add(new { tick = _tick, kind = "fadeaway-substitute", detail = _fadeawaySubstitute });
     }
     private void ObserveRelease(PlayerController p)
     {
