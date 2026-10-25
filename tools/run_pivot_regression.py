@@ -24,6 +24,7 @@ def main():
     parser.add_argument("--paced", action="store_true", help="diagnostic remote source pacing; excludes real-time timing claims")
     parser.add_argument("--resolution", default="960x540")
     parser.add_argument("--port", type=int, default=23468)
+    parser.add_argument("--local-render-delay-ms", type=int, default=0)
     args = parser.parse_args()
     revision = args.commit or subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, check=True, capture_output=True, text=True).stdout.strip()
     output = (ROOT / (args.output or Path(f".godot/pivot-continuity/catalog-{uuid.uuid4().hex}"))).resolve()
@@ -45,6 +46,8 @@ def main():
                    "--output", str(destination), "--commit", revision, "--case", case, "--gesture", gesture,
                    "--port", str(args.port), "--resolution", args.resolution]
         command += ["--images"] if args.rendered and not mutation else ["--headless"]
+        if args.rendered and not remote and not mutation and args.local_render_delay_ms:
+            command += ["--local-render-delay-ms", str(args.local_render_delay_ms)]
         if remote:
             command.append("--remote")
             if args.paced:

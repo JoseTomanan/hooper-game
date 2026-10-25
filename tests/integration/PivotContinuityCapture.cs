@@ -20,6 +20,7 @@ public partial class PivotContinuityCapture : Node
     private float _pivotXfade = -1;
     private float _angle = 180, _entryHeading, _targetHeading, _initialAngle;
     private Vector2 _gestureWish;
+    private int _localRenderDelayMs;
     private bool _probeApplied, _disablePivotPose, _mutationApplied, _paced, _fixedFps, _protection, _resetOwnerPresentation;
     private PivotPose _pivotPose;
     private bool _images, _finished, _ready, _readySent, _finishSent, _finishAck, _clientFinished;
@@ -49,6 +50,7 @@ public partial class PivotContinuityCapture : Node
         _gesture = Read("--capture-gesture", "flick"); _commit = Read("--capture-commit", "unknown");
         _angle = float.Parse(Read("--capture-angle", "180"), System.Globalization.CultureInfo.InvariantCulture);
         _images = Read("--capture-images", "false") == "true";
+        _localRenderDelayMs = int.Parse(Read("--capture-local-render-delay-ms", "0"));
         _disablePivotPose = Read("--capture-disable-pivot-pose", "false") == "true";
         _paced = Read("--capture-paced", "false") == "true";
         _protection = Read("--capture-protection", "false") == "true";
@@ -58,7 +60,8 @@ public partial class PivotContinuityCapture : Node
         _output = ProjectSettings.GlobalizePath(Read("--capture-output", ""));
         if (!new[] { "local", "server", "client" }.Contains(_role) || !new[] { "idle", "run", "left", "right" }.Contains(_case) ||
             !new[] { "flick", "held", "forward" }.Contains(_gesture) || (_protection && (_case != "right" || _gesture != "held")) || (_paced && _role == "local") || (_resetOwnerPresentation && (_role != "local" || _case != "run" || _gesture != "held" || _protection)) || _commit == "unknown" ||
-            !float.IsFinite(_angle) || _angle <= 0 || _angle > 180 || string.IsNullOrEmpty(_output) || Directory.Exists(_output))
+            !float.IsFinite(_angle) || _angle <= 0 || _angle > 180 || _localRenderDelayMs < 0 ||
+            (_localRenderDelayMs > 0 && (_role != "local" || !_images || !_fixedFps)) || string.IsNullOrEmpty(_output) || Directory.Exists(_output))
         { _output = ""; Finish("invalid arguments or non-fresh output"); return; }
         Directory.CreateDirectory(_output);
         if (_images) { _imageQueue = new(64); _imageWriter = Task.Run(WriteImages); }
@@ -352,6 +355,9 @@ public partial class PivotContinuityCapture : Node
         // 1/60 simulation interval; the remote observer can render source holds.
         // https://docs.godotengine.org/en/4.7/classes/class_os.html#class-os-method-delay-msec
         if (!_finished && _paced && _role == "server") OS.DelayMsec(50);
+        // Local fixed-fps captures can outrun PNG compression. Wall-time pacing
+        // leaves their simulation/source clocks at60Hz; remote timing is untouched.
+        if (!_finished && _localRenderDelayMs > 0) OS.DelayMsec(_localRenderDelayMs);
     }
     private void Draw()
     {
@@ -381,7 +387,7 @@ public partial class PivotContinuityCapture : Node
             File.WriteAllText(Path.Combine(_output, "manifest.json"), JsonSerializer.Serialize(new {
                 schema = "hooper-pivot-continuity/v1", result = failure.Length == 0 ? "captured" : "failed", failure,
                 commit = _commit, role = _role, @case = _case, gesture = _gesture, requestedAngleDegrees = _angle, expectedPivot = ExpectedPivot, gestureEntries = _gestureEntries,
-                protection = _protection, resetOwnerPresentation = _resetOwnerPresentation, requestedCycles = 3, completedCycles = _completed,
+                protection = _protection, resetOwnerPresentation = _resetOwnerPresentation, localRenderDelayMs = _localRenderDelayMs, requestedCycles = 3, completedCycles = _completed,
                 samples = _samples, images = _imagesWritten, diagnosticPivotXfade = _pivotXfade, diagnosticProbeApplied = _probeApplied, mutation = _disablePivotPose ? "disable-pivot-pose" : "none", mutationApplied = _mutationApplied, paced = _paced, fixedFps = _fixedFps, diagnosticServerDelayMs = _paced && _role == "server" ? 50 : 0,
                 remoteTiming = _paced ? "paced fixed-fps diagnostic; no real-time timing claim" : _role == "local" ? "not a remote capture" : "real-time",
                 pacingMeaning = _paced ? "both peers fixed simulation delta 1/60; server waits50ms per render (~20 source ticks per wall second); client source holds are normal" : _fixedFps ? "local fixed simulation delta1/60 per frame; no real-time performance claim" : "real-time simulation", finishSent = _finishSent, finishAcknowledged = _finishAck,

@@ -1,5 +1,6 @@
 """Capture one #416 case, three repetitions. Headless output is diagnostic state only."""
 import argparse
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -11,7 +12,8 @@ SCENE = "res://tests/integration/PivotContinuityCapture.tscn"
 
 def launch(args, role):
     directory = args.output / role
-    command = [args.godot, "--path", str(ROOT), "--max-fps", "60", "--disable-vsync",
+    maximum_fps = "0" if args.headless and args.fixed_fps else "60"
+    command = [args.godot, "--path", str(ROOT), "--max-fps", maximum_fps, "--disable-vsync",
                "--resolution", args.resolution, "--log-file", str(args.output / (role + ".godot.log"))]
     # Native local capture evaluates exactly one simulation tick per rendered frame.
     # Network fixed-fps is opt-in because it removes real-time synchronization.
@@ -26,6 +28,7 @@ def launch(args, role):
     command += [SCENE, "--", "--capture-output=" + str(directory), "--capture-role=" + role,
                 "--capture-case=" + args.case, "--capture-gesture=" + args.gesture,
                 "--capture-angle=" + str(args.angle),
+                "--capture-local-render-delay-ms=" + str(args.local_render_delay_ms),
                 "--capture-commit=" + args.commit, "--capture-port=" + str(args.port),
                 "--capture-images=" + str(args.images and role != "server").lower(),
                 "--capture-paced=" + str(args.paced).lower(), "--capture-fixed-fps=" + str(fixed_fps).lower()]
@@ -73,6 +76,7 @@ def main():
     parser.add_argument("--headless", action="store_true")
     parser.add_argument("--fixed-fps", action="store_true", help="local diagnostic only: fixed60Hz simulation, including headless capture")
     parser.add_argument("--images", action="store_true")
+    parser.add_argument("--local-render-delay-ms", type=int, default=0, help="local native fixed-fps diagnostic: extra wall time per frame for PNG writing; simulation stays60Hz")
     parser.add_argument("--paced", action="store_true", help="diagnostic: fixed 60Hz delta; remote server wall clock slowed to ~20Hz; no real-time claim")
     parser.add_argument("--compatibility", action="store_true", help="native local/client Mesa-compatible OpenGL renderer")
     parser.add_argument("--resolution", default="960x540")
@@ -86,6 +90,8 @@ def main():
         parser.error("--angle must be greater than0 and at most180 degrees")
     if args.fixed_fps and args.remote:
         parser.error("--fixed-fps is local-only; remote diagnostic pacing requires --paced")
+    if args.local_render_delay_ms < 0 or (args.local_render_delay_ms and (args.remote or args.headless or not args.images)):
+        parser.error("--local-render-delay-ms requires local native --images and a nonnegative delay")
     if args.reset_owner_presentation and (args.remote or args.protection or args.case != "run" or args.gesture != "held"):
         parser.error("--reset-owner-presentation requires local run-held without protection")
     if args.paced and not args.remote:
@@ -122,6 +128,13 @@ def main():
         for process, log in running:
             if process.returncode:
                 raise RuntimeError(f"Godot exited {process.returncode}; see {log.name}")
+        for role in (("server", "client") if args.remote else ("local",)):
+            manifest_path = args.output / role / "manifest.json"
+            if not manifest_path.exists():
+                raise RuntimeError(f"Godot exited without a completed capture: {manifest_path}")
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8-sig"))
+            if manifest["result"] != "captured" or manifest["completedCycles"] != 3:
+                raise RuntimeError(f"incomplete capture: {manifest_path}")
         print(f"[pivot-capture] CAPTURED case={args.case} gesture={args.gesture} remote={args.remote}")
     finally:
         for process, log in running:
