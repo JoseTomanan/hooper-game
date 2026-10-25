@@ -133,8 +133,11 @@ def contact_checks(active, measured, failures, prefix):
            for row in active) and math.dist(point(active[0]), point(active[-1])) > .08 and transfers == 0:
         failures.append(f"{prefix}: long moving turn never transferred support")
     first_frame, last_frame = active[0]["physicsFrame"], active[-1]["physicsFrame"]
-    seam = [row for row in measured if first_frame - 1 <= row["physicsFrame"] <= last_frame + 8]
+    seam = [row for row in measured if first_frame - 1 <= row["physicsFrame"] <= last_frame + 9]
     for before, after in zip(seam, seam[1:]):
+        for side in ("Left", "Right"):
+            if after["bones"][f"mixamorig_{side}Toe_End"]["world"][1] < -CONTACT_METRES:
+                failures.append(f"{prefix}: {side} toe penetrated the court during entry/exit")
         for name in EFFECTORS:
             bone = "mixamorig_" + name
             distance = math.dist(before["bones"][bone]["world"], after["bones"][bone]["world"])

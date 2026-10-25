@@ -67,7 +67,11 @@ public partial class PivotPose : SkeletonModifier3D
             chains.Add(new(_skeleton.FindBone("mixamorig_" + side + "Arm"),
                 _skeleton.FindBone("mixamorig_" + side + "ForeArm"), _skeleton.FindBone("mixamorig_" + side + "Hand")));
         }
-        _bridge = new CrossoverPoseBridge(_parents, chains.ToArray());
+        // Dedicated contact solves below own the legs during a turn. A second
+        // endpoint IK solve in the generic bridge can choose a different knee
+        // branch at mid-blend. Unconstrained exit legs use the continuous bone
+        // rotation blend; only arms need generic endpoint interpolation here.
+        _bridge = new CrossoverPoseBridge(_parents, chains.FindAll(chain => !chain.IsSupport).ToArray());
         _neutralBridge = new CrossoverPoseBridge(_parents, chains.ToArray(), followAnchorPose: true);
         Cache();
         // Snapshot the final evaluated pose, including other modifiers. Godot restores
@@ -174,6 +178,21 @@ public partial class PivotPose : SkeletonModifier3D
             else Plant(result, landing);
             KeepSwingAboveCourt(result);
         }
+        else if (_exiting)
+        {
+            // Unconstrained rotation blending can arc a toe below the flat
+            // court between two valid poses. Minimal vertical pelvis clearance
+            // avoids reintroducing the unstable leg IK branch during handoff.
+            var globals = CrossoverPoseBridge.Forward(_parents, result);
+            float lowest = Math.Min(
+                _skeleton.ToGlobal(globals[_skeleton.FindBone("mixamorig_LeftToe_End")].Origin).Y,
+                _skeleton.ToGlobal(globals[_skeleton.FindBone("mixamorig_RightToe_End")].Origin).Y);
+            if (lowest < 0)
+            {
+                result[_hips].Origin += _skeleton.GlobalBasis.Inverse() * (Vector3.Up * -lowest);
+                PelvisShiftForHarness = -lowest;
+            }
+        }
         Write(result);
         _held = result;
         if (_exiting && _age >= BridgeTicks) { _exiting = false; _held = null; }
@@ -250,6 +269,26 @@ public partial class PivotPose : SkeletonModifier3D
         for (int i = 0; i < 16; i++) { Assist(_leg, support); Assist(_swingLeg, swing); }
         pose[_hips].Origin += shift;
         PelvisShiftForHarness = (_skeleton.GlobalBasis * shift).Length();
+        // A fresh blended knee can cross the hip-to-ankle axis during a short
+        // turn and make IK choose the opposite bend (near-180-degree knee pop).
+        // Start both solves from the last displayed world limb orientations,
+        // including their twist, rather than reselecting that branch each tick.
+        // The new foot orientations/targets still come from this tick's pose.
+        var previous = CrossoverPoseBridge.Forward(_parents, _last);
+        void SetRotation(int bone, Quaternion rotation)
+        {
+            var current = CrossoverPoseBridge.Forward(_parents, pose);
+            Quaternion parent = current[_parents[bone]].Basis.Orthonormalized().GetRotationQuaternion();
+            pose[bone].Basis = new Basis((parent.Inverse() * rotation).Normalized()).Scaled(pose[bone].Basis.Scale);
+        }
+        foreach (var leg in new[] { _leg, _swingLeg })
+        {
+            Quaternion foot = globals[leg.Effector].Basis.Orthonormalized().GetRotationQuaternion();
+            foreach (int bone in new[] { leg.Root, leg.Middle })
+                SetRotation(bone, (_skeleton.GlobalBasis.Inverse() * _lastWorld.Basis * previous[bone].Basis)
+                    .Orthonormalized().GetRotationQuaternion());
+            SetRotation(leg.Effector, foot);
+        }
         foreach (var placement in new[] { (_leg, support), (_swingLeg, swing) })
         {
             var solved = _bridge.PlaceEffector(pose, placement.Item1, placement.Item2);

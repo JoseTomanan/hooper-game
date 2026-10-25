@@ -70,9 +70,12 @@ def verify(directory):
             # Include every pivot sample and the full first neutral tail, not
             # only the requested state-change frame (which can hide a late snap).
             in_seam = manifest["gesture"] == "forward" or a["displayPivoting"] or b["displayPivoting"] or (
-                pivot and pivot[-1]["physicsFrame"] < b["physicsFrame"] <= pivot[-1]["physicsFrame"] + 8)
+                pivot and pivot[-1]["physicsFrame"] < b["physicsFrame"] <= pivot[-1]["physicsFrame"] + 9)
             if not in_seam:
                 continue
+            for side in ("Left", "Right"):
+                if b["bones"][f"mixamorig_{side}Toe_End"]["world"][1] < -CONTACT_METRES:
+                    failures.append(f"cycle {cycle}: {side} toe penetrated the court during entry/exit")
             frame_max = 0.0
             for name in EFFECTORS:
                 bone = "mixamorig_" + name
@@ -104,7 +107,7 @@ def verify(directory):
                 failures.append(f"cycle {cycle}: moving turn never transferred support")
             if manifest["images"]:
                 window = [row for row in image_rows if row["cycle"] == cycle and
-                          pivot[0]["physicsFrame"] - 2 <= row["physicsFrame"] <= pivot[-1]["physicsFrame"] + 8]
+                          pivot[0]["physicsFrame"] - 2 <= row["physicsFrame"] <= pivot[-1]["physicsFrame"] + 9]
                 if len(window) < 6 or not any(row["physicsFrame"] < pivot[0]["physicsFrame"] for row in window) or not any(
                         row["physicsFrame"] > pivot[-1]["physicsFrame"] for row in window):
                     failures.append(f"cycle {cycle}: rendered frames do not bracket both boundaries")

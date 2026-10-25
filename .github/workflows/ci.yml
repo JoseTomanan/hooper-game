@@ -120,6 +120,7 @@ jobs:
             .godot/dedicated-game-*/**
             .godot/crossover-continuity/**
             .godot/pivot-continuity/**
+            .godot/moving-turn-measurements/**
             .godot/remote-presentation-lifecycle/**
             .godot/committed-replay/**
             .godot/production-contact/**
