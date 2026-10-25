@@ -47,6 +47,8 @@ public partial class RenderedEvidenceCapture : Node
     private Vector3 _velocityBeforeDirectionChange;
     private Vector3 _velocityAfterDirectionChange;
     private bool _sawFadeaway;
+    private bool _sawFadeawayRelease;
+    private float _ordinaryTurnRateDeg;
     private bool _sawPivot;
     private bool _sawRemoteDisplay;
     private bool _shotBegun;
@@ -250,15 +252,30 @@ public partial class RenderedEvidenceCapture : Node
 
         if (!_shotBegun && _frame > SettleFrames + 190 && player.PhaseForHarness == Hooper.Moves.MovePhase.Inactive)
         {
-            // A back-facing heading makes the real JumpShot resolver select its
-            // FadeawayActive state. This is controlled setup (as in
-            // JumpshotAnimTest), while BeginJumpShotForHarness still runs the
-            // same production begin path and subsequent AnimationTree drive.
+            // #428 squares a back-facing Begin during Startup at production
+            // rates. As in JumpshotAnimTest, an explicit slow-turn fixture
+            // leaves a real residual angle for the fadeaway asset capture.
+            // Begin, release classification and AnimationTree remain live.
             Vector3 rimDelta = _ball.RimCenter - player.GlobalPosition;
             player.SetHeadingForHarness(Mathf.Atan2(rimDelta.X, rimDelta.Z) + Mathf.Pi);
+            _ordinaryTurnRateDeg = player.MaxTurnRateDeg;
+            player.MaxTurnRateDeg = 90f;
             _shotBegun = player.BeginJumpShotForHarness();
             RecordEvent("committed-move", "jumpshot-fadeaway began=" + _shotBegun);
             if (!_shotBegun) { Fail("JumpShot did not begin after BehindTheBack recovery."); Finish(1); return; }
+        }
+
+        if (_shotBegun && !_sawFadeawayRelease &&
+            player.PhaseForHarness == Hooper.Moves.MovePhase.Active && player.FrameInPhaseForHarness == 0)
+        {
+            float angle = ShotFacing.AngleFromTarget(player.Heading, player.GlobalPosition, _ball.RimCenter);
+            RecordEvent("fadeaway-release", $"angleRadians={angle:R}, maxTurnRateDeg={player.MaxTurnRateDeg:R}");
+            if (!float.IsFinite(angle) || angle < Mathf.Pi / 2f)
+            {
+                Fail($"fadeaway fixture squared up before release: angle={angle:R} radians.");
+                Finish(1); return;
+            }
+            _sawFadeawayRelease = true;
         }
 
         if (_shotBegun && player.ActiveAnimNodeForHarness == "FadeawayActive")
@@ -269,6 +286,7 @@ public partial class RenderedEvidenceCapture : Node
 
         if (!_pivotStarted && _shotBegun && _sawFadeaway && player.PhaseForHarness == Hooper.Moves.MovePhase.Inactive)
         {
+            player.MaxTurnRateDeg = _ordinaryTurnRateDeg;
             _pivotStarted = true;
             _pivotStartFrame = _frame;
             Input.ActionPress("move_forward", 1f);
@@ -288,7 +306,7 @@ public partial class RenderedEvidenceCapture : Node
             QueueCaptureOnce("pivot", player, "Pivot", false);
         }
 
-        if (_captures.Count >= 4 && _captures.All(c => c.ByteLength > 0) && _sawLocalDribble && _sawLeftHand && _sawRightHand && _sawDirectionChange && _sawFadeaway && _sawPivot)
+        if (_captures.Count >= 4 && _captures.All(c => c.ByteLength > 0) && _sawLocalDribble && _sawLeftHand && _sawRightHand && _sawDirectionChange && _sawFadeawayRelease && _sawFadeaway && _sawPivot)
             Finish(0);
     }
 
