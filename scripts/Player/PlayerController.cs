@@ -4451,16 +4451,18 @@ public partial class PlayerController : CharacterBody3D
 		Heading = step.NewYaw;
 		_pivot  = step.Pivot;
 
-		if (step.IsPivotingInPlace)
+		if (stance && !_effectiveStance)
 		{
-			// Feet planted mid-pivot: zero displacement is the acceptance
-			// criterion (issue #172) — a committed plant-and-turn must cost
-			// real position, not just a facing delay. MovementMath.ComputeVelocity
-			// is intentionally NOT called on this branch (it must not change).
-			// Zeroing the whole Vector3 (not just X/Z) is safe here: this
-			// controller applies no gravity and never sets Velocity.Y anywhere
-			// (a top-down half-court capsule, not a jumping character).
+			// Stance still waits out an owed ordinary latch, including its completion
+			// tick. Only ordinary movement-stick turning receives #430's relaxation.
 			Velocity = Vector3.Zero;
+		}
+		else if (step.IsPivotingInPlace)
+		{
+			Vector3 wish = translationLocked ? Vector3.Zero : new Vector3(inputDir.X, 0f, inputDir.Y);
+			float remaining = Mathf.AngleDifference(Heading, _pivot.LatchedYaw);
+			Velocity = MovementMath.ComputeTurnVelocity(Velocity, wish, delta,
+				protect ? ProtectSpeed : sprint ? SprintSpeed : MoveSpeed, Accel, Decel, remaining);
 		}
 		else
 		{

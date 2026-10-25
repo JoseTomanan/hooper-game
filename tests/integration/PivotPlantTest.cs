@@ -224,7 +224,10 @@ public partial class PivotPlantTest : Node
         // so a plain difference check is sufficient here — no wraparound
         // handling needed since the target itself (π) is already normalized.
         bool headingReached = Mathf.Abs(_player.Heading - Mathf.Pi) < HeadingEpsilon;
-        bool stayedPlanted = _pivotSeenActive && _maxDeviationDuringPivot < StillEpsilon;
+        // #430: a flick may travel for its one held tick, then brakes at Decel.
+        // It must not keep travelling because the heading latch is still owed.
+        bool stayedPlanted = _pivotSeenActive && _maxDeviationDuringPivot < 0.04f
+            && _player.Velocity.Length() < StillEpsilon;
         // Generous band (0.15 - 0.30 s) per issue #172's acceptance criterion,
         // as retuned by a #172 follow-up to the ≈0.20 s target (MaxTurnRateDeg 900,
         // BackTurnSlowFactor 0.95) — engine tick jitter and the non-linear
@@ -285,7 +288,8 @@ public partial class PivotPlantTest : Node
 
     private void VerdictHeld135()
     {
-        bool stayedPlanted = _pivotSeenActive && _maxDeviationDuringPivot < StillEpsilon;
+        // 2 cm exceeds float/solver noise (~1e-6 m) by four orders of magnitude.
+        bool stayedPlanted = _pivotSeenActive && _maxDeviationDuringPivot > 0.02f;
         float resumedDelta = (_player.GlobalPosition - _completionPos).Length();
         bool movementResumed = resumedDelta > MovedEpsilon;
 
@@ -298,7 +302,7 @@ public partial class PivotPlantTest : Node
         }
         else
         {
-            Fail($"held-135 expected zero displacement during the pivot (<{StillEpsilon}) then movement to " +
+            Fail($"held-135 expected slow displacement during the pivot (>0.02m) then movement to " +
                  $"resume (>{MovedEpsilon}) once held input completed the turn; got " +
                  $"maxDeviationDuringPivot={_maxDeviationDuringPivot:F5}, resumedDelta={resumedDelta:F3}, " +
                  $"stayedPlanted={stayedPlanted}, movementResumed={movementResumed}.");

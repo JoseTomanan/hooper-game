@@ -454,3 +454,46 @@ Rejected: cosmetic-only yaw, instant snap, preserving Begin-angle penalties,
 stretching phases to finish a turn, new aim/tuning axes, or borrowing the post
 turnaround's admission/timing/turn rule. The known fixed-offset ball/hand
 separation is not repaired by turning. Feel remains #185/#173 and tuning #238.
+
+
+## Amendment 2026-10-25 ? Slow travel during the ordinary movement-stick turn (#430)
+
+The maintainer's 2026-10-22 request explicitly replaces #172's ordinary
+zero-displacement plant with slow translation during the existing turn interval,
+for movement/animation continuity. This supersedes only the stationary-then-move
+requirement in the two #172 amendments above. The withdrawn 2/3-duration speedup
+is rejected: MaxTurnRateDeg=900 and BackTurnSlowFactor=0.95 remain unchanged
+(continuous 180-degree reference 0.205 s; fixed 60 Hz completion 13 steps).
+
+Held ordinary turns target 35% of the matching locomotion mode speed at a
+remaining half-turn, increasing linearly to 65% at zero remaining angle. These
+fractions are bounded provisional modeling defaults, not measured human speeds;
+#238 owns tuning and #184/#173 own final feel. The fixed-step velocity approaches
+that target at Accel (45 m/s?), or Decel (70 m/s?) when opposing the requested
+travel or shedding excessive speed. Thus running entry and mode changes carry
+finite braking momentum; the fraction bounds the target, not an instantaneous
+cap on incoming speed. Completion resumes the ordinary acceleration step on
+that same tick. Release commands zero travel and brakes at Decel while the owed
+heading finishes. There is no latch-driven automatic travel.
+
+Strict >90-degree latch creation, held retargeting, released completion and
+successful committed-Begin preemption remain. Exactly 90 degrees and smaller
+retain ordinary movement. Sprint retains its relative heading penalty. Protection
+uses its existing mode speed; stance/post establishment, spent-held translation
+locks, committed move timelines/heading and production contact remain distinct.
+In particular stance waits through an owed latch's completion tick; post retains
+its finite entry braking. No second yaw step is applied on either completion.
+
+The pure velocity rule is called inside the shared Move step on authority,
+prediction and replay, using restored heading/latch and historical mode inputs.
+It adds no persistent gameplay state or wire field. Pose and foot contact remain
+downstream of coherent displayed position/velocity/heading (ADR-0027), including
+hold/refill/reset. Per-stance world contact and stepping replace a requirement to
+pin one foot for an entire moving turn; released stationary contacts remain.
+
+Rejected: retaining zero velocity with only a visual blend, because it cannot
+produce the requested displacement; full-speed reversal during the turn,
+because it removes the requested slow interval; globally faster yaw, because
+it changes the preserved timing; applying this relaxation to stance/post gates
+or the separate committed Turnaround, because those are outside the request.
+Status remains Accepted.
