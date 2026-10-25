@@ -1,0 +1,34 @@
+[
+  {
+    "path": ".godot\\418\\429-base-noise\\right-fadeaway-1\\trace.jsonl",
+    "sharedPhaseFrames": 41,
+    "missingBaseline": [],
+    "maxBodyComponentDifference": 0.0,
+    "maximumAt": [
+      [
+        "Active",
+        0
+      ],
+      "mixamorig_Hips",
+      0,
+      -0.21399856,
+      -0.21399856
+    ]
+  },
+  {
+    "path": ".godot\\418\\429-base-noise\\right-fadeaway-2\\trace.jsonl",
+    "sharedPhaseFrames": 41,
+    "missingBaseline": [],
+    "maxBodyComponentDifference": 0.0,
+    "maximumAt": [
+      [
+        "Active",
+        0
+      ],
+      "mixamorig_Hips",
+      0,
+      -0.21399856,
+      -0.21399856
+    ]
+  }
+]
