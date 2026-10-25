@@ -28,6 +28,8 @@ def start(args, output, role, hand, variant):
         cmd += ["--capture-paced=true"]
     if args.legacy_shot:
         cmd += ["--capture-legacy-shot=true"]
+    if args.fadeaway_substitute:
+        cmd += ["--capture-fadeaway-substitute=" + args.fadeaway_substitute]
     options = {}
     if os.name == "nt":
         info = subprocess.STARTUPINFO()
@@ -64,6 +66,8 @@ def main():
     parser.add_argument("--remote", action="store_true")
     parser.add_argument("--paced", action="store_true", help="diagnostic server pacing; no real-time timing claim")
     parser.add_argument("--legacy-shot", action="store_true", help="supplemental before reproduction from the preserved three-clip fixture")
+    parser.add_argument("--fadeaway-substitute", choices=("before429", "normal"),
+                        help="isolated production fadeaway asset substitution for #429 proof")
     parser.add_argument("--compatibility", action="store_true")
     parser.add_argument("--resolution", default="960x540")
     parser.add_argument("--port", type=int, default=23468)

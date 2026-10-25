@@ -439,6 +439,10 @@ _ADDITIONAL_SINGLE_ROWS += "".join(
                      "retarget", "contact-retarget", "release-below", "release-at", "release-above")
 )
 _ADDITIONAL_MULTIPROCESS_ROWS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
+    ("fadeaway-form", "tests/integration/run-fadeaway-form.sh godot", "JumpshotFormCapture.tscn",
+     (".godot/418/429-proof-*/**/*",)),
+    ("net-fadeaway-form", "tests/integration/run-fadeaway-form.sh godot --remote", "JumpshotFormCapture.tscn",
+     (".godot/418/429-proof-*/**/*",)),
     ("net-jumpshot-form", "tests/integration/run-net-jumpshot-form.sh godot", "JumpshotFormCapture.tscn", (".godot/418/catalog-net-*/**/*",)),
     ("net-rebound-presentation", "tests/integration/run-net-rebound-presentation.sh godot", "ReboundPresentationCapture.tscn", (".godot/427/catalog-*/**/*",)),
     ("net-moving-crossover-host", "tests/integration/run-net-moving-crossover.sh godot host", "MovingCrossoverLateralTest.tscn", (".godot/harness-logs/net-moving-crossover-host-*.log",)),

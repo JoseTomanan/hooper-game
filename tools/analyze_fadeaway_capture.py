@@ -53,12 +53,40 @@ def analyze_capture(directory, gate=True):
     result = analyze(directory)
     manifest = json.loads((directory / "manifest.json").read_text())
     rows = [json.loads(line) for line in (directory / "trace.jsonl").read_text().splitlines()]
+    result["poseClocks"] = {f'{r["pose"]["phase"]}:{r["pose"]["frame"]}': r["playbackTime"]
+        for r in rows if r.get("pose", {}).get("move") == "jumpshot" and
+        r["pose"].get("physicsFrame") == r["physicsFrame"] and
+        (manifest["role"] != "client" or r["pose"].get("presentationTick") ==
+            r.get("selectedPresentationTick") == r.get("ballPresentationTick"))}
     if manifest["variant"] == "fadeaway":
         result["fadeawayForm"] = form(rows, manifest["role"] == "client")
+        authority = manifest if manifest["role"] != "client" else json.loads(
+            (Path(str(directory) + "-server") / "manifest.json").read_text())
+        releases = [e for e in authority.get("events", []) if e["kind"] == "release"]
+        if not releases or any(not e.get("fadeaway") or e.get("residualAngle", 0) < math.pi / 2 for e in releases):
+            result["failures"].append("actual fadeaway release-angle premise missing")
+        if any(s["animation"] != "FadeawayActive" for s in result["fadeawayForm"]["samples"]):
+            result["failures"].append("production FadeawayActive selection missing")
         if gate:
             result["failures"].extend(result["fadeawayForm"]["failures"])
     result["result"] = "failed" if result["failures"] else "passed"
     return result
+
+
+def compare(result, prior):
+    # Keep the old motion envelope, including its native coordinate precision.
+    # A changed playback offset is incomparable evidence, never a relaxed bound.
+    for key, time in result["poseClocks"].items():
+        if key not in prior["poseClocks"] or abs(time - prior["poseClocks"][key]) > 1e-6:
+            result["failures"].append("incomparable playback clock: " + key)
+    limits = {b["transition"]: b for b in prior["boundaries"]}
+    for seam in result["boundaries"]:
+        old = limits.get(seam["transition"])
+        if old is None or seam["maxDisplacement"] > old["maxDisplacement"] + old["coordinateResolutionM"]:
+            result["failures"].append("boundary displacement exceeds baseline: " + seam["transition"])
+        if old:
+            seam["baselineMotionBoundM"] = old["maxDisplacement"]
+    result["result"] = "failed" if result["failures"] else "passed"
 
 
 def main():
@@ -66,10 +94,19 @@ def main():
     parser.add_argument("directory", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--measure-only", action="store_true")
+    parser.add_argument("--baseline", type=Path)
     args = parser.parse_args()
     directories = [args.directory] if (args.directory / "manifest.json").exists() else sorted(
         p.parent for p in args.directory.glob("*/manifest.json") if not p.parent.name.endswith("-server"))
     results = [analyze_capture(p, not args.measure_only) for p in directories]
+    if args.baseline:
+        baseline = {c["case"]: c for c in json.loads(args.baseline.read_text())["cases"]}
+        for result in results:
+            if result["case"] not in baseline:
+                result["failures"].append("baseline case missing")
+                result["result"] = "failed"
+            else:
+                compare(result, baseline[result["case"]])
     passed = bool(results) and all(r["result"] == "passed" for r in results)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(dict(result="passed" if passed else "failed", cases=results), indent=2))

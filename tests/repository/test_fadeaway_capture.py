@@ -56,6 +56,14 @@ class FadeawayProjectionTests(unittest.TestCase):
         rows[2]["ballPresentationTick"] -= 1
         self.assertIn("missing final Active pose 2", fadeaway.form(rows, True)["failures"])
 
+    def test_form_rejects_each_individual_trailing_joint(self):
+        for bone in ("RightLeg", "RightFoot", "LeftLeg", "LeftFoot"):
+            with self.subTest(bone=bone):
+                rows = self.rows()
+                rows[2]["pose"]["bones"]["mixamorig_" + bone]["body"][2] = -.3
+                self.assertIn("both legs must lead upper torso at Active:2",
+                              fadeaway.form(rows, False)["failures"])
+
 
 if __name__ == "__main__":
     unittest.main()
