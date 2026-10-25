@@ -19,6 +19,7 @@ public partial class JumpshotFormCapture : Node
     private int _tick, _start = -1, _shotTick = -1, _swapTick = -1, _samples, _releases;
     private bool _ready, _sentReady, _done, _finished, _feinted, _images, _sawShot, _sawFeintRecovery;
     private bool _paced, _legacyShot, _legacyApplied;
+    private int _pacingMs;
     private bool _headingFixture;
     private string _fadeawaySubstitute;
     private bool _fadeawaySubstituteApplied;
@@ -50,6 +51,8 @@ public partial class JumpshotFormCapture : Node
         _commit = Read("--capture-commit", "unknown");
         _images = Read("--capture-images", "true") != "false";
         _paced = Read("--capture-paced", "false") == "true";
+        _pacingMs = int.Parse(Read("--capture-pacing-ms", "80"));
+        if (_pacingMs is not (80 or 160)) throw new ArgumentException("unsupported diagnostic pacing");
         _legacyShot = Read("--capture-legacy-shot", "false") == "true";
         _fadeawaySubstitute = Read("--capture-fadeaway-substitute", "");
         if (_fadeawaySubstitute is not ("" or "before429" or "normal"))
@@ -194,7 +197,7 @@ public partial class JumpshotFormCapture : Node
         // lets the real ENet observer draw each source tick. This is diagnostic
         // coverage evidence, never a real-time network/performance claim.
         // https://docs.godotengine.org/en/4.7/classes/class_os.html#class-os-method-delay-msec
-        if (!_finished && _paced && _role == "server") OS.DelayMsec(80);
+        if (!_finished && _paced && _role == "server") OS.DelayMsec(_pacingMs);
         if (!_images && DisplayServer.GetName() == "headless") Sample();
     }
 
@@ -287,7 +290,8 @@ public partial class JumpshotFormCapture : Node
             hand = _hand, commit = _commit, view = _view, samples = _samples, releases = _releases, events = _events,
             headingFixture = _headingFixture, initialAngle = _headingAngle, headingEntry = _headingEntry, headingRate = _headingRate,
             sawProductionShotStartup = _sawShot, feintRequested = _feinted, sawAcceptedFeintRecovery = _sawFeintRecovery,
-            paced = _paced, pacingMeaning = _paced ? "80ms producer wall-clock delay; fixed simulation steps; not real-time" : "unpaced",
+            paced = _paced, pacingMs = _paced ? _pacingMs : 0,
+            pacingMeaning = _paced ? $"{_pacingMs}ms producer wall-clock delay; fixed simulation steps; not real-time" : "unpaced",
             mutation = _legacyShot ? "legacy-normal-shot-three-clips" : "none", mutationApplied = _legacyApplied,
             fadeawaySubstitute = _fadeawaySubstitute, fadeawaySubstituteApplied = _fadeawaySubstituteApplied,
             fadeawayFixtureSha256 = _fadeawaySubstitute == "before429" ? Convert.ToHexString(SHA256.HashData(

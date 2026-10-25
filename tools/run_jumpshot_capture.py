@@ -25,7 +25,7 @@ def start(args, output, role, hand, variant):
     if args.headless or role == "server":
         cmd += ["--capture-images=false"]
     if args.paced:
-        cmd += ["--capture-paced=true"]
+        cmd += ["--capture-paced=true", "--capture-pacing-ms=" + str(args.pacing_ms)]
     if args.legacy_shot:
         cmd += ["--capture-legacy-shot=true"]
     if args.fadeaway_substitute:
@@ -65,6 +65,8 @@ def main():
     parser.add_argument("--headless", action="store_true")
     parser.add_argument("--remote", action="store_true")
     parser.add_argument("--paced", action="store_true", help="diagnostic server pacing; no real-time timing claim")
+    parser.add_argument("--pacing-ms", type=int, choices=(80, 160), default=80,
+                        help="producer delay for diagnostic readback coverage; requires --paced")
     parser.add_argument("--legacy-shot", action="store_true", help="supplemental before reproduction from the preserved three-clip fixture")
     parser.add_argument("--fadeaway-substitute", choices=("before429", "normal"),
                         help="isolated production fadeaway asset substitution for #429 proof")
@@ -78,6 +80,8 @@ def main():
     args = parser.parse_args()
     if args.paced and not args.remote:
         parser.error("--paced requires --remote")
+    if args.pacing_ms != 80 and not args.paced:
+        parser.error("--pacing-ms requires --paced")
     args.output = (ROOT / args.output).resolve()
     if not args.output.is_relative_to(ROOT / ".godot" / "418") or args.repeat < 1:
         parser.error("output must be below .godot/418; repeat must be positive")
