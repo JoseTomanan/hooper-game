@@ -428,6 +428,7 @@ PostPresentationTest.tscn|presentation
 CommittedClipHookupAudit.tscn|
 """
 _ADDITIONAL_SINGLE_ROWS += "PivotPlantTest.tscn|movement-matrix\n"
+_ADDITIONAL_SINGLE_ROWS += "NetSprintTest.tscn|moving-turn\n"
 
 _ADDITIONAL_SINGLE_ROWS += "".join(
     f"JumpShotHeadingTest.tscn|matrix-{angle}-{entry}-{hand}\n"

@@ -626,7 +626,7 @@ public partial class PivotPlantTest : Node
 
     private void RunReplayCases()
     {
-        foreach (int mode in new[] { 0, 1, 2 })
+        foreach (int mode in new[] { 0, 1, 2, 3 })
         foreach (string context in new[] { "ordinary", "stance", "post", "locked" })
         foreach (int ackTick in new[] { 0, 3, 8, 15 })
         {
@@ -638,14 +638,16 @@ public partial class PivotPlantTest : Node
             var opponent = MatrixPlayer("5", group, true);
             opponent.SeedProductionContactRawForHarness(new Vector3(50, 0, 50), 0);
             int ack = replay.ClearMovingTurnHistoryForHarness() + ackTick;
-            authority.ResetContactStateForHarness(Vector3.Zero, 0, new Vector3(0, 0, ModeSpeed(mode)));
+            authority.ResetContactStateForHarness(Vector3.Zero, 0, new Vector3(0, 0,
+                mode == 3 ? _player.SprintSpeed : ModeSpeed(mode)));
             PlayerController.MovingTurnSnapshot snapshot = default;
             for (int tick = 0; tick < 40; tick++)
             {
                 if (tick == ackTick) snapshot = authority.CaptureMovingTurnForHarness();
                 Vector2 input = tick >= 8 ? Vector2.Zero : Direction(tick >= 4 ? 150 : 180);
                 bool transition = tick >= 3;
-                var frame = new PredictionBuffer.InputFrame(input, mode == 1, mode == 2,
+                var frame = new PredictionBuffer.InputFrame(input,
+                    mode == 1 || mode == 3 && tick < 4, mode == 2 || mode == 3 && tick >= 4 && tick < 8,
                     PostureHeld: transition && context == "stance", StanceEligible: true,
                     PostHeld: transition && context == "post", PostEligible: true,
                     RimSample: new Vector3(0, 0, 100), TranslationLocked: transition && context == "locked");
@@ -670,6 +672,11 @@ public partial class PivotPlantTest : Node
                         $"reconcile mode={mode} context={context} ackTick={ackTick} tick={tick}: mismatch {actual} vs {expected}");
                 }
             }
+            var fullyAcknowledged = authority.CaptureMovingTurnForHarness();
+            replay.ResetContactStateForHarness(new Vector3(10, 0, 10), -1, new Vector3(20, 0, 0));
+            replay.ReconcileMovingTurnForHarness(fullyAcknowledged, replay.MovingTurnLastSequenceForHarness, MatrixDt);
+            Require(replay.SprintPendingForHarness == 0 && replay.CaptureMovingTurnForHarness() == fullyAcknowledged,
+                $"reconcile mode={mode} context={context} ackTick={ackTick}: fully acknowledged empty-buffer snapshot differed");
             authority.Free(); group.Free();
         }
     }

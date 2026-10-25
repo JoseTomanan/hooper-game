@@ -16,7 +16,7 @@ def launch(args, role):
     # Native local capture evaluates exactly one simulation tick per rendered frame.
     # Network fixed-fps is opt-in because it removes real-time synchronization.
     # https://docs.godotengine.org/en/4.7/tutorials/editor/command_line_tutorial.html
-    fixed_fps = args.paced or (not args.remote and not args.headless)
+    fixed_fps = args.paced or args.fixed_fps or (not args.remote and not args.headless)
     if fixed_fps:
         command += ["--fixed-fps", "60"]
     if args.headless or role == "server":
@@ -25,6 +25,7 @@ def launch(args, role):
         command += ["--rendering-method", "gl_compatibility", "--rendering-driver", "opengl3"]
     command += [SCENE, "--", "--capture-output=" + str(directory), "--capture-role=" + role,
                 "--capture-case=" + args.case, "--capture-gesture=" + args.gesture,
+                "--capture-angle=" + str(args.angle),
                 "--capture-commit=" + args.commit, "--capture-port=" + str(args.port),
                 "--capture-images=" + str(args.images and role != "server").lower(),
                 "--capture-paced=" + str(args.paced).lower(), "--capture-fixed-fps=" + str(fixed_fps).lower()]
@@ -67,8 +68,10 @@ def main():
     parser.add_argument("--commit", required=True)
     parser.add_argument("--case", choices=("idle", "run", "left", "right"), required=True)
     parser.add_argument("--gesture", choices=("flick", "held", "forward"), required=True)
+    parser.add_argument("--angle", type=float, default=180, help="turn magnitude in degrees; exact90 uses the opposite cardinal quarter-turn; forward ignores this")
     parser.add_argument("--remote", action="store_true")
     parser.add_argument("--headless", action="store_true")
+    parser.add_argument("--fixed-fps", action="store_true", help="local diagnostic only: fixed60Hz simulation, including headless capture")
     parser.add_argument("--images", action="store_true")
     parser.add_argument("--paced", action="store_true", help="diagnostic: fixed 60Hz delta; remote server wall clock slowed to ~20Hz; no real-time claim")
     parser.add_argument("--compatibility", action="store_true", help="native local/client Mesa-compatible OpenGL renderer")
@@ -79,6 +82,10 @@ def main():
     parser.add_argument("--pivot-xfade", type=float, help="diagnostic only: override direct Pivot transition blend duration")
     parser.add_argument("--port", type=int, default=23468)
     args = parser.parse_args()
+    if not 0 < args.angle <= 180:
+        parser.error("--angle must be greater than0 and at most180 degrees")
+    if args.fixed_fps and args.remote:
+        parser.error("--fixed-fps is local-only; remote diagnostic pacing requires --paced")
     if args.reset_owner_presentation and (args.remote or args.protection or args.case != "run" or args.gesture != "held"):
         parser.error("--reset-owner-presentation requires local run-held without protection")
     if args.paced and not args.remote:

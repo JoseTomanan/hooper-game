@@ -456,7 +456,7 @@ turnaround's admission/timing/turn rule. The known fixed-offset ball/hand
 separation is not repaired by turning. Feel remains #185/#173 and tuning #238.
 
 
-## Amendment 2026-10-25 ? Slow travel during the ordinary movement-stick turn (#430)
+## Amendment 2026-10-25 - Slow travel during the ordinary movement-stick turn (#430)
 
 The maintainer's 2026-10-22 request explicitly replaces #172's ordinary
 zero-displacement plant with slow translation during the existing turn interval,
@@ -469,8 +469,11 @@ Held ordinary turns target 35% of the matching locomotion mode speed at a
 remaining half-turn, increasing linearly to 65% at zero remaining angle. These
 fractions are bounded provisional modeling defaults, not measured human speeds;
 #238 owns tuning and #184/#173 own final feel. The fixed-step velocity approaches
-that target at Accel (45 m/s?), or Decel (70 m/s?) when opposing the requested
-travel or shedding excessive speed. Thus running entry and mode changes carry
+that target at Accel (45 m/s^2), or Decel (70 m/s^2) when opposing the requested
+travel or shedding excessive speed. The rate is selected once per fixed tick;
+a braking tick can cross zero toward the target using its remaining budget.
+The vector change is bounded by that tick's selected rate, rather than splitting
+the tick into separate braking and acceleration substeps. Thus running entry and mode changes carry
 finite braking momentum; the fraction bounds the target, not an instantaneous
 cap on incoming speed. Completion resumes the ordinary acceleration step on
 that same tick. Release commands zero travel and brakes at Decel while the owed

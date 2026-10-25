@@ -592,12 +592,12 @@ BehindTheBack, BetweenTheLegs, InAndOut and Spin retain their original shared
 composition without the Crossover-specific contribution.
 
 
-## Amendment 2026-10-25 ? Moving ordinary turns (#430)
+## Amendment 2026-10-25 - Moving ordinary turns (#430)
 
 The maintainer explicitly revisited the movement-stick pivot on 2026-10-22:
 retain the approximately 0.21-second reversal, but blend slow real travel during
 it into full-speed locomotion. This supersedes the zero-displacement/frozen-feet
-requirement in ?Back-turn legibility relaxed for the movement-stick pivot? above,
+requirement in "Back-turn legibility relaxed for the movement-stick pivot" above,
 only for ordinary movement-stick turning. It does not relax any committed move's
 Startup/Active/Recovery, cancellation, plant or heading contract.
 

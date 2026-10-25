@@ -90,6 +90,7 @@ class HarnessCatalogCliTests(unittest.TestCase):
                 'turnaround-replay', 'turnaround-rejected', 'contact-set', 'contact-unset')]
             + ['post-presentation-test-presentation', 'committed-clip-hookup-audit']
             + ['pivot-plant-test-movement-matrix']
+            + ['net-sprint-test-moving-turn']
             + [f'jump-shot-heading-test-matrix-{angle}-{entry}-{hand}'
                for angle in (0, 45, 89, 90, 91, 135, 180)
                for entry in ('stationary', 'moving')
@@ -342,7 +343,7 @@ class HarnessCatalogShardTests(unittest.TestCase):
         for case_id in ('fadeaway-form', 'net-fadeaway-form'):
             self.assertEqual(catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS, weights[case_id])
         self.assertAlmostEqual(
-            976.0 + 3.0 / 5 + 44 * catalog.DEFAULT_SINGLE_WEIGHT_SECONDS
+            976.0 + 3.0 / 5 + 45 * catalog.DEFAULT_SINGLE_WEIGHT_SECONDS
             + 7 * catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS,
             sum(weights.values()),
         )

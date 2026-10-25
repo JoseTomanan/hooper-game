@@ -15,12 +15,17 @@ public partial class NetSprintTest : Node3D
     private Node3D _serverRoot, _clientRoot;
     private bool _connected, _finished;
     private int _tick, _baselineAck;
+    private string _scenario;
+    private PlayerController.MovingTurnSnapshot _movingBaseline;
+    private float _movingActiveDistance;
+    private bool _movingSawLatch, _movingCompleted;
     private double _elapsed;
     private double Dt => 1.0 / Engine.PhysicsTicksPerSecond;
     public override void _Ready()
     {
         try
         {
+            _scenario = HarnessArgs.ReadArg(OS.GetCmdlineUserArgs(), "--harness-scenario", "historical-sprint");
             var serverPeer = new ENetMultiplayerPeer();
             var clientPeer = new ENetMultiplayerPeer();
             int port = int.Parse(HarnessArgs.ReadArg(OS.GetCmdlineUserArgs(), "--harness-port", "28425"));
@@ -102,9 +107,18 @@ public partial class NetSprintTest : Node3D
                     $"raw held sprint did not traverse guarded SubmitInput: ack={_server.SprintAckForHarness} speed={_server.Velocity.Length()}");
                 GD.Print($"[net-sprint] wire ack={_server.SprintAckForHarness} speed={_server.Velocity.Length()}");
                 _baselineAck = _client.SprintPreparePendingForHarness();
+                if (_scenario == "moving-turn")
+                {
+                    var position = new Vector3(0, 0, 10);
+                    _client.ResetContactStateForHarness(position, 0, Vector3.Zero);
+                    _reference.ResetContactStateForHarness(position, 0, Vector3.Zero);
+                    _movingBaseline = _client.CaptureMovingTurnForHarness();
+                    return;
+                }
                 Input.ActionRelease("move_forward"); Input.ActionPress("move_right");
                 return;
             }
+            if (_scenario == "moving-turn") { TickMovingTurn(); return; }
             // Twelve actual client prediction ticks, with server stepping suspended so
             // none are acknowledged. This deterministic pending history is all Right+sprint.
             if (_tick <= 92) { _client.SprintTickClientForHarness(Dt, suppressCorrection: true); return; }
@@ -127,6 +141,74 @@ public partial class NetSprintTest : Node3D
             Finish(true, "real held-input RPC and corrected historical sprint replay");
         }
         catch (Exception error) { Finish(false, error.Message); }
+    }
+
+    private void TickMovingTurn()
+    {
+        int step = _tick - 81;
+        if (step < 40)
+        {
+            // This script is independent of the production buffer. Input.GetVector
+            // remains exercised by TickClientOwnPlayer, including its real gates.
+            bool sprint = step < 4;
+            bool protect = step >= 4 && step < 8;
+            Vector2 input = step >= 8 ? Vector2.Zero : step >= 4
+                ? new Vector2(.5f, -MathF.Sqrt(3) / 2) : new Vector2(0, -1);
+            SetMovingTurnInput(input, sprint, protect);
+            Vector3 before = _client.GlobalPosition;
+            _client.SprintTickClientForHarness(Dt, suppressCorrection: true);
+            Require(_client.IsSprinting == sprint && _client.IsProtecting == protect,
+                $"moving-turn tick={step}: scripted possession/pace gates did not resolve as expected");
+            _reference.Move(input, Dt, sprint: sprint, protect: protect);
+            AssertMovingTurnState($"prediction tick={step}");
+            if (_client.IsPivotingInPlace)
+            {
+                _movingSawLatch = true;
+                _movingActiveDistance += before.DistanceTo(_client.GlobalPosition);
+            }
+            else if (_movingSawLatch) _movingCompleted = true;
+            return;
+        }
+        Require(_movingSawLatch && _movingCompleted && _movingActiveDistance > .02f,
+            $"moving-turn lacked a completed travelling turn: activeDistance={_movingActiveDistance}");
+        Require(_client.SprintPendingForHarness == 40, "moving-turn pending history not forty actual client ticks");
+        var expected = _reference.CaptureMovingTurnForHarness();
+        // Corrupt the predicted body, then invoke the real received-snapshot /
+        // reconciliation path. Replaying today's ordinary mode for every tick
+        // cannot reconstruct the independently scripted sprint/protect history.
+        _client.ResetContactStateForHarness(new Vector3(10, 0, 10), -1, new Vector3(20, 0, 0));
+        _client.ReconcileMovingTurnForHarness(_movingBaseline, _baselineAck, Dt);
+        Require(_client.SprintPendingForHarness == 40, "moving-turn replay lost unacknowledged history");
+        AssertMovingTurnState("historical pace replay");
+        _client.ResetContactStateForHarness(new Vector3(10, 0, 10), -1, new Vector3(20, 0, 0));
+        _client.ReconcileMovingTurnForHarness(expected, _client.MovingTurnLastSequenceForHarness, Dt);
+        Require(_client.SprintPendingForHarness == 0 && _client.CaptureMovingTurnForHarness() == expected,
+            "moving-turn fully acknowledged empty buffer did not adopt exact authoritative state");
+        GD.Print($"[net-sprint] moving-turn actualPredictionTicks=40 activeDistance={_movingActiveDistance:F6}m pendingBeforeAck=40 pendingAfterAck=0");
+        Finish(true, "moving-turn: real ENet warmup, live input prediction, historical pace replay and empty-buffer correction");
+    }
+
+    private static void SetMovingTurnInput(Vector2 input, bool sprint, bool protect)
+    {
+        foreach (string action in new[] { "move_left", "move_right", "move_forward", "move_backward", "move_sprint", "move_protect" })
+            Input.ActionRelease(action);
+        if (input.X > 0) Input.ActionPress("move_right", input.X);
+        if (input.Y < 0) Input.ActionPress("move_forward", -input.Y);
+        if (sprint) Input.ActionPress("move_sprint");
+        if (protect) Input.ActionPress("move_protect");
+    }
+
+    private void AssertMovingTurnState(string label)
+    {
+        var actual = _client.CaptureMovingTurnForHarness();
+        var expected = _reference.CaptureMovingTurnForHarness();
+        Require(actual.Position.DistanceTo(expected.Position) < .0001f
+            && actual.Velocity.DistanceTo(expected.Velocity) < .0001f
+            && Math.Abs(Mathf.AngleDifference(actual.Heading, expected.Heading)) < .00001f
+            && actual.Pivot.HasLatch == expected.Pivot.HasLatch
+            && Math.Abs(Mathf.AngleDifference(actual.Pivot.LatchedYaw, expected.Pivot.LatchedYaw)) < .00001f
+            && actual.Stance == expected.Stance && actual.Post == expected.Post && actual.Established == expected.Established,
+            $"moving-turn {label}: independent reference mismatch {actual} vs {expected}");
     }
     private void Finish(bool pass, string message)
     { _finished = true; GD.Print($"[net-sprint] {(pass ? "PASS" : "FAIL")} {message}"); GetTree().Quit(pass ? 0 : 1); }

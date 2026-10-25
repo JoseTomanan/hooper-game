@@ -22,8 +22,9 @@ namespace Hooper.Player;
 public static class MovementMath
 {
 	/// <summary>Ordinary latched turn: 35% of the mode speed at a half-turn,
-	/// rising to 65% as the remaining angle closes. Incoming momentum brakes
-	/// at Decel; acceleration toward the new direction stays bounded by Accel.
+	/// rising to 65% as the remaining angle closes. Each tick uses Decel while
+	/// opposing input or shedding speed, otherwise Accel. A braking tick can
+	/// cross zero toward the target; the whole velocity change remains bounded.
 	/// These are provisional #430 modeling defaults, with tuning in #238.</summary>
 	public static Vector3 ComputeTurnVelocity(Vector3 current, Vector3 wishDir, double delta,
 		float moveSpeed, float accel, float decel, float remainingAngle)

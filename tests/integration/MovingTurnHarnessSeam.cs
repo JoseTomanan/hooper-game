@@ -13,6 +13,7 @@ public partial class PlayerController
         Heading, _pivot, _effectiveStance, _effectivePost, _postEstablished);
     internal int ClearMovingTurnHistoryForHarness()
     { _buffer.Acknowledge(_buffer.LastSequence); return _buffer.LastSequence; }
+    internal int MovingTurnLastSequenceForHarness => _buffer.LastSequence;
     internal void RecordMovingTurnForHarness(PredictionBuffer.InputFrame frame) =>
         _buffer.Record(frame.Movement, frame.Sprint, frame.Protect, frame.PostureHeld,
             frame.StanceEligible, frame.PostHeld, frame.PostEligible, frame.RimSample,
