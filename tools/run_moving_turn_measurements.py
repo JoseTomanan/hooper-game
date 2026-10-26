@@ -133,7 +133,15 @@ def contact_checks(active, measured, failures, prefix):
            for row in active) and math.dist(point(active[0]), point(active[-1])) > .08 and transfers == 0:
         failures.append(f"{prefix}: long moving turn never transferred support")
     first_frame, last_frame = active[0]["physicsFrame"], active[-1]["physicsFrame"]
-    seam = [row for row in measured if first_frame - 1 <= row["physicsFrame"] <= last_frame + 9]
+    # A handoff cannot evade continuity by retaining a correction past the old
+    # fixed bridge window. Follow it through released travel and two ordinary
+    # neutral samples after the actual pose modifier relinquishes ownership.
+    release_age = 25 if measured[-1]["gesture"] == "held" else 1
+    settled = next((row for row in measured if row["stageAge"] >= release_age
+                    and row["physicsFrame"] > last_frame and speed(row) <= .03
+                    and not row["pivotPoseApplied"]), measured[-1])
+    seam_end = max(last_frame + 9, settled["physicsFrame"] + 2)
+    seam = [row for row in measured if first_frame - 1 <= row["physicsFrame"] <= seam_end]
     for before, after in zip(seam, seam[1:]):
         for side in ("Left", "Right"):
             if after["bones"][f"mixamorig_{side}Toe_End"]["world"][1] < -CONTACT_METRES:

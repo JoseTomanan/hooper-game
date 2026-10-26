@@ -60,6 +60,23 @@ def verify(directory):
         # reject that trial rather than quietly counting it as continuous proof.
         if manifest["role"] == "client" and len({(row["presentationEpoch"], row["presentationResyncCount"]) for row in measured}) != 1:
             failures.append(f"cycle {cycle}: presentation reset invalidates continuity trial")
+        seam_end = pivot[-1]["physicsFrame"] + 9 if pivot else 0
+        if pivot:
+            settled = next((row for row in measured if row["physicsFrame"] > pivot[-1]["physicsFrame"]
+                            and math.hypot(*row["displayVelocity"][::2]) <= .03
+                            and not row["pivotPoseApplied"]), None)
+            if settled is None:
+                failures.append(f"cycle {cycle}: pose handoff never relinquished settled neutral")
+            else:
+                following = [row for row in measured if row["physicsFrame"] >= settled["physicsFrame"]]
+                # Require two consumed source intervals after relinquish, not
+                # two wall callbacks that may both show a held remote sample.
+                source = lambda row: row["presentationTick"] if row["presentationTick"] >= 0 else row["physicsFrame"]
+                after = next((row for row in following if source(row) >= source(settled) + 2), None)
+                if after is None:
+                    failures.append(f"cycle {cycle}: missing source tail after settled handoff")
+                else:
+                    seam_end = max(seam_end, after["physicsFrame"])
         for a, b in zip(measured, measured[1:]):
             physics_gap = b["physicsFrame"] - a["physicsFrame"]
             source_gap = (b["presentationTick"] - a["presentationTick"]) if b["presentationTick"] >= 0 else physics_gap
@@ -70,7 +87,7 @@ def verify(directory):
             # Include every pivot sample and the full first neutral tail, not
             # only the requested state-change frame (which can hide a late snap).
             in_seam = manifest["gesture"] == "forward" or a["displayPivoting"] or b["displayPivoting"] or (
-                pivot and pivot[-1]["physicsFrame"] < b["physicsFrame"] <= pivot[-1]["physicsFrame"] + 9)
+                pivot and pivot[-1]["physicsFrame"] < b["physicsFrame"] <= seam_end)
             if not in_seam:
                 continue
             for side in ("Left", "Right"):
@@ -107,7 +124,7 @@ def verify(directory):
                 failures.append(f"cycle {cycle}: moving turn never transferred support")
             if manifest["images"]:
                 window = [row for row in image_rows if row["cycle"] == cycle and
-                          pivot[0]["physicsFrame"] - 2 <= row["physicsFrame"] <= pivot[-1]["physicsFrame"] + 9]
+                          pivot[0]["physicsFrame"] - 2 <= row["physicsFrame"] <= seam_end]
                 if len(window) < 6 or not any(row["physicsFrame"] < pivot[0]["physicsFrame"] for row in window) or not any(
                         row["physicsFrame"] > pivot[-1]["physicsFrame"] for row in window):
                     failures.append(f"cycle {cycle}: rendered frames do not bracket both boundaries")

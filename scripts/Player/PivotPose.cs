@@ -10,9 +10,11 @@ public partial class PivotPose : SkeletonModifier3D
 {
     public PlayerController Player { get; set; }
     public AnimationPlayer AnimationPlayer { get; set; }
-    // Six intervals distribute the reproduced running/dribble endpoint gaps;
-    // see docs/analysis/0416-pivot-continuity.md. This is not a move/heading timer.
+    // Entry retains #416's six intervals; travelling exit needs seven to keep
+    // the toe-tip arc plus body travel within the unchanged forward-control
+    // envelope (#430). These presentation clocks never change move/heading time.
     private const int BridgeTicks = 6;
+    private const int ExitTicks = 7;
     private const int LandingTicks = 4;
     // One short step per eight consumed source ticks, including a four-tick
     // landing and grounded stance. No wall-clock phase runs during remote holds.
@@ -23,12 +25,18 @@ public partial class PivotPose : SkeletonModifier3D
     private CrossoverPoseBridge.LimbChain _leg;
     private CrossoverPoseBridge _bridge;
     private CrossoverPoseBridge _neutralBridge;
+    private CrossoverPoseBridge _settleBridge;
     private Transform3D[] _last, _anchor, _held;
     private Transform3D[] _pivotTarget;
     private Transform3D _lastWorld;
     private Vector3 _contact, _landingStart;
     private bool _wasPivot, _exiting;
     private bool _correctDribbleBlend;
+    private bool _neutralHandoff;
+    private Transform3D[] _settleAnchor;
+    private int _settleAge = -1;
+    private float _handoffSpeed;
+    private bool _handoffBraking;
     private long _clock = -1;
     private int _age;
     private int _stanceAge;
@@ -72,7 +80,8 @@ public partial class PivotPose : SkeletonModifier3D
         // branch at mid-blend. Unconstrained exit legs use the continuous bone
         // rotation blend; only arms need generic endpoint interpolation here.
         _bridge = new CrossoverPoseBridge(_parents, chains.FindAll(chain => !chain.IsSupport).ToArray());
-        _neutralBridge = new CrossoverPoseBridge(_parents, chains.ToArray(), followAnchorPose: true);
+        _neutralBridge = new CrossoverPoseBridge(_parents, Array.Empty<CrossoverPoseBridge.LimbChain>(), followAnchorPose: true);
+        _settleBridge = new CrossoverPoseBridge(_parents, Array.Empty<CrossoverPoseBridge.LimbChain>());
         Cache();
         // Snapshot the final evaluated pose, including other modifiers. Godot restores
         // their input afterwards; sampling in _Process would cache the wrong endpoint.
@@ -105,8 +114,9 @@ public partial class PivotPose : SkeletonModifier3D
         var reset = buffered ? Player.PivotPresentationReset : default;
         if (_clock >= 0 && (buffered != _buffered || reset != _reset || clock < _clock || clock - _clock > 1))
         {
-            _wasPivot = _exiting = _correctDribbleBlend = false;
+            _wasPivot = _exiting = _correctDribbleBlend = _neutralHandoff = false;
             _anchor = _held = null;
+            _settleAge = -1;
             Cache();
         }
         int step = _clock < 0 ? 0 : (int)Math.Clamp(clock - _clock, 0, 1);
@@ -115,26 +125,65 @@ public partial class PivotPose : SkeletonModifier3D
         // cannot establish that the resolver actually selected Pivot.
         bool pivot = Player.DisplayPivoting && Player.ResolvedAnimationState == "Pivot";
         bool neutral = display.Phase == MovePhase.Inactive && Player.ResolvedAnimationState != "ReboundGrab";
-        if (!neutral) { _wasPivot = _exiting = _correctDribbleBlend = false; _held = null; return; }
+        if (!neutral) { _wasPivot = _exiting = _correctDribbleBlend = _neutralHandoff = false; _held = null; _settleAge = -1; return; }
         bool plainDribble = Player.DisplayDribbling() && !Player.DisplayProtecting
             && !Player.DisplayPosting && !Player.DisplayDefensiveStance;
-        float speed = new Vector2(Player.DisplayVelocity.X, Player.DisplayVelocity.Z).Length();
-        bool intermediateDribble = plainDribble && speed > .001f && speed < Player.MoveSpeed - .001f;
-        if (!intermediateDribble) _correctDribbleBlend = false;
-        if (!pivot && !_wasPivot && !_exiting)
+        bool posture = Player.DisplayProtecting || Player.DisplayPosting || Player.DisplayDefensiveStance;
+        if (posture && !pivot && !_wasPivot && !_exiting)
         {
-            // After the bounded pivot handoff, retain only the neutral blend repair
-            // until a clip endpoint. Postures retain their complete evaluated pose.
-            if (_correctDribbleBlend) Write(DestinationPose(Capture()));
+            // These downstream posture modifiers own the complete neutral pose.
+            _neutralHandoff = _correctDribbleBlend = false;
+            _held = null; _settleAge = -1;
             return;
         }
+        float speed = new Vector2(Player.DisplayVelocity.X, Player.DisplayVelocity.Z).Length();
+        bool intermediateDribble = plainDribble && speed > .001f && speed < Player.MoveSpeed - .001f;
+        if (!intermediateDribble && !_neutralHandoff) _correctDribbleBlend = false;
         if (step == 0 && _held != null) { Write(_held); return; }
+        if (!pivot && !_wasPivot && !_exiting)
+        {
+            // Full-speed dribble is not a safe end to the handoff: the tree's
+            // intermediate blend returns when input is released. Retain the
+            // authored-endpoint repair and floor clearance until travel stops.
+            if (_neutralHandoff || _correctDribbleBlend)
+            {
+                var destination = DestinationPose(Capture());
+                // Releasing a travelling dribble crosses the same problematic
+                // BlendSpace again. Bridge that final return from the last
+                // displayed pose, rather than handing a stale endpoint to it.
+                bool braking = speed < _handoffSpeed - .001f;
+                if (braking && (_settleAge < 0 || !_handoffBraking))
+                {
+                    _settleAnchor = (Transform3D[])_last.Clone();
+                    _settleAge = 0;
+                    _settleBridge.ResetContinuity();
+                }
+                else if (_settleAge >= 0) _settleAge += step;
+                if (_settleAge >= 0)
+                {
+                    if (_settleAge == 1) _settleBridge.ResetContinuity();
+                    destination = _settleBridge.Blend(_settleAnchor, destination,
+                        Math.Clamp(_settleAge / (float)BridgeTicks, 0, 1)).Pose;
+                }
+                float clearance = ClearCourt(destination);
+                Write(destination);
+                _held = destination;
+                _handoffSpeed = speed;
+                _handoffBraking = braking;
+                if (speed <= .001f && clearance <= .00001f && (_settleAge < 0 || _settleAge >= BridgeTicks))
+                { _neutralHandoff = _correctDribbleBlend = false; _settleAge = -1; }
+                else if (_settleAge >= BridgeTicks) _settleAge = -1;
+            }
+            else _held = null;
+            return;
+        }
         ContactErrorForHarness = SwingErrorForHarness = PelvisShiftForHarness = 0;
         var fresh = Capture();
         if (pivot && !_wasPivot)
         {
             _anchor = (Transform3D[])_last.Clone();
-            _bridge.ResetContinuity(); _age = 0; _exiting = false;
+            _bridge.ResetContinuity(); _age = 0; _exiting = _neutralHandoff = false;
+            _settleAge = -1;
             _stanceAge = 0; _stepping = false;
             ChooseSupport(_anchor);
             BeginStep(_anchor);
@@ -144,13 +193,20 @@ public partial class PivotPose : SkeletonModifier3D
         {
             _anchor = (Transform3D[])_last.Clone();
             _bridge.ResetContinuity(); _age = 0; _exiting = true;
+            _neutralHandoff = !posture;
+            _settleAge = -1;
+            _handoffBraking = false;
             _neutralBridge.ResetContinuity();
             _correctDribbleBlend = intermediateDribble;
         }
         else { _age += step; if (pivot) _stanceAge += step; }
         _wasPivot = pivot;
         if (_exiting) fresh = DestinationPose(fresh);
-        float progress = Math.Clamp(_age / (float)BridgeTicks, 0, 1);
+        // Age zero returns the anchor unchanged. AnimationTree can still expose
+        // the departing Pivot sample on that tick; choose the exit hemisphere
+        // from the first actual neutral blend sample instead of that stale goal.
+        if (_exiting && _age == 1) _bridge.ResetContinuity();
+        float progress = Math.Clamp(_age / (float)(pivot ? BridgeTicks : ExitTicks), 0, 1);
         var result = _bridge.Blend(_anchor, pivot ? _pivotTarget : fresh, progress).Pose;
         if (pivot && _toe >= 0)
         {
@@ -183,19 +239,24 @@ public partial class PivotPose : SkeletonModifier3D
             // Unconstrained rotation blending can arc a toe below the flat
             // court between two valid poses. Minimal vertical pelvis clearance
             // avoids reintroducing the unstable leg IK branch during handoff.
-            var globals = CrossoverPoseBridge.Forward(_parents, result);
-            float lowest = Math.Min(
-                _skeleton.ToGlobal(globals[_skeleton.FindBone("mixamorig_LeftToe_End")].Origin).Y,
-                _skeleton.ToGlobal(globals[_skeleton.FindBone("mixamorig_RightToe_End")].Origin).Y);
-            if (lowest < 0)
-            {
-                result[_hips].Origin += _skeleton.GlobalBasis.Inverse() * (Vector3.Up * -lowest);
-                PelvisShiftForHarness = -lowest;
-            }
+            ClearCourt(result);
         }
         Write(result);
         _held = result;
-        if (_exiting && _age >= BridgeTicks) { _exiting = false; _held = null; }
+        _handoffSpeed = speed;
+        if (_exiting && _age >= ExitTicks) _exiting = false;
+    }
+
+    private float ClearCourt(Transform3D[] pose)
+    {
+        var globals = CrossoverPoseBridge.Forward(_parents, pose);
+        float lowest = Math.Min(
+            _skeleton.ToGlobal(globals[_skeleton.FindBone("mixamorig_LeftToe_End")].Origin).Y,
+            _skeleton.ToGlobal(globals[_skeleton.FindBone("mixamorig_RightToe_End")].Origin).Y);
+        if (lowest >= 0) return 0;
+        pose[_hips].Origin += _skeleton.GlobalBasis.Inverse() * (Vector3.Up * -lowest);
+        PelvisShiftForHarness = -lowest;
+        return -lowest;
     }
 
     private void ChooseSupport(Transform3D[] pose, bool transfer = false)
