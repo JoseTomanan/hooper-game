@@ -34,7 +34,7 @@ namespace Hooper.Player;
 public static class HeadingMath
 {
     /// <summary>Attacker-facing slides never create a movement-facing pivot.
-    /// A pre-existing plant must finish first, at the ordinary pivot rate.
+    /// A pre-existing turn latch must finish first, at the ordinary pivot rate.
     /// The completion tick advances only that pivot, never a second yaw step.</summary>
     public static HeadingStep StepDefensiveStance(float currentYaw, PivotState pivot,
         Vector2 toAttacker, double delta, float stanceTurnRateDeg,
@@ -95,7 +95,7 @@ public static class HeadingMath
     /// MaxTurnRateDeg 900 — brings a full 180° reversal down to
     /// ≈0.20 s (from the pre-#172 ≈0.55 s figure): the old value doubled as
     /// both "how committed does a back-turn feel" and "how slow is the
-    /// rate," and #172 splits those concerns — the pivot-in-place gate in
+    /// rate," and #172 splits those concerns — the bounded turn interval in
     /// <see cref="Step"/> now carries the commitment read, so the raw rate
     /// no longer needs to be as punishing.
     /// </param>
@@ -173,7 +173,7 @@ public static class HeadingMath
     /// rotation. Exactly this value counts as "forward-ish" (no plant) —
     /// the comparison against the threshold is strict-greater-than.
     /// </param>
-    /// <returns>The new yaw, the pivot state to persist, and whether movement is currently gated.</returns>
+    /// <returns>The new yaw, the pivot state to persist, and whether the ordinary reduced-speed turn is still owed.</returns>
     public static HeadingStep Step(
         float currentYaw,
         PivotState pivot,
@@ -194,7 +194,7 @@ public static class HeadingMath
             bool reached  = MathF.Abs(AngleDiff(rotated, pivot.LatchedYaw)) < AngleEpsilon;
 
             // Reaching the latched facing on this tick both clears the debt
-            // and immediately un-gates movement — no extra settle tick.
+            // and immediately restores ordinary travel — no extra settle tick.
             return reached
                 ? new HeadingStep(rotated, PivotState.None, false)
                 : new HeadingStep(rotated, pivot, true);
@@ -207,11 +207,9 @@ public static class HeadingMath
         float thresholdRad = pivotThresholdDeg * MathF.PI / 180f;
 
         // The >threshold check gates LATCH CREATION only. Once a latch
-        // exists, the player stays planted until the latched facing is
-        // actually reached — issue #172's acceptance criterion is "a held
-        // input > 90° produces zero displacement until Heading reaches
-        // target, then movement begins," so the shrinking mid-pivot diff
-        // must NOT be re-classified as "forward-ish" and ungate early.
+        // exists, the reduced-speed interval remains owed until the latched
+        // facing is actually reached (#430). The shrinking mid-turn diff must
+        // NOT be re-classified as "forward-ish" and restore full travel early.
         if (!pivot.HasLatch && !(MathF.Abs(diff) > thresholdRad))
         {
             // Forward-ish turn with no pivot debt: resolves exactly like
