@@ -269,6 +269,21 @@ shards and a separate rendered-pivot job. The commands above reproduce the full
 catalog; this report does not substitute a compile or selected unit tests for
 those checks.
 
+The first CI run also exposed a stale premise in the older rendered-evidence
+spike. After its dribble/fadeaway sequence, a fixed world-forward flick differed
+from the actual heading by only 1.4607553 radians (about 83.696 degrees), so it
+correctly did not create a pivot and the fixture timed out. The fixture now
+presses the opposite live heading through production Input, records/checks the
+actual sampled angle against the strict threshold, then releases one tick later.
+It retains the real Pivot animation, camera, persisted-image and mutation guards.
+A controlled old-world-forward input fails the new precondition before the
+repaired capture succeeds; this is a fixture repair, not a relaxed gameplay gate.
+[The fixture proof](evidence/0430/rendered-spike-fixture-summary.json) records
+the old-input failure, exact source restoration, two passing native captures
+at identical frames 120/156/254/279 and camera/FOV, both persisted-artifact
+verifiers, and the retained missing-intended-state negative control. The actual
+new input angle is 3.1415925 radians.
+
 ## Source grounding
 
 The existing engine contracts remain the implementation boundary:
