@@ -1,0 +1,681 @@
+{
+  "schema": "hooper-430-spike-fixture-proof/v1",
+  "result": "PASS",
+  "commit": "047a16ae6e6b0fca3edb5048e8216dc9a9ffec1f",
+  "sourceSha256": "d00d3eafb087813613c72e2eaf6342de3fc93572c82ebb7c03191a062f7773df",
+  "commands": [
+    {
+      "name": "old-world-forward-build",
+      "command": [
+        "dotnet",
+        "build",
+        "HOOPER GAME.csproj",
+        "--no-restore",
+        "-p:IncludeIntegrationHarness=true",
+        "-v:q"
+      ],
+      "exit": 0,
+      "seconds": 8.270625400000426,
+      "log": ".godot\\430-spike-proof\\old-world-forward-build.stdout.log"
+    },
+    {
+      "name": "old-world-forward",
+      "command": [
+        "C:\\Users\\The King\\AppData\\Local\\GodotPortable\\Godot_v4.7.1-stable_mono_win64\\Godot_v4.7.1-stable_mono_win64_console.exe",
+        "--path",
+        "C:\\Users\\The King\\Documents\\GitHub\\hooper-game",
+        "--resolution",
+        "480x270",
+        "--rendering-method",
+        "mobile",
+        "--fixed-fps",
+        "60",
+        "--disable-vsync",
+        "--log-file",
+        "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\430-spike-proof\\old-world-forward.godot.log",
+        "--write-movie",
+        "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\430-spike-proof\\old-world-forward\\capture.avi",
+        "res://tests/integration/RenderedEvidenceCapture.tscn",
+        "--",
+        "--capture-role=local",
+        "--capture-output=C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\430-spike-proof\\old-world-forward",
+        "--capture-commit=047a16ae6e6b0fca3edb5048e8216dc9a9ffec1f",
+        "--capture-port=25503"
+      ],
+      "exit": 1,
+      "seconds": 14.990058500000032,
+      "log": ".godot\\430-spike-proof\\old-world-forward.stdout.log"
+    },
+    {
+      "name": "restored-clean-build",
+      "command": [
+        "dotnet",
+        "build",
+        "HOOPER GAME.csproj",
+        "--no-restore",
+        "-p:IncludeIntegrationHarness=true",
+        "-v:q"
+      ],
+      "exit": 0,
+      "seconds": 6.8699414000002434,
+      "log": ".godot\\430-spike-proof\\restored-clean-build.stdout.log"
+    },
+    {
+      "name": "a",
+      "command": [
+        "C:\\Users\\The King\\AppData\\Local\\GodotPortable\\Godot_v4.7.1-stable_mono_win64\\Godot_v4.7.1-stable_mono_win64_console.exe",
+        "--path",
+        "C:\\Users\\The King\\Documents\\GitHub\\hooper-game",
+        "--resolution",
+        "480x270",
+        "--rendering-method",
+        "mobile",
+        "--fixed-fps",
+        "60",
+        "--disable-vsync",
+        "--log-file",
+        "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\430-spike-proof\\a.godot.log",
+        "--write-movie",
+        "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\430-spike-proof\\a\\capture.avi",
+        "res://tests/integration/RenderedEvidenceCapture.tscn",
+        "--",
+        "--capture-role=local",
+        "--capture-output=C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\430-spike-proof\\a",
+        "--capture-commit=047a16ae6e6b0fca3edb5048e8216dc9a9ffec1f",
+        "--capture-port=25503"
+      ],
+      "exit": 0,
+      "seconds": 14.70744300000024,
+      "log": ".godot\\430-spike-proof\\a.stdout.log"
+    },
+    {
+      "name": "a-verify",
+      "command": [
+        "C:\\Users\\The King\\AppData\\Local\\Programs\\Python\\Python314\\python.exe",
+        "tools/verify_rendered_evidence.py",
+        "--local",
+        "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\430-spike-proof\\a\\manifest.json"
+      ],
+      "exit": 0,
+      "seconds": 0.4874064999999064,
+      "log": ".godot\\430-spike-proof\\a-verify.stdout.log"
+    },
+    {
+      "name": "b",
+      "command": [
+        "C:\\Users\\The King\\AppData\\Local\\GodotPortable\\Godot_v4.7.1-stable_mono_win64\\Godot_v4.7.1-stable_mono_win64_console.exe",
+        "--path",
+        "C:\\Users\\The King\\Documents\\GitHub\\hooper-game",
+        "--resolution",
+        "480x270",
+        "--rendering-method",
+        "mobile",
+        "--fixed-fps",
+        "60",
+        "--disable-vsync",
+        "--log-file",
+        "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\430-spike-proof\\b.godot.log",
+        "--write-movie",
+        "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\430-spike-proof\\b\\capture.avi",
+        "res://tests/integration/RenderedEvidenceCapture.tscn",
+        "--",
+        "--capture-role=local",
+        "--capture-output=C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\430-spike-proof\\b",
+        "--capture-commit=047a16ae6e6b0fca3edb5048e8216dc9a9ffec1f",
+        "--capture-port=25503"
+      ],
+      "exit": 0,
+      "seconds": 14.692034000000149,
+      "log": ".godot\\430-spike-proof\\b.stdout.log"
+    },
+    {
+      "name": "b-verify",
+      "command": [
+        "C:\\Users\\The King\\AppData\\Local\\Programs\\Python\\Python314\\python.exe",
+        "tools/verify_rendered_evidence.py",
+        "--local",
+        "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\430-spike-proof\\b\\manifest.json"
+      ],
+      "exit": 0,
+      "seconds": 0.4857857000001786,
+      "log": ".godot\\430-spike-proof\\b-verify.stdout.log"
+    },
+    {
+      "name": "missing-intended-state",
+      "command": [
+        "C:\\Users\\The King\\AppData\\Local\\GodotPortable\\Godot_v4.7.1-stable_mono_win64\\Godot_v4.7.1-stable_mono_win64_console.exe",
+        "--path",
+        "C:\\Users\\The King\\Documents\\GitHub\\hooper-game",
+        "--resolution",
+        "480x270",
+        "--rendering-method",
+        "mobile",
+        "--fixed-fps",
+        "60",
+        "--disable-vsync",
+        "--log-file",
+        "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\430-spike-proof\\missing-intended-state.godot.log",
+        "--write-movie",
+        "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\430-spike-proof\\missing-intended-state\\capture.avi",
+        "res://tests/integration/RenderedEvidenceCapture.tscn",
+        "--",
+        "--capture-role=local",
+        "--capture-output=C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\430-spike-proof\\missing-intended-state",
+        "--capture-commit=047a16ae6e6b0fca3edb5048e8216dc9a9ffec1f",
+        "--capture-port=25503",
+        "--capture-mutation=missing-intended-state"
+      ],
+      "exit": 1,
+      "seconds": 9.174481099999866,
+      "log": ".godot\\430-spike-proof\\missing-intended-state.stdout.log"
+    }
+  ],
+  "captures": [
+    {
+      "name": "old-world-forward",
+      "exit": 1,
+      "directory": ".godot\\430-spike-proof\\old-world-forward",
+      "manifestResult": "fail",
+      "eventAngles": [
+        {
+          "name": "fadeaway-release",
+          "detail": "angleRadians=2.7173743, maxTurnRateDeg=90",
+          "physicsFrame": 254
+        },
+        {
+          "name": "input-down",
+          "detail": "opposite-heading pivot reversal; angleRadians=1.4607553",
+          "physicsFrame": 278
+        }
+      ],
+      "captures": [
+        {
+          "label": "stationary-to-moving-dribble",
+          "physicsFrame": 120,
+          "cameraTransform": [
+            0,
+            8,
+            9.705208,
+            1,
+            0,
+            0,
+            0,
+            0.7071068,
+            -0.7071068,
+            0,
+            0.7071068,
+            0.7071068
+          ],
+          "cameraFov": 75,
+          "expectedAnimationState": "Dribble",
+          "observedAnimationState": "DribbleRight",
+          "byteLength": 57822
+        },
+        {
+          "label": "both-hands-direction-change",
+          "physicsFrame": 156,
+          "cameraTransform": [
+            0,
+            8,
+            9.705208,
+            1,
+            0,
+            0,
+            0,
+            0.7071068,
+            -0.7071068,
+            0,
+            0.7071068,
+            0.7071068
+          ],
+          "cameraFov": 75,
+          "expectedAnimationState": "BehindTheBackStartupRight",
+          "observedAnimationState": "BehindTheBackStartupRight",
+          "byteLength": 57874
+        },
+        {
+          "label": "shot-fadeaway",
+          "physicsFrame": 254,
+          "cameraTransform": [
+            0,
+            8,
+            9.705208,
+            1,
+            0,
+            0,
+            0,
+            0.7071068,
+            -0.7071068,
+            0,
+            0.7071068,
+            0.7071068
+          ],
+          "cameraFov": 75,
+          "expectedAnimationState": "FadeawayActive",
+          "observedAnimationState": "FadeawayActive",
+          "byteLength": 56191
+        }
+      ],
+      "sourceState": "controlled single-line old-world-forward mutation",
+      "renderer": {
+        "engineVersion": "4.7.1-stable (official)",
+        "rendererSetting": "mobile",
+        "effectiveRenderingMethod": "unknown",
+        "effectiveDisplayDriver": "Windows",
+        "adapterName": "NVIDIA GeForce RTX 3050",
+        "adapterApiVersion": "12_0"
+      },
+      "pngDimensions": {
+        "stationary-to-moving-dribble": [
+          480,
+          270
+        ],
+        "both-hands-direction-change": [
+          480,
+          270
+        ],
+        "shot-fadeaway": [
+          480,
+          270
+        ]
+      },
+      "movie": {
+        "bytes": 10242516,
+        "riffHeader": "RIFF",
+        "type": "AVI ",
+        "writerFinalized": true,
+        "shippedVerifierContract": "nonempty AVI, normal completed writer; no video decode claim"
+      },
+      "extraRiffSizeProbe": {
+        "declaredRiffBytes": 10242446,
+        "differenceFromFileBytes": 70,
+        "note": "Additional probe beyond shipped verifier. All four outputs have the same70-byte difference; no container-integrity verdict inferred."
+      },
+      "failureLines": [
+        "[rendered-evidence] FAIL: pivot fixture did not establish a large-angle turn: 1.4607553 radians."
+      ]
+    },
+    {
+      "name": "a",
+      "exit": 0,
+      "directory": ".godot\\430-spike-proof\\a",
+      "manifestResult": "pass",
+      "eventAngles": [
+        {
+          "name": "fadeaway-release",
+          "detail": "angleRadians=2.7173743, maxTurnRateDeg=90",
+          "physicsFrame": 254
+        },
+        {
+          "name": "input-down",
+          "detail": "opposite-heading pivot reversal; angleRadians=3.1415925",
+          "physicsFrame": 278
+        }
+      ],
+      "captures": [
+        {
+          "label": "stationary-to-moving-dribble",
+          "physicsFrame": 120,
+          "cameraTransform": [
+            0,
+            8,
+            9.705208,
+            1,
+            0,
+            0,
+            0,
+            0.7071068,
+            -0.7071068,
+            0,
+            0.7071068,
+            0.7071068
+          ],
+          "cameraFov": 75,
+          "expectedAnimationState": "Dribble",
+          "observedAnimationState": "DribbleRight",
+          "byteLength": 57822
+        },
+        {
+          "label": "both-hands-direction-change",
+          "physicsFrame": 156,
+          "cameraTransform": [
+            0,
+            8,
+            9.705208,
+            1,
+            0,
+            0,
+            0,
+            0.7071068,
+            -0.7071068,
+            0,
+            0.7071068,
+            0.7071068
+          ],
+          "cameraFov": 75,
+          "expectedAnimationState": "BehindTheBackStartupRight",
+          "observedAnimationState": "BehindTheBackStartupRight",
+          "byteLength": 57874
+        },
+        {
+          "label": "shot-fadeaway",
+          "physicsFrame": 254,
+          "cameraTransform": [
+            0,
+            8,
+            9.705208,
+            1,
+            0,
+            0,
+            0,
+            0.7071068,
+            -0.7071068,
+            0,
+            0.7071068,
+            0.7071068
+          ],
+          "cameraFov": 75,
+          "expectedAnimationState": "FadeawayActive",
+          "observedAnimationState": "FadeawayActive",
+          "byteLength": 56191
+        },
+        {
+          "label": "pivot",
+          "physicsFrame": 279,
+          "cameraTransform": [
+            0,
+            8,
+            9.705208,
+            1,
+            0,
+            0,
+            0,
+            0.7071068,
+            -0.7071068,
+            0,
+            0.7071068,
+            0.7071068
+          ],
+          "cameraFov": 75,
+          "expectedAnimationState": "Pivot",
+          "observedAnimationState": "Pivot",
+          "byteLength": 56121
+        }
+      ],
+      "sourceState": "restored committed production fixture",
+      "renderer": {
+        "engineVersion": "4.7.1-stable (official)",
+        "rendererSetting": "mobile",
+        "effectiveRenderingMethod": "unknown",
+        "effectiveDisplayDriver": "Windows",
+        "adapterName": "NVIDIA GeForce RTX 3050",
+        "adapterApiVersion": "12_0"
+      },
+      "pngDimensions": {
+        "stationary-to-moving-dribble": [
+          480,
+          270
+        ],
+        "both-hands-direction-change": [
+          480,
+          270
+        ],
+        "shot-fadeaway": [
+          480,
+          270
+        ],
+        "pivot": [
+          480,
+          270
+        ]
+      },
+      "movie": {
+        "bytes": 10313052,
+        "riffHeader": "RIFF",
+        "type": "AVI ",
+        "writerFinalized": true,
+        "shippedVerifierContract": "nonempty AVI, normal completed writer; no video decode claim"
+      },
+      "extraRiffSizeProbe": {
+        "declaredRiffBytes": 10312982,
+        "differenceFromFileBytes": 70,
+        "note": "Additional probe beyond shipped verifier. All four outputs have the same70-byte difference; no container-integrity verdict inferred."
+      },
+      "failureLines": []
+    },
+    {
+      "name": "b",
+      "exit": 0,
+      "directory": ".godot\\430-spike-proof\\b",
+      "manifestResult": "pass",
+      "eventAngles": [
+        {
+          "name": "fadeaway-release",
+          "detail": "angleRadians=2.7173743, maxTurnRateDeg=90",
+          "physicsFrame": 254
+        },
+        {
+          "name": "input-down",
+          "detail": "opposite-heading pivot reversal; angleRadians=3.1415925",
+          "physicsFrame": 278
+        }
+      ],
+      "captures": [
+        {
+          "label": "stationary-to-moving-dribble",
+          "physicsFrame": 120,
+          "cameraTransform": [
+            0,
+            8,
+            9.705208,
+            1,
+            0,
+            0,
+            0,
+            0.7071068,
+            -0.7071068,
+            0,
+            0.7071068,
+            0.7071068
+          ],
+          "cameraFov": 75,
+          "expectedAnimationState": "Dribble",
+          "observedAnimationState": "DribbleRight",
+          "byteLength": 57822
+        },
+        {
+          "label": "both-hands-direction-change",
+          "physicsFrame": 156,
+          "cameraTransform": [
+            0,
+            8,
+            9.705208,
+            1,
+            0,
+            0,
+            0,
+            0.7071068,
+            -0.7071068,
+            0,
+            0.7071068,
+            0.7071068
+          ],
+          "cameraFov": 75,
+          "expectedAnimationState": "BehindTheBackStartupRight",
+          "observedAnimationState": "BehindTheBackStartupRight",
+          "byteLength": 57874
+        },
+        {
+          "label": "shot-fadeaway",
+          "physicsFrame": 254,
+          "cameraTransform": [
+            0,
+            8,
+            9.705208,
+            1,
+            0,
+            0,
+            0,
+            0.7071068,
+            -0.7071068,
+            0,
+            0.7071068,
+            0.7071068
+          ],
+          "cameraFov": 75,
+          "expectedAnimationState": "FadeawayActive",
+          "observedAnimationState": "FadeawayActive",
+          "byteLength": 56191
+        },
+        {
+          "label": "pivot",
+          "physicsFrame": 279,
+          "cameraTransform": [
+            0,
+            8,
+            9.705208,
+            1,
+            0,
+            0,
+            0,
+            0.7071068,
+            -0.7071068,
+            0,
+            0.7071068,
+            0.7071068
+          ],
+          "cameraFov": 75,
+          "expectedAnimationState": "Pivot",
+          "observedAnimationState": "Pivot",
+          "byteLength": 56121
+        }
+      ],
+      "sourceState": "restored committed production fixture",
+      "renderer": {
+        "engineVersion": "4.7.1-stable (official)",
+        "rendererSetting": "mobile",
+        "effectiveRenderingMethod": "unknown",
+        "effectiveDisplayDriver": "Windows",
+        "adapterName": "NVIDIA GeForce RTX 3050",
+        "adapterApiVersion": "12_0"
+      },
+      "pngDimensions": {
+        "stationary-to-moving-dribble": [
+          480,
+          270
+        ],
+        "both-hands-direction-change": [
+          480,
+          270
+        ],
+        "shot-fadeaway": [
+          480,
+          270
+        ],
+        "pivot": [
+          480,
+          270
+        ]
+      },
+      "movie": {
+        "bytes": 10313052,
+        "riffHeader": "RIFF",
+        "type": "AVI ",
+        "writerFinalized": true,
+        "shippedVerifierContract": "nonempty AVI, normal completed writer; no video decode claim"
+      },
+      "extraRiffSizeProbe": {
+        "declaredRiffBytes": 10312982,
+        "differenceFromFileBytes": 70,
+        "note": "Additional probe beyond shipped verifier. All four outputs have the same70-byte difference; no container-integrity verdict inferred."
+      },
+      "failureLines": []
+    },
+    {
+      "name": "missing-intended-state",
+      "exit": 1,
+      "directory": ".godot\\430-spike-proof\\missing-intended-state",
+      "manifestResult": "fail",
+      "eventAngles": [],
+      "captures": [],
+      "sourceState": "restored committed production fixture",
+      "renderer": {
+        "engineVersion": "4.7.1-stable (official)",
+        "rendererSetting": "mobile",
+        "effectiveRenderingMethod": "unknown",
+        "effectiveDisplayDriver": "Windows",
+        "adapterName": "NVIDIA GeForce RTX 3050",
+        "adapterApiVersion": "12_0"
+      },
+      "pngDimensions": {},
+      "movie": {
+        "bytes": 4483090,
+        "riffHeader": "RIFF",
+        "type": "AVI ",
+        "writerFinalized": true,
+        "shippedVerifierContract": "nonempty AVI, normal completed writer; no video decode claim"
+      },
+      "extraRiffSizeProbe": {
+        "declaredRiffBytes": 4483020,
+        "differenceFromFileBytes": 70,
+        "note": "Additional probe beyond shipped verifier. All four outputs have the same70-byte difference; no container-integrity verdict inferred."
+      },
+      "failureLines": [
+        "[rendered-evidence] FAIL: stationary-to-moving-dribble: intended live AnimationTree state 'DefinitelyMissingState' was not observed at capture (actual 'DribbleRight')."
+      ]
+    }
+  ],
+  "mutation": {
+    "before": "Vector2 opposite = -HeadingMath.Forward(player.Heading);",
+    "after": "Vector2 opposite = new Vector2(0f, -1f);",
+    "meaning": "old fixed-world-forward intent; new precondition retained"
+  },
+  "redDetected": true,
+  "restoration": {
+    "source": "tests\\integration\\RenderedEvidenceCapture.cs",
+    "expectedSha256": "d00d3eafb087813613c72e2eaf6342de3fc93572c82ebb7c03191a062f7773df",
+    "actualSha256": "d00d3eafb087813613c72e2eaf6342de3fc93572c82ebb7c03191a062f7773df",
+    "exactBytes": true,
+    "stillExactAfterAllRuns": true
+  },
+  "repeatChecks": [
+    {
+      "label": "stationary-to-moving-dribble",
+      "checks": {
+        "physicsFrame": true,
+        "cameraTransform": true,
+        "cameraFov": true
+      },
+      "physicsFrame": 120
+    },
+    {
+      "label": "both-hands-direction-change",
+      "checks": {
+        "physicsFrame": true,
+        "cameraTransform": true,
+        "cameraFov": true
+      },
+      "physicsFrame": 156
+    },
+    {
+      "label": "shot-fadeaway",
+      "checks": {
+        "physicsFrame": true,
+        "cameraTransform": true,
+        "cameraFov": true
+      },
+      "physicsFrame": 254
+    },
+    {
+      "label": "pivot",
+      "checks": {
+        "physicsFrame": true,
+        "cameraTransform": true,
+        "cameraFov": true
+      },
+      "physicsFrame": 279
+    }
+  ],
+  "missingStateDetected": true,
+  "repeatMethod": "For each exact LOCAL_LABELS, compare physicsFrame, cameraTransform, cameraFov by Python equality, as tools/verify_rendered_evidence.py main(); a/b --local verifiers decode actual PNG bytes and validate live-state provenance."
+}

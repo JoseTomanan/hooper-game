@@ -590,3 +590,28 @@ steering Active, or adding a cosmetic-only lateral offset. Each would change
 the commitment or separate the displayed body from its authoritative root.
 BehindTheBack, BetweenTheLegs, InAndOut and Spin retain their original shared
 composition without the Crossover-specific contribution.
+
+
+## Amendment 2026-10-25 - Moving ordinary turns (#430)
+
+The maintainer explicitly revisited the movement-stick pivot on 2026-10-22:
+retain the approximately 0.21-second reversal, but blend slow real travel during
+it into full-speed locomotion. This supersedes the zero-displacement/frozen-feet
+requirement in "Back-turn legibility relaxed for the movement-stick pivot" above,
+only for ordinary movement-stick turning. It does not relax any committed move's
+Startup/Active/Recovery, cancellation, plant or heading contract.
+
+An owed >90-degree turn retains its authoritative heading/latch semantics.
+Held travel has a bounded reduced-speed target and finite acceleration/braking;
+release brakes existing motion without commanding travel from the latch.
+The displayed body steps and transfers support with fixed contact per stance,
+rather than sliding a fully planted pose with the collider. Matching technical
+policy, mode/lock exceptions and rejected alternatives are recorded in
+[ADR-0010's #430 amendment](0010-authoritative-heading.md#amendment-2026-10-25--slow-travel-during-the-ordinary-movement-stick-turn-430).
+
+Reason: the human requested movement/animation continuity rather than a stationary
+wait followed by full-speed locomotion. Rejected: the superseded stationary-then-
+move approach, the withdrawn 2/3-duration retune, and instant full-speed reversal.
+This is a scoped human decision under ADR-0014; no reference-game claim approves
+its magnitude. Final appearance/speed acceptance stays #184/#173, tuning #238.
+Status remains Accepted.

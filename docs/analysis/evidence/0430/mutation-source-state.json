@@ -1,0 +1,15 @@
+{
+  "revision": "31cdc03714e06075bbb4ed9dbfe199b749ae1b5b",
+  "sourceState": "exact execution-time bytes; may include uncommitted candidate changes",
+  "workingTree": " M .agent-skills/canonical/hooper-verification-and-qa/SKILL.md\n M .agents/skills/hooper-verification-and-qa/SKILL.md\n M .claude/skills/hooper-verification-and-qa/SKILL.md\n M EDITOR_TASKS.md\n?? docs/analysis/0430-moving-turns.md\n?? docs/analysis/evidence/0430/\n?? tools/package_moving_turn_evidence.py\n",
+  "originals": {
+    "scripts\\Player\\PlayerController.cs": "1f6092b05936c75c6f6ac8928806cdb9351ed0dd5ac2595af2cc5b565d9b81e6",
+    "scripts\\Player\\MovementMath.cs": "40665aebf80bd25c014b6a69ce44a2358d4dae626592e90f811dc6669b319305",
+    "scripts\\Player\\PivotPose.cs": "8ffb9fe3e48ec8a62f09b753d2b4de7a6519de7dab7ea7621d23924e26b26032"
+  },
+  "recipes": {
+    "old-zero-gate": "replace the ordinary pivot ComputeTurnVelocity assignment with Velocity = Vector3.Zero;",
+    "full-speed-turn-target": "replace MovementMath turn target fraction with 1f",
+    "frozen-foot": "assign _swingEnd = _swingStart immediately before _swingEnd.Y = 0"
+  }
+}

@@ -427,6 +427,9 @@ PostPlayTest.tscn|contact-unset
 PostPresentationTest.tscn|presentation
 CommittedClipHookupAudit.tscn|
 """
+_ADDITIONAL_SINGLE_ROWS += "PivotPlantTest.tscn|movement-matrix\n"
+_ADDITIONAL_SINGLE_ROWS += "NetSprintTest.tscn|moving-turn\n"
+
 _ADDITIONAL_SINGLE_ROWS += "".join(
     f"JumpShotHeadingTest.tscn|matrix-{angle}-{entry}-{hand}\n"
     for angle in (0, 45, 89, 90, 91, 135, 180)
@@ -452,6 +455,7 @@ _ADDITIONAL_MULTIPROCESS_ROWS: tuple[tuple[str, str, str, tuple[str, ...]], ...]
     ("net-held-possession-client", "tests/integration/run-net-held-possession.sh godot client", "NetHeldPossessionTest.tscn", (".godot/harness-logs/net-held-possession-client-*.log",)),
     ("crossover-continuity", "tests/integration/run-crossover-continuity.sh godot", "CrossoverContinuityCapture.tscn", (".godot/crossover-continuity/catalog-*/**/*",)),
     ("pivot-continuity", "tests/integration/run-pivot-continuity.sh godot", "PivotContinuityCapture.tscn", (".godot/pivot-continuity/catalog-*/**/*",)),
+    ("moving-turn-poses", "tests/integration/run-moving-turn-measurements.sh godot", "PivotContinuityCapture.tscn", (".godot/moving-turn-measurements/**/*",)),
     ("remote-presentation-lifecycle", "tests/integration/run-remote-presentation-lifecycle.sh godot", "RemotePresentationLifecycleTest.tscn", (".godot/remote-presentation-lifecycle/*",)),
 
     ("net-rig-presentation-left", "tests/integration/run-net-rig-presentation.sh godot left", "NetRigPresentationTest.tscn", (".godot/harness-logs/net-rig-presentation-left-*.log",)),
@@ -529,7 +533,7 @@ def _multiprocess_cases(rows: Iterable[tuple[str, str, str, tuple[str, ...]]]) -
             scenes=(SceneMetadata(f"res://tests/integration/{scene_name}"),),
             argv=tuple(shlex.split(command)),
             tags=tuple(tags),
-            timeout_seconds=480.0 if case_id == "pivot-continuity" else 240.0,
+            timeout_seconds=600.0 if case_id == "moving-turn-poses" else 480.0 if case_id == "pivot-continuity" else 240.0,
             log_policy=LogPolicy("adapter-owned", ";".join(artifacts)),
             artifact_globs=artifacts,
         )
@@ -731,6 +735,7 @@ _SINGLE_FAMILY_MEASUREMENTS: tuple[tuple[float, tuple[str, ...]], ...] = (
 _MULTIPROCESS_CASE_SECONDS = {
     # #416: eighteen repeated captures, two negative controls and four context captures.
     "pivot-continuity": 250.0,
+    "moving-turn-poses": 300.0,
     "net-handshake": 6.0,
     "net-state-sync": 7.0,
     "net-node-replication": 6.0,

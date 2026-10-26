@@ -120,6 +120,7 @@ jobs:
             .godot/dedicated-game-*/**
             .godot/crossover-continuity/**
             .godot/pivot-continuity/**
+            .godot/moving-turn-measurements/**
             .godot/remote-presentation-lifecycle/**
             .godot/committed-replay/**
             .godot/production-contact/**
@@ -219,7 +220,7 @@ jobs:
       - name: Verify pivot poses and capture both views
         run: >-
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 python3 tools/run_pivot_regression.py
-          --godot godot --rendered --compatibility --paced --resolution 480x270
+          --godot godot --rendered --compatibility --paced --resolution 480x270 --local-render-delay-ms 40
           --output .godot/pivot-rendered --commit "${{ github.sha }}"
       - name: Upload pivot traces, rendered frames and logs
         if: always()

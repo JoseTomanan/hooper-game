@@ -17,6 +17,55 @@ namespace Hooper.Ball.Tests;
 /// </summary>
 public class MovementMathTests
 {
+    [Fact]
+    public void ComputeTurnVelocity_Reversal_BrakesFiniteMomentumBeforeBuildingReverseSpeed()
+    {
+        Vector3 result = MovementMath.ComputeTurnVelocity(new Vector3(0, 0, 6),
+            new Vector3(0, 0, -1), 1.0 / 60, 6, 45, 70, MathF.PI);
+        Assert.InRange(result.Z, 4.83332f, 4.83335f);
+        Assert.True(result.Z > 0, "A reverse request must retain incoming momentum on its first tick.");
+    }
+
+    [Theory]
+    [InlineData(1f)]
+    [InlineData(6f)]
+    [InlineData(9f)]
+    public void ComputeTurnVelocity_Released_StopsWithinDecelBudgetWithoutReversing(float speed)
+    {
+        Vector3 velocity = new(0, 0, speed);
+        int ticks = (int)MathF.Ceiling(speed / 70 * 60);
+        for (int tick = 0; tick < ticks; tick++)
+        {
+            float previous = velocity.Z;
+            velocity = MovementMath.ComputeTurnVelocity(velocity, Vector3.Zero,
+                1.0 / 60, speed, 45, 70, MathF.PI);
+            Assert.InRange(velocity.Z, 0, previous);
+            Assert.InRange(previous - velocity.Z, 0, 70f / 60 + 1e-5f);
+        }
+        Assert.Equal(Vector3.Zero, velocity);
+    }
+
+    [Theory]
+    [InlineData(1f, 0f, .65f)]
+    [InlineData(6f, 180f, .35f)]
+    [InlineData(9f, 90f, .5f)]
+    [InlineData(6f, 360f, .35f)]
+    public void ComputeTurnVelocity_LargeStep_ClampsAtAngleScaledModeTarget(float speed, float degrees, float fraction)
+    {
+        Vector3 velocity = MovementMath.ComputeTurnVelocity(Vector3.Zero, Vector3.Right,
+            10, speed, 45, 70, degrees * MathF.PI / 180);
+        Assert.InRange(velocity.X, speed * fraction - 1e-5f, speed * fraction + 1e-5f);
+        Assert.Equal(0, velocity.Z);
+    }
+
+    [Fact]
+    public void ComputeTurnVelocity_FromRest_BuildsSpeedAtFiniteAcceleration()
+    {
+        Vector3 velocity = MovementMath.ComputeTurnVelocity(Vector3.Zero, Vector3.Right,
+            1.0 / 60, 6, 45, 70, MathF.PI);
+        Assert.InRange(velocity.X, .74999f, .75001f);
+    }
+
     // ── Acceleration ──────────────────────────────────────────────────────────
 
     [Fact]

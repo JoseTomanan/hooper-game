@@ -10,31 +10,53 @@ public partial class PivotPose : SkeletonModifier3D
 {
     public PlayerController Player { get; set; }
     public AnimationPlayer AnimationPlayer { get; set; }
-    // Six intervals distribute the reproduced running/dribble endpoint gaps;
-    // see docs/analysis/0416-pivot-continuity.md. This is not a move/heading timer.
+    // Entry retains #416's six intervals; travelling exit needs seven to keep
+    // the toe-tip arc plus body travel within the unchanged forward-control
+    // envelope (#430). These presentation clocks never change move/heading time.
     private const int BridgeTicks = 6;
+    private const int ExitTicks = 7;
     private const int LandingTicks = 4;
+    // One short step per eight consumed source ticks, including a four-tick
+    // landing and grounded stance. No wall-clock phase runs during remote holds.
+    private const int StanceTicks = 8;
     private Skeleton3D _skeleton;
     private int[] _parents;
     private int _hips, _toe;
     private CrossoverPoseBridge.LimbChain _leg;
     private CrossoverPoseBridge _bridge;
     private CrossoverPoseBridge _neutralBridge;
+    private CrossoverPoseBridge _settleBridge;
     private Transform3D[] _last, _anchor, _held;
     private Transform3D[] _pivotTarget;
     private Transform3D _lastWorld;
     private Vector3 _contact, _landingStart;
     private bool _wasPivot, _exiting;
     private bool _correctDribbleBlend;
+    private bool _neutralHandoff;
+    private Transform3D[] _settleAnchor;
+    private int _settleAge = -1;
+    private float _handoffSpeed;
+    private bool _handoffBraking;
     private long _clock = -1;
     private int _age;
+    private int _stanceAge;
+    private bool _stepping;
+    private int _swingToe;
+    private CrossoverPoseBridge.LimbChain _swingLeg;
+    private Vector3 _swingStart, _swingEnd;
     private (int Epoch, int Resync) _reset;
     private bool _buffered;
 
     public bool AppliedForHarness { get; private set; }
     public string SupportToeForHarness => _toe >= 0 && _skeleton != null ? _skeleton.GetBoneName(_toe) : "";
     public int AgeForHarness => _age;
+    public int StanceAgeForHarness => _stanceAge;
     public float ContactErrorForHarness { get; private set; }
+    public float SwingErrorForHarness { get; private set; }
+    public bool SteppingForHarness => _wasPivot && _stepping;
+    public string SwingToeForHarness => _swingToe >= 0 && _skeleton != null ? _skeleton.GetBoneName(_swingToe) : "";
+    public Vector3 SupportTargetForHarness { get; private set; }
+    public Vector3 SwingTargetForHarness { get; private set; }
     public float PelvisShiftForHarness { get; private set; }
 
     public override void _Ready()
@@ -53,8 +75,13 @@ public partial class PivotPose : SkeletonModifier3D
             chains.Add(new(_skeleton.FindBone("mixamorig_" + side + "Arm"),
                 _skeleton.FindBone("mixamorig_" + side + "ForeArm"), _skeleton.FindBone("mixamorig_" + side + "Hand")));
         }
-        _bridge = new CrossoverPoseBridge(_parents, chains.ToArray());
-        _neutralBridge = new CrossoverPoseBridge(_parents, chains.ToArray(), followAnchorPose: true);
+        // Dedicated contact solves below own the legs during a turn. A second
+        // endpoint IK solve in the generic bridge can choose a different knee
+        // branch at mid-blend. Unconstrained exit legs use the continuous bone
+        // rotation blend; only arms need generic endpoint interpolation here.
+        _bridge = new CrossoverPoseBridge(_parents, chains.FindAll(chain => !chain.IsSupport).ToArray());
+        _neutralBridge = new CrossoverPoseBridge(_parents, Array.Empty<CrossoverPoseBridge.LimbChain>(), followAnchorPose: true);
+        _settleBridge = new CrossoverPoseBridge(_parents, Array.Empty<CrossoverPoseBridge.LimbChain>());
         Cache();
         // Snapshot the final evaluated pose, including other modifiers. Godot restores
         // their input afterwards; sampling in _Process would cache the wrong endpoint.
@@ -87,8 +114,9 @@ public partial class PivotPose : SkeletonModifier3D
         var reset = buffered ? Player.PivotPresentationReset : default;
         if (_clock >= 0 && (buffered != _buffered || reset != _reset || clock < _clock || clock - _clock > 1))
         {
-            _wasPivot = _exiting = _correctDribbleBlend = false;
+            _wasPivot = _exiting = _correctDribbleBlend = _neutralHandoff = false;
             _anchor = _held = null;
+            _settleAge = -1;
             Cache();
         }
         int step = _clock < 0 ? 0 : (int)Math.Clamp(clock - _clock, 0, 1);
@@ -97,52 +125,141 @@ public partial class PivotPose : SkeletonModifier3D
         // cannot establish that the resolver actually selected Pivot.
         bool pivot = Player.DisplayPivoting && Player.ResolvedAnimationState == "Pivot";
         bool neutral = display.Phase == MovePhase.Inactive && Player.ResolvedAnimationState != "ReboundGrab";
-        if (!neutral) { _wasPivot = _exiting = _correctDribbleBlend = false; _held = null; return; }
+        if (!neutral) { _wasPivot = _exiting = _correctDribbleBlend = _neutralHandoff = false; _held = null; _settleAge = -1; return; }
         bool plainDribble = Player.DisplayDribbling() && !Player.DisplayProtecting
             && !Player.DisplayPosting && !Player.DisplayDefensiveStance;
-        float speed = new Vector2(Player.DisplayVelocity.X, Player.DisplayVelocity.Z).Length();
-        bool intermediateDribble = plainDribble && speed > .001f && speed < Player.MoveSpeed - .001f;
-        if (!intermediateDribble) _correctDribbleBlend = false;
-        if (!pivot && !_wasPivot && !_exiting)
+        bool posture = Player.DisplayProtecting || Player.DisplayPosting || Player.DisplayDefensiveStance;
+        if (posture && !pivot && !_wasPivot && !_exiting)
         {
-            // After the bounded pivot handoff, retain only the neutral blend repair
-            // until a clip endpoint. Postures retain their complete evaluated pose.
-            if (_correctDribbleBlend) Write(DestinationPose(Capture()));
+            // These downstream posture modifiers own the complete neutral pose.
+            _neutralHandoff = _correctDribbleBlend = false;
+            _held = null; _settleAge = -1;
             return;
         }
+        float speed = new Vector2(Player.DisplayVelocity.X, Player.DisplayVelocity.Z).Length();
+        bool intermediateDribble = plainDribble && speed > .001f && speed < Player.MoveSpeed - .001f;
+        if (!intermediateDribble && !_neutralHandoff) _correctDribbleBlend = false;
         if (step == 0 && _held != null) { Write(_held); return; }
-        ContactErrorForHarness = PelvisShiftForHarness = 0;
+        if (!pivot && !_wasPivot && !_exiting)
+        {
+            // Full-speed dribble is not a safe end to the handoff: the tree's
+            // intermediate blend returns when input is released. Retain the
+            // authored-endpoint repair and floor clearance until travel stops.
+            if (_neutralHandoff || _correctDribbleBlend)
+            {
+                var destination = DestinationPose(Capture());
+                // Releasing a travelling dribble crosses the same problematic
+                // BlendSpace again. Bridge that final return from the last
+                // displayed pose, rather than handing a stale endpoint to it.
+                bool braking = speed < _handoffSpeed - .001f;
+                if (braking && (_settleAge < 0 || !_handoffBraking))
+                {
+                    _settleAnchor = (Transform3D[])_last.Clone();
+                    _settleAge = 0;
+                    _settleBridge.ResetContinuity();
+                }
+                else if (_settleAge >= 0) _settleAge += step;
+                if (_settleAge >= 0)
+                {
+                    if (_settleAge == 1) _settleBridge.ResetContinuity();
+                    destination = _settleBridge.Blend(_settleAnchor, destination,
+                        Math.Clamp(_settleAge / (float)BridgeTicks, 0, 1)).Pose;
+                }
+                float clearance = ClearCourt(destination);
+                Write(destination);
+                _held = destination;
+                _handoffSpeed = speed;
+                _handoffBraking = braking;
+                if (speed <= .001f && clearance <= .00001f && (_settleAge < 0 || _settleAge >= BridgeTicks))
+                { _neutralHandoff = _correctDribbleBlend = false; _settleAge = -1; }
+                else if (_settleAge >= BridgeTicks) _settleAge = -1;
+            }
+            else _held = null;
+            return;
+        }
+        ContactErrorForHarness = SwingErrorForHarness = PelvisShiftForHarness = 0;
         var fresh = Capture();
         if (pivot && !_wasPivot)
         {
             _anchor = (Transform3D[])_last.Clone();
-            _bridge.ResetContinuity(); _age = 0; _exiting = false;
+            _bridge.ResetContinuity(); _age = 0; _exiting = _neutralHandoff = false;
+            _settleAge = -1;
+            _stanceAge = 0; _stepping = false;
             ChooseSupport(_anchor);
+            BeginStep(_anchor);
             _pivotTarget = SampleNeutral(fresh);
         }
         else if (!pivot && _wasPivot)
         {
             _anchor = (Transform3D[])_last.Clone();
             _bridge.ResetContinuity(); _age = 0; _exiting = true;
+            _neutralHandoff = !posture;
+            _settleAge = -1;
+            _handoffBraking = false;
             _neutralBridge.ResetContinuity();
             _correctDribbleBlend = intermediateDribble;
         }
-        else _age += step;
+        else { _age += step; if (pivot) _stanceAge += step; }
         _wasPivot = pivot;
         if (_exiting) fresh = DestinationPose(fresh);
-        float progress = Math.Clamp(_age / (float)BridgeTicks, 0, 1);
+        // Age zero returns the anchor unchanged. AnimationTree can still expose
+        // the departing Pivot sample on that tick; choose the exit hemisphere
+        // from the first actual neutral blend sample instead of that stale goal.
+        if (_exiting && _age == 1) _bridge.ResetContinuity();
+        float progress = Math.Clamp(_age / (float)(pivot ? BridgeTicks : ExitTicks), 0, 1);
         var result = _bridge.Blend(_anchor, pivot ? _pivotTarget : fresh, progress).Pose;
         if (pivot && _toe >= 0)
         {
-            Plant(result, Math.Clamp(_age / (float)LandingTicks, 0, 1));
+            // A flick can stop before the first foot transfer. It retains the
+            // stationary #416 contact instead of inventing latch-driven steps.
+            if (speed > .05f && !_stepping)
+            {
+                // Motion can start after several blocked/stationary turn ticks.
+                // Start a real swing from the last displayed feet, not halfway
+                // through an old entry clock/trajectory.
+                _stepping = true; _stanceAge = 0;
+                var lastGlobal = CrossoverPoseBridge.Forward(_parents, _last);
+                _landingStart = _lastWorld * lastGlobal[_toe].Origin;
+                _contact = new Vector3(_landingStart.X, 0, _landingStart.Z);
+                BeginStep(_last);
+            }
+            if (_stepping && speed > .05f && _stanceAge >= StanceTicks)
+            {
+                ChooseSupport(_last, transfer: true);
+                BeginStep(_last);
+                _stanceAge = 0;
+            }
+            float landing = Math.Clamp(_stanceAge / (float)LandingTicks, 0, 1);
+            if (_stepping) StepFeet(result, landing);
+            else Plant(result, landing);
             KeepSwingAboveCourt(result);
+        }
+        else if (_exiting)
+        {
+            // Unconstrained rotation blending can arc a toe below the flat
+            // court between two valid poses. Minimal vertical pelvis clearance
+            // avoids reintroducing the unstable leg IK branch during handoff.
+            ClearCourt(result);
         }
         Write(result);
         _held = result;
-        if (_exiting && _age >= BridgeTicks) { _exiting = false; _held = null; }
+        _handoffSpeed = speed;
+        if (_exiting && _age >= ExitTicks) _exiting = false;
     }
 
-    private void ChooseSupport(Transform3D[] pose)
+    private float ClearCourt(Transform3D[] pose)
+    {
+        var globals = CrossoverPoseBridge.Forward(_parents, pose);
+        float lowest = Math.Min(
+            _skeleton.ToGlobal(globals[_skeleton.FindBone("mixamorig_LeftToe_End")].Origin).Y,
+            _skeleton.ToGlobal(globals[_skeleton.FindBone("mixamorig_RightToe_End")].Origin).Y);
+        if (lowest >= 0) return 0;
+        pose[_hips].Origin += _skeleton.GlobalBasis.Inverse() * (Vector3.Up * -lowest);
+        PelvisShiftForHarness = -lowest;
+        return -lowest;
+    }
+
+    private void ChooseSupport(Transform3D[] pose, bool transfer = false)
     {
         var globals = CrossoverPoseBridge.Forward(_parents, pose);
         int left = _skeleton.FindBone("mixamorig_LeftToe_End"), right = _skeleton.FindBone("mixamorig_RightToe_End");
@@ -154,7 +271,8 @@ public partial class PivotPose : SkeletonModifier3D
         }
         // A low trailing dribble toe can be almost a metre behind the body.
         // The closer foot supports the turn without dragging the pelvis around it.
-        _toe = left < 0 || right < 0 ? -1 : FootprintDistance(left) < FootprintDistance(right) ? left : right;
+        _toe = left < 0 || right < 0 ? -1 : transfer ? (_toe == left ? right : left)
+            : FootprintDistance(left) < FootprintDistance(right) ? left : right;
         if (_toe < 0) return;
         string side = _toe == left ? "Left" : "Right";
         _leg = new(_skeleton.FindBone("mixamorig_" + side + "UpLeg"),
@@ -163,6 +281,83 @@ public partial class PivotPose : SkeletonModifier3D
         // Main's court is the world y=0 plane. An airborne incoming run foot lands
         // continuously; only its height changes, never its fixed world footprint.
         _contact = new Vector3(_landingStart.X, 0, _landingStart.Z);
+    }
+
+    private void BeginStep(Transform3D[] pose)
+    {
+        if (_toe < 0) return;
+        string side = SupportToeForHarness.Contains("Left", StringComparison.Ordinal) ? "Right" : "Left";
+        _swingToe = _skeleton.FindBone("mixamorig_" + side + "Toe_End");
+        _swingLeg = new(_skeleton.FindBone("mixamorig_" + side + "UpLeg"),
+            _skeleton.FindBone("mixamorig_" + side + "Leg"), _skeleton.FindBone("mixamorig_" + side + "Foot"));
+        var globals = CrossoverPoseBridge.Forward(_parents, pose);
+        _swingStart = _lastWorld * globals[_swingToe].Origin;
+        Vector2 forward = HeadingMath.Forward(Player.DisplayHeading);
+        Vector3 lateral = new Vector3(forward.Y, 0, -forward.X) * (side == "Left" ? .16f : -.16f);
+        // Place the next foot under the travelling body, with 100 ms of measured
+        // velocity lead. A fixed world destination prevents stance-foot skating.
+        _swingEnd = Player.DisplayRootPosition + lateral + Player.DisplayVelocity * .10f;
+        _swingEnd.Y = 0;
+    }
+
+    private void StepFeet(Transform3D[] pose, float landing)
+    {
+        float phase = Math.Clamp(_stanceAge / (float)(StanceTicks - 1), 0, 1);
+        Vector3 world = _swingStart.Lerp(_swingEnd, phase);
+        world.Y += .10f * MathF.Sin(MathF.PI * phase);
+        var globals = CrossoverPoseBridge.Forward(_parents, pose);
+        Vector3 supportWorld = _landingStart.Lerp(_contact, landing);
+        SupportTargetForHarness = supportWorld;
+        SwingTargetForHarness = world;
+        Vector3 Ankle(CrossoverPoseBridge.LimbChain leg, int toe, Vector3 target) =>
+            _skeleton.ToLocal(target) - (globals[toe].Origin - globals[leg.Effector].Origin);
+        Vector3 support = Ankle(_leg, _toe, supportWorld);
+        Vector3 swing = Ankle(_swingLeg, _swingToe, world);
+        float Reach(CrossoverPoseBridge.LimbChain leg) =>
+            (globals[leg.Root].Origin.DistanceTo(globals[leg.Middle].Origin)
+            + globals[leg.Middle].Origin.DistanceTo(globals[leg.Effector].Origin)) * .999f;
+        // Both legs share one pelvis. Solving the support first and silently
+        // clamping the other leg can lift a grounded toe on transfer (#430).
+        // Project into both reach spheres before either limb solve; target-error
+        // proof rejects unreachable configurations rather than calling clamps contact.
+        Vector3 shift = Vector3.Zero;
+        void Assist(CrossoverPoseBridge.LimbChain leg, Vector3 ankle)
+        {
+            Vector3 offset = ankle - (globals[leg.Root].Origin + shift);
+            float reach = Reach(leg);
+            if (offset.Length() > reach) shift += offset - offset.Normalized() * reach;
+        }
+        for (int i = 0; i < 16; i++) { Assist(_leg, support); Assist(_swingLeg, swing); }
+        pose[_hips].Origin += shift;
+        PelvisShiftForHarness = (_skeleton.GlobalBasis * shift).Length();
+        // A fresh blended knee can cross the hip-to-ankle axis during a short
+        // turn and make IK choose the opposite bend (near-180-degree knee pop).
+        // Start both solves from the last displayed world limb orientations,
+        // including their twist, rather than reselecting that branch each tick.
+        // The new foot orientations/targets still come from this tick's pose.
+        var previous = CrossoverPoseBridge.Forward(_parents, _last);
+        void SetRotation(int bone, Quaternion rotation)
+        {
+            var current = CrossoverPoseBridge.Forward(_parents, pose);
+            Quaternion parent = current[_parents[bone]].Basis.Orthonormalized().GetRotationQuaternion();
+            pose[bone].Basis = new Basis((parent.Inverse() * rotation).Normalized()).Scaled(pose[bone].Basis.Scale);
+        }
+        foreach (var leg in new[] { _leg, _swingLeg })
+        {
+            Quaternion foot = globals[leg.Effector].Basis.Orthonormalized().GetRotationQuaternion();
+            foreach (int bone in new[] { leg.Root, leg.Middle })
+                SetRotation(bone, (_skeleton.GlobalBasis.Inverse() * _lastWorld.Basis * previous[bone].Basis)
+                    .Orthonormalized().GetRotationQuaternion());
+            SetRotation(leg.Effector, foot);
+        }
+        foreach (var placement in new[] { (_leg, support), (_swingLeg, swing) })
+        {
+            var solved = _bridge.PlaceEffector(pose, placement.Item1, placement.Item2);
+            Array.Copy(solved.Pose, pose, pose.Length);
+        }
+        globals = CrossoverPoseBridge.Forward(_parents, pose);
+        ContactErrorForHarness = _skeleton.ToGlobal(globals[_toe].Origin).DistanceTo(supportWorld);
+        SwingErrorForHarness = _skeleton.ToGlobal(globals[_swingToe].Origin).DistanceTo(world);
     }
 
     private Transform3D[] SampleNeutral(Transform3D[] fallback)

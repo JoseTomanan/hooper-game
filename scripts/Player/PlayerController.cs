@@ -137,7 +137,7 @@ public partial class PlayerController : CharacterBody3D
 	/// time of the non-linear rate schedule (rate accelerates as the diff closes),
 	/// NOT the constant-rate 180/(rate×f) estimate, which overestimates the time.
 	/// A 20° micro-correction takes ≈ 0.02 s — effectively instant to the player, so the reversal is now
-	/// only mildly slower than a micro-turn (the plant-then-pivot gate at
+	/// only mildly slower than a micro-turn (the bounded slow-turn interval at
 	/// <see cref="PivotThresholdDeg"/> carries the "commitment" read instead — see
 	/// HeadingMath.Step's doc). Raising this scales EVERY turn proportionally; it
 	/// is the knob to reach for when "turning feels too slow" overall. (To instead
@@ -153,7 +153,7 @@ public partial class PlayerController : CharacterBody3D
 	/// 0.95 (issue #172 retune 0.35 → 0.90, then a #172 follow-up 0.90 → 0.95): a
 	/// back-turn is now only mildly slower than a small correction — the raw
 	/// rate no longer has to carry the "back-turn is a commitment" read on
-	/// its own, because <see cref="PivotThresholdDeg"/>'s plant-then-pivot
+	/// its own, because <see cref="PivotThresholdDeg"/>'s bounded slow-turn
 	/// gate now carries that commitment instead (see HeadingMath.Step's doc).
 	/// Combined with MaxTurnRateDeg 900, a full 180° reversal comes down to
 	/// ≈0.20 s (from the pre-#172 ≈0.55 s).
@@ -164,7 +164,7 @@ public partial class PlayerController : CharacterBody3D
 
 	/// <summary>
 	/// Facing difference, in degrees, above which a turn demands the player
-	/// plant their feet and pivot in place before moving, rather than
+	/// latch a bounded turn with reduced-speed travel (#430), rather than
 	/// resolving as an ordinary same-tick rotation (issue #172,
 	/// HeadingMath.Step). 90° default: anything up to a quarter-turn is
 	/// "forward-ish" and never gates movement; a flick past that — including
@@ -561,10 +561,10 @@ public partial class PlayerController : CharacterBody3D
 	private HeadingMath.PivotState _pivot = HeadingMath.PivotState.None;
 
 	/// <summary>
-	/// True while the player is planted mid-pivot and Move() must not advance
-	/// position (a flick or held turn past <see cref="PivotThresholdDeg"/>
-	/// that hasn't yet reached its latched facing). Exposed read-only for the
-	/// deferred animation layer (#184) to drive a plant/pivot pose; movement
+	/// True while the ordinary heading turn is owed (#430 allows slow travel).
+	/// A flick or held turn past <see cref="PivotThresholdDeg"/>
+	/// that hasn't yet reached its latched facing. The historical property name
+	/// remains for callers; presentation uses it to drive turn footwork. Movement
 	/// and netcode do not read it back — <see cref="_pivot"/> alone is what
 	/// Move() consults.
 	///
@@ -4434,7 +4434,7 @@ public partial class PlayerController : CharacterBody3D
 		// Advance the authoritative heading — and the in-place-pivot latch it
 		// now carries (issue #172) — toward inputDir at a bounded non-linear
 		// rate BEFORE velocity, because velocity below depends on whether this
-		// step says the player is currently planted. HeadingMath.Step is pure,
+		// step still owes a turn (the reduced-speed interval, #430). HeadingMath.Step is pure,
 		// so this introduces no role-checks or network calls in violation of
 		// the "keep Move() pure" contract, and — placed here inside the shared
 		// motion step — it replays identically on the server, the client
@@ -4451,16 +4451,18 @@ public partial class PlayerController : CharacterBody3D
 		Heading = step.NewYaw;
 		_pivot  = step.Pivot;
 
-		if (step.IsPivotingInPlace)
+		if (stance && !_effectiveStance)
 		{
-			// Feet planted mid-pivot: zero displacement is the acceptance
-			// criterion (issue #172) — a committed plant-and-turn must cost
-			// real position, not just a facing delay. MovementMath.ComputeVelocity
-			// is intentionally NOT called on this branch (it must not change).
-			// Zeroing the whole Vector3 (not just X/Z) is safe here: this
-			// controller applies no gravity and never sets Velocity.Y anywhere
-			// (a top-down half-court capsule, not a jumping character).
+			// Stance still waits out an owed ordinary latch, including its completion
+			// tick. Only ordinary movement-stick turning receives #430's relaxation.
 			Velocity = Vector3.Zero;
+		}
+		else if (step.IsPivotingInPlace)
+		{
+			Vector3 wish = translationLocked ? Vector3.Zero : new Vector3(inputDir.X, 0f, inputDir.Y);
+			float remaining = Mathf.AngleDifference(Heading, _pivot.LatchedYaw);
+			Velocity = MovementMath.ComputeTurnVelocity(Velocity, wish, delta,
+				protect ? ProtectSpeed : sprint ? SprintSpeed : MoveSpeed, Accel, Decel, remaining);
 		}
 		else
 		{

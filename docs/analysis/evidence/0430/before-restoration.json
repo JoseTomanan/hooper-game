@@ -1,0 +1,24 @@
+[
+  {
+    "step": "before-zero-build",
+    "exit": 0
+  },
+  {
+    "step": "before-zero-remote-capture",
+    "exit": 0
+  },
+  {
+    "step": "before-zero-local-capture",
+    "exit": 0
+  },
+  {
+    "step": "restore",
+    "expectedSHA256": "1f6092b05936c75c6f6ac8928806cdb9351ed0dd5ac2595af2cc5b565d9b81e6",
+    "actualSHA256": "1f6092b05936c75c6f6ac8928806cdb9351ed0dd5ac2595af2cc5b565d9b81e6",
+    "exact": true
+  },
+  {
+    "step": "before-zero-restored-build",
+    "exit": 0
+  }
+]

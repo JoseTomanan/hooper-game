@@ -1,3 +1,4 @@
+using System;
 using Godot;
 
 namespace Hooper.Player;
@@ -20,6 +21,23 @@ namespace Hooper.Player;
 /// </summary>
 public static class MovementMath
 {
+	/// <summary>Ordinary latched turn: 35% of the mode speed at a half-turn,
+	/// rising to 65% as the remaining angle closes. Each tick uses Decel while
+	/// opposing input or shedding speed, otherwise Accel. A braking tick can
+	/// cross zero toward the target; the whole velocity change remains bounded.
+	/// These are provisional #430 modeling defaults, with tuning in #238.</summary>
+	public static Vector3 ComputeTurnVelocity(Vector3 current, Vector3 wishDir, double delta,
+		float moveSpeed, float accel, float decel, float remainingAngle)
+	{
+		float fraction = .65f - .30f * Math.Clamp(MathF.Abs(remainingAngle) / MathF.PI, 0f, 1f);
+		Vector3 target = wishDir * (moveSpeed * fraction);
+		float rate = wishDir == Vector3.Zero || current.Dot(wishDir) < 0f
+			|| current.LengthSquared() > target.LengthSquared() ? decel : accel;
+		// MoveToward clamps at target (no overshoot); delta is the fixed physics step.
+		// https://docs.godotengine.org/en/4.7/classes/class_vector3.html#class-vector3-method-move-toward
+		return current.MoveToward(target, rate * (float)delta);
+	}
+
 	/// <summary>
 	/// Turns desired direction into the next velocity. Asymmetric rates
 	/// (decel &gt; accel) are where "change of pace" lives (ADR-0003): a
