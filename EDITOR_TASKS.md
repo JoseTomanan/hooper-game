@@ -5,6 +5,14 @@
 > structure and of what each harness scenario encodes — read a step as "what
 > the integration test asserts," never as "what you must click."
 
+**#430 turn recheck:** no editor wiring is needed. The ordinary movement-stick
+turn now allows slow travel while its existing approximately 0.21-second
+full-reversal heading resolves, then accelerates into locomotion. Historical
+#184 wording requiring a stationary turn or 0.35-second duration is superseded.
+Assess the stepping/contact and speed handoff in the deferred #184/#173 pass;
+the build proof and gameplay-distance captures are in
+[the moving-turn report](docs/analysis/0430-moving-turns.md). Tuning remains #238.
+
 **What is actually yours today** — the residue after four successive narrowings:
 
 - **Feel / taste judgments** — lean degrees, telegraph readability, burst

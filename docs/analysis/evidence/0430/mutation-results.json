@@ -1,0 +1,89 @@
+[
+  {
+    "mutation": "old-zero-gate",
+    "exit": 1,
+    "reasons": [
+      "[pivot-plant] FAIL: System.InvalidOperationException: angle=91 mode=0 incoming=False release=False: held idle turn travelled only 0, still hard-planted"
+    ],
+    "expectedDetected": true
+  },
+  {
+    "mutation": "full-speed-turn-target",
+    "exit": 1,
+    "reasons": [
+      "[pivot-plant] FAIL: System.InvalidOperationException: angle=91 mode=0 incoming=False release=False tick=5: turn exceeded the momentum/target envelope"
+    ],
+    "expectedDetected": true
+  },
+  {
+    "mutation": "frozen-foot",
+    "captureExit": 0,
+    "exit": 1,
+    "reasons": [
+      "cycle 1: Right toe penetrated the court during entry/exit",
+      "cycle 1: mixamorig_RightToe_End missed world foot target by 0.013470 m",
+      "cycle 1: support toe slid 0.012810 m",
+      "cycle 1: mixamorig_RightToe_End missed world foot target by 0.101790 m",
+      "cycle 1: support toe slid 0.099663 m",
+      "cycle 1: support toe not grounded (0.020700 m)",
+      "cycle 1: mixamorig_RightToe_End missed world foot target by 0.156409 m",
+      "cycle 1: support toe slid 0.155461 m",
+      "cycle 1: support toe not grounded (0.017193 m)",
+      "cycle 1: mixamorig_RightToe_End missed world foot target by 0.197048 m",
+      "cycle 1: support toe slid 0.196997 m",
+      "cycle 1: support toe not grounded (0.004497 m)",
+      "cycle 1: mixamorig_RightToe_End missed world foot target by 0.180798 m",
+      "cycle 1: support toe slid 0.180719 m",
+      "cycle 1: support toe not grounded (-0.005336 m)",
+      "cycle 1: Right toe penetrated the court",
+      "cycle 1: completed swing did not relocate its footprint",
+      "cycle 1: stance never established sustained ground contact",
+      "cycle 1: mixamorig_RightToe_End missed world foot target by 0.005336 m",
+      "cycle 2: Right toe penetrated the court during entry/exit",
+      "cycle 2: mixamorig_RightToe_End missed world foot target by 0.013470 m",
+      "cycle 2: support toe slid 0.012810 m",
+      "cycle 2: mixamorig_RightToe_End missed world foot target by 0.101790 m",
+      "cycle 2: support toe slid 0.099663 m",
+      "cycle 2: support toe not grounded (0.020700 m)",
+      "cycle 2: mixamorig_RightToe_End missed world foot target by 0.156409 m",
+      "cycle 2: support toe slid 0.155461 m",
+      "cycle 2: support toe not grounded (0.017193 m)",
+      "cycle 2: mixamorig_RightToe_End missed world foot target by 0.197048 m",
+      "cycle 2: support toe slid 0.196997 m",
+      "cycle 2: support toe not grounded (0.004497 m)",
+      "cycle 2: mixamorig_RightToe_End missed world foot target by 0.180798 m",
+      "cycle 2: support toe slid 0.180719 m",
+      "cycle 2: support toe not grounded (-0.005336 m)",
+      "cycle 2: Right toe penetrated the court",
+      "cycle 2: completed swing did not relocate its footprint",
+      "cycle 2: stance never established sustained ground contact",
+      "cycle 2: mixamorig_RightToe_End missed world foot target by 0.005336 m",
+      "cycle 3: Right toe penetrated the court during entry/exit",
+      "cycle 3: mixamorig_RightToe_End missed world foot target by 0.013470 m",
+      "cycle 3: support toe slid 0.012810 m",
+      "cycle 3: mixamorig_RightToe_End missed world foot target by 0.101790 m",
+      "cycle 3: support toe slid 0.099663 m",
+      "cycle 3: support toe not grounded (0.020700 m)",
+      "cycle 3: mixamorig_RightToe_End missed world foot target by 0.156409 m",
+      "cycle 3: support toe slid 0.155461 m",
+      "cycle 3: support toe not grounded (0.017193 m)",
+      "cycle 3: mixamorig_RightToe_End missed world foot target by 0.197048 m",
+      "cycle 3: support toe slid 0.196997 m",
+      "cycle 3: support toe not grounded (0.004497 m)",
+      "cycle 3: mixamorig_RightToe_End missed world foot target by 0.180798 m",
+      "cycle 3: support toe slid 0.180719 m",
+      "cycle 3: support toe not grounded (-0.005336 m)",
+      "cycle 3: Right toe penetrated the court",
+      "cycle 3: completed swing did not relocate its footprint",
+      "cycle 3: stance never established sustained ground contact",
+      "cycle 3: mixamorig_RightToe_End missed world foot target by 0.005336 m"
+    ],
+    "expectedDetected": true,
+    "boundaries": 6
+  },
+  {
+    "mutation": "restored-clean",
+    "exit": 0,
+    "passed": true
+  }
+]

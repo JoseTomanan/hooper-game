@@ -1,0 +1,413 @@
+{
+  "revision": "31cdc03714e06075bbb4ed9dbfe199b749ae1b5b",
+  "results": [
+    {
+      "case": "idle",
+      "captureExit": 0,
+      "verifyExit": 0,
+      "captureCommand": [
+        "C:\\Users\\The King\\AppData\\Local\\Programs\\Python\\Python314\\python.exe",
+        "tools/run_pivot_capture.py",
+        "--case",
+        "idle",
+        "--gesture",
+        "held",
+        "--resume-travel",
+        "--headless",
+        "--fixed-fps",
+        "--output",
+        "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\430-resume-final\\idle",
+        "--commit",
+        "31cdc03714e06075bbb4ed9dbfe199b749ae1b5b",
+        "--port",
+        "25502"
+      ],
+      "report": {
+        "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\430-resume-final\\idle\\local",
+        "result": "PASS",
+        "failures": [],
+        "cycles": [
+          {
+            "cycle": 1,
+            "firstReleaseSpeed": 4.833333,
+            "beforeResumeSpeed": 2.4999995,
+            "resumedSpeed": 3.9999995,
+            "secondReleaseSpeed": 4.833333,
+            "secondStopStageAge": 45,
+            "finalSettledStageAge": 47
+          },
+          {
+            "cycle": 2,
+            "firstReleaseSpeed": 4.833333,
+            "beforeResumeSpeed": 2.4999995,
+            "resumedSpeed": 3.9999995,
+            "secondReleaseSpeed": 4.833333,
+            "secondStopStageAge": 45,
+            "finalSettledStageAge": 47
+          },
+          {
+            "cycle": 3,
+            "firstReleaseSpeed": 4.833333,
+            "beforeResumeSpeed": 2.4999995,
+            "resumedSpeed": 3.9999995,
+            "secondReleaseSpeed": 4.833333,
+            "secondStopStageAge": 45,
+            "finalSettledStageAge": 47
+          }
+        ],
+        "continuity": {
+          "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\430-resume-final\\idle\\local",
+          "failures": [],
+          "boundaries": [
+            {
+              "cycle": 1,
+              "tick": 148,
+              "entry": true,
+              "maxStep": 0.09358058896186802
+            },
+            {
+              "cycle": 1,
+              "tick": 160,
+              "entry": false,
+              "maxStep": 0.11184712825164471
+            },
+            {
+              "cycle": 2,
+              "tick": 307,
+              "entry": true,
+              "maxStep": 0.09358058896186802
+            },
+            {
+              "cycle": 2,
+              "tick": 319,
+              "entry": false,
+              "maxStep": 0.11184712825164471
+            },
+            {
+              "cycle": 3,
+              "tick": 466,
+              "entry": true,
+              "maxStep": 0.09358058896186802
+            },
+            {
+              "cycle": 3,
+              "tick": 478,
+              "entry": false,
+              "maxStep": 0.11184712825164471
+            }
+          ],
+          "maxStepMetresPerTick": 0.2758504847527915,
+          "maxWorldRotationDegreesPerTick": 48.16636705570867,
+          "maxContactErrorMetres": 5.8591808298572985e-06,
+          "maxPelvisAssistanceMetres": 0.28290853
+        }
+      }
+    },
+    {
+      "case": "run",
+      "captureExit": 0,
+      "verifyExit": 0,
+      "captureCommand": [
+        "C:\\Users\\The King\\AppData\\Local\\Programs\\Python\\Python314\\python.exe",
+        "tools/run_pivot_capture.py",
+        "--case",
+        "run",
+        "--gesture",
+        "held",
+        "--resume-travel",
+        "--headless",
+        "--fixed-fps",
+        "--output",
+        "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\430-resume-final\\run",
+        "--commit",
+        "31cdc03714e06075bbb4ed9dbfe199b749ae1b5b",
+        "--port",
+        "25502"
+      ],
+      "report": {
+        "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\430-resume-final\\run\\local",
+        "result": "PASS",
+        "failures": [],
+        "cycles": [
+          {
+            "cycle": 1,
+            "firstReleaseSpeed": 4.833333,
+            "beforeResumeSpeed": 2.4999995,
+            "resumedSpeed": 3.9999995,
+            "secondReleaseSpeed": 4.833333,
+            "secondStopStageAge": 45,
+            "finalSettledStageAge": 47
+          },
+          {
+            "cycle": 2,
+            "firstReleaseSpeed": 4.833333,
+            "beforeResumeSpeed": 2.4999995,
+            "resumedSpeed": 3.9999995,
+            "secondReleaseSpeed": 4.833333,
+            "secondStopStageAge": 45,
+            "finalSettledStageAge": 47
+          },
+          {
+            "cycle": 3,
+            "firstReleaseSpeed": 4.833333,
+            "beforeResumeSpeed": 2.4999995,
+            "resumedSpeed": 3.9999995,
+            "secondReleaseSpeed": 4.833333,
+            "secondStopStageAge": 45,
+            "finalSettledStageAge": 47
+          }
+        ],
+        "continuity": {
+          "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\430-resume-final\\run\\local",
+          "failures": [],
+          "boundaries": [
+            {
+              "cycle": 1,
+              "tick": 148,
+              "entry": true,
+              "maxStep": 0.1606638760673737
+            },
+            {
+              "cycle": 1,
+              "tick": 160,
+              "entry": false,
+              "maxStep": 0.10022475605399854
+            },
+            {
+              "cycle": 2,
+              "tick": 307,
+              "entry": true,
+              "maxStep": 0.1606638760673737
+            },
+            {
+              "cycle": 2,
+              "tick": 319,
+              "entry": false,
+              "maxStep": 0.10022475605399854
+            },
+            {
+              "cycle": 3,
+              "tick": 466,
+              "entry": true,
+              "maxStep": 0.1606638760673737
+            },
+            {
+              "cycle": 3,
+              "tick": 478,
+              "entry": false,
+              "maxStep": 0.10022475605399854
+            }
+          ],
+          "maxStepMetresPerTick": 0.31735784276229917,
+          "maxWorldRotationDegreesPerTick": 48.16636705570867,
+          "maxContactErrorMetres": 8.683317338106188e-06,
+          "maxPelvisAssistanceMetres": 0.50773776
+        }
+      }
+    },
+    {
+      "case": "left",
+      "captureExit": 0,
+      "verifyExit": 0,
+      "captureCommand": [
+        "C:\\Users\\The King\\AppData\\Local\\Programs\\Python\\Python314\\python.exe",
+        "tools/run_pivot_capture.py",
+        "--case",
+        "left",
+        "--gesture",
+        "held",
+        "--resume-travel",
+        "--headless",
+        "--fixed-fps",
+        "--output",
+        "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\430-resume-final\\left",
+        "--commit",
+        "31cdc03714e06075bbb4ed9dbfe199b749ae1b5b",
+        "--port",
+        "25502"
+      ],
+      "report": {
+        "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\430-resume-final\\left\\local",
+        "result": "PASS",
+        "failures": [],
+        "cycles": [
+          {
+            "cycle": 1,
+            "firstReleaseSpeed": 4.833333,
+            "beforeResumeSpeed": 2.4999995,
+            "resumedSpeed": 3.9999995,
+            "secondReleaseSpeed": 4.833333,
+            "secondStopStageAge": 45,
+            "finalSettledStageAge": 47
+          },
+          {
+            "cycle": 2,
+            "firstReleaseSpeed": 4.833333,
+            "beforeResumeSpeed": 2.4999995,
+            "resumedSpeed": 3.9999995,
+            "secondReleaseSpeed": 4.833333,
+            "secondStopStageAge": 45,
+            "finalSettledStageAge": 47
+          },
+          {
+            "cycle": 3,
+            "firstReleaseSpeed": 4.833333,
+            "beforeResumeSpeed": 2.4999995,
+            "resumedSpeed": 3.9999995,
+            "secondReleaseSpeed": 4.833333,
+            "secondStopStageAge": 45,
+            "finalSettledStageAge": 47
+          }
+        ],
+        "continuity": {
+          "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\430-resume-final\\left\\local",
+          "failures": [],
+          "boundaries": [
+            {
+              "cycle": 1,
+              "tick": 273,
+              "entry": true,
+              "maxStep": 0.18595503106877706
+            },
+            {
+              "cycle": 1,
+              "tick": 285,
+              "entry": false,
+              "maxStep": 0.11786964882659005
+            },
+            {
+              "cycle": 2,
+              "tick": 432,
+              "entry": true,
+              "maxStep": 0.18024634285458258
+            },
+            {
+              "cycle": 2,
+              "tick": 444,
+              "entry": false,
+              "maxStep": 0.11786956757897094
+            },
+            {
+              "cycle": 3,
+              "tick": 591,
+              "entry": true,
+              "maxStep": 0.18024634285458258
+            },
+            {
+              "cycle": 3,
+              "tick": 603,
+              "entry": false,
+              "maxStep": 0.11786956757897094
+            }
+          ],
+          "maxStepMetresPerTick": 0.28159711214713246,
+          "maxWorldRotationDegreesPerTick": 47.80027003447081,
+          "maxContactErrorMetres": 8.602325267935297e-07,
+          "maxPelvisAssistanceMetres": 0.37995458
+        }
+      }
+    },
+    {
+      "case": "right",
+      "captureExit": 0,
+      "verifyExit": 0,
+      "captureCommand": [
+        "C:\\Users\\The King\\AppData\\Local\\Programs\\Python\\Python314\\python.exe",
+        "tools/run_pivot_capture.py",
+        "--case",
+        "right",
+        "--gesture",
+        "held",
+        "--resume-travel",
+        "--headless",
+        "--fixed-fps",
+        "--output",
+        "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\430-resume-final\\right",
+        "--commit",
+        "31cdc03714e06075bbb4ed9dbfe199b749ae1b5b",
+        "--port",
+        "25502"
+      ],
+      "report": {
+        "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\430-resume-final\\right\\local",
+        "result": "PASS",
+        "failures": [],
+        "cycles": [
+          {
+            "cycle": 1,
+            "firstReleaseSpeed": 4.833333,
+            "beforeResumeSpeed": 2.4999995,
+            "resumedSpeed": 3.9999995,
+            "secondReleaseSpeed": 4.833333,
+            "secondStopStageAge": 45,
+            "finalSettledStageAge": 47
+          },
+          {
+            "cycle": 2,
+            "firstReleaseSpeed": 4.833333,
+            "beforeResumeSpeed": 2.4999995,
+            "resumedSpeed": 3.9999995,
+            "secondReleaseSpeed": 4.833333,
+            "secondStopStageAge": 45,
+            "finalSettledStageAge": 47
+          },
+          {
+            "cycle": 3,
+            "firstReleaseSpeed": 4.833333,
+            "beforeResumeSpeed": 2.4999995,
+            "resumedSpeed": 3.9999995,
+            "secondReleaseSpeed": 4.833333,
+            "secondStopStageAge": 45,
+            "finalSettledStageAge": 47
+          }
+        ],
+        "continuity": {
+          "directory": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\430-resume-final\\right\\local",
+          "failures": [],
+          "boundaries": [
+            {
+              "cycle": 1,
+              "tick": 193,
+              "entry": true,
+              "maxStep": 0.17522171184975935
+            },
+            {
+              "cycle": 1,
+              "tick": 205,
+              "entry": false,
+              "maxStep": 0.11110353813072237
+            },
+            {
+              "cycle": 2,
+              "tick": 352,
+              "entry": true,
+              "maxStep": 0.18157091842619227
+            },
+            {
+              "cycle": 2,
+              "tick": 364,
+              "entry": false,
+              "maxStep": 0.11111219786191064
+            },
+            {
+              "cycle": 3,
+              "tick": 511,
+              "entry": true,
+              "maxStep": 0.18157091842619227
+            },
+            {
+              "cycle": 3,
+              "tick": 523,
+              "entry": false,
+              "maxStep": 0.11111219786191064
+            }
+          ],
+          "maxStepMetresPerTick": 0.29787106540179464,
+          "maxWorldRotationDegreesPerTick": 47.79632147274849,
+          "maxContactErrorMetres": 1.019803902007591e-06,
+          "maxPelvisAssistanceMetres": 0.45052412
+        }
+      }
+    }
+  ]
+}

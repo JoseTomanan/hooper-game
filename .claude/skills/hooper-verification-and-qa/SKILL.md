@@ -125,7 +125,7 @@ This table is transcribed from `.github/workflows/ci.yml`'s actual run steps
 | `OobTurnoverTest.tscn` | `held-turnover`, `defender-exempt`, `both-oob`, `wall-placement` | Holder-crosses-line turnover; non-holder crossing is a no-op; no 60Hz strobe when both players are OOB; the four `Walls/WallCollision*` shapes in the live `scenes/Main.tscn` sit outside `CourtMin`/`CourtMax` (#179, adjudicating hitl #119) |
 | `TripleThreatTest.tscn` | `dead-dribble`, `production-drive` | Held-start tipoff (not auto-chained into Dribbling); dead-dribble flag on jump-shot cradle; dribble-move refusal while Held; OOB reset restores a live possession; `production-drive` presses REAL `Input.ActionPress` and proves Held→Dribbling via the unmodified `CheckAutoStartDribble` → `TryStartDribble` production path (#193, #204) |
 | `CrossoverSweepTest.tscn` | `crossover-sweep`, `possession-change-no-sweep`, `remote-handside-sweep` | Genuine mid-body ball transit (lateral offset dips well below `HandOffset` magnitude — not a one-tick snap); a possession-change hand reset NEVER activates a sweep; the broadcast-receive (remote-client display) path also drives the sweep (#195, PR #208) |
-| `PivotPlantTest.tscn` | `exports`, `flick-180`, `held-135`, `no-plant-boundary`, `committed-cancel` | The #172-retuned exports are live; a released 180° flick pivots to completion with zero displacement in a ~0.35s band; a sustained >90° hold stays planted then resumes; an exactly-90° turn never plants; a committed move (`def_steal`) cancels an in-progress pivot (#172, ADR-0010 amendment) |
+| `PivotPlantTest.tscn` | `exports`, `flick-180`, `held-135`, `no-plant-boundary`, `committed-cancel`, `movement-matrix` | The 900 degrees/s, 0.95-factor exports are live; #430 retains approximately 0.21s full-reversal timing while held >90-degree turns travel slowly and released flicks brake. The matrix checks 96 angle/mode/momentum/release cases, 64 actual replay trajectories, posture/lock transitions and contact controls. <=90-degree movement and committed preemption remain. See `docs/analysis/0430-moving-turns.md`; appearance/speed acceptance remains #184/#173. |
 | `MovingCrossoverTest.tscn` | `retains-speed`, `stationary-forward-exit`, `hesitation-still-hard-zeroes`, `remote-pending-stick` | Startup's `GatherDecel` bleeds (never zeroes) momentum; forward burst component from a dead stop; Hesitation still hard-zeroes (the ADR-0003 amendment's own scoping guard); the server's REMOTE-player copy reaches `CrossoverBurstMath` via `_pendingRawStick`, not just the own-player `ReadInput()` path (#198) |
 | `BehindTheBackTest.tscn` | `shielded-sweep`, `narrower-exit-cone`, `dead-dribble-gate` | Ball's forward offset goes genuinely NEGATIVE (behind the holder's centerline — the discriminator vs. Crossover's in-front sweep); pure-lateral stick input yields a real forward burst through the narrower exit cone (`move_size_up` modifier wired end-to-end); same Held dead-dribble gate as Crossover/Hesitation (#194) |
 
@@ -398,10 +398,12 @@ turns a green scenario into a vacuous one.
   exactly this, and its `VerdictMarginFrames` exists because Root observes
   the ball state the tick AFTER `BallController` set it.
 - **Frame-band tolerance, not exact-frame, for input-driven timing.**
-  `PivotPlantTest`'s `flick-180`/`held-135` assert timing *bands* (e.g.
-  ~0.35s completion), not exact ticks — real-`Input`-singleton edges plus
+  `PivotPlantTest`'s input-driven `flick-180` asserts a 0.15-0.30s band around
+  the approximately 0.21s reversal, rather than exact ticks — real-`Input`-singleton edges plus
   the tick-order skews above make exact-frame assertions flaky by
-  construction.
+  construction. Its direct fixed-step `movement-matrix` separately pins the
+  unchanged per-angle schedule and 13-step full reversal within one 60Hz step
+  of the 0.205173s continuous integral (#430).
 - **Dual-instance pass evidence must be co-occurrence on one tick, never
   independent latches.** `NetBehindTheBackSweepTest` passes only if, on the
   SAME live-sweep tick, the client's ball flags behind-body AND the remote
