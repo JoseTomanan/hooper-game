@@ -10,6 +10,7 @@ import uuid
 
 from verify_pivot_continuity import verify
 from verify_pivot_context import verify_context
+from verify_moving_turn_resume import verify_resume
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -91,6 +92,14 @@ def main():
         summary["context"] = verify_context(normal, reset, protection, control)
         if summary["context"]["failures"]:
             raise RuntimeError("pivot context regressions failed; see summary.json")
+        summary["resumedTravel"] = []
+        for case in ("idle", "run", "left", "right"):
+            directory = context_capture("resume-" + case, case, "--resume-travel", "--fixed-fps")
+            report = verify_resume(directory)
+            (directory / "verification.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+            summary["resumedTravel"].append(report)
+            if report["failures"]:
+                raise RuntimeError(f"resumed travel regression failed: {directory}; see verification.json")
         summary["result"] = "PASS"
     finally:
         (output / "summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")

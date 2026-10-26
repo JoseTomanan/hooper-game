@@ -21,7 +21,7 @@ public partial class PivotContinuityCapture : Node
     private float _angle = 180, _entryHeading, _targetHeading, _initialAngle;
     private Vector2 _gestureWish;
     private int _localRenderDelayMs;
-    private bool _probeApplied, _disablePivotPose, _mutationApplied, _paced, _fixedFps, _protection, _resetOwnerPresentation;
+    private bool _probeApplied, _disablePivotPose, _mutationApplied, _paced, _fixedFps, _protection, _resetOwnerPresentation, _resumeTravel;
     private PivotPose _pivotPose;
     private bool _images, _finished, _ready, _readySent, _finishSent, _finishAck, _clientFinished;
     private bool _sawPivot, _sawNeutral, _measuring, _pendingEnd, _cycleAck;
@@ -55,11 +55,13 @@ public partial class PivotContinuityCapture : Node
         _paced = Read("--capture-paced", "false") == "true";
         _protection = Read("--capture-protection", "false") == "true";
         _resetOwnerPresentation = Read("--capture-reset-owner-presentation", "false") == "true";
+        _resumeTravel = Read("--capture-resume-travel", "false") == "true";
         _fixedFps = Read("--capture-fixed-fps", "false") == "true";
         _pivotXfade = float.Parse(Read("--capture-pivot-xfade", "-1"), System.Globalization.CultureInfo.InvariantCulture);
         _output = ProjectSettings.GlobalizePath(Read("--capture-output", ""));
         if (!new[] { "local", "server", "client" }.Contains(_role) || !new[] { "idle", "run", "left", "right" }.Contains(_case) ||
             !new[] { "flick", "held", "forward" }.Contains(_gesture) || (_protection && (_case != "right" || _gesture != "held")) || (_paced && _role == "local") || (_resetOwnerPresentation && (_role != "local" || _case != "run" || _gesture != "held" || _protection)) || _commit == "unknown" ||
+            (_resumeTravel && (_role != "local" || _gesture != "held" || _protection || _resetOwnerPresentation)) ||
             !float.IsFinite(_angle) || _angle <= 0 || _angle > 180 || _localRenderDelayMs < 0 ||
             (_localRenderDelayMs > 0 && (_role != "local" || !_images || !_fixedFps)) || string.IsNullOrEmpty(_output) || Directory.Exists(_output))
         { _output = ""; Finish("invalid arguments or non-fresh output"); return; }
@@ -229,6 +231,18 @@ public partial class PivotContinuityCapture : Node
                 Event("owner-remote-history-reset", $"cycle={_cycle}; unrelated remote history epoch={_ball.PresentationEpoch}");
             }
             if (age == (_gesture == "held" ? 25 : _gesture == "forward" ? 12 : 1)) Release();
+            if (_resumeTravel && age == 28)
+            {
+                // Resume the exact original production wish before braking has
+                // stopped travel. Do not recalculate heading or gesture metadata.
+                PressWish(_gestureWish);
+                Event("travel-resume", $"cycle={_cycle}; stageAge={age}");
+            }
+            if (_resumeTravel && age == 40)
+            {
+                Release();
+                Event("travel-second-release", $"cycle={_cycle}; stageAge={age}");
+            }
             if (age >= 72)
             {
                 if (!CompleteCycle()) return;
@@ -279,6 +293,13 @@ public partial class PivotContinuityCapture : Node
     // action_press is read by production Input.GetVector; no direct move/heading injection.
     // https://docs.godotengine.org/en/4.7/classes/class_input.html#class-input-method-action-press
     private void InputDown(string action, float strength = 1) { Input.ActionPress(action, strength); Event("input-down", strength == 1 ? action : $"{action} strength={strength:R}"); }
+    private void PressWish(Vector2 wish)
+    {
+        if (wish.X < 0) InputDown("move_left", -wish.X);
+        else if (wish.X > 0) InputDown("move_right", wish.X);
+        if (wish.Y < 0) InputDown("move_forward", -wish.Y);
+        else if (wish.Y > 0) InputDown("move_backward", wish.Y);
+    }
     private void BeginGesture(PlayerController p)
     {
         float entry = p.Heading;
@@ -295,10 +316,7 @@ public partial class PivotContinuityCapture : Node
                 wish = Vector2.Right;
             }
             else wish = HeadingMath.Forward(entry + _angle * MathF.PI / 180).Normalized();
-            if (wish.X < 0) InputDown("move_left", -wish.X);
-            else if (wish.X > 0) InputDown("move_right", wish.X);
-            if (wish.Y < 0) InputDown("move_forward", -wish.Y);
-            else if (wish.Y > 0) InputDown("move_backward", wish.Y);
+            PressWish(wish);
         }
         // Measure the vector production actually consumes, including GetVector's
         // deadzone/normalization, rather than assuming analog strengths survived.
@@ -342,7 +360,7 @@ public partial class PivotContinuityCapture : Node
             pivotSwingToe = _pivotPose?.SwingToeForHarness ?? "",
             pivotSupportTarget = Vec(_pivotPose?.SupportTargetForHarness ?? Vector3.Zero),
             pivotSwingTarget = Vec(_pivotPose?.SwingTargetForHarness ?? Vector3.Zero),
-            pivotPelvisShift = _pivotPose?.PelvisShiftForHarness ?? 0, mutationApplied = _mutationApplied,
+            pivotPelvisShift = _pivotPose?.PelvisShiftForHarness ?? 0, mutationApplied = _mutationApplied, resumeTravel = _resumeTravel,
             animation = p.ActiveAnimNodeForHarness, playbackTime = p.ContinuityPlaybackTime,
             fadingFrom = p.ContinuityFadingFrom, fadingTime = p.ContinuityFadingTime, animationCallback = p.ContinuityAnimationCallback,
             displayMove = display.MoveId, displayPhase = display.Phase.ToString(), displayFrame = display.FrameInPhase,
@@ -387,7 +405,7 @@ public partial class PivotContinuityCapture : Node
             File.WriteAllText(Path.Combine(_output, "manifest.json"), JsonSerializer.Serialize(new {
                 schema = "hooper-pivot-continuity/v1", result = failure.Length == 0 ? "captured" : "failed", failure,
                 commit = _commit, role = _role, @case = _case, gesture = _gesture, requestedAngleDegrees = _angle, expectedPivot = ExpectedPivot, gestureEntries = _gestureEntries,
-                protection = _protection, resetOwnerPresentation = _resetOwnerPresentation, localRenderDelayMs = _localRenderDelayMs, requestedCycles = 3, completedCycles = _completed,
+                protection = _protection, resetOwnerPresentation = _resetOwnerPresentation, resumeTravel = _resumeTravel, localRenderDelayMs = _localRenderDelayMs, requestedCycles = 3, completedCycles = _completed,
                 samples = _samples, images = _imagesWritten, diagnosticPivotXfade = _pivotXfade, diagnosticProbeApplied = _probeApplied, mutation = _disablePivotPose ? "disable-pivot-pose" : "none", mutationApplied = _mutationApplied, paced = _paced, fixedFps = _fixedFps, diagnosticServerDelayMs = _paced && _role == "server" ? 50 : 0,
                 remoteTiming = _paced ? "paced fixed-fps diagnostic; no real-time timing claim" : _role == "local" ? "not a remote capture" : "real-time",
                 pacingMeaning = _paced ? "both peers fixed simulation delta 1/60; server waits50ms per render (~20 source ticks per wall second); client source holds are normal" : _fixedFps ? "local fixed simulation delta1/60 per frame; no real-time performance claim" : "real-time simulation", finishSent = _finishSent, finishAcknowledged = _finishAck,

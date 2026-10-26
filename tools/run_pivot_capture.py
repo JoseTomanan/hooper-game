@@ -34,6 +34,8 @@ def launch(args, role):
                 "--capture-paced=" + str(args.paced).lower(), "--capture-fixed-fps=" + str(fixed_fps).lower()]
     if args.reset_owner_presentation:
         command.append("--capture-reset-owner-presentation=true")
+    if args.resume_travel:
+        command.append("--capture-resume-travel=true")
     if args.protection:
         command.append("--capture-protection=true")
     if args.disable_pivot_pose:
@@ -81,6 +83,7 @@ def main():
     parser.add_argument("--compatibility", action="store_true", help="native local/client Mesa-compatible OpenGL renderer")
     parser.add_argument("--resolution", default="960x540")
     parser.add_argument("--reset-owner-presentation", action="store_true", help="local run-held diagnostic: reset unrelated remote history during pivot")
+    parser.add_argument("--resume-travel", action="store_true", help="local held diagnostic: release at25, resume the original wish at28, then release again at40")
     parser.add_argument("--protection", action="store_true", help="right-held regression: hold production protection through pivot and neutral tail")
     parser.add_argument("--disable-pivot-pose", action="store_true", help="negative control: disable production PivotPose")
     parser.add_argument("--pivot-xfade", type=float, help="diagnostic only: override direct Pivot transition blend duration")
@@ -94,6 +97,8 @@ def main():
         parser.error("--local-render-delay-ms requires local native --images and a nonnegative delay")
     if args.reset_owner_presentation and (args.remote or args.protection or args.case != "run" or args.gesture != "held"):
         parser.error("--reset-owner-presentation requires local run-held without protection")
+    if args.resume_travel and (args.remote or args.gesture != "held" or args.protection or args.reset_owner_presentation):
+        parser.error("--resume-travel requires local held input without protection or owner reset")
     if args.paced and not args.remote:
         parser.error("--paced requires --remote; native local already uses fixed-fps60")
     if args.protection and (args.case != "right" or args.gesture != "held"):
