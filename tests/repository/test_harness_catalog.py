@@ -45,7 +45,25 @@ class HarnessCatalogCliTests(unittest.TestCase):
         baseline_tail = len(catalog.MIGRATION_BASELINE_CATALOG) - 1
         self.assertTrue(lines[baseline_tail].startswith('dedicated-game-journey-score-rpc-disabled\t'))
         self.assertEqual(
-            ['animation-harness-primitives-test-primitives-discovery',
+            ['four-move-active-entry-test-crossover-neutral',
+             'four-move-active-entry-test-crossover-moving',
+             'four-move-active-entry-test-crossover-forward',
+             'four-move-active-entry-test-crossover-backward',
+             'four-move-active-entry-test-behind-neutral',
+             'four-move-active-entry-test-behind-lateral',
+             'four-move-active-entry-test-behind-cone-edge',
+             'four-move-active-entry-test-behind-backward',
+             'four-move-active-entry-test-between-neutral',
+             'four-move-active-entry-test-between-forward',
+             'four-move-active-entry-test-between-lateral',
+             'four-move-active-entry-test-between-cone-edge',
+             'four-move-active-entry-test-inout-neutral',
+             'four-move-active-entry-test-inout-right-neutral',
+             'four-move-active-entry-test-inout-forward',
+             'four-move-active-entry-test-inout-backward',
+             'four-move-active-entry-test-crossover-exit-below-deadzone',
+             'four-move-active-entry-test-crossover-exit-above-deadzone',
+             'animation-harness-primitives-test-primitives-discovery',
              'jumpshot-form-test-normal-right',
              'jumpshot-form-test-normal-left',
              'jumpshot-form-test-feint-early',
@@ -344,7 +362,7 @@ class HarnessCatalogShardTests(unittest.TestCase):
         for case_id in ('fadeaway-form', 'net-fadeaway-form'):
             self.assertEqual(catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS, weights[case_id])
         self.assertAlmostEqual(
-            1276.0 + 3.0 / 5 + 45 * catalog.DEFAULT_SINGLE_WEIGHT_SECONDS
+            1276.0 + 3.0 / 5 + 63 * catalog.DEFAULT_SINGLE_WEIGHT_SECONDS
             + 7 * catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS,
             sum(weights.values()),
         )
