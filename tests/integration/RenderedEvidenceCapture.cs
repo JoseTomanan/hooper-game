@@ -289,16 +289,26 @@ public partial class RenderedEvidenceCapture : Node
             player.MaxTurnRateDeg = _ordinaryTurnRateDeg;
             _pivotStarted = true;
             _pivotStartFrame = _frame;
-            Input.ActionPress("move_forward", 1f);
-            RecordEvent("input-down", "move_forward (pivot reversal)");
+            // Earlier movement/shot fixtures determine the final heading. A
+            // fixed world-forward flick is not necessarily a >90-degree turn.
+            // Drive a real opposite input and verify that premise explicitly.
+            Vector2 opposite = -HeadingMath.Forward(player.Heading);
+            Input.ActionPress(opposite.X < 0 ? "move_left" : "move_right", MathF.Abs(opposite.X));
+            Input.ActionPress(opposite.Y < 0 ? "move_forward" : "move_backward", MathF.Abs(opposite.Y));
+            Vector2 actual = Input.GetVector("move_left", "move_right", "move_forward", "move_backward");
+            float angle = MathF.Abs(Mathf.AngleDifference(player.Heading, MathF.Atan2(actual.X, actual.Y)));
+            RecordEvent("input-down", $"opposite-heading pivot reversal; angleRadians={angle:R}");
+            if (actual.Length() < .9f || !float.IsFinite(angle) || angle <= player.PivotThresholdDeg * MathF.PI / 180)
+            { Fail($"pivot fixture did not establish a large-angle turn: {angle:R} radians."); Finish(1); return; }
         }
         // Match PivotAnimTest's one-tick flick. A global frame-parity release
         // could release the action in the same tick it was pressed, before
         // PlayerController samples it and creates the pivot latch.
         if (_pivotStarted && _frame == _pivotStartFrame + 1)
         {
-            Input.ActionRelease("move_forward");
-            RecordEvent("input-up", "move_forward (pivot reversal)");
+            foreach (string action in new[] { "move_left", "move_right", "move_forward", "move_backward" })
+                Input.ActionRelease(action);
+            RecordEvent("input-up", "opposite-heading pivot reversal");
         }
         if (_pivotStarted && player.IsPivotingInPlace && player.ActiveAnimNodeForHarness == "Pivot")
         {
