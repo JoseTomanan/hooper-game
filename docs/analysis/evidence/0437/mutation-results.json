@@ -1,0 +1,643 @@
+{
+  "head": "5f279204875c7816d44f162ba050ced04d10bf5f",
+  "source_sha_before": {
+    "scripts/Player/FourMoveBurstResolver.cs": "e8bcfecfdc99dc89afa837b89f239eacd93b09d707e4e6452482c3c9cb0616a3",
+    "scripts/Player/PlayerController.cs": "4655f343ccdb1b5dcd2498f904d8a407fa48d1ef93618205c74fef3b5b941498"
+  },
+  "godot": "C:\\Users\\The King\\AppData\\Local\\GodotPortable\\Godot_v4.7.1-stable_mono_win64\\Godot_v4.7.1-stable_mono_win64_console.exe",
+  "mutants": [
+    {
+      "name": "crossover-shared-calculation",
+      "source_sha_before": {
+        "scripts/Player/FourMoveBurstResolver.cs": "e8bcfecfdc99dc89afa837b89f239eacd93b09d707e4e6452482c3c9cb0616a3",
+        "scripts/Player/PlayerController.cs": "4655f343ccdb1b5dcd2498f904d8a407fa48d1ef93618205c74fef3b5b941498"
+      },
+      "expected_failure": "entry composition or event-time hand differs",
+      "mutation_file": "scripts\\Player\\FourMoveBurstResolver.cs",
+      "mutation_sha": "23a5ec8ea8259cf0242297f47ea7638297d98842c0be876be2a3fe6eccb4af2a",
+      "build": {
+        "command": [
+          "dotnet",
+          "build",
+          "HOOPER GAME.csproj",
+          "--configuration",
+          "Debug",
+          "-p:IncludeIntegrationHarness=true",
+          "--no-restore"
+        ],
+        "exit": 0,
+        "log": ".godot\\437-mutations\\crossover-shared-calculation-build.log",
+        "seconds": 27.512
+      },
+      "test": {
+        "command": [
+          "C:\\Users\\The King\\AppData\\Local\\Programs\\Python\\Python314\\python.exe",
+          "tools/harness_catalog.py",
+          "run",
+          "--id",
+          "four-move-active-entry-test-crossover-moving",
+          "--godot",
+          "C:\\Users\\The King\\AppData\\Local\\GodotPortable\\Godot_v4.7.1-stable_mono_win64\\Godot_v4.7.1-stable_mono_win64_console.exe",
+          "--run-id",
+          "437-mutation-crossover-shared-calculation"
+        ],
+        "exit": 1,
+        "log": ".godot\\437-mutations\\crossover-shared-calculation-test.log",
+        "seconds": 2.584
+      },
+      "native_logs": [
+        ".godot\\437-mutations\\crossover-shared-calculation\\native\\four-move-active-entry-test-crossover-moving.log"
+      ],
+      "failure_excerpt": [
+        "[four-move-entry] FAIL scenario=crossover-moving phase=Active frame=0 startup=5 entries=1 active=0 later=0 recovery=0 expectedVelocity=(-0.9159292, 0, 5.1310835) actualVelocity=(1.8566238, 0, 2.7957942) expectedHand=Right actualHand=Right entryHand=Left boundary= reason=entry composition or event-time hand differs"
+      ],
+      "status": "KILLED_BY_EXPECTED_ASSERTION",
+      "source_sha_restored": {
+        "scripts/Player/FourMoveBurstResolver.cs": "e8bcfecfdc99dc89afa837b89f239eacd93b09d707e4e6452482c3c9cb0616a3",
+        "scripts/Player/PlayerController.cs": "4655f343ccdb1b5dcd2498f904d8a407fa48d1ef93618205c74fef3b5b941498"
+      },
+      "mutation": "Crossover branch: ComposeCrossoverActiveVelocity -> ComposeActiveVelocity"
+    },
+    {
+      "name": "behind-wrong-speed",
+      "source_sha_before": {
+        "scripts/Player/FourMoveBurstResolver.cs": "e8bcfecfdc99dc89afa837b89f239eacd93b09d707e4e6452482c3c9cb0616a3",
+        "scripts/Player/PlayerController.cs": "4655f343ccdb1b5dcd2498f904d8a407fa48d1ef93618205c74fef3b5b941498"
+      },
+      "expected_failure": "entry composition or event-time hand differs",
+      "mutation_file": "scripts\\Player\\FourMoveBurstResolver.cs",
+      "mutation_sha": "da9ea478addae75d4894d449f26037f23ccaae2f39b155d7005d43c25f6f0f24",
+      "build": {
+        "command": [
+          "dotnet",
+          "build",
+          "HOOPER GAME.csproj",
+          "--configuration",
+          "Debug",
+          "-p:IncludeIntegrationHarness=true",
+          "--no-restore"
+        ],
+        "exit": 0,
+        "log": ".godot\\437-mutations\\behind-wrong-speed-build.log",
+        "seconds": 7.953
+      },
+      "test": {
+        "command": [
+          "C:\\Users\\The King\\AppData\\Local\\Programs\\Python\\Python314\\python.exe",
+          "tools/harness_catalog.py",
+          "run",
+          "--id",
+          "four-move-active-entry-test-behind-neutral",
+          "--godot",
+          "C:\\Users\\The King\\AppData\\Local\\GodotPortable\\Godot_v4.7.1-stable_mono_win64\\Godot_v4.7.1-stable_mono_win64_console.exe",
+          "--run-id",
+          "437-mutation-behind-wrong-speed"
+        ],
+        "exit": 1,
+        "log": ".godot\\437-mutations\\behind-wrong-speed-test.log",
+        "seconds": 2.717
+      },
+      "native_logs": [
+        ".godot\\437-mutations\\behind-wrong-speed\\native\\four-move-active-entry-test-behind-neutral.log"
+      ],
+      "failure_excerpt": [
+        "[four-move-entry] FAIL scenario=behind-neutral phase=Active frame=0 startup=5 entries=1 active=0 later=0 recovery=0 expectedVelocity=(-3.2505794, 0, 2.737925) actualVelocity=(-4.780264, 0, 4.0263605) expectedHand=Right actualHand=Right entryHand=Left boundary= reason=entry composition or event-time hand differs"
+      ],
+      "status": "KILLED_BY_EXPECTED_ASSERTION",
+      "source_sha_restored": {
+        "scripts/Player/FourMoveBurstResolver.cs": "e8bcfecfdc99dc89afa837b89f239eacd93b09d707e4e6452482c3c9cb0616a3",
+        "scripts/Player/PlayerController.cs": "4655f343ccdb1b5dcd2498f904d8a407fa48d1ef93618205c74fef3b5b941498"
+      },
+      "mutation": "BehindTheBack branch: tuning.BehindTheBackBurstSpeed -> tuning.BetweenTheLegsBurstSpeed"
+    },
+    {
+      "name": "between-wrong-cone",
+      "source_sha_before": {
+        "scripts/Player/FourMoveBurstResolver.cs": "e8bcfecfdc99dc89afa837b89f239eacd93b09d707e4e6452482c3c9cb0616a3",
+        "scripts/Player/PlayerController.cs": "4655f343ccdb1b5dcd2498f904d8a407fa48d1ef93618205c74fef3b5b941498"
+      },
+      "expected_failure": "entry composition or event-time hand differs",
+      "mutation_file": "scripts\\Player\\FourMoveBurstResolver.cs",
+      "mutation_sha": "d18f86f4093834e85818e6f18c336b5a2bb3baeebc7f956a1575554b8e427855",
+      "build": {
+        "command": [
+          "dotnet",
+          "build",
+          "HOOPER GAME.csproj",
+          "--configuration",
+          "Debug",
+          "-p:IncludeIntegrationHarness=true",
+          "--no-restore"
+        ],
+        "exit": 0,
+        "log": ".godot\\437-mutations\\between-wrong-cone-build.log",
+        "seconds": 26.845
+      },
+      "test": {
+        "command": [
+          "C:\\Users\\The King\\AppData\\Local\\Programs\\Python\\Python314\\python.exe",
+          "tools/harness_catalog.py",
+          "run",
+          "--id",
+          "four-move-active-entry-test-between-lateral",
+          "--godot",
+          "C:\\Users\\The King\\AppData\\Local\\GodotPortable\\Godot_v4.7.1-stable_mono_win64\\Godot_v4.7.1-stable_mono_win64_console.exe",
+          "--run-id",
+          "437-mutation-between-wrong-cone"
+        ],
+        "exit": 1,
+        "log": ".godot\\437-mutations\\between-wrong-cone-test.log",
+        "seconds": 2.645
+      },
+      "native_logs": [
+        ".godot\\437-mutations\\between-wrong-cone\\native\\four-move-active-entry-test-between-lateral.log"
+      ],
+      "failure_excerpt": [
+        "[four-move-entry] FAIL scenario=between-lateral phase=Active frame=0 startup=5 entries=1 active=0 later=0 recovery=0 expectedVelocity=(-5.1194205, 0, 7.225664) actualVelocity=(-8.109848, 0, 6.2180905) expectedHand=Right actualHand=Right entryHand=Left boundary= reason=entry composition or event-time hand differs"
+      ],
+      "status": "KILLED_BY_EXPECTED_ASSERTION",
+      "source_sha_restored": {
+        "scripts/Player/FourMoveBurstResolver.cs": "e8bcfecfdc99dc89afa837b89f239eacd93b09d707e4e6452482c3c9cb0616a3",
+        "scripts/Player/PlayerController.cs": "4655f343ccdb1b5dcd2498f904d8a407fa48d1ef93618205c74fef3b5b941498"
+      },
+      "mutation": "BetweenTheLegs branch: tuning.BetweenTheLegsExitConeDegrees -> tuning.BehindTheBackExitConeDegrees"
+    },
+    {
+      "name": "inout-wrong-speed",
+      "source_sha_before": {
+        "scripts/Player/FourMoveBurstResolver.cs": "e8bcfecfdc99dc89afa837b89f239eacd93b09d707e4e6452482c3c9cb0616a3",
+        "scripts/Player/PlayerController.cs": "4655f343ccdb1b5dcd2498f904d8a407fa48d1ef93618205c74fef3b5b941498"
+      },
+      "expected_failure": "entry composition or event-time hand differs",
+      "mutation_file": "scripts\\Player\\FourMoveBurstResolver.cs",
+      "mutation_sha": "3fb89db5857063dc9c419dd90f66a759d7c147a72796c7cd87e063b18f1f1ffb",
+      "build": {
+        "command": [
+          "dotnet",
+          "build",
+          "HOOPER GAME.csproj",
+          "--configuration",
+          "Debug",
+          "-p:IncludeIntegrationHarness=true",
+          "--no-restore"
+        ],
+        "exit": 0,
+        "log": ".godot\\437-mutations\\inout-wrong-speed-build.log",
+        "seconds": 27.417
+      },
+      "test": {
+        "command": [
+          "C:\\Users\\The King\\AppData\\Local\\Programs\\Python\\Python314\\python.exe",
+          "tools/harness_catalog.py",
+          "run",
+          "--id",
+          "four-move-active-entry-test-inout-neutral",
+          "--godot",
+          "C:\\Users\\The King\\AppData\\Local\\GodotPortable\\Godot_v4.7.1-stable_mono_win64\\Godot_v4.7.1-stable_mono_win64_console.exe",
+          "--run-id",
+          "437-mutation-inout-wrong-speed"
+        ],
+        "exit": 1,
+        "log": ".godot\\437-mutations\\inout-wrong-speed-test.log",
+        "seconds": 5.056
+      },
+      "native_logs": [
+        ".godot\\437-mutations\\inout-wrong-speed\\native\\four-move-active-entry-test-between-neutral.log",
+        ".godot\\437-mutations\\inout-wrong-speed\\native\\four-move-active-entry-test-inout-neutral.log"
+      ],
+      "failure_excerpt": [
+        "[four-move-entry] FAIL scenario=inout-neutral phase=Active frame=0 startup=3 entries=1 active=0 later=0 recovery=0 expectedVelocity=(0.8153048, 0, 2.0970879) actualVelocity=(2.6270933, 0, 6.757283) expectedHand=Left actualHand=Left entryHand=Left boundary= reason=entry composition or event-time hand differs"
+      ],
+      "status": "KILLED_BY_EXPECTED_ASSERTION",
+      "source_sha_restored": {
+        "scripts/Player/FourMoveBurstResolver.cs": "e8bcfecfdc99dc89afa837b89f239eacd93b09d707e4e6452482c3c9cb0616a3",
+        "scripts/Player/PlayerController.cs": "4655f343ccdb1b5dcd2498f904d8a407fa48d1ef93618205c74fef3b5b941498"
+      },
+      "mutation": "InAndOut branch: tuning.InAndOutBurstSpeed -> tuning.BurstSpeed"
+    },
+    {
+      "name": "inout-wrong-sign",
+      "source_sha_before": {
+        "scripts/Player/FourMoveBurstResolver.cs": "e8bcfecfdc99dc89afa837b89f239eacd93b09d707e4e6452482c3c9cb0616a3",
+        "scripts/Player/PlayerController.cs": "4655f343ccdb1b5dcd2498f904d8a407fa48d1ef93618205c74fef3b5b941498"
+      },
+      "expected_failure": "entry composition or event-time hand differs",
+      "mutation_file": "scripts\\Player\\FourMoveBurstResolver.cs",
+      "mutation_sha": "fd1afc28c43cbd5829687f74a277996f0d77ebf49b73282b0835a8ace45e8acb",
+      "build": {
+        "command": [
+          "dotnet",
+          "build",
+          "HOOPER GAME.csproj",
+          "--configuration",
+          "Debug",
+          "-p:IncludeIntegrationHarness=true",
+          "--no-restore"
+        ],
+        "exit": 0,
+        "log": ".godot\\437-mutations\\inout-wrong-sign-build.log",
+        "seconds": 6.592
+      },
+      "test": {
+        "command": [
+          "C:\\Users\\The King\\AppData\\Local\\Programs\\Python\\Python314\\python.exe",
+          "tools/harness_catalog.py",
+          "run",
+          "--id",
+          "four-move-active-entry-test-inout-neutral",
+          "--godot",
+          "C:\\Users\\The King\\AppData\\Local\\GodotPortable\\Godot_v4.7.1-stable_mono_win64\\Godot_v4.7.1-stable_mono_win64_console.exe",
+          "--run-id",
+          "437-mutation-inout-wrong-sign"
+        ],
+        "exit": 1,
+        "log": ".godot\\437-mutations\\inout-wrong-sign-test.log",
+        "seconds": 5.004
+      },
+      "native_logs": [
+        ".godot\\437-mutations\\inout-wrong-sign\\native\\four-move-active-entry-test-between-neutral.log",
+        ".godot\\437-mutations\\inout-wrong-sign\\native\\four-move-active-entry-test-inout-neutral.log"
+      ],
+      "failure_excerpt": [
+        "[four-move-entry] FAIL scenario=inout-neutral phase=Active frame=0 startup=3 entries=1 active=0 later=0 recovery=0 expectedVelocity=(0.8153048, 0, 2.0970879) actualVelocity=(-0.8153048, 0, -2.0970879) expectedHand=Left actualHand=Left entryHand=Left boundary= reason=entry composition or event-time hand differs"
+      ],
+      "status": "KILLED_BY_EXPECTED_ASSERTION",
+      "source_sha_restored": {
+        "scripts/Player/FourMoveBurstResolver.cs": "e8bcfecfdc99dc89afa837b89f239eacd93b09d707e4e6452482c3c9cb0616a3",
+        "scripts/Player/PlayerController.cs": "4655f343ccdb1b5dcd2498f904d8a407fa48d1ef93618205c74fef3b5b941498"
+      },
+      "mutation": "InAndOut branch: -Math.Sign(inAndOut.BurstDirection) -> Math.Sign(inAndOut.BurstDirection)"
+    },
+    {
+      "name": "inout-wrong-swap",
+      "source_sha_before": {
+        "scripts/Player/FourMoveBurstResolver.cs": "e8bcfecfdc99dc89afa837b89f239eacd93b09d707e4e6452482c3c9cb0616a3",
+        "scripts/Player/PlayerController.cs": "4655f343ccdb1b5dcd2498f904d8a407fa48d1ef93618205c74fef3b5b941498"
+      },
+      "expected_failure": "entry composition or event-time hand differs",
+      "mutation_file": "scripts\\Player\\FourMoveBurstResolver.cs",
+      "mutation_sha": "13e2e3129029fb5753a77b0abd339b78077370166d7af696f7c777394a75b337",
+      "build": {
+        "command": [
+          "dotnet",
+          "build",
+          "HOOPER GAME.csproj",
+          "--configuration",
+          "Debug",
+          "-p:IncludeIntegrationHarness=true",
+          "--no-restore"
+        ],
+        "exit": 0,
+        "log": ".godot\\437-mutations\\inout-wrong-swap-build.log",
+        "seconds": 26.809
+      },
+      "test": {
+        "command": [
+          "C:\\Users\\The King\\AppData\\Local\\Programs\\Python\\Python314\\python.exe",
+          "tools/harness_catalog.py",
+          "run",
+          "--id",
+          "four-move-active-entry-test-inout-neutral",
+          "--godot",
+          "C:\\Users\\The King\\AppData\\Local\\GodotPortable\\Godot_v4.7.1-stable_mono_win64\\Godot_v4.7.1-stable_mono_win64_console.exe",
+          "--run-id",
+          "437-mutation-inout-wrong-swap"
+        ],
+        "exit": 1,
+        "log": ".godot\\437-mutations\\inout-wrong-swap-test.log",
+        "seconds": 5.022
+      },
+      "native_logs": [
+        ".godot\\437-mutations\\inout-wrong-swap\\native\\four-move-active-entry-test-between-neutral.log",
+        ".godot\\437-mutations\\inout-wrong-swap\\native\\four-move-active-entry-test-inout-neutral.log"
+      ],
+      "failure_excerpt": [
+        "[four-move-entry] FAIL scenario=inout-neutral phase=Active frame=0 startup=3 entries=1 active=0 later=0 recovery=0 expectedVelocity=(0.8153048, 0, 2.0970879) actualVelocity=(0.8153048, 0, 2.0970879) expectedHand=Left actualHand=Right entryHand=Left boundary= reason=entry composition or event-time hand differs"
+      ],
+      "status": "KILLED_BY_EXPECTED_ASSERTION",
+      "source_sha_restored": {
+        "scripts/Player/FourMoveBurstResolver.cs": "e8bcfecfdc99dc89afa837b89f239eacd93b09d707e4e6452482c3c9cb0616a3",
+        "scripts/Player/PlayerController.cs": "4655f343ccdb1b5dcd2498f904d8a407fa48d1ef93618205c74fef3b5b941498"
+      },
+      "mutation": "InAndOut branch: SwapHands: false -> SwapHands: true"
+    },
+    {
+      "name": "repeated-active-entry",
+      "source_sha_before": {
+        "scripts/Player/FourMoveBurstResolver.cs": "e8bcfecfdc99dc89afa837b89f239eacd93b09d707e4e6452482c3c9cb0616a3",
+        "scripts/Player/PlayerController.cs": "4655f343ccdb1b5dcd2498f904d8a407fa48d1ef93618205c74fef3b5b941498"
+      },
+      "expected_failure": "later Active changed latched entry velocity or hand",
+      "mutation_file": "scripts\\Player\\PlayerController.cs",
+      "mutation_sha": "e1d1fe2786a6442ea0171f04f8ec7ddce7560e6c2b04cb8cb8e664a798b0fc9a",
+      "build": {
+        "command": [
+          "dotnet",
+          "build",
+          "HOOPER GAME.csproj",
+          "--configuration",
+          "Debug",
+          "-p:IncludeIntegrationHarness=true",
+          "--no-restore"
+        ],
+        "exit": 0,
+        "log": ".godot\\437-mutations\\repeated-active-entry-build.log",
+        "seconds": 27.829
+      },
+      "test": {
+        "command": [
+          "C:\\Users\\The King\\AppData\\Local\\Programs\\Python\\Python314\\python.exe",
+          "tools/harness_catalog.py",
+          "run",
+          "--id",
+          "four-move-active-entry-test-crossover-moving",
+          "--godot",
+          "C:\\Users\\The King\\AppData\\Local\\GodotPortable\\Godot_v4.7.1-stable_mono_win64\\Godot_v4.7.1-stable_mono_win64_console.exe",
+          "--run-id",
+          "437-mutation-repeated-active-entry"
+        ],
+        "exit": 1,
+        "log": ".godot\\437-mutations\\repeated-active-entry-test.log",
+        "seconds": 2.59
+      },
+      "native_logs": [
+        ".godot\\437-mutations\\repeated-active-entry\\native\\four-move-active-entry-test-crossover-moving.log"
+      ],
+      "failure_excerpt": [
+        "[four-move-entry] FAIL scenario=crossover-moving phase=Active frame=1 startup=5 entries=1 active=1 later=0 recovery=0 expectedVelocity=(-0.9159292, 0, 5.1310835) actualVelocity=(1.9484224, 0, 14.158742) expectedHand=Right actualHand=Left entryHand=Right boundary= reason=later Active changed latched entry velocity or hand"
+      ],
+      "status": "KILLED_BY_EXPECTED_ASSERTION",
+      "source_sha_restored": {
+        "scripts/Player/FourMoveBurstResolver.cs": "e8bcfecfdc99dc89afa837b89f239eacd93b09d707e4e6452482c3c9cb0616a3",
+        "scripts/Player/PlayerController.cs": "4655f343ccdb1b5dcd2498f904d8a407fa48d1ef93618205c74fef3b5b941498"
+      },
+      "mutation": "Controller exact family gate: _machine.JustEnteredActive && FourMoveBurstResolver.TryResolve -> FourMoveBurstResolver.TryResolve"
+    },
+    {
+      "name": "crossover-default-deadzone",
+      "source_sha_before": {
+        "scripts/Player/FourMoveBurstResolver.cs": "e8bcfecfdc99dc89afa837b89f239eacd93b09d707e4e6452482c3c9cb0616a3",
+        "scripts/Player/PlayerController.cs": "4655f343ccdb1b5dcd2498f904d8a407fa48d1ef93618205c74fef3b5b941498"
+      },
+      "expected_failure": "Assert.Equal()",
+      "mutation_file": "scripts\\Player\\FourMoveBurstResolver.cs",
+      "mutation_sha": "2a9cca26050932dde1c716b6daff888cf176422f225d1a4899f62a20498a6caa",
+      "test": {
+        "command": [
+          "dotnet",
+          "test",
+          "tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj",
+          "--configuration",
+          "Debug",
+          "--no-restore",
+          "--filter",
+          "FullyQualifiedName~FourMoveBurstResolverTests.CrossoverUsesItsOwnCompositionAndNormalizedSign"
+        ],
+        "exit": 1,
+        "log": ".godot\\437-mutations\\crossover-default-deadzone-test.log",
+        "seconds": 24.221
+      },
+      "failure_excerpt": [
+        "Assert.Equal() Failure: Values differ"
+      ],
+      "status": "KILLED_BY_EXPECTED_ASSERTION",
+      "source_sha_restored": {
+        "scripts/Player/FourMoveBurstResolver.cs": "e8bcfecfdc99dc89afa837b89f239eacd93b09d707e4e6452482c3c9cb0616a3",
+        "scripts/Player/PlayerController.cs": "4655f343ccdb1b5dcd2498f904d8a407fa48d1ef93618205c74fef3b5b941498"
+      },
+      "mutation": "Crossover branch only: tuning.ExitDeadzone -> .15f",
+      "failure_details": [
+        "[xUnit.net 00:00:00.31]     Hooper.Ball.Tests.FourMoveBurstResolverTests.CrossoverUsesItsOwnCompositionAndNormalizedSign(direction: -0.349999994, sign: -1, exitMagnitude: 0.129999995) [FAIL]",
+        "Assert.Equal() Failure: Values differ",
+        "Expected: (8.329989, 0, 6.3767023)",
+        "Actual:   (3.4520216, 0, -0.954911)",
+        "Failed!  - Failed:     1, Passed:     4, Skipped:     0, Total:     5, Duration: 13 ms - Hooper.Ball.Tests.dll (net8.0)"
+      ]
+    },
+    {
+      "name": "behind-default-deadzone",
+      "source_sha_before": {
+        "scripts/Player/FourMoveBurstResolver.cs": "e8bcfecfdc99dc89afa837b89f239eacd93b09d707e4e6452482c3c9cb0616a3",
+        "scripts/Player/PlayerController.cs": "4655f343ccdb1b5dcd2498f904d8a407fa48d1ef93618205c74fef3b5b941498"
+      },
+      "expected_failure": "Assert.Equal()",
+      "mutation_file": "scripts\\Player\\FourMoveBurstResolver.cs",
+      "mutation_sha": "f10fe790894ed07818be40f9cefb07a45c76cc87d9923f5f1d69f20cc79ffdac",
+      "test": {
+        "command": [
+          "dotnet",
+          "test",
+          "tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj",
+          "--configuration",
+          "Debug",
+          "--no-restore",
+          "--filter",
+          "FullyQualifiedName~FourMoveBurstResolverTests.BehindTheBackUsesItsProfileAndNormalizedSign"
+        ],
+        "exit": 1,
+        "log": ".godot\\437-mutations\\behind-default-deadzone-test.log",
+        "seconds": 24.643
+      },
+      "failure_excerpt": [
+        "Assert.Equal() Failure: Values differ"
+      ],
+      "status": "KILLED_BY_EXPECTED_ASSERTION",
+      "source_sha_restored": {
+        "scripts/Player/FourMoveBurstResolver.cs": "e8bcfecfdc99dc89afa837b89f239eacd93b09d707e4e6452482c3c9cb0616a3",
+        "scripts/Player/PlayerController.cs": "4655f343ccdb1b5dcd2498f904d8a407fa48d1ef93618205c74fef3b5b941498"
+      },
+      "mutation": "BehindTheBack branch only: tuning.ExitDeadzone -> .15f",
+      "failure_details": [
+        "[xUnit.net 00:00:00.30]     Hooper.Ball.Tests.FourMoveBurstResolverTests.BehindTheBackUsesItsProfileAndNormalizedSign(direction: -0.349999994, sign: -1, exitMagnitude: 0.129999995) [FAIL]",
+        "Assert.Equal() Failure: Values differ",
+        "Expected: (4.0042515, 0, 6.097843)",
+        "Actual:   (0.74489427, 0, 1.3252708)",
+        "Failed!  - Failed:     1, Passed:     4, Skipped:     0, Total:     5, Duration: 10 ms - Hooper.Ball.Tests.dll (net8.0)"
+      ]
+    },
+    {
+      "name": "between-default-deadzone",
+      "source_sha_before": {
+        "scripts/Player/FourMoveBurstResolver.cs": "e8bcfecfdc99dc89afa837b89f239eacd93b09d707e4e6452482c3c9cb0616a3",
+        "scripts/Player/PlayerController.cs": "4655f343ccdb1b5dcd2498f904d8a407fa48d1ef93618205c74fef3b5b941498"
+      },
+      "expected_failure": "Assert.Equal()",
+      "mutation_file": "scripts\\Player\\FourMoveBurstResolver.cs",
+      "mutation_sha": "ef44e70b918966f529080ef6e62e8e3dc14e9fe857a2cca7a4555744cf338970",
+      "test": {
+        "command": [
+          "dotnet",
+          "test",
+          "tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj",
+          "--configuration",
+          "Debug",
+          "--no-restore",
+          "--filter",
+          "FullyQualifiedName~FourMoveBurstResolverTests.BetweenTheLegsUsesItsProfileAndNormalizedSign"
+        ],
+        "exit": 1,
+        "log": ".godot\\437-mutations\\between-default-deadzone-test.log",
+        "seconds": 24.432
+      },
+      "failure_excerpt": [
+        "Assert.Equal() Failure: Values differ"
+      ],
+      "status": "KILLED_BY_EXPECTED_ASSERTION",
+      "source_sha_restored": {
+        "scripts/Player/FourMoveBurstResolver.cs": "e8bcfecfdc99dc89afa837b89f239eacd93b09d707e4e6452482c3c9cb0616a3",
+        "scripts/Player/PlayerController.cs": "4655f343ccdb1b5dcd2498f904d8a407fa48d1ef93618205c74fef3b5b941498"
+      },
+      "mutation": "BetweenTheLegs branch only: tuning.ExitDeadzone -> .15f",
+      "failure_details": [
+        "[xUnit.net 00:00:00.30]     Hooper.Ball.Tests.FourMoveBurstResolverTests.BetweenTheLegsUsesItsProfileAndNormalizedSign(direction: -0.349999994, sign: -1, exitMagnitude: 0.129999995) [FAIL]",
+        "Assert.Equal() Failure: Values differ",
+        "Expected: (5.292687, 0, 7.627527)",
+        "Actual:   (0.95425636, 0, 1.1489276)",
+        "Failed!  - Failed:     1, Passed:     4, Skipped:     0, Total:     5, Duration: 3 ms - Hooper.Ball.Tests.dll (net8.0)"
+      ]
+    },
+    {
+      "name": "inout-default-deadzone",
+      "source_sha_before": {
+        "scripts/Player/FourMoveBurstResolver.cs": "e8bcfecfdc99dc89afa837b89f239eacd93b09d707e4e6452482c3c9cb0616a3",
+        "scripts/Player/PlayerController.cs": "4655f343ccdb1b5dcd2498f904d8a407fa48d1ef93618205c74fef3b5b941498"
+      },
+      "expected_failure": "Assert.Equal()",
+      "mutation_file": "scripts\\Player\\FourMoveBurstResolver.cs",
+      "mutation_sha": "fa9baf69415fca06f0073c833ae7ab2abbfabedb704d2636c00c2b91427acbf2",
+      "test": {
+        "command": [
+          "dotnet",
+          "test",
+          "tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj",
+          "--configuration",
+          "Debug",
+          "--no-restore",
+          "--filter",
+          "FullyQualifiedName~FourMoveBurstResolverTests.InAndOutReversesTheNormalizedSignWithoutSwappingHands"
+        ],
+        "exit": 1,
+        "log": ".godot\\437-mutations\\inout-default-deadzone-test.log",
+        "seconds": 24.24
+      },
+      "failure_excerpt": [
+        "Assert.Equal() Failure: Values differ"
+      ],
+      "status": "KILLED_BY_EXPECTED_ASSERTION",
+      "source_sha_restored": {
+        "scripts/Player/FourMoveBurstResolver.cs": "e8bcfecfdc99dc89afa837b89f239eacd93b09d707e4e6452482c3c9cb0616a3",
+        "scripts/Player/PlayerController.cs": "4655f343ccdb1b5dcd2498f904d8a407fa48d1ef93618205c74fef3b5b941498"
+      },
+      "mutation": "InAndOut branch only: tuning.ExitDeadzone -> .15f",
+      "failure_details": [
+        "[xUnit.net 00:00:00.32]     Hooper.Ball.Tests.FourMoveBurstResolverTests.InAndOutReversesTheNormalizedSignWithoutSwappingHands(direction: -0.349999994, sign: -1, exitMagnitude: 0.129999995) [FAIL]",
+        "Assert.Equal() Failure: Values differ",
+        "Expected: (2.7158163, 0, 4.568158)",
+        "Actual:   (0.06446774, 0, 1.8983861)",
+        "Failed!  - Failed:     1, Passed:     4, Skipped:     0, Total:     5, Duration: 11 ms - Hooper.Ball.Tests.dll (net8.0)"
+      ]
+    }
+  ],
+  "clean": {
+    "source_sha_restored": {
+      "scripts/Player/FourMoveBurstResolver.cs": "e8bcfecfdc99dc89afa837b89f239eacd93b09d707e4e6452482c3c9cb0616a3",
+      "scripts/Player/PlayerController.cs": "4655f343ccdb1b5dcd2498f904d8a407fa48d1ef93618205c74fef3b5b941498"
+    },
+    "source_diff": {
+      "command": [
+        "git",
+        "diff",
+        "--exit-code",
+        "--",
+        "scripts/Player/FourMoveBurstResolver.cs",
+        "scripts/Player/PlayerController.cs"
+      ],
+      "exit": 0,
+      "log": ".godot\\437-mutations\\clean-source-diff.log",
+      "seconds": 0.074
+    },
+    "build": {
+      "command": [
+        "dotnet",
+        "build",
+        "HOOPER GAME.csproj",
+        "--configuration",
+        "Debug",
+        "-p:IncludeIntegrationHarness=true",
+        "--no-restore"
+      ],
+      "exit": 0,
+      "log": ".godot\\437-mutations\\clean-proof-build.log",
+      "seconds": 6.643
+    },
+    "live18": {
+      "command": [
+        "C:\\Users\\The King\\AppData\\Local\\Programs\\Python\\Python314\\python.exe",
+        "tools/harness_catalog.py",
+        "run",
+        "--scene",
+        "FourMoveActiveEntryTest.tscn",
+        "--godot",
+        "C:\\Users\\The King\\AppData\\Local\\GodotPortable\\Godot_v4.7.1-stable_mono_win64\\Godot_v4.7.1-stable_mono_win64_console.exe",
+        "--run-id",
+        "437-mutation-clean-live18"
+      ],
+      "exit": 0,
+      "log": ".godot\\437-mutations\\clean-live18.log",
+      "seconds": 42.595
+    },
+    "native_logs": [
+      ".godot\\437-mutations\\clean-live18\\native\\four-move-active-entry-test-behind-backward.log",
+      ".godot\\437-mutations\\clean-live18\\native\\four-move-active-entry-test-behind-cone-edge.log",
+      ".godot\\437-mutations\\clean-live18\\native\\four-move-active-entry-test-behind-lateral.log",
+      ".godot\\437-mutations\\clean-live18\\native\\four-move-active-entry-test-behind-neutral.log",
+      ".godot\\437-mutations\\clean-live18\\native\\four-move-active-entry-test-between-cone-edge.log",
+      ".godot\\437-mutations\\clean-live18\\native\\four-move-active-entry-test-between-forward.log",
+      ".godot\\437-mutations\\clean-live18\\native\\four-move-active-entry-test-between-lateral.log",
+      ".godot\\437-mutations\\clean-live18\\native\\four-move-active-entry-test-between-neutral.log",
+      ".godot\\437-mutations\\clean-live18\\native\\four-move-active-entry-test-crossover-backward.log",
+      ".godot\\437-mutations\\clean-live18\\native\\four-move-active-entry-test-crossover-exit-above-deadzone.log",
+      ".godot\\437-mutations\\clean-live18\\native\\four-move-active-entry-test-crossover-exit-below-deadzone.log",
+      ".godot\\437-mutations\\clean-live18\\native\\four-move-active-entry-test-crossover-forward.log",
+      ".godot\\437-mutations\\clean-live18\\native\\four-move-active-entry-test-crossover-moving.log",
+      ".godot\\437-mutations\\clean-live18\\native\\four-move-active-entry-test-crossover-neutral.log",
+      ".godot\\437-mutations\\clean-live18\\native\\four-move-active-entry-test-inout-backward.log",
+      ".godot\\437-mutations\\clean-live18\\native\\four-move-active-entry-test-inout-forward.log",
+      ".godot\\437-mutations\\clean-live18\\native\\four-move-active-entry-test-inout-neutral.log",
+      ".godot\\437-mutations\\clean-live18\\native\\four-move-active-entry-test-inout-right-neutral.log"
+    ],
+    "unit": {
+      "command": [
+        "dotnet",
+        "test",
+        "tests/Hooper.Ball.Tests/Hooper.Ball.Tests.csproj",
+        "--configuration",
+        "Debug",
+        "--no-restore"
+      ],
+      "exit": 0,
+      "log": ".godot\\437-mutations\\clean-full-unit.log",
+      "seconds": 26.165
+    },
+    "unit_summary": [
+      "Passed!  - Failed:     0, Passed:  1313, Skipped:     5, Total:  1318, Duration: 1 s - Hooper.Ball.Tests.dll (net8.0)"
+    ]
+  },
+  "godot_version": {
+    "result": {
+      "command": [
+        "C:\\Users\\The King\\AppData\\Local\\GodotPortable\\Godot_v4.7.1-stable_mono_win64\\Godot_v4.7.1-stable_mono_win64_console.exe",
+        "--version"
+      ],
+      "exit": 0,
+      "log": ".godot\\437-mutations\\godot-version.log",
+      "seconds": 1.637
+    },
+    "output": "4.7.1.stable.mono.official.a13da4feb"
+  },
+  "status": "COMPLETE",
+  "source_sha_final": {
+    "scripts/Player/FourMoveBurstResolver.cs": "e8bcfecfdc99dc89afa837b89f239eacd93b09d707e4e6452482c3c9cb0616a3",
+    "scripts/Player/PlayerController.cs": "4655f343ccdb1b5dcd2498f904d8a407fa48d1ef93618205c74fef3b5b941498"
+  }
+}

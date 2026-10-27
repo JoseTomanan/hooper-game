@@ -335,7 +335,25 @@ def _slug(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
 
 
-_ADDITIONAL_SINGLE_ROWS = """AnimationHarnessPrimitivesTest.tscn|primitives-discovery
+_ADDITIONAL_SINGLE_ROWS = """FourMoveActiveEntryTest.tscn|crossover-neutral
+FourMoveActiveEntryTest.tscn|crossover-moving
+FourMoveActiveEntryTest.tscn|crossover-forward
+FourMoveActiveEntryTest.tscn|crossover-backward
+FourMoveActiveEntryTest.tscn|behind-neutral
+FourMoveActiveEntryTest.tscn|behind-lateral
+FourMoveActiveEntryTest.tscn|behind-cone-edge
+FourMoveActiveEntryTest.tscn|behind-backward
+FourMoveActiveEntryTest.tscn|between-neutral
+FourMoveActiveEntryTest.tscn|between-forward
+FourMoveActiveEntryTest.tscn|between-lateral
+FourMoveActiveEntryTest.tscn|between-cone-edge
+FourMoveActiveEntryTest.tscn|inout-neutral
+FourMoveActiveEntryTest.tscn|inout-right-neutral
+FourMoveActiveEntryTest.tscn|inout-forward
+FourMoveActiveEntryTest.tscn|inout-backward
+FourMoveActiveEntryTest.tscn|crossover-exit-below-deadzone
+FourMoveActiveEntryTest.tscn|crossover-exit-above-deadzone
+AnimationHarnessPrimitivesTest.tscn|primitives-discovery
 JumpshotFormTest.tscn|normal-right
 JumpshotFormTest.tscn|normal-left
 JumpshotFormTest.tscn|feint-early
@@ -540,6 +558,10 @@ def _multiprocess_cases(rows: Iterable[tuple[str, str, str, tuple[str, ...]]]) -
 
 
 _CONTROL_COMPONENTS = (
+    ("four-move-active-entry-test-inout-neutral", "four-move-active-entry-test-between-neutral"),
+    ("four-move-active-entry-test-inout-right-neutral", "four-move-active-entry-test-crossover-neutral"),
+    ("four-move-active-entry-test-inout-forward", "four-move-active-entry-test-crossover-forward"),
+    ("four-move-active-entry-test-inout-backward", "four-move-active-entry-test-crossover-backward"),
     ("jump-shot-heading-test-bounded", "jump-shot-heading-test-loss", "jump-shot-heading-test-oob",
      "jump-shot-heading-test-feint-early", "jump-shot-heading-test-feint-late", "jump-shot-heading-test-missing"),
     ("jump-shot-heading-test-bounded", "jump-shot-heading-test-unfinished",

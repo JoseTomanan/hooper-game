@@ -4066,106 +4066,26 @@ public partial class PlayerController : CharacterBody3D
 							FadeawayTriggerResolver.IsFadeaway(Heading, GlobalPosition, ball.RimCenter);
 				}
 
-				// Crossover, BehindTheBack (#194), BetweenTheLegs (#199), and
-				// InAndOut (#202) share the SAME CrossoverBurstMath composition
-				// (composition, not inheritance — see BehindTheBack's doc) with
-				// different tunables: BehindTheBack passes its own (smaller)
-				// burst speeds and a NARROWER exit cone (BehindTheBackExitConeDegrees,
-				// "fewer follow-ups" per the M9 taxonomy handoff — never a
-				// recovery/cooldown penalty); BetweenTheLegs passes its own
-				// MIDPOINT tunables between Crossover's and BehindTheBack's;
-				// InAndOut passes its own REDUCED tunables (~0.6x Crossover's,
-				// #202's "fast, safe, small" design call).
-				if (_machine.JustEnteredActive && _machine.CurrentMove is Crossover or BehindTheBack or BetweenTheLegs or InAndOut)
+				// (#437) Keep the one-shot timing and authoritative mutations here;
+				// the pure resolver owns family/sign/profile/calculation policy.
+				// The caller still selects the role-specific exit snapshot (#210):
+				// server-remote prefers the reliable RPC, falling back to pending
+				// raw stick if it has not arrived. This does not change that race.
+				if (_machine.JustEnteredActive && FourMoveBurstResolver.TryResolve(
+					_machine.CurrentMove, Velocity, Heading, exitVectorSample,
+					new FourMoveBurstTuning(
+						BurstSpeed: BurstSpeed, ForwardBurstScale: ForwardBurstScale, ExitDeadzone: ExitDeadzone,
+						BehindTheBackBurstSpeed: BehindTheBackBurstSpeed,
+						BehindTheBackForwardBurstScale: BehindTheBackForwardBurstScale,
+						BehindTheBackExitConeDegrees: BehindTheBackExitConeDegrees,
+						BetweenTheLegsBurstSpeed: BetweenTheLegsBurstSpeed,
+						BetweenTheLegsForwardBurstScale: BetweenTheLegsForwardBurstScale,
+						BetweenTheLegsExitConeDegrees: BetweenTheLegsExitConeDegrees,
+						InAndOutBurstSpeed: InAndOutBurstSpeed, InAndOutForwardBurstScale: InAndOutForwardBurstScale),
+					out BurstActiveEntry entry))
 				{
-					// #198: CrossoverBurstMath composes the surviving Startup
-					// momentum with the exit-vector-driven burst impulse — see
-					// its doc for the full emergent-move table.
-					//
-					// (#210, fixed) STILL NOT jointly deterministic across
-					// client/server the way Heading is (ADR-0010) — each role
-					// composes from its OWN snapshot of exitVectorSample — but
-					// the SERVER's snapshot (TickServerRemotePlayer's call
-					// site) now PREFERS the value delivered by the client's
-					// discrete RequestExitVector RPC, fired at the client's
-					// own JustEnteredActive tick, over the old continuously-
-					// streamed _pendingRawStick cache that used to be the
-					// sole source. Any tick the RPC has already been
-					// processed by the time the server needs it, the two
-					// composed bursts are IDENTICAL, not just coincidentally
-					// close — the RPC IS the client's own value, not a second
-					// independent read of it. The residual: the RPC can only
-					// be proven to win a same-frame-or-earlier arrival, not a
-					// strict "always beats the old cache" guarantee under
-					// adversarial jitter (see RequestExitVector's doc for the
-					// timing analysis) — in that rare residual case this falls
-					// back to _pendingRawStick, i.e. no worse than the
-					// pre-#210 status quo, never a NEW divergence class.
-					// BehindTheBack, BetweenTheLegs, and InAndOut all ride the
-					// SAME composition path (and the SAME RequestExitVector
-					// send site, gated on CurrentMove type in
-					// TickClientOwnPlayer), so this fix covers all of them,
-					// and Spin (below), for free.
-					float burstSign = _machine.CurrentMove switch
-					{
-						Crossover c      => c.BurstDirection,
-						BehindTheBack b  => b.BurstDirection,
-						BetweenTheLegs g => g.BurstDirection,
-						InAndOut i       => i.BurstDirection,
-						_                => 0f,
-					};
-					int sign = System.Math.Sign(burstSign);
-
-					// InAndOut (#202) passes the NEGATED sign into the shared
-					// composition. ComposeActiveVelocity's own flickSign
-					// parameter is used ONLY as (a) the stationary+neutral-exit
-					// fallback lateral direction and (b) the exact-backward-pole
-					// tiebreak — for Crossover/BehindTheBack/BetweenTheLegs both
-					// must point toward the EMPTY hand (where the ball is
-					// headed), which is exactly what BurstDirection already
-					// encodes. An in-and-out's ball never crosses, so those same
-					// two fallback paths must instead point toward the BALL
-					// hand — the direction of the sell, not the empty hand — see
-					// InAndOut's class doc "Negated flick sign" section and
-					// AC-4's control (a Crossover under identical conditions
-					// bursts toward the empty hand).
-					int composeSign = _machine.CurrentMove is InAndOut ? -sign : sign;
-
-					// Per-move tunable triple, resolved with a switch so this
-					// stays a single ComposeActiveVelocity call site rather than
-					// a growing nested ternary as move #3 joins the family
-					// (#199 code-review self-check). Crossover's own 180° falls
-					// back to CrossoverBurstMath's own FullExitCone default via
-					// an explicit 180 here — Mathf.DegToRad(180) is exactly PI,
-					// bit-identical to omitting the parameter. InAndOut is not
-					// given a narrower cone (#202's brief only locks the burst
-					// MAGNITUDE as reduced, not the exit cone).
-					(float burstSpeed, float forwardBurstScale, float exitConeDegrees) = _machine.CurrentMove switch
-					{
-						BehindTheBack  => (BehindTheBackBurstSpeed, BehindTheBackForwardBurstScale, BehindTheBackExitConeDegrees),
-						BetweenTheLegs => (BetweenTheLegsBurstSpeed, BetweenTheLegsForwardBurstScale, BetweenTheLegsExitConeDegrees),
-						InAndOut       => (InAndOutBurstSpeed, InAndOutForwardBurstScale, 180f),
-						_              => (BurstSpeed, ForwardBurstScale, 180f),
-					};
-
-					// #424 revises only Crossover's moving push-cross. Siblings
-					// keep the original shared composition and tunables.
-					Velocity = _machine.CurrentMove is Crossover
-						? CrossoverBurstMath.ComposeCrossoverActiveVelocity(
-							Velocity, Heading, composeSign, exitVectorSample,
-							burstSpeed, forwardBurstScale, ExitDeadzone)
-						: CrossoverBurstMath.ComposeActiveVelocity(
-						Velocity, Heading, composeSign, exitVectorSample,
-						burstSpeed, forwardBurstScale, ExitDeadzone,
-						Mathf.DegToRad(exitConeDegrees));
-
-					// Crossover/BehindTheBack/BetweenTheLegs swap the ball to
-					// the (now near) empty hand — the authoritative hand-state
-					// change (M9, #83). InAndOut does NOT (AC-2): the ball
-					// never crosses, mirroring Hesitation's identical
-					// no-swap rule — it rides this same predicted + reconciled
-					// Active-entry event for its BURST only, never the hand.
-					if (_machine.CurrentMove is not InAndOut)
+					Velocity = entry.Velocity;
+					if (entry.SwapHands)
 						HandSide = HandStateResolver.Opposite(HandSide);
 				}
 				else if (_machine.JustEnteredActive && _machine.CurrentMove is RetreatDribble)
