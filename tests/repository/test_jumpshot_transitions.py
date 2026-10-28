@@ -189,6 +189,31 @@ class JumpshotTransitionEvidenceTests(unittest.TestCase):
                 self.assertIn("consumed " + phase + " duration changed", failures)
                 self.assertEqual((18 if phase == "Startup" else 4) + 1, durations[phase])
 
+    def test_entry_gate_keeps_the_boundary_but_separates_preexisting_neutral_motion(self):
+        rows, _, _ = self.observed(self.local)
+        seams, _ = proof.measure_boundaries(rows, False)
+        entry = next(s for s in seams if s["name"] == "entry")
+        index = next(i for i in range(2, len(rows)) if rows[i-1]["pose"]["phase"] == "Inactive"
+                     and rows[i]["pose"]["phase"] == "Startup")
+        before = proof.repair_metrics(entry)
+        # Alter only the wholly neutral pre-edge, retaining the real handoff.
+        neutral = copy.deepcopy(rows)
+        neutral[index-2]["pose"]["bones"]["mixamorig_RightHand"]["body"][0] += 10
+        altered, _ = proof.measure_boundaries(neutral, False)
+        altered = next(s for s in altered if s["name"] == "entry")
+        self.assertGreater(altered["maxStepM"], entry["maxStepM"])
+        self.assertEqual(before, proof.repair_metrics(altered))
+        # A restored jump on the FIRST evaluated shot pose must still fail.
+        jump = copy.deepcopy(rows)
+        jump[index]["pose"]["bones"]["mixamorig_RightHand"]["body"][0] += 10
+        altered, _ = proof.measure_boundaries(jump, False)
+        altered = next(s for s in altered if s["name"] == "entry")
+        self.assertTrue(all(proof.repair_metrics(altered)[key] > value for key, value in before.items()))
+        # Return/fake pre-edges are repair-owned and must never be excluded.
+        for seam in seams:
+            if seam["name"] != "entry":
+                self.assertEqual(seam["maxStepM"], proof.repair_metrics(seam)["maxStepM"])
+
 
 if __name__ == "__main__":
     unittest.main()

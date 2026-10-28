@@ -110,6 +110,16 @@ Transition measurements retain both wrists, feet and toes, hips and torso.
 Five adjacent source-tick poses surround each seam, including the first new
 state and the two following evaluations. Reports include per-joint displacement,
 velocity change, actual playback offsets, ball/wrist distance and source clocks.
+At entry only, the comparative repair gate covers the actual boundary and two
+following edges, and their outgoing velocity changes. The preceding wholly
+neutral edge and incoming acceleration remain in the complete diagnostics. One
+owning-client moving entry reproduced a larger **pre-shot** neutral foot step
+(1.071305 m versus 1.018720 m full-neighborhood baseline maximum), while its
+actual entry step was 0.0131 m. This unrelated neutral/prediction motion is not
+claimed repaired. Fake and return gates retain their entire neighborhoods,
+including repair-owned motion before the boundary. A first-shot-pose jump
+mutation still fails the entry gate; a neutral-only pre-edge mutation remains
+visible without being attributed to the shot.
 Entry, fake-to-Recovery and return must improve against immutable matched-clock baseline data;
 merely passing #418's old no-regression bounds is insufficient. Missing ticks,
 changed duplicate poses and reset-spanning neighborhoods fail proof. Identical

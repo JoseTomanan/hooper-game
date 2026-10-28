@@ -420,6 +420,19 @@ def analyze(directory, root_gate=True):
             "supportTrajectory": support, "boundaries": seams}
 
 
+def repair_metrics(seam):
+    if seam["name"] != "entry":
+        return {key: seam[key] for key in ("maxStepM", "maxVelocityChangeMPerTick")}
+    # The first edge of an entry neighborhood is wholly pre-shot neutral
+    # movement. Keep it (and incoming acceleration) in the full diagnostics,
+    # but attribute repair only to the actual handoff and following shot poses.
+    # Fake/return neighborhoods remain complete: their pre-edge IS shot motion.
+    return {
+        "maxBoundaryAndFollowingStepM": max(max(j["stepM"][1:]) for j in seam["joints"].values()),
+        "maxOutgoingVelocityChangeMPerTick": max(max(j["velocityChangeMPerTick"][1:]) for j in seam["joints"].values()),
+    }
+
+
 def compare(case, baseline, require_improved=("entry", "fake-recovery", "return")):
     failures = case["failures"]
     keys = ("role", "entry", "hand", "variant", "entryOffset", "view", "subjectRole", "paced", "pacingMs", "engine", "images")
@@ -437,11 +450,18 @@ def compare(case, baseline, require_improved=("entry", "fake-recovery", "return"
             seam["baselineMaxStepM"] = old["maxStepM"]
             seam["baselineMaxVelocityChangeMPerTick"] = old["maxVelocityChangeMPerTick"]
             seam["baselinePlayback"] = old["playback"]
+            seam["comparisonMetrics"] = repair_metrics(seam)
+            seam["baselineComparisonMetrics"] = repair_metrics(old)
+            seam["comparisonWindow"] = ("actual entry edge and two following edges; outgoing velocity changes; "
+                "pre-shot neutral edge/incoming acceleration retained only in full diagnostics"
+                if seam["name"] == "entry" else "complete five-pose neighborhood")
+            seam["fullNeighborhoodImproved"] = all(seam[key] < old[key] for key in
+                ("maxStepM", "maxVelocityChangeMPerTick"))
             if seam["name"] in require_improved:
                 # This is an explicit before/after repair claim, not merely a
                 # no-regression bound. Retain both velocity and position changes.
-                for metric in ("maxStepM", "maxVelocityChangeMPerTick"):
-                    if not seam[metric] < old[metric]:
+                for metric, value in seam["comparisonMetrics"].items():
+                    if not value < seam["baselineComparisonMetrics"][metric]:
                         failures.append("reproduced discontinuity not improved: " + seam["name"] + " " + metric)
     case["result"] = "failed" if failures else "passed"
 

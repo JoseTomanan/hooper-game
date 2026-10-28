@@ -364,6 +364,9 @@ JumpshotFormTest.tscn|control-idle
 JumpshotFormTest.tscn|control-goalkeeper
 JumpshotFormTest.tscn|centered-body
 JumpshotFormTest.tscn|control-before440
+JumpshotPoseResetTest.tscn|gap
+JumpshotPoseResetTest.tscn|backward
+JumpshotPoseResetTest.tscn|continuous-fake
 MovingCrossoverLateralTest.tscn|suite
 HeldPossessionTest.tscn|held
 AnimationHarnessPrimitivesTest.tscn|primitives-resources
@@ -574,6 +577,7 @@ _CONTROL_COMPONENTS = (
     ("jumpshot-form-test-normal-right", "jumpshot-form-test-normal-left", "jumpshot-form-test-control-idle", "jumpshot-form-test-control-goalkeeper"),
     ("jumpshot-form-test-normal-right", "jumpshot-form-test-feint-early", "jumpshot-form-test-feint-late"),
     ("jumpshot-form-test-centered-body", "jumpshot-form-test-control-before440"),
+    ("jumpshot-pose-reset-test-gap", "jumpshot-pose-reset-test-backward", "jumpshot-pose-reset-test-continuous-fake"),
     ("post-play-test-accuracy", "post-play-test-accuracy-unsquared"),
     ("post-play-test-turnaround", "post-play-test-lost-payload", "post-play-test-turnaround-steal", "post-play-test-turnaround-oob"),
     ("post-play-test-contact-set", "post-play-test-contact-unset"),
