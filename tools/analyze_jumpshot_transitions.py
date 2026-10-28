@@ -146,6 +146,37 @@ def events(manifest, name):
     return [event for event in manifest.get("events", []) if event.get("kind") == name]
 
 
+def normal_phase_durations(rows):
+    """Prove consumed authority ticks, not merely the set of frame counters."""
+    durations, failures = {}, []
+    for phase, length in (("Startup", 18), ("Active", 4)):
+        observed = {}
+        for row in rows:
+            if row.get("move") == "jumpshot" and row.get("authoritativePhase") == phase:
+                observed.setdefault(row["physicsFrame"], row)
+        phase_rows = list(observed.values())
+        if not phase_rows:
+            failures.append("missing authoritative " + phase + " duration evidence")
+            continue
+        first, last = phase_rows[0], phase_rows[-1]
+        frame = first["authoritativeFrame"]
+        counters = [row["authoritativeFrame"] for row in phase_rows]
+        ticks = list(observed)
+        if (frame not in ((0, 1) if phase == "Startup" else (0,)) or
+                counters != list(range(frame, length)) or
+                ticks != list(range(ticks[0], ticks[-1] + 1))):
+            failures.append("authoritative " + phase + " tick/frame sequence changed")
+        following = next((row for row in rows if row["physicsFrame"] > last["physicsFrame"]
+                          and row.get("authoritativePhase") != phase), None)
+        if following is None:
+            failures.append("missing authoritative boundary after " + phase)
+            continue
+        durations[phase] = following["physicsFrame"] - first["physicsFrame"] + frame
+        if durations[phase] != length:
+            failures.append("consumed " + phase + " duration changed")
+    return durations, failures
+
+
 def analyze(directory, root_gate=True):
     directory = Path(directory)
     manifest, rows = load_json(directory / "manifest.json"), load_rows(directory)
@@ -354,6 +385,10 @@ def analyze(directory, root_gate=True):
     else:
         require(recovery_frames == list(range(20)), "authoritative Recovery phase coverage changed")
     consumed_recovery = None
+    consumed_phases = {}
+    if not feint:
+        consumed_phases, timing_failures = normal_phase_durations(authority_rows)
+        failures.extend(timing_failures)
     if recovery_rows:
         first, last = recovery_rows[0]["physicsFrame"], recovery_rows[-1]["physicsFrame"]
         neutral = next((r for r in authority_rows if r["physicsFrame"] > last and r.get("authoritativePhase") == "Inactive"), None)
@@ -379,12 +414,13 @@ def analyze(directory, root_gate=True):
                 all("hipInSkeleton" in r["pose"] for r in shots) else "legacy body-relative diagnostic; no centering acceptance",
             "rootNumericalFloorM": ROOT_CENTER_FLOOR_M,
             "authorityRecoveryFramesObserved": recovery_frames, "consumedRecoveryTicks": consumed_recovery,
+            "consumedNormalPhaseTicks": consumed_phases,
             "authoritativeEvents": authority.get("events", []), "driverEvents": driver.get("events", []),
             "ballWristSeparation": ball_windows, "actualReleaseSourceWindows": release_windows,
             "supportTrajectory": support, "boundaries": seams}
 
 
-def compare(case, baseline, require_improved=("entry", "return")):
+def compare(case, baseline, require_improved=("entry", "fake-recovery", "return")):
     failures = case["failures"]
     keys = ("role", "entry", "hand", "variant", "entryOffset", "view", "subjectRole", "paced", "pacingMs", "engine", "images")
     if any(case.get(k) != baseline.get(k) for k in keys):
@@ -416,7 +452,7 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--baseline-measurement", action="store_true", help="measure immutable pre-fix assets without root-centering acceptance")
     parser.add_argument("--baseline", type=Path, help="matched immutable baseline JSON report")
-    parser.add_argument("--require-improved", nargs="*", choices=("entry", "return"), default=["entry", "return"])
+    parser.add_argument("--require-improved", nargs="*", choices=("entry", "fake-recovery", "return"), default=["entry", "fake-recovery", "return"])
     args = parser.parse_args()
     directories = [args.directory] if (args.directory / "manifest.json").exists() else sorted(
         p.parent for p in args.directory.glob("*/manifest.json") if not p.parent.name.endswith("-server"))

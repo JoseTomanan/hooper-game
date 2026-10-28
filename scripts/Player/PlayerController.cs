@@ -1562,7 +1562,7 @@ public partial class PlayerController : CharacterBody3D
 			protectionSkeleton.AddChild(new ProtectionPose { Name = "ProtectionPose", Player = this });
 			protectionSkeleton.AddChild(new PostPose { Name = "PostPose", Player = this });
 			protectionSkeleton.AddChild(new DefensiveStancePose { Name = "DefensiveStancePose", Player = this });
-			protectionSkeleton.AddChild(new JumpshotEntryPose { Name = "JumpshotEntryPose", Player = this });
+			protectionSkeleton.AddChild(new JumpshotPose { Name = "JumpshotPose", Player = this });
 			protectionSkeleton.AddChild(new CrossoverPose
 			{
 				Name = "CrossoverPose", Player = this,

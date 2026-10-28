@@ -5,14 +5,16 @@ using Hooper.Moves;
 
 namespace Hooper.Player;
 
-/// <summary>Connects the displayed neutral pose to the normal shot's existing gather.</summary>
-public partial class JumpshotEntryPose : SkeletonModifier3D
+/// <summary>Connects actual displayed poses within the shot's existing gather and fake windows.</summary>
+public partial class JumpshotPose : SkeletonModifier3D
 {
     public PlayerController Player { get; set; }
     private Skeleton3D _skeleton;
     private CrossoverPoseBridge _bridge;
     private Transform3D[] _lastFinal, _anchor;
     private int _previousFrame = -1;
+    private MovePhase _previousPhase = MovePhase.Inactive;
+    private bool _fakeRecovery;
 
     public override void _Ready()
     {
@@ -61,21 +63,33 @@ public partial class JumpshotEntryPose : SkeletonModifier3D
     {
         if (_bridge == null || Player == null) return;
         var display = Player.AnimationDisplaySnapshot;
-        if (display.MoveId != "jumpshot" || display.Phase != MovePhase.Startup)
+        bool startup = display.MoveId == "jumpshot" && display.Phase == MovePhase.Startup;
+        bool recovery = display.MoveId == "jumpshot" && display.Phase == MovePhase.Recovery;
+        bool newFake = recovery && _previousPhase == MovePhase.Startup && display.FrameInPhase >= 12;
+        bool newStartup = startup && (_previousPhase != MovePhase.Startup || display.FrameInPhase < _previousFrame);
+        if (newStartup || newFake)
         {
-            _anchor = null; _previousFrame = -1;
-            return;
-        }
-        if (_anchor == null || display.FrameInPhase < _previousFrame)
-        {
+            _fakeRecovery = newFake;
             _anchor = (Transform3D[])_lastFinal.Clone();
             _bridge.ResetContinuity();
         }
+        _previousPhase = display.MoveId == "jumpshot" ? display.Phase : MovePhase.Inactive;
         _previousFrame = display.FrameInPhase;
+        if (!startup && !(recovery && _fakeRecovery))
+        {
+            _anchor = null; _fakeRecovery = false;
+            return;
+        }
+        if (_anchor == null) return;
         // Four intervals within Startup, independent of render frequency or
         // held remote ticks. Preserve the actual incoming feet/hands and use
         // the existing limb bridge to avoid rest-relative mixer antipodes.
-        float progress = Math.Clamp((display.FrameInPhase - 1) / 4f, 0f, 1f);
+        // A fake skips Recovery's airborne head. Join its grounded tail from
+        // the actual last Startup pose instead of snapping through a mixer fade.
+        // Frame13 is the first ordinary post-Feint tick; frame19 must already
+        // match neutral before the unchanged eight-tick Recovery finishes.
+        float progress = startup ? Math.Clamp((display.FrameInPhase - 1) / 4f, 0f, 1f)
+            : Math.Clamp((display.FrameInPhase - 13) / 6f, 0f, 1f);
         if (progress >= 1f) return;
         float smooth = progress * progress * (3f - 2f * progress);
         var result = _bridge.Blend(_anchor, Capture(), smooth, progress).Pose;

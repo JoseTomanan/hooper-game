@@ -1003,7 +1003,6 @@ node_connections = [&"output", 0, &"RecoverySeek", &"RecoverySeek", 0, &"ReturnB
 [sub_resource type="AnimationNodeStateMachineTransition" id="shot440_entry"]
 
 [sub_resource type="AnimationNodeStateMachineTransition" id="shot440_feint"]
-xfade_time = 0.05
 
 [sub_resource type="AnimationNodeStateMachineTransition" id="shot440_exit"]
 

@@ -168,6 +168,27 @@ class JumpshotTransitionEvidenceTests(unittest.TestCase):
                 raise RuntimeError("test cleanup target escaped its workspace scratch directory")
             shutil.rmtree(root)
 
+    def test_extra_startup_or_active_tick_fails_even_with_all_frame_counters(self):
+        trace = ROOT / "docs/analysis/evidence/0418/local-right-normal-after-trace.jsonl.gz"
+        rows = [json.loads(line) for line in gzip.decompress(trace.read_bytes()).decode().splitlines()]
+        durations, failures = proof.normal_phase_durations(rows)
+        self.assertEqual([], failures)
+        self.assertEqual({"Startup": 18, "Active": 4}, durations)
+        for phase, frame in (("Startup", 10), ("Active", 2)):
+            with self.subTest(phase=phase):
+                mutated = copy.deepcopy(rows)
+                index = next(i for i, row in enumerate(mutated)
+                             if row.get("authoritativePhase") == phase and row["authoritativeFrame"] == frame)
+                duplicate = copy.deepcopy(mutated[index])
+                # Preserve every pose/frame counter and an uninterrupted source
+                # clock, but consume one extra simulation tick in this phase.
+                for row in mutated[index+1:]: row["physicsFrame"] += 1
+                duplicate["physicsFrame"] += 1
+                mutated.insert(index + 1, duplicate)
+                durations, failures = proof.normal_phase_durations(mutated)
+                self.assertIn("consumed " + phase + " duration changed", failures)
+                self.assertEqual((18 if phase == "Startup" else 4) + 1, durations[phase])
+
 
 if __name__ == "__main__":
     unittest.main()

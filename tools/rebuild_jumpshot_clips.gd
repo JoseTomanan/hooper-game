@@ -464,7 +464,7 @@ func _center_shot_root(segment: Animation, standing: Animation) -> void:
 func _settle_shot_body(segment: Animation, standing: Animation) -> void:
 	# The final eight Recovery ticks absorb/settle the landing. The last two
 	# poses already equal neutral; no gameplay window is extended. Entry starts
-	# from the actual displayed pose through JumpshotEntryPose's limb bridge.
+	# from the actual displayed pose through JumpshotPose's limb bridge.
 	for track in segment.get_track_count():
 		var type := segment.track_get_type(track)
 		if type not in [Animation.TYPE_POSITION_3D, Animation.TYPE_ROTATION_3D]:

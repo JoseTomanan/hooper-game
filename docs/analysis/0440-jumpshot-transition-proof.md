@@ -66,7 +66,9 @@ Shot entry uses the existing `CrossoverPoseBridge` after animation evaluation.
 It retains the incoming hands/feet and rig proportions while connecting to the
 gather within Startup. Ordinary state-machine entry fades reproduced a leg
 excursion caused by rest-relative pose mixing; they were rejected against the
-unchanged baseline. The Startup-to-Recovery fake edge receives three ticks.
+unchanged baseline. A fake bridges from the actual last Startup pose to its
+grounded Recovery tail, reaching neutral by frame 19. A three-tick state-machine
+fake fade still produced a larger late-fake step and was rejected too.
 Return blending happens inside Recovery's last eight frames,
 toward Idle or the actual left/right Held pose. Outgoing edges have no fade
 which could delay an immediate follow-up move. Shared Held transition resources
@@ -108,7 +110,7 @@ Transition measurements retain both wrists, feet and toes, hips and torso.
 Five adjacent source-tick poses surround each seam, including the first new
 state and the two following evaluations. Reports include per-joint displacement,
 velocity change, actual playback offsets, ball/wrist distance and source clocks.
-Entry and return must improve against immutable matched-clock baseline data;
+Entry, fake-to-Recovery and return must improve against immutable matched-clock baseline data;
 merely passing #418's old no-regression bounds is insufficient. Missing ticks,
 changed duplicate poses and reset-spanning neighborhoods fail proof. Identical
 held source frames are counted and reported rather than invented as new motion.
@@ -117,6 +119,9 @@ The pre-440 asset substitution must fail the root detector at the real playback
 seam. Bypassing the Recovery seek child must fail the legal-feint playback-time
 regression. Existing idle/goalkeeper substitutions retain their original form
 detectors. Gap/duplicate/reset mutations use real captured traces.
+The authority's elapsed Startup and Active ticks are checked separately from
+frame-counter sets: inserting a repeated Startup/10 or Active/2 on an otherwise
+uninterrupted source clock must fail the duration gate.
 
 The dedicated fixture moves the idle observer's body out of the offensive lane;
 otherwise it legitimately blocks the later-dribble check at Z=4. Reset waits for

@@ -19,13 +19,16 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
-from analyze_jumpshot_transitions import OBSERVER_ROLES, observations
+from analyze_jumpshot_transitions import OBSERVER_ROLES, observations, pose_signature
 
 ROOT = Path(__file__).resolve().parents[1]
 EVIDENCE = ROOT / "docs/analysis/evidence/0440"
 PANEL = (480, 270)
 WIDTH, HEADER, FOOTER = 1000, 76, 30
 HEIGHT = HEADER + PANEL[1] + FOOTER
+BEFORE_ASSET_SHA256 = "E36A16BE4C3313A906518D922B0C48B7EBED614522F8379F5E0AD2390D5CDDA9"
+BEFORE_SCENE_SHA256 = "061CA5B670D13BFD2D01EEDC9EB5088DD53CEB5C69526514230CFE1DA68E7995"
+KNOWN_BEFORE_DEFECT = "changed final pose on duplicate source tick"
 
 
 def read_json(path):
@@ -40,7 +43,7 @@ def source_path(path):
     return str(path.resolve().relative_to(ROOT)).replace("\\", "/")
 
 
-def read_capture(directory):
+def read_capture(directory, *, before=False):
     """Select one observed image per adjacent source tick, including both seams."""
     manifest = read_json(directory / "manifest.json")
     if manifest.get("result") != "captured" or not manifest.get("images"):
@@ -58,9 +61,26 @@ def read_capture(directory):
     # The selection includes the first evaluated new state and all observed
     # post-handoff poses; the eight neutral samples are not endpoint guesses.
     window = [row for row in raw if first - 8 <= source_tick(row, remote) <= last + 8]
-    rows, failures, duplicates = observations(window, remote)
-    if failures:
+    changed = []
+    rows, failures, duplicates = observations(window, remote, changed)
+    permitted_before = (before and
+        manifest.get("animationResourceSha256") == BEFORE_ASSET_SHA256 and
+        manifest.get("playerSceneSha256") == BEFORE_SCENE_SHA256)
+    if failures and (not permitted_before or any(failure != KNOWN_BEFORE_DEFECT for failure in failures)):
         raise ValueError(f"invalid source-tick evidence in {directory}: {sorted(set(failures))}")
+    # Keep the actual adjacent raw observations, not only the earliest pose used
+    # by the source-tick projection. These are the reproduced baseline defect.
+    raw_edges, previous = [], None
+    for row in window:
+        if not row.get("pose", {}).get("bones") or row["pose"].get("physicsFrame") != row.get("physicsFrame"):
+            continue
+        if remote and source_tick(row, True) < 0:
+            continue
+        if previous is not None and source_tick(row, remote) == source_tick(previous, remote) and pose_signature(row) != pose_signature(previous):
+            raw_edges.append((previous, row))
+        previous = row
+    if len(raw_edges) != len(changed):
+        raise ValueError(f"raw changed-edge inventory differs from continuity diagnostics: {directory}")
     expected = list(range(first - 8, last + 9))
     if [source_tick(row, remote) for row in rows] != expected:
         raise ValueError(f"missing/duplicate/reset-spanning rendered source ticks: {directory}")
@@ -78,17 +98,17 @@ def read_capture(directory):
     missing = required - keys
     if missing:
         raise ValueError(f"missing required rendered phases {sorted(missing)}: {directory}")
-    for row in rows:
+    for row in rows + [row for edge in raw_edges for row in edge]:
         if not row.get("file") or not (directory / row["file"]).is_file():
             raise ValueError(f"missing original PNG: {directory} sample {row.get('sample')}")
         if not all(key in row for key in ("camera", "cameraProvenance", "viewportSize")):
             raise ValueError(f"observed camera metadata missing: {directory}")
-    return manifest, rows, duplicates
+    return manifest, rows, duplicates, raw_edges
 
 
 def metadata_matches(before, after):
     keys = ("role", "entry", "hand", "variant", "entryOffset", "view", "subjectRole",
-            "paced", "pacingMs", "engine")
+            "paced", "pacingMs", "engine", "observerPacingMs")
     differing = [key for key in keys if before.get(key) != after.get(key)]
     if differing:
         raise ValueError("incomparable before/after input, view or pacing metadata: " + ", ".join(differing))
@@ -134,7 +154,7 @@ def pose_label(row):
     return f"{pose['phase']}/{pose['frame']}  {state}  clip t={time:.4f}s"
 
 
-def draw_pair(before_dir, after_dir, old, new, title, relative_tick, pace):
+def draw_pair(before_dir, after_dir, old, new, title, relative_tick, pace, *, raw_clocks=False):
     canvas = Image.new("RGB", (WIDTH, HEIGHT), "#101820")
     draw = ImageDraw.Draw(canvas)
     draw.text((12, 7), title + f" | source tick {relative_tick:+d} from first observed Startup", fill="white")
@@ -142,6 +162,11 @@ def draw_pair(before_dir, after_dir, old, new, title, relative_tick, pace):
     draw.text((512, 24), "AFTER: #440 repair", fill="#bddcff")
     draw.text((12, 43), pose_label(old), fill="white")
     draw.text((512, 43), pose_label(new), fill="white")
+    if raw_clocks:
+        for x, row in ((12, old), (512, new)):
+            tick = row.get("selectedPresentationTick", -1)
+            if tick < 0: tick = row["physicsFrame"]
+            draw.text((x, 59), f"source {tick} | physics {row['physicsFrame']} | {row['pose'].get('clip', row.get('clip', '?'))}", fill="white")
     for x, directory, row in ((10, before_dir, old), (510, after_dir, new)):
         with Image.open(directory / row["file"]) as source:
             if source.size != tuple(row["viewportSize"]) or source.size != (960, 540):
@@ -181,8 +206,8 @@ def milestones(manifest, rows):
 
 
 def package_case(before_dir, after_dir, output, label):
-    before_manifest, before, before_holds = read_capture(before_dir)
-    after_manifest, after, after_holds = read_capture(after_dir)
+    before_manifest, before, before_holds, before_edges = read_capture(before_dir, before=True)
+    after_manifest, after, after_holds, _ = read_capture(after_dir)
     metadata_matches(before_manifest, after_manifest)
     if len(before) != len(after):
         raise ValueError(f"unequal observed shot timelines require separate diagnosis: {before_dir.name}")
@@ -201,7 +226,7 @@ def package_case(before_dir, after_dir, output, label):
     for i, (old, new) in enumerate(zip(before, after)):
         relative = source_tick(old, remote) - before_first
         normal.append(draw_pair(before_dir, after_dir, old, new, title, relative,
-                                "60Hz simulation presentation; not latency/performance proof; " + pacing))
+                                "60Hz source-tick projection; raw baseline held edges in linked diagnostic; " + pacing))
         slow.append(draw_pair(before_dir, after_dir, old, new, title, relative,
                               "2.4x slow motion (40ms per source tick); " + pacing))
         records.append({"outputFrame": i, "alignment": relative,
@@ -221,6 +246,25 @@ def package_case(before_dir, after_dir, output, label):
     for index, frame in enumerate(selected):
         sheet.paste(normal[frame], (0, HEIGHT * index))
     sheet.save(output / (stem + "-contact.png"))
+    edge_records = []
+    diagnostic = []
+    after_by_relative = {source_tick(row, remote) - after_first: row for row in after}
+    for edge_index, (old_from, old_to) in enumerate(before_edges):
+        relative = source_tick(old_from, remote) - before_first
+        new = after_by_relative[relative]
+        edge_records.append({"edge": edge_index, "relativeSourceTick": relative,
+            "beforeFrom": frame_reference(before_dir, old_from, remote, before_first, before_events),
+            "beforeTo": frame_reference(before_dir, old_to, remote, before_first, before_events),
+            "afterCanonicalHeldStatic": frame_reference(after_dir, new, remote, after_first, after_events)})
+        for edge_end, old in (("FROM", old_from), ("TO", old_to)):
+            edge_title = title + f" | raw held edge {edge_index + 1}/{len(before_edges)} {edge_end}"
+            diagnostic.append(draw_pair(before_dir, after_dir, old, new, edge_title, relative,
+                "diagnostic 500ms/frame; original raw BEFORE observations; canonical AFTER same source tick held static", raw_clocks=True))
+    diagnostic_file = None
+    if diagnostic:
+        diagnostic_file = stem + "-raw-held-edges.gif"
+        diagnostic[0].save(output / diagnostic_file, save_all=True, append_images=diagnostic[1:],
+                           duration=500, loop=0, disposal=2, optimize=False)
     archives = {}
     for prefix, directory, manifest in (("before", before_dir, before_manifest), ("after", after_dir, after_manifest)):
         archives[prefix] = {}
@@ -239,6 +283,9 @@ def package_case(before_dir, after_dir, output, label):
             "beforeManifest": before_manifest, "afterManifest": after_manifest,
             "beforeEventClock": before_events, "afterEventClock": after_events,
             "beforeDuplicateHoldSamples": before_holds, "afterDuplicateHoldSamples": after_holds,
+            "sourceTickProjection": "earliest evaluated observation per source tick; baseline changed held edges are omitted ONLY from this projection and shown in the raw diagnostic",
+            "beforeRawChangedHeldEdgesFilm": diagnostic_file, "beforeRawChangedHeldEdges": edge_records,
+            "rawHeldEdgePlayback": "500ms per original adjacent observation; after canonical same-relative-source-tick pose held static; diagnostic only",
             "frames": records, "normalFrameDurationsMs": durations, "archives": archives}
 
 
@@ -273,8 +320,8 @@ def main():
     # Validate everything before creating artifacts; a missing image cannot
     # produce a partial directory that looks like an accepted comparison.
     for name in selected:
-        before_manifest, before, _ = read_capture(old[name])
-        after_manifest, after, _ = read_capture(new[name])
+        before_manifest, before, _, _ = read_capture(old[name], before=True)
+        after_manifest, after, _, _ = read_capture(new[name])
         metadata_matches(before_manifest, after_manifest)
         if len(before) != len(after):
             parser.error("incomparable observed timeline length: " + name)
@@ -287,17 +334,20 @@ def main():
              "imageTreatment": "whole 960x540 original PNGs resized to 480x270; labels outside source panels; no crop, pose editing or temporal interpolation",
              "alignment": "consecutive source ticks relative to first observed Startup; owner local physics clock remains separate from authority events; actual before/after playback offsets retained",
              "normalPlayback": "60Hz simulation presentation using 17/17/16ms durations; paced capture is not latency/performance evidence",
+             "sourceTickProjection": "main films use the earliest evaluated pose per source tick; they do not reproduce changed baseline poses on held ticks; every such raw adjacent edge is retained in linked 500ms/frame diagnostics and indexed with original PNG hashes",
              "slowPlayback": "40ms per observed source tick, 2.4x slow motion",
              "feelVerdict": "unaccepted; artifacts for human review in #173", "cases": records}
     (output / "frame-index.json").write_text(json.dumps(index, indent=2) + "\n", encoding="utf-8")
     readme = ["# #440 rendered comparisons", "",
               "Each panel preserves the complete production frame, including the ball. The normal films show consecutive simulation source ticks at 60Hz (17/17/16ms frame durations); the GIFs show the same poses at 2.4x slow motion (40ms each). Paced network captures are retimed for this presentation and establish no latency or performance result.", "",
               "Before and after retain their own actual clip positions and independent release events. The index includes original PNG SHA256 hashes, observed cameras, source ticks, playback offsets and compressed raw traces/manifests. Owning-client physics ticks are never joined to server event ticks.", "",
+              "The main films project the earliest evaluated observation per source tick. This projection omits the baseline's changed poses on held source ticks and must not be read as showing that the old playback was continuous. Every changed raw adjacent baseline edge appears in the linked diagnostic film at 500ms per original observation, paired with the repaired canonical pose at the same relative source tick held static. Those diagnostics label the local physics frames and actual playback state/time; their full original frame references and SHA256 hashes remain in the index. Only the named defect in the exact frozen baseline assets/scene is permitted; repaired captures reject it.", "",
               "Appearance and smoothness remain unaccepted for the human pass in #173. The full visible ball/wrist relationship remains in the source images.", "",
-              "| Case | 60Hz simulation film | 2.4x slow film | Contact sheet |",
-              "|---|---|---|---|"]
+              "| Case | 60Hz source-tick projection | 2.4x slow projection | Contact sheet | Raw baseline held edges (500ms/frame) |",
+              "|---|---|---|---|---|"]
     for record in records:
-        readme.append(f"| {record['case']} | [WebP]({record['normalSpeedFilm']}) | [GIF]({record['slowMotionFilm']}) | [PNG]({record['contactSheet']}) |")
+        raw_link = f"[GIF]({record['beforeRawChangedHeldEdgesFilm']})" if record['beforeRawChangedHeldEdgesFilm'] else "none observed"
+        readme.append(f"| {record['case']} | [WebP]({record['normalSpeedFilm']}) | [GIF]({record['slowMotionFilm']}) | [PNG]({record['contactSheet']}) | {raw_link} |")
     readme += ["", "[Source frame and clock index](frame-index.json)", ""]
     (output / "README.md").write_text("\n".join(readme), encoding="utf-8")
     print(f"[jumpshot-evidence] PACKAGED cases={len(records)} output={output}")
