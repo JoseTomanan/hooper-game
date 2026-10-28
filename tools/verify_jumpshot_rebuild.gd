@@ -12,11 +12,12 @@ func fingerprint(anim: Animation) -> String:
 
 func _initialize() -> void:
 	var args := OS.get_cmdline_user_args()
-	if args.size() not in [2, 3] or (args.size() == 3 and args[2] != "--fadeaway-only"):
-		push_error("usage: -s tools/verify_jumpshot_rebuild.gd -- <before.res> <after.res> [--fadeaway-only]")
+	if args.size() not in [2, 3] or (args.size() == 3 and args[2] not in ["--fadeaway-only", "--normal-body"]):
+		push_error("usage: -s tools/verify_jumpshot_rebuild.gd -- <before.res> <after.res> [--fadeaway-only|--normal-body]")
 		quit(1)
 		return
-	var fadeaway_only := args.size() == 3
+	var fadeaway_only := args.size() == 3 and args[2] == "--fadeaway-only"
+	var normal_body := args.size() == 3 and args[2] == "--normal-body"
 	var before: AnimationLibrary = load(args[0])
 	var after: AnimationLibrary = load(args[1])
 	if before == null or after == null or before.get_animation_list() != after.get_animation_list():
@@ -25,6 +26,8 @@ func _initialize() -> void:
 		return
 	var checked := 0
 	var allowed := [&"fadeawayactive"] if fadeaway_only else [&"jumpshotstartup", &"jumpshotactive", &"jumpshotrecovery"]
+	if normal_body:
+		allowed.append(&"fadeawayactive")
 	for name in before.get_animation_list():
 		if name in allowed:
 			continue
@@ -33,9 +36,30 @@ func _initialize() -> void:
 			quit(1)
 			return
 		checked += 1
-	if fadeaway_only and not exact_fadeaway_endpoints(after):
+	if (fadeaway_only or normal_body) and not exact_fadeaway_endpoints(after):
 		quit(1)
 		return
+	if normal_body:
+		# Normal centering propagates ONLY to the fadeaway's hip position; all
+		# #429 authored rotation keys must stay byte-identical. This is dependency
+		# maintenance, not permission to redesign #439's separate silhouette.
+		var old: Animation = before.get_animation(&"fadeawayactive")
+		var updated: Animation = after.get_animation(&"fadeawayactive")
+		for track in old.get_track_count():
+			var type := old.track_get_type(track)
+			var path := old.track_get_path(track)
+			var counterpart := updated.find_track(path, type)
+			if counterpart < 0 or old.track_get_key_count(track) != updated.track_get_key_count(counterpart):
+				push_error("fadeaway track inventory changed")
+				quit(1)
+				return
+			if type == Animation.TYPE_POSITION_3D and String(path).ends_with(":mixamorig_Hips"):
+				continue
+			for key in old.track_get_key_count(track):
+				if var_to_bytes(old.track_get_key_value(track, key)) != var_to_bytes(updated.track_get_key_value(counterpart, key)):
+					push_error("fadeaway non-root channel changed: %s" % path)
+					quit(1)
+					return
 	print("[jumpshot-rebuild] PASS %d unrelated animations unchanged" % checked)
 	quit(0)
 

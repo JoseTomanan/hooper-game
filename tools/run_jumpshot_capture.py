@@ -26,6 +26,12 @@ def start(args, output, role, hand, variant):
         cmd += ["--capture-images=false"]
     if args.paced:
         cmd += ["--capture-paced=true", "--capture-pacing-ms=" + str(args.pacing_ms)]
+    if args.entry:
+        cmd += ["--capture-entry=" + args.entry, "--capture-entry-offset=" + str(args.entry_offset)]
+    if args.subject_role != "host":
+        cmd += ["--capture-subject-role=" + args.subject_role]
+    if args.before440:
+        cmd += ["--capture-before440=true"]
     if args.legacy_shot:
         cmd += ["--capture-legacy-shot=true"]
     if args.fadeaway_substitute:
@@ -57,6 +63,48 @@ def finish(process, log):
         log.close()
 
 
+def run_case(args, output, hand, variant):
+    if not args.remote:
+        finish(*start(args, output, "local", hand, variant))
+    else:
+        server, server_log = start(args, Path(str(output) + "-server"), "server", hand, variant)
+        owner = owner_log = None
+        try:
+            deadline = time.monotonic() + 20
+            ready = ("Dedicated server running headless" if args.subject_role == "owner" else "Spawned player for peer 1")
+            while ready not in Path(server_log.name).read_text(encoding="utf-8", errors="replace"):
+                if server.poll() is not None or time.monotonic() > deadline:
+                    raise RuntimeError("server not ready: " + server_log.name)
+                time.sleep(.1)
+            if args.subject_role == "owner":
+                owner, owner_log = start(args, Path(str(output) + "-owner"), "owner", hand, variant)
+                deadline = time.monotonic() + 20
+                while "Connected to server as peer" not in Path(owner_log.name).read_text(encoding="utf-8", errors="replace"):
+                    if owner.poll() is not None or time.monotonic() > deadline:
+                        raise RuntimeError("owner not connected: " + owner_log.name)
+                    time.sleep(.1)
+                observer, observer_log = start(args, output, "observer", hand, variant)
+                try:
+                    finish(owner, owner_log)
+                    finish(observer, observer_log)
+                finally:
+                    if observer.poll() is None:
+                        observer.kill(); observer.wait(timeout=10)
+                    observer_log.close()
+            else:
+                finish(*start(args, output, "client", hand, variant))
+            finish(server, server_log)
+        finally:
+            if owner is not None and owner.poll() is None:
+                owner.kill(); owner.wait(timeout=10)
+            if owner_log is not None: owner_log.close()
+            if server.poll() is None:
+                server.kill()
+                server.wait(timeout=10)
+            server_log.close()
+    print(f"[jumpshot-capture] CAPTURED {output}", flush=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--godot", default=os.environ.get("GODOT", "godot"))
@@ -77,37 +125,30 @@ def main():
     parser.add_argument("--variant", choices=("normal", "early", "late", "fadeaway"))
     parser.add_argument("--view", choices=("gameplay", "front", "side"), default="gameplay")
     parser.add_argument("--repeat", type=int, default=1)
+    parser.add_argument("--entry", choices=("held", "dribble", "moving"))
+    parser.add_argument("--entry-offset", type=int, default=0)
+    parser.add_argument("--subject-role", choices=("host", "owner"), default="host")
+    parser.add_argument("--before440", action="store_true", help="isolated pre-440 normal asset substitution; playback unchanged")
     args = parser.parse_args()
+    if args.subject_role == "owner" and not args.remote:
+        parser.error("owner subject requires --remote (dedicated server + owner + observer)")
+    if args.entry_offset < 0:
+        parser.error("entry offset must be nonnegative")
     if args.paced and not args.remote:
         parser.error("--paced requires --remote")
     if args.pacing_ms != 80 and not args.paced:
         parser.error("--pacing-ms requires --paced")
     args.output = (ROOT / args.output).resolve()
-    if not args.output.is_relative_to(ROOT / ".godot" / "418") or args.repeat < 1:
-        parser.error("output must be below .godot/418; repeat must be positive")
+    if not any(args.output.is_relative_to(ROOT / ".godot" / number) for number in ("418", "440")) or args.repeat < 1:
+        parser.error("output must be below .godot/418 or .godot/440; repeat must be positive")
     args.output.mkdir(parents=True, exist_ok=False)
     for hand in [args.origin] if args.origin else ("Right", "Left"):
         for variant in [args.variant] if args.variant else ("normal", "early", "late", "fadeaway"):
             for repeat in range(args.repeat):
-                output = args.output / f"{hand.lower()}-{variant}-{repeat + 1}"
-                if not args.remote:
-                    finish(*start(args, output, "local", hand, variant))
-                else:
-                    server, server_log = start(args, Path(str(output) + "-server"), "server", hand, variant)
-                    try:
-                        deadline = time.monotonic() + 20
-                        while "Spawned player for peer 1" not in Path(server_log.name).read_text(encoding="utf-8", errors="replace"):
-                            if server.poll() is not None or time.monotonic() > deadline:
-                                raise RuntimeError("server not ready: " + server_log.name)
-                            time.sleep(.1)
-                        finish(*start(args, output, "client", hand, variant))
-                        finish(server, server_log)
-                    finally:
-                        if server.poll() is None:
-                            server.kill()
-                            server.wait(timeout=10)
-                        server_log.close()
-                print(f"[jumpshot-capture] CAPTURED {output}", flush=True)
+                stem = (f"{hand.lower()}-{args.entry}-{variant}-o{args.entry_offset}" if args.entry
+                        else f"{hand.lower()}-{variant}")
+                output = args.output / f"{stem}-{repeat + 1}"
+                run_case(args, output, hand, variant)
 
 
 if __name__ == "__main__":

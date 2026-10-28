@@ -177,6 +177,15 @@ func _initialize() -> void:
 	# neutral with Recovery's sixth key still visible. Preserve that measured
 	# final pose, not an unobserved theoretical eighth animation key.
 	_restore_inherited_channels(recovery, legacy_recovery, false, 6.0 / TPS)
+	# #440: the owned catch travels sideways and ends in a keeper crouch. That
+	# travel belongs to the source performance, not the stationary basketball
+	# move. Keep the measured jump/load and arm form, but center its root and
+	# settle the WHOLE body into the actual unpossessed neutral after landing.
+	# Jr. NBA: https://jr.nba.com/how-to-shoot-a-jump-shot/
+	var standing: Animation = lib.get_animation(&"idle")
+	for segment in [startup, active, recovery]:
+		_center_shot_root(segment, standing)
+	_settle_shot_body(recovery, standing)
 
 	var lean_axis := _derive_body_right_axis()
 	if lean_axis == Vector3.ZERO:
@@ -206,6 +215,10 @@ func _initialize() -> void:
 			quit(1)
 			return
 		fadeaway = _slice(authored, 0.0, AUTHORED_FADEAWAY_END_S, ACTIVE_TICKS)
+		# Preserve #429's authored DELTA over its original normal base. Only the
+		# normal root centering is shared here; the interior fadeaway lean/legs
+		# remain authored, rather than jumping to the former sideways root at key1.
+		_center_fadeaway_root(fadeaway, active)
 		# Blender may omit an unchanged, rest-valued rotation channel on export.
 		# A single Godot AnimationTree state then resets that non-authored limb to
 		# the T-pose. The squared-up active is the shared base pose for this one
@@ -431,6 +444,69 @@ func _restore_inherited_channels(authored: Animation, original: Animation, start
 					authored.track_set_key_value(track, key, original.position_track_interpolate(old, time))
 				Animation.TYPE_SCALE_3D:
 					authored.track_set_key_value(track, key, original.scale_track_interpolate(old, time))
+
+
+func _center_shot_root(segment: Animation, standing: Animation) -> void:
+	# Animation position keys are local. Copy the standing center in that SAME
+	# frame; editing Player.Position would change authority instead of the skin.
+	# https://docs.godotengine.org/en/4.7/classes/class_animation.html
+	for track in segment.get_track_count():
+		if segment.track_get_type(track) != Animation.TYPE_POSITION_3D or bone_of(segment.track_get_path(track)) != "mixamorig_Hips":
+			continue
+		var center: Vector3 = _standing_value(standing, segment.track_get_path(track), Animation.TYPE_POSITION_3D)
+		for key in segment.track_get_key_count(track):
+			var value: Vector3 = segment.track_get_key_value(track, key)
+			value.x = center.x
+			value.z = center.z
+			segment.track_set_key_value(track, key, value)
+
+
+func _settle_shot_body(segment: Animation, standing: Animation) -> void:
+	# The final eight Recovery ticks absorb/settle the landing. The last two
+	# poses already equal neutral; no gameplay window is extended. Entry starts
+	# from the actual displayed pose through JumpshotEntryPose's limb bridge.
+	for track in segment.get_track_count():
+		var type := segment.track_get_type(track)
+		if type not in [Animation.TYPE_POSITION_3D, Animation.TYPE_ROTATION_3D]:
+			continue
+		var neutral = _standing_value(standing, segment.track_get_path(track), type)
+		for key in segment.track_get_key_count(track):
+			var tick := segment.track_get_key_time(track, key) * TPS
+			var u: float = clampf((tick - 10.0) / 8.0, 0.0, 1.0)
+			var weight := u * u * (3.0 - 2.0 * u)
+			var value = segment.track_get_key_value(track, key)
+			if type == Animation.TYPE_POSITION_3D:
+				segment.track_set_key_value(track, key, value.lerp(neutral, weight))
+			else:
+				segment.track_set_key_value(track, key, value.slerp(neutral, weight))
+
+
+func _standing_value(standing: Animation, path: NodePath, type: int) -> Variant:
+	var track := standing.find_track(path, type)
+	if track >= 0:
+		return standing.position_track_interpolate(track, 0.0) if type == Animation.TYPE_POSITION_3D else standing.rotation_track_interpolate(track, 0.0)
+	# Idle omits the static hip-position channel. The actual neutral position
+	# is therefore the rig rest, not the goalkeeper's last animated position.
+	# https://docs.godotengine.org/en/4.7/classes/class_skeleton3d.html#class-skeleton3d-method-get-bone-rest
+	var bone := _skel.find_bone(bone_of(path))
+	assert(bone >= 0, "standing fallback bone missing")
+	var rest := _skel.get_bone_rest(bone)
+	return rest.origin if type == Animation.TYPE_POSITION_3D else rest.basis.get_rotation_quaternion()
+
+
+func _center_fadeaway_root(fadeaway: Animation, normal: Animation) -> void:
+	var base: Animation = load("res://tests/fixtures/jumpshot_before_440.res").get_animation(&"jumpshotactive")
+	for track in fadeaway.get_track_count():
+		if fadeaway.track_get_type(track) != Animation.TYPE_POSITION_3D or bone_of(fadeaway.track_get_path(track)) != "mixamorig_Hips":
+			continue
+		var path := fadeaway.track_get_path(track)
+		var old_track := base.find_track(path, Animation.TYPE_POSITION_3D)
+		var new_track := normal.find_track(path, Animation.TYPE_POSITION_3D)
+		assert(old_track >= 0 and new_track >= 0)
+		for key in fadeaway.track_get_key_count(track):
+			var time := fadeaway.track_get_key_time(track, key)
+			var offset := normal.position_track_interpolate(new_track, time) - base.position_track_interpolate(old_track, time)
+			fadeaway.track_set_key_value(track, key, fadeaway.track_get_key_value(track, key) + offset)
 
 
 # The a45bd1d guard, applied at build time as well as in the harness: a slice
