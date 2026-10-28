@@ -108,8 +108,10 @@ def read_capture(directory, *, before=False):
 
 def metadata_matches(before, after):
     keys = ("role", "entry", "hand", "variant", "entryOffset", "view", "subjectRole",
-            "paced", "pacingMs", "engine", "observerPacingMs")
+            "paced", "pacingMs", "engine")
     differing = [key for key in keys if before.get(key) != after.get(key)]
+    if before.get("observerPacingMs", 0) != after.get("observerPacingMs", 0):
+        differing.append("observerPacingMs")
     if differing:
         raise ValueError("incomparable before/after input, view or pacing metadata: " + ", ".join(differing))
 

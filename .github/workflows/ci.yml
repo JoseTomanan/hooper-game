@@ -126,6 +126,7 @@ jobs:
             .godot/production-contact/**
             .godot/stance-net/**
             .godot/427/**
+            .godot/440/**
           include-hidden-files: true
           if-no-files-found: warn
 

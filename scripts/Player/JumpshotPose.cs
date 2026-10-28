@@ -15,6 +15,10 @@ public partial class JumpshotPose : SkeletonModifier3D
     private int _previousFrame = -1;
     private MovePhase _previousPhase = MovePhase.Inactive;
     private bool _fakeRecovery;
+    private long _clock = -1;
+    private bool _buffered;
+    private (int Epoch, int Resync) _reset;
+    public bool AppliedForHarness { get; private set; }
 
     public override void _Ready()
     {
@@ -61,8 +65,22 @@ public partial class JumpshotPose : SkeletonModifier3D
 
     public override void _ProcessModificationWithDelta(double delta)
     {
+        AppliedForHarness = false;
         if (_bridge == null || Player == null) return;
         var display = Player.AnimationDisplaySnapshot;
+        bool buffered = display.PresentationTick >= 0;
+        long clock = buffered ? display.PresentationTick : (long)Engine.GetPhysicsFrames();
+        var reset = buffered ? Player.PivotPresentationReset : default;
+        if (_clock >= 0 && (buffered != _buffered || reset != _reset || clock < _clock || clock - _clock > 1))
+        {
+            // A history reset/gap cannot establish a Startup-to-fake seam.
+            // Rebase on this sampled pose, never carry a pre-reset anchor into
+            // what may be the late landing of an ordinary shot (ADR-0027).
+            _anchor = null; _fakeRecovery = false; _previousPhase = MovePhase.Inactive;
+            _lastFinal = Capture();
+            _bridge.ResetContinuity();
+        }
+        _clock = clock; _buffered = buffered; _reset = reset;
         bool startup = display.MoveId == "jumpshot" && display.Phase == MovePhase.Startup;
         bool recovery = display.MoveId == "jumpshot" && display.Phase == MovePhase.Recovery;
         bool newFake = recovery && _previousPhase == MovePhase.Startup && display.FrameInPhase >= 12;
@@ -101,5 +119,6 @@ public partial class JumpshotPose : SkeletonModifier3D
             _skeleton.SetBonePoseRotation(i, result[i].Basis.Orthonormalized().GetRotationQuaternion().Normalized());
             _skeleton.SetBonePoseScale(i, result[i].Basis.Scale);
         }
+        AppliedForHarness = true;
     }
 }

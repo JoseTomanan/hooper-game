@@ -60,6 +60,8 @@ public partial class CommittedClipHookupAudit : Node
             tree.Active = true;
             var playback = tree.Get("parameters/playback").As<AnimationNodeStateMachinePlayback>();
             var graph = (AnimationNodeStateMachine)tree.TreeRoot;
+            if (Array.IndexOf(OS.GetCmdlineUserArgs(), "--audit-disconnect-shot-recovery") >= 0)
+                ((AnimationNodeBlendTree)graph.GetNode("JumpshotRecovery")).DisconnectNode("ReturnBlend", 0);
             var trackRoot = tree.GetNode(tree.RootNode);
             bool allPassed = true;
             foreach (var family in Families)
@@ -97,7 +99,8 @@ public partial class CommittedClipHookupAudit : Node
         int tracks = 0, valid = 0;
         double halfSeconds = 0;
         var invalid = new List<string>();
-        if (graph.HasNode(resolved) && graph.GetNode(resolved) is AnimationNodeAnimation node)
+        AnimationNodeAnimation node = graph.HasNode(resolved) ? PrimaryAnimation(graph.GetNode(resolved)) : null;
+        if (node != null)
         {
             actualClip = node.Animation.ToString();
             if (animationPlayer.HasAnimation(node.Animation))
@@ -143,4 +146,28 @@ public partial class CommittedClipHookupAudit : Node
             scope = "Manual state entry and clip/skeleton binding; no gameplay input-route or visual-quality proof", error, rows = _rows }, new JsonSerializerOptions { WriteIndented = true }));
     }
     private static HandSide Opposite(HandSide side) => side == HandSide.Left ? HandSide.Right : HandSide.Left;
+
+    private static AnimationNodeAnimation PrimaryAnimation(AnimationNode node)
+    {
+        if (node is AnimationNodeAnimation animation) return animation;
+        if (node is not AnimationNodeBlendTree blend) return null;
+        // Follow connected primary inputs from output, not an arbitrary leaf
+        // which might exist in the resource but be disconnected from playback.
+        // Godot 4.7.1 serializes input node/index/output node triples here:
+        // https://github.com/godotengine/godot/blob/4.7.1-stable/scene/animation/animation_blend_tree.cpp
+        var connections = blend.Get("node_connections").AsGodotArray();
+        string current = "output";
+        var visited = new HashSet<string>();
+        while (visited.Add(current))
+        {
+            if (current != "output" && blend.GetNode(current) is AnimationNodeAnimation leaf) return leaf;
+            string next = null;
+            for (int i = 0; i + 2 < connections.Count; i += 3)
+                if (connections[i].AsStringName().ToString() == current && connections[i + 1].AsInt32() == 0)
+                { next = connections[i + 2].AsStringName().ToString(); break; }
+            if (next == null || !blend.HasNode(next)) return null;
+            current = next;
+        }
+        return null;
+    }
 }
