@@ -6,6 +6,81 @@ namespace Hooper.Ball.Tests;
 public class CrossoverPoseBridgeTests
 {
     [Fact]
+    public void CompletedBodyTranslationRetainsAnIntermediateArmGoal()
+    {
+        int[] parents = [-1, 0, 1, 2];
+        Transform3D[] anchor = [At(Vector3.Zero),
+            new(new Basis(Vector3.Back, -.5f), Vector3.Zero),
+            At(Vector3.Down), At(Vector3.Down)];
+        Transform3D[] animated = [At(Vector3.Right),
+            new(new Basis(Vector3.Back, .5f), Vector3.Zero),
+            At(Vector3.Down), At(Vector3.Down)];
+        var a = CrossoverPoseBridge.Forward(parents, anchor);
+        var b = CrossoverPoseBridge.Forward(parents, animated);
+        var result = new CrossoverPoseBridge(parents, [new(1, 2, 3)])
+            .Blend(anchor, animated, .5f, positionWeight: 1f);
+        var actual = CrossoverPoseBridge.Forward(parents, result.Pose);
+
+        Assert.Equal(animated[0].Origin, actual[0].Origin);
+        Assert.True(actual[3].Origin.DistanceTo(a[3].Origin.Lerp(b[3].Origin, .5f)) < .0001f);
+        Assert.True(actual[3].Origin.DistanceTo(b[3].Origin) > .1f);
+        Assert.True(Mathf.Abs(actual[1].Origin.DistanceTo(actual[2].Origin) - 1f) < .00001f);
+        Assert.True(Mathf.Abs(actual[2].Origin.DistanceTo(actual[3].Origin) - 1f) < .00001f);
+        Assert.Equal(0, result.ClampCount);
+    }
+
+    [Theory]
+    [InlineData(0f, 1f)]
+    [InlineData(1f, 0f)]
+    public void IndependentTranslationDoesNotTakeTheRotationEndpointShortcut(float weight, float positionWeight)
+    {
+        Transform3D[] anchor = [new(new Basis(Vector3.Up, -.4f), Vector3.Zero)];
+        Transform3D[] animated = [new(new Basis(Vector3.Up, .4f), Vector3.Right)];
+        var result = new CrossoverPoseBridge([-1], [])
+            .Blend(anchor, animated, weight, positionWeight: positionWeight).Pose[0];
+        var expectedRotation = (weight == 0 ? anchor : animated)[0].Basis.GetRotationQuaternion();
+        Assert.Equal(positionWeight == 0 ? Vector3.Zero : Vector3.Right, result.Origin);
+        Assert.True(result.Basis.GetRotationQuaternion().AngleTo(expectedRotation) < .001f);
+    }
+
+    [Fact]
+    public void OmittedPositionWeightExactlyMatchesTheExistingSharedWeightPath()
+    {
+        int[] parents = [-1, 0, 1];
+        var anchor = Leg(0, -.5f, 1.3f);
+        var animated = Leg(1, .5f, 1.3f);
+        var implicitBridge = new CrossoverPoseBridge(parents, [new(0, 1, 2, IsSupport: true)]);
+        var explicitBridge = new CrossoverPoseBridge(parents, [new(0, 1, 2, IsSupport: true)]);
+        foreach (float weight in new[] { 0f, .1f, .25f, .5f, .75f, .9f, 1f })
+        {
+            var original = implicitBridge.Blend(anchor, animated, weight, supportWeight: .3f);
+            var explicitPosition = explicitBridge.Blend(anchor, animated, weight, supportWeight: .3f, positionWeight: weight);
+            Assert.Equal(original.Pose, explicitPosition.Pose);
+            Assert.Equal(original.ClampCount, explicitPosition.ClampCount);
+            Assert.Equal(original.MaxReachError, explicitPosition.MaxReachError);
+        }
+    }
+
+    [Theory]
+    [InlineData(-1f, 0f)]
+    [InlineData(2f, 1f)]
+    [InlineData(float.NaN, .5f)]
+    [InlineData(float.PositiveInfinity, .5f)]
+    [InlineData(float.NegativeInfinity, .5f)]
+    public void PositionWeightIsBoundedAndNonfiniteValuesUseTheSharedWeight(float positionWeight, float expected)
+    {
+        Transform3D[] anchor = [Transform3D.Identity];
+        Transform3D[] animated = [new(new Basis(Vector3.Up, .4f).Scaled(Vector3.One * 1.4f), Vector3.Right)];
+        var result = new CrossoverPoseBridge([-1], [])
+            .Blend(anchor, animated, .5f, positionWeight: positionWeight).Pose[0];
+        Assert.True(result.IsFinite());
+        Assert.Equal(new Vector3(expected, 0, 0), result.Origin);
+        Assert.True(result.Basis.Scale.DistanceTo(Vector3.One * 1.2f) < .00001f);
+        Assert.True(result.Basis.Orthonormalized().GetRotationQuaternion()
+            .AngleTo(new Quaternion(Vector3.Up, .2f)) < .001f);
+    }
+
+    [Fact]
     public void MovingNeutralAnchorKeepsItsAuthoredRotationInTheBlend()
     {
         var bridge = new CrossoverPoseBridge([-1], [], followAnchorPose: true);
