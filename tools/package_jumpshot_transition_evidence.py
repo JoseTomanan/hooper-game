@@ -17,8 +17,6 @@ import json
 import re
 from pathlib import Path
 
-from PIL import Image, ImageDraw
-
 from analyze_jumpshot_transitions import OBSERVER_ROLES, observations, pose_signature
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -157,6 +155,8 @@ def pose_label(row):
 
 
 def draw_pair(before_dir, after_dir, old, new, title, relative_tick, pace, *, raw_clocks=False):
+    from PIL import Image, ImageDraw
+
     canvas = Image.new("RGB", (WIDTH, HEIGHT), "#101820")
     draw = ImageDraw.Draw(canvas)
     draw.text((12, 7), title + f" | source tick {relative_tick:+d} from first observed Startup", fill="white")
@@ -208,6 +208,10 @@ def milestones(manifest, rows):
 
 
 def package_case(before_dir, after_dir, output, label):
+    # Validation stays importable on standard-library-only CI; image production
+    # requires Pillow, while checking the captured evidence does not.
+    from PIL import Image
+
     before_manifest, before, before_holds, before_edges = read_capture(before_dir, before=True)
     after_manifest, after, after_holds, _ = read_capture(after_dir)
     metadata_matches(before_manifest, after_manifest)
