@@ -7,7 +7,7 @@ namespace Hooper.Ball;
 
 /// <summary>Immutable simulation anchors for one accepted normal-shot instance.</summary>
 public readonly record struct ShotGatherState(bool Valid, Vector3 EntryOffset, HandSide Hand,
-    float DribblePhase, bool Faking = false, Vector3 FakeOffset = default);
+    float DribblePhase, bool Faking = false, Vector3 FakeOffset = default, bool Released = false);
 
 /// <summary>Fixed-frame ball attachment; no animation, skeleton or render clock.</summary>
 public static class ShotGather
@@ -22,7 +22,7 @@ public static class ShotGather
             t = t * t * (3f - 2f * t);
             return (root + state.EntryOffset).Lerp(root + new Basis(Vector3.Up, heading) * authoredTarget, t);
         }
-        if (phase == MovePhase.Active && frame == 0 && !state.Faking)
+        if (phase == MovePhase.Active && !state.Faking)
             return root + new Basis(Vector3.Up, heading) * authoredTarget;
         if (phase == MovePhase.Recovery && state.Faking)
         {

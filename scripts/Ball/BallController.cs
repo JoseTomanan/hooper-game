@@ -1496,6 +1496,7 @@ public partial class BallController : Node3D
 		if (IsServer)
 			ResolveBlockAttempts();
 
+		ReplayPredictedGatherCradle();
 		switch (State)
 		{
 			case BallState.Held:      TickHeld();        break;
@@ -1570,6 +1571,8 @@ public partial class BallController : Node3D
 		ApplySmoothCorrection();
 		ApplyRemoteBallPresentation();
 		ApplyReboundHeldPresentation();
+		ApplyShotHeldPresentation();
+		ClearLostShotGathers();
 
 		// Push the possession HUD only when something actually changed (#51) —
 		// one refresh per possession/clear event, not 60 per second. Runs on
@@ -2391,6 +2394,7 @@ public partial class BallController : Node3D
 			DribbleHandHeight - verticalDip * SweepDipDepth(sweepPath),
 			holderPos.Z + forward.Z * forwardOffset + right.Z * HandOffset * lateralSign
 		);
+		ApplyShotGather(holderBody);
 		CheckJumpShotRelease(holderBody);
 	}
 
@@ -2990,6 +2994,7 @@ public partial class BallController : Node3D
 	/// </summary>
 	private void AwardPossession(int peerId, bool cleared = false)
 	{
+		ResetShotGathers();
 		// Pick the legal edge by the ball's current state:
 		//   • Loose / InFlight  → Catch    : a live recovery (rebound, made-shot
 		//     reset, OOB award after a loose ball crossed the line). The original
@@ -3466,6 +3471,8 @@ public partial class BallController : Node3D
 		}
 
 		_arc = new ShotArc(GlobalPosition, aimTarget, ShotApexHeight, Gravity);
+		if (holder.SimulationShot is { } releasedShot)
+			releasedShot.Gather = releasedShot.Gather with { Released = true };
 		LastAimTargetForHarness = aimTarget;
 		LastReleasePositionForHarness = GlobalPosition;
 		SuccessfulShotReleasesForHarness++;

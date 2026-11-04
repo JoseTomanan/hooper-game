@@ -1578,6 +1578,7 @@ public partial class PlayerController : CharacterBody3D
 				Name = "ReboundPose", Player = this,
 				AnimationPlayer = GetNodeOrNull<AnimationPlayer>("AnimationPlayer")
 			});
+			protectionSkeleton.AddChild(new ShotHandPose { Name = "ShotHandPose", Player = this });
 		}
 
 		_gameManager = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
@@ -1720,7 +1721,7 @@ public partial class PlayerController : CharacterBody3D
 			(int)_machine.Phase, _machine.FrameInPhase, MoveIdOf(_machine.CurrentMove), MoveParamOf(_machine.CurrentMove),
 			Heading, (int)HandSide, _machine.WasRecoveryEnteredEarly, _pivot.HasLatch, _pivot.LatchedYaw,
 			IsBeaten(PhysicsTick), IsProtecting, IsInDefensiveStance, IsPosting, DisplayPostEstablished, _turnaroundToken,
-			_lastShotToken, _lastShotTarget);
+			_lastShotToken, _lastShotTarget, CaptureShotGatherSnapshot());
 	}
 
 	/// <summary>
@@ -1797,7 +1798,7 @@ public partial class PlayerController : CharacterBody3D
 			(int)_machine.Phase, _machine.FrameInPhase, MoveIdOf(_machine.CurrentMove), MoveParamOf(_machine.CurrentMove),
 			Heading, (int)HandSide, _machine.WasRecoveryEnteredEarly, _pivot.HasLatch, _pivot.LatchedYaw,
 			IsBeaten(PhysicsTick), IsProtecting, IsInDefensiveStance, IsPosting, DisplayPostEstablished, _turnaroundToken,
-			_lastShotToken, _lastShotTarget);
+			_lastShotToken, _lastShotTarget, CaptureShotGatherSnapshot());
 	}
 
 	/// <summary>
@@ -2200,6 +2201,7 @@ public partial class PlayerController : CharacterBody3D
 			normalShot.BeginToken = IsServer ? 0 : _buffer.LastSequence + 1;
 			_lastShotToken = normalShot.BeginToken;
 			_lastShotTarget = normalShot.TargetHeading;
+			normalShot.Gather = GetBall()?.CaptureShotGather(this) ?? default;
 		}
 		InterruptReboundPresentation();
 		_pivot = HeadingMath.PivotState.None;
@@ -2610,7 +2612,7 @@ public partial class PlayerController : CharacterBody3D
 	/// authoritative feint abort. Same transfer-mode rationale as
 	/// RequestBeginMove above — a one-shot discrete event, Reliable is correct.
 	///
-	/// _machine.Feint() enforces the feint window using the SERVER's own frame
+	/// FeintWithGather() enforces the feint window using the SERVER's own frame
 	/// count (FrameInPhase), not anything the client reports — so a client
 	/// attempting to feint outside the legal window simply gets a no-op here,
 	/// exactly like a local Feint() call would.
@@ -2627,7 +2629,7 @@ public partial class PlayerController : CharacterBody3D
 			return;
 		}
 
-		_machine.Feint();
+		FeintWithGather();
 	}
 
 	// ── Client RPC: receive server state ─────────────────────────────────────
@@ -2700,7 +2702,7 @@ public partial class PlayerController : CharacterBody3D
 		int movePhase, int frameInPhase, string moveId, float moveParam, float heading, int handSide,
 		bool endedActiveEarly, bool pivotHasLatch, float pivotLatchedYaw, bool isBeaten, bool protect = false, bool stance = false,
 		bool post = false, bool postEstablished = false, int turnaroundToken = 0,
-		int shotToken = 0, float shotTarget = 0)
+		int shotToken = 0, float shotTarget = 0, Godot.Collections.Array shotGather = null)
 	{
 		_serverPos       = pos;
 		_serverVel       = vel;
@@ -2736,6 +2738,7 @@ public partial class PlayerController : CharacterBody3D
 		_serverTurnaroundToken = turnaroundToken;
 		_serverShotToken = shotToken;
 		_serverShotTarget = shotTarget;
+		ReceiveShotGatherSnapshot(shotGather);
 		_hasNewState     = true;
 		_hasContactSnapshot = true;
 	}
@@ -2899,6 +2902,7 @@ public partial class PlayerController : CharacterBody3D
 
 		// Step 1: prune confirmed inputs.
 		ConfirmShotTarget(_serverShotToken, _serverShotTarget);
+		if (_serverShotGather.Valid) ConfirmShotGather(_serverShotToken, _serverShotGather.EntryOffset, (int)_serverShotGather.Hand, _serverShotGather.DribblePhase, _serverShotGather.Faking, _serverShotGather.FakeOffset);
 		if (_machine.CurrentMove is JumpShot releaseShot && releaseShot.BeginToken == _serverShotToken
 			&& _serverMoveId == "jumpshot" && _serverMovePhase is MovePhase.Active or MovePhase.Recovery)
 			releaseShot.IsFadeaway = _serverMoveParam != 0f;
@@ -3939,7 +3943,7 @@ public partial class PlayerController : CharacterBody3D
 		// JumpShot — is now structurally moot: there is no other gesture-
 		// sourced Feint() call left to withhold it from. FeintGateResolver
 		// was removed (doubt-driven pass, #202) rather than kept as dead code.
-		if (Input.IsActionJustPressed("move_feint") && _machine.Feint() && !isServer)
+		if (Input.IsActionJustPressed("move_feint") && FeintWithGather() && !isServer)
 			RpcId(1, MethodName.RequestFeint);
 
 		_machine.Tick(); // advance one frame — always called, including Inactive (no-op)
