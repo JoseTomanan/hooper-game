@@ -31,14 +31,20 @@ public partial class PlayerController
         return true;
     }
 
-    private void ConfirmShotGather(int token, Vector3 entry, int hand, float dribble, bool faking, Vector3 fake)
+    private void ConfirmShotGather(int token, ShotGatherState confirmed)
     {
-        if (token == 0 || !entry.IsFinite() || !fake.IsFinite() || !float.IsFinite(dribble)) return;
-        if (_machine.CurrentMove is not JumpShot shot || shot.BeginToken != token || !shot.Gather.Valid) return;
+        if (token == 0 || _machine.CurrentMove is not JumpShot shot || shot.BeginToken != token) return;
+        // A matching invalidation can represent an award/loss whose transient
+        // ball packet was skipped. Same-holder Held alone cannot identify it.
+        // Older Begins cannot invalidate the current shot's attachment.
+        if (!confirmed.Valid) { shot.Gather = default; return; }
+        if (!shot.Gather.Valid || !confirmed.EntryOffset.IsFinite() || !confirmed.FakeOffset.IsFinite()
+            || !float.IsFinite(confirmed.DribblePhase)) return;
         // Stale Startup packets cannot undo a locally accepted fake or rewind
         // its eight-tick clock. Only the anchors for this Begin are confirmed.
-        shot.Gather = shot.Gather with { EntryOffset = entry, Hand = (HandSide)hand, DribblePhase = dribble,
-            Faking = shot.Gather.Faking || faking, FakeOffset = faking ? fake : shot.Gather.FakeOffset };
+        shot.Gather = shot.Gather with { EntryOffset = confirmed.EntryOffset, Hand = confirmed.Hand,
+            DribblePhase = confirmed.DribblePhase, Faking = shot.Gather.Faking || confirmed.Faking,
+            FakeOffset = confirmed.Faking ? confirmed.FakeOffset : shot.Gather.FakeOffset };
     }
 
     private Godot.Collections.Array CaptureShotGatherSnapshot()

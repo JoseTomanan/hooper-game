@@ -2902,7 +2902,7 @@ public partial class PlayerController : CharacterBody3D
 
 		// Step 1: prune confirmed inputs.
 		ConfirmShotTarget(_serverShotToken, _serverShotTarget);
-		if (_serverShotGather.Valid) ConfirmShotGather(_serverShotToken, _serverShotGather.EntryOffset, (int)_serverShotGather.Hand, _serverShotGather.DribblePhase, _serverShotGather.Faking, _serverShotGather.FakeOffset);
+		ConfirmShotGather(_serverShotToken, _serverShotGather);
 		if (_machine.CurrentMove is JumpShot releaseShot && releaseShot.BeginToken == _serverShotToken
 			&& _serverMoveId == "jumpshot" && _serverMovePhase is MovePhase.Active or MovePhase.Recovery)
 			releaseShot.IsFadeaway = _serverMoveParam != 0f;
