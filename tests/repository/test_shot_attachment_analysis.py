@@ -349,6 +349,17 @@ class ShotAttachmentAnalysisTests(unittest.TestCase):
         at["hasDribbled"] = False
         self.assert_failure(self.analyze(rows, variant="early", entry="dribble"), "dead-dribble")
 
+    def test_common_visual_shift_cannot_explain_itself_as_holder_correction(self):
+        rows = self.fixture()
+        for row in rows:
+            row["ball"][0] += .15
+            for bone in row["pose"]["bones"].values():
+                bone["world"][0] += .15
+        # Independent holder correction stays zero. Palm/ball contact survives
+        # this mutation, while the common presentation-frame assertion must fail.
+        report = self.analyze(rows)
+        self.assert_failure(report, "not explained by holder visual correction")
+
     def test_matrix_requires_all_combinations_and_separate_owner_and_observer(self):
         self.assertEqual(36, len(expected_cases("local")))
         self.assertEqual(72, len(expected_cases("owner")))

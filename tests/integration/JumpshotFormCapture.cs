@@ -325,7 +325,8 @@ public partial class JumpshotFormCapture : Node
             ball = Vec(_ball.RenderedWorldPosition), liveBall = Vec(_ball.GlobalPosition), ballState = _ball.State.ToString(),
             shotAttachmentModel = Vec(ExpectedGather(p)),
             gatherRoot = Vec(p.GlobalPosition),
-            shotVisualOffset = Vec(_ball.RenderedWorldPosition - _ball.GlobalPosition),
+            // Independent expected holder correction, not observed ball-liveBall.
+            shotVisualOffset = Vec(p.ReboundVisualOffset),
             flightVelocity = Vec(_ball.FlightVelocityForHarness), arcGravity = _ball.Gravity,
             flightStep = new { advanced = _ball.FlightStepForHarness.Advanced,
                 position = Vec(_ball.FlightStepForHarness.Position), velocity = Vec(_ball.FlightStepForHarness.Velocity) },
