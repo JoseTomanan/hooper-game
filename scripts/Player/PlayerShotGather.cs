@@ -24,12 +24,18 @@ public partial class PlayerController
         var shot = SimulationShot;
         var ball = GetBall();
         Vector3 offset = ball == null ? Vector3.Zero : ball.GlobalPosition - GlobalPosition;
-        if (!_machine.Feint()) return false;
+        var phase = _machine.Phase;
+        int frame = _machine.FrameInPhase;
+        bool accepted = _machine.Feint();
+        ObserveShotFeintForHarness(phase, frame, accepted);
+        if (!accepted) return false;
         if (shot is { Gather.Valid: true } && ball?.State == BallState.Held
             && ball.StateMachine.HolderPeerId == OwnPeerId)
             shot.Gather = shot.Gather with { Faking = true, FakeOffset = offset };
         return true;
     }
+
+    partial void ObserveShotFeintForHarness(MovePhase phase, int frame, bool accepted);
 
     private void ConfirmShotGather(int token, ShotGatherState confirmed)
     {

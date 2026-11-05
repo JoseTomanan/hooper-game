@@ -28,6 +28,7 @@ public partial class JumpshotFormCapture : Node
     private bool _headingFixture;
     private string _fadeawaySubstitute;
     private bool _fadeawaySubstituteApplied;
+    private int _observedFeints;
     private float _headingAngle, _headingRate, _fixedHeadingTarget;
     private string _headingEntry;
     private int _headingMoveStart = -1;
@@ -110,8 +111,16 @@ public partial class JumpshotFormCapture : Node
         if (_finished) return;
         _tick++;
         if (_wall.Elapsed.TotalSeconds > 80 || _tick > 6000) { Finish("timeout"); return; }
-        if (_matrix) { TickMatrix(); return; }
         var p = Subject();
+        if (p != null && p.CapturedFeintCount != _observedFeints)
+        {
+            _observedFeints = p.CapturedFeintCount;
+            var feint = p.CapturedFeint;
+            _events.Add(new { kind = "feint-resolution", physicsFrame = feint.PhysicsFrame,
+                phase = feint.Phase.ToString(), frame = feint.Frame, accepted = feint.Accepted,
+                role = _role, count = _observedFeints });
+        }
+        if (_matrix) { TickMatrix(); return; }
         if (p == null) return;
         // #428's production rate finishes the ordinary turn. This retained
         // comparison explicitly exercises an unfinished turn at a fixture rate.
@@ -213,7 +222,17 @@ public partial class JumpshotFormCapture : Node
         // lets the real ENet observer draw each source tick. This is diagnostic
         // coverage evidence, never a real-time network/performance claim.
         // https://docs.godotengine.org/en/4.7/classes/class_os.html#class-os-method-delay-msec
-        if (!_finished && _paced && (_role == "server" || _role == "owner")) OS.DelayMsec(_pacingMs);
+        if (!_finished && _paced && (_role == "server" || _role == "owner"))
+        {
+            // A last-legal owner fake must arrive inside authority's legal
+            // window too. Equal wall pacing can drift past that boundary.
+            // Slow only authority's fake Startup producer; simulation dt and
+            // every gameplay gate remain unchanged. This is a state fixture,
+            // never a latency/performance experiment.
+            bool fakeStartup = _matrix && _subjectRole == "owner" && _role == "server"
+                && _variant is "early" or "late" && Subject()?.PhaseForHarness == MovePhase.Startup;
+            OS.DelayMsec(fakeStartup ? _pacingMs * 2 : _pacingMs);
+        }
         // A fixed-fps headless observer otherwise runs as fast as the CPU and
         // can exhaust its fixture tick guard before the paced producers finish.
         // Keep several observations per 80ms source tick without pretending
@@ -304,7 +323,8 @@ public partial class JumpshotFormCapture : Node
             facingFactor = ShotFacing.Multiplier(p.DisplayHeading, p.DisplayRootPosition, _ball.RimCenter, _ball.FacingScatterK),
             initiationSpeed = p.ShotInitiationSpeed,
             ball = Vec(_ball.RenderedWorldPosition), liveBall = Vec(_ball.GlobalPosition), ballState = _ball.State.ToString(),
-            shotAttachmentModel = Vec(_ball.State == BallState.Held ? _ball.GlobalPosition : _ball.LastReleasePositionForHarness),
+            shotAttachmentModel = Vec(ExpectedGather(p)),
+            gatherRoot = Vec(p.GlobalPosition),
             shotVisualOffset = Vec(_ball.RenderedWorldPosition - _ball.GlobalPosition),
             flightVelocity = Vec(_ball.FlightVelocityForHarness), arcGravity = _ball.Gravity,
             flightStep = new { advanced = _ball.FlightStepForHarness.Advanced,
@@ -341,6 +361,8 @@ public partial class JumpshotFormCapture : Node
             paced = _paced, pacingMs = _paced ? _pacingMs : 0,
             observerPacingMs = _matrix && _paced && _role == "observer" ? 16 : 0,
             pacingMeaning = _paced ? $"{_pacingMs}ms producer wall-clock delay; fixed simulation steps; not real-time" : "unpaced",
+            authorityFakeStartupPacingMs = _paced && _matrix && _subjectRole == "owner" && _role == "server"
+                && _variant is "early" or "late" ? _pacingMs * 2 : 0,
             mutation = _legacyShot ? "legacy-normal-shot-three-clips" : "none", mutationApplied = _legacyApplied,
             fadeawaySubstitute = _fadeawaySubstitute, fadeawaySubstituteApplied = _fadeawaySubstituteApplied,
             fadeawayFixtureSha256 = _fadeawaySubstitute == "before429" ? Convert.ToHexString(SHA256.HashData(
@@ -684,6 +706,24 @@ public partial class JumpshotFormCapture : Node
         foreach (Node child in n.GetChildren()) { var found = FindSkeleton(child); if (found != null) return found; }
         return null;
     }
+    private Vector3 ExpectedGather(PlayerController player)
+    {
+        var shot = player.SimulationShot;
+        if (shot is not { Gather.Valid: true }) return _ball.LastReleasePositionForHarness;
+        // Evaluate the pure model independently of the ball root. Reading the
+        // observed Held center here would let a fixed-waist mutation prove itself.
+        Vector3 forward = BallController.HolderForwardForHarness(player);
+        Vector3 right = forward.Cross(Vector3.Up);
+        float sign = player.HandSide == HandSide.Right ? 1f : -1f;
+        Vector3 station = player.GlobalPosition + forward * _ball.DribbleForwardOffset + right * (_ball.HandOffset * sign);
+        station.Y = _ball.DribbleHandHeight;
+        var gather = player.SimulationMovePhase == MovePhase.Active && player.SimulationMoveFrame == 0
+            ? shot.Gather with { Released = false } : shot.Gather;
+        return ShotGather.Position(gather, player.SimulationMovePhase, player.SimulationMoveFrame,
+            player.GlobalPosition, player.Heading, station, ShotGatherProfile.Target(
+                player.SimulationMovePhase == MovePhase.Active ? 18 : player.SimulationMoveFrame));
+    }
+
     private static float[] Vec(Vector3 v) => new[] { v.X, v.Y, v.Z };
     private static float[] Transform(Transform3D t) => Vec(t.Origin).Concat(Vec(t.Basis.X)).Concat(Vec(t.Basis.Y)).Concat(Vec(t.Basis.Z)).ToArray();
 }
