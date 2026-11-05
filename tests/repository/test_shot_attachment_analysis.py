@@ -360,6 +360,14 @@ class ShotAttachmentAnalysisTests(unittest.TestCase):
         report = self.analyze(rows)
         self.assert_failure(report, "not explained by holder visual correction")
 
+    def test_actual_limb_lengths_reject_stretch(self):
+        rows = self.real_trace("normal")
+        dimensions, failures = proof.limb_dimensions(rows)
+        self.assertEqual([], failures)
+        self.assertEqual(4, len(dimensions))
+        rows[10]["pose"]["bones"]["mixamorig_RightHand"]["world"][0] += .1
+        self.assertIn("evaluated rig segment stretched: RightForeArm", proof.limb_dimensions(rows)[1])
+
     def test_matrix_requires_all_combinations_and_separate_owner_and_observer(self):
         self.assertEqual(36, len(expected_cases("local")))
         self.assertEqual(72, len(expected_cases("owner")))

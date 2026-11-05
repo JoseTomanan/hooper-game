@@ -108,6 +108,19 @@ jobs:
           --run-id "ci-${{ github.run_id }}-${{ github.run_attempt }}-shard-${{ matrix.shard }}"
           --godot godot
 
+      # #442's objective contact/origin proof remains reviewable on green too.
+      # Each offset partition owns a fresh directory and independent role traces.
+      - name: Upload shot attachment proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shot-attachment-proof-${{ github.run_id }}-${{ github.run_attempt }}-shard-${{ matrix.shard }}
+          path: |
+            .godot/440/442-catalog-*/**
+            .godot/harness-logs/shot-gather-lifecycle-*.log
+          include-hidden-files: true
+          if-no-files-found: ignore
+
       - name: Upload harness failure artifacts
         if: failure()
         uses: actions/upload-artifact@v4

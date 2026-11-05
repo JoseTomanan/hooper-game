@@ -339,10 +339,31 @@ def feint_resolution_failures(variant, authority_events, driver_events):
     return failures, evidence
 
 
+def limb_dimensions(rows):
+    """Compare actual evaluated segment lengths with the incoming neutral rig."""
+    measurements, failures = {}, []
+    if not rows:
+        return measurements, ["missing rig dimension samples"]
+    for side in ("Right", "Left"):
+        for start, end in (("Arm", "ForeArm"), ("ForeArm", "Hand")):
+            lengths = [distance(r["pose"]["bones"]["mixamorig_" + side + start]["world"][:3],
+                                r["pose"]["bones"]["mixamorig_" + side + end]["world"][:3]) for r in rows]
+            incoming = lengths[0]
+            error = max(abs(length - incoming) for length in lengths)
+            measurements[side + start] = {"incomingLengthM": incoming, "minLengthM": min(lengths),
+                                         "maxLengthM": max(lengths), "maxChangeM": error}
+            if incoming <= 0 or error > NUMERICAL_TOLERANCE_M:
+                failures.append("evaluated rig segment stretched: " + side + start)
+    return measurements, failures
+
+
 def analyze(directory, calibration=None):
     directory = Path(directory)
-    report = analyze_rows(transitions.load_json(directory / "manifest.json"), transitions.load_rows(directory),
-                          calibration or load_calibration())
+    manifest, rows = transitions.load_json(directory / "manifest.json"), transitions.load_rows(directory)
+    report = analyze_rows(manifest, rows, calibration or load_calibration())
+    window, _, _ = _window(rows, manifest["role"] in transitions.OBSERVER_ROLES)
+    report["limbDimensions"], dimension_failures = limb_dimensions(window)
+    report["failures"] += dimension_failures
     prior = transitions.analyze(directory)
     feint_failures, report["feintResolutions"] = feint_resolution_failures(report["variant"],
         prior["authoritativeEvents"], prior["driverEvents"])
