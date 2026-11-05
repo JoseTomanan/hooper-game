@@ -124,6 +124,7 @@ class HarnessCatalogCliTests(unittest.TestCase):
                 'illegal-early', 'illegal-late', 'loss', 'oob', 'missing', 'degenerate',
                 'retarget', 'contact-retarget', 'release-below', 'release-at', 'release-above')]
             + ['fadeaway-form', 'net-fadeaway-form', 'net-jumpshot-form', 'jumpshot-transitions',
+               'shot-attachment-local', 'shot-attachment-owner-o0', 'shot-attachment-owner-o7', 'shot-gather-lifecycle',
                'net-rebound-presentation',
                'net-moving-crossover-host', 'net-moving-crossover-client',
                'net-moving-crossover-client-reset-race',
@@ -361,6 +362,9 @@ class HarnessCatalogShardTests(unittest.TestCase):
         self.assertEqual(250.0, weights['pivot-continuity'])
         self.assertEqual(300.0, weights['moving-turn-poses'])
         self.assertEqual(400.0, weights['jumpshot-transitions'])
+        self.assertEqual(40.0, weights['shot-attachment-local'])
+        self.assertEqual(400.0, weights['shot-attachment-owner-o0'])
+        self.assertEqual(400.0, weights['shot-attachment-owner-o7'])
         self.assertEqual(3.0 / 5, weights['pivot-plant-test-movement-matrix'])
         self.assertEqual(catalog.DEFAULT_SINGLE_WEIGHT_SECONDS, weights['moving-crossover-lateral-test-suite'])
         for case_id in ('net-moving-crossover-host', 'net-moving-crossover-client', 'net-moving-crossover-client-reset-race'):
@@ -369,8 +373,8 @@ class HarnessCatalogShardTests(unittest.TestCase):
         for case_id in ('fadeaway-form', 'net-fadeaway-form'):
             self.assertEqual(catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS, weights[case_id])
         self.assertAlmostEqual(
-            1276.0 + 400.0 + 3.0 / 5 + 69 * catalog.DEFAULT_SINGLE_WEIGHT_SECONDS
-            + 7 * catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS,
+            1276.0 + 400.0 + 40.0 + 400.0 + 400.0 + 3.0 / 5 + 69 * catalog.DEFAULT_SINGLE_WEIGHT_SECONDS
+            + 8 * catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS,
             sum(weights.values()),
         )
 
