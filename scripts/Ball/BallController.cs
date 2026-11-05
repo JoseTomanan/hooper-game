@@ -1427,6 +1427,8 @@ public partial class BallController : Node3D
 
 	public override void _PhysicsProcess(double delta)
 	{
+		FlightStepForHarness = default;
+		BallCorrectionForHarness = default;
 		// (#25 doubt cycle 2, finding #1 — fixed from an earlier draft that
 		// early-returned the ENTIRE ball tick, including the broadcast, the
 		// instant GameManager.IsGameOver went true) An early "freeze the
@@ -2645,6 +2647,7 @@ public partial class BallController : Node3D
 	/// </summary>
 	private void TickInFlight(float dt)
 	{
+		FlightStepForHarness = (true, _arc.Position, _arc.Velocity);
 		_arc.Step(dt);
 		ContactResult contact = _basket.Resolve(_arc); // mutates _arc on a bounce
 		GlobalPosition = _arc.Position;
@@ -3472,7 +3475,7 @@ public partial class BallController : Node3D
 
 		_arc = new ShotArc(GlobalPosition, aimTarget, ShotApexHeight, Gravity);
 		if (holder.SimulationShot is { } releasedShot)
-			releasedShot.Gather = releasedShot.Gather with { Released = true };
+			releasedShot.Gather = releasedShot.Gather with { Released = true, ReleaseOrigin = GlobalPosition };
 		LastAimTargetForHarness = aimTarget;
 		LastReleasePositionForHarness = GlobalPosition;
 		SuccessfulShotReleasesForHarness++;
@@ -3589,6 +3592,7 @@ public partial class BallController : Node3D
 	/// </summary>
 	private void ReconcileFromServer()
 	{
+		BallCorrectionForHarness = (true, GlobalPosition, _serverPos, _serverVel, State.ToString(), _serverState.ToString());
 		if (StateMachine.Current != _serverState || StateMachine.HolderPeerId != _serverHolderPeerId)
 			StateMachine.ForceState(_serverState, _serverHolderPeerId);
 

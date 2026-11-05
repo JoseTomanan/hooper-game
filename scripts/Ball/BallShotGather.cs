@@ -76,7 +76,8 @@ public partial class BallController
             var frame = GetPresentationFrame();
             if (frame == null || frame.Tick != display.PresentationTick) return false;
             held = frame.Ball.ShotAttached && frame.Ball.State == BallState.Held && frame.Ball.HolderPeerId == player.SimulationPeerId;
-            released = frame.Ball.State == BallState.InFlight && display.Phase == MovePhase.Active && display.FrameInPhase == 0;
+            released = frame.Ball.State == BallState.InFlight && frame.Ball.ShooterPeerId == player.SimulationPeerId
+                && display.Phase == MovePhase.Active && display.FrameInPhase == 0;
             target = frame.Ball.Position;
         }
         else
@@ -90,6 +91,8 @@ public partial class BallController
     }
 
     public Vector3 FlightVelocityForHarness => CurrentVelocity();
+    public (bool Advanced, Vector3 Position, Vector3 Velocity) FlightStepForHarness { get; private set; }
+    public (bool Received, Vector3 Before, Vector3 Authoritative, Vector3 Velocity, string BeforeState, string State) BallCorrectionForHarness { get; private set; }
 
     private bool ShotAttached => State == BallState.Held &&
         Players?.GetNodeOrNull<PlayerController>(StateMachine.HolderPeerId.ToString())?.SimulationShot is { Gather.Valid: true, Gather.Released: false };

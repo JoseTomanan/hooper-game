@@ -58,4 +58,13 @@ public class ShotGatherTests
         Assert.Equal(held, ShotGather.Position(state, MovePhase.Recovery, 0, root, .4f, held, target));
         Assert.Equal(held, ShotGather.Position(default, MovePhase.Startup, 8, root, .4f, held, target));
     }
+
+    [Fact]
+    public void ReleasedCorrectionRetainsAbsoluteOriginThroughRecovery()
+    {
+        var origin = new Vector3(2, 2.2f, 4);
+        var state = new ShotGatherState(true, Vector3.Zero, HandSide.Right, 0, Released: true, ReleaseOrigin: origin);
+        Assert.Equal(origin, ShotGather.Position(state, MovePhase.Recovery, 10,
+            new(3, 1, 4), .7f, new(3, 1, 4.5f), new(.1f, 1.2f, .2f)));
+    }
 }

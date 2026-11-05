@@ -263,8 +263,12 @@ public partial class JumpshotFormTest : Node
             if (_scenario == "control-idle")
                 Require(failures.Contains("release wrist not above elbow"), "idle mutation escaped its intended wrist-height detector");
             else if (_scenario == "control-goalkeeper")
+                // Attachment IK legitimately repairs the old loaded-elbow
+                // metric. Keep the full production modifier stack and every
+                // positive form threshold; this asset still independently
+                // fails release asymmetry and anatomical wrist flexion.
                 Require(failures.Any(s => s.StartsWith("release not one-handed"))
-                    && failures.Any(s => s.StartsWith("followthrough elbow")), "goalkeeper mutation escaped its two original defects");
+                    && failures.Any(s => s.StartsWith("wrist did not flex")), "goalkeeper mutation escaped asymmetry/wrist-flexion detectors");
             else if (_scenario != "diagnose") Require(failures.Count == 0, string.Join("; ", failures));
         }
         if (_scenario == "diagnose")

@@ -14,7 +14,8 @@ public sealed record PlayerPresentationFrame(int PeerId, Vector3 Position, Vecto
     bool PostEstablished, bool ReboundGrab, string AnimationNode, double AnimationTime);
 
 public sealed record BallPresentationFrame(Vector3 Position, BallState State, int HolderPeerId,
-    bool Cleared, float DribblePhase, bool SweepActive, int SweepTicks, int SweepDurationTicks, bool ShotAttached = false);
+    bool Cleared, float DribblePhase, bool SweepActive, int SweepTicks, int SweepDurationTicks,
+    bool ShotAttached = false, int ShooterPeerId = 0);
 
 /// <summary>Copies player membership once; neither sender nor caller can mutate history.</summary>
 public sealed class WorldPresentationFrame
