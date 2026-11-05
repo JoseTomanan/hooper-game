@@ -321,11 +321,32 @@ def analyze_rows(manifest, rows, calibration):
             "observerReleaseMechanics": "not joined to latest physical state" if remote else None}
 
 
+def feint_resolution_failures(variant, authority_events, driver_events):
+    """Check each event clock separately; receipt is not inferred from input."""
+    failures = []
+    expected = 1 if variant in ("early", "late") else 0
+    evidence = {}
+    for role, events in (("authority", authority_events), ("driver", driver_events)):
+        resolutions = [e for e in events if e.get("kind") == "feint-resolution"]
+        evidence[role] = resolutions
+        if len(resolutions) != expected:
+            failures.append(role + " missing/unexpected actual feint resolution")
+        for event in resolutions:
+            if not (event.get("accepted") is True and event.get("phase") == "Startup"
+                    and isinstance(event.get("frame"), int) and 3 <= event["frame"] < 12
+                    and isinstance(event.get("physicsFrame"), int) and event["physicsFrame"] >= 0):
+                failures.append(role + " actual feint was rejected or outside legal Startup window")
+    return failures, evidence
+
+
 def analyze(directory, calibration=None):
     directory = Path(directory)
     report = analyze_rows(transitions.load_json(directory / "manifest.json"), transitions.load_rows(directory),
                           calibration or load_calibration())
     prior = transitions.analyze(directory)
+    feint_failures, report["feintResolutions"] = feint_resolution_failures(report["variant"],
+        prior["authoritativeEvents"], prior["driverEvents"])
+    report["failures"] += feint_failures
     report["case"] = directory.name
     report["transitionFailures"] = prior["failures"]
     report["consumedRecoveryTicks"] = prior["consumedRecoveryTicks"]

@@ -361,6 +361,20 @@ class ShotAttachmentAnalysisTests(unittest.TestCase):
         self.assertEqual(expected_cases("owner"), zero | seven)
         self.assertEqual(108, len(expected_cases("local")) + len(zero) + len(seven))
 
+    def test_actual_authority_and_driver_feint_resolutions_are_required_independently(self):
+        authority = [{"kind": "feint-resolution", "phase": "Startup", "frame": 5,
+                      "accepted": True, "physicsFrame": 173}]
+        driver = [{"kind": "feint-resolution", "phase": "Startup", "frame": 11,
+                   "accepted": True, "physicsFrame": 156}]
+        self.assertEqual([], proof.feint_resolution_failures("late", authority, driver)[0])
+        self.assertTrue(proof.feint_resolution_failures("late", [], driver)[0])
+        self.assertTrue(proof.feint_resolution_failures("late", authority, [])[0])
+        for key, value in (("accepted", False), ("phase", "Active"), ("frame", 12), ("physicsFrame", None)):
+            changed = copy.deepcopy(authority)
+            changed[0][key] = value
+            self.assertTrue(proof.feint_resolution_failures("late", changed, driver)[0])
+        self.assertTrue(proof.feint_resolution_failures("normal", authority, [])[0])
+
     def test_owner_capture_is_sequential_while_local_cases_may_parallelize(self):
         args = SimpleNamespace(godot="pinned-godot", port=24750, offsets=[0, 7])
         for topology, jobs in (("local", "2"), ("owner", "1")):
