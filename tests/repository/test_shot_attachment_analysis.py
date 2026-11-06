@@ -338,7 +338,7 @@ class ShotAttachmentAnalysisTests(unittest.TestCase):
         del at["flightStep"]
         self.assert_failure(self.analyze(rows, role="owner"), "flightStep telemetry")
 
-    def test_fake_requires_zero_release_and_retained_hand_and_dead_dribble(self):
+    def fake_fixture(self):
         rows = self.real_trace("early")
         startup = [r for r in rows if r["pose"]["phase"] == "Startup"]
         hand = startup[-1]["pose"]["hand"]
@@ -346,6 +346,31 @@ class ShotAttachmentAnalysisTests(unittest.TestCase):
             row["hasDribbled"] = True
             row["hand"] = hand
             row["pose"]["hand"] = hand
+            # Operator-only telemetry: known consistent synthetic targets,
+            # subsequently mutated independently. Production uses real captures.
+            row["shotAttachmentModel"] = row["liveBall"][:]
+            row["shotVisualOffset"] = [0, 0, 0]
+            row["ball"] = row["liveBall"][:]
+        return rows
+
+    def test_fake_recovery_cannot_teleport_physics_and_visible_ball_together(self):
+        rows = self.fake_fixture()
+        self.assertEqual([], self.analyze(rows, variant="early", entry="dribble")["failures"])
+        at = next(r for r in rows if r["pose"]["phase"] == "Recovery" and r["pose"]["frame"] == 16)
+        at["liveBall"][1] += .05
+        at["ball"][1] += .05
+        self.assert_failure(self.analyze(rows, variant="early", entry="dribble"), "fake physical ball differs from attachment model")
+
+    def test_fake_first_neutral_cannot_expose_a_hidden_smoothing_offset(self):
+        rows = self.fake_fixture()
+        last = max(i for i, r in enumerate(rows) if r["pose"]["phase"] == "Recovery")
+        self.assertEqual("Inactive", rows[last + 1]["pose"]["phase"])
+        rows[last + 1]["ball"][0] += .15
+        self.assert_failure(self.analyze(rows, variant="early", entry="dribble"), "fake visible ball differs from holder correction")
+
+    def test_fake_requires_zero_release_and_retained_hand_and_dead_dribble(self):
+        rows = self.fake_fixture()
+        hand = next(r for r in rows if r["pose"]["phase"] == "Startup")["pose"]["hand"]
         report = self.analyze(rows, variant="early", entry="dribble")
         self.assertEqual([], report["failures"])
         at = next(r for r in rows if r["pose"]["phase"] == "Recovery")

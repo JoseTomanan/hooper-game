@@ -298,6 +298,7 @@ def analyze_rows(manifest, rows, calibration):
             require(len(flight) == 2, "missing first two actual flightStep advances inside bounded proof window")
         except (KeyError, ValueError, TypeError) as error:
             failures.append("invalid/missing release/flight evidence: " + str(error))
+    fake_attachment, fake_return = [], {}
     if feint:
         require(not any(r["pose"]["phase"] == "Active" for r in shots), "fake entered Active")
         # Observer release/possession semantics are proven by source authority in
@@ -315,11 +316,44 @@ def analyze_rows(manifest, rows, calibration):
                 require(all(r["pose"].get("hand") == expected_hand and r.get("hand") == expected_hand
                             and r.get("hasDribbled") is expected_dead for r in recovery + tail),
                         "fake lost retained HandSide/dead-dribble state")
+                # Check the entire return, including the neutral handoff. Joint
+                # continuity alone cannot see an independent ball mesh offset.
+                for row in shots + tail:
+                    try:
+                        live, visible = required(row, "liveBall"), required(row, "ball")
+                        offset = required(row, "shotVisualOffset")
+                        sample = {"sourceTick": source_tick(row, False), "phase": row["pose"]["phase"],
+                                  "frame": row["pose"]["frame"], "physicalBallWorld": live,
+                                  "visibleBallWorld": visible, "holderVisualOffset": offset,
+                                  "visualCorrectionResidualM": distance([p+o for p, o in zip(live, offset)], visible)}
+                        require(row.get("ballState") == "Held", "fake return lost actual Held state")
+                        if row["pose"]["phase"] in ("Startup", "Recovery"):
+                            sample["physicalModelErrorM"] = distance(live, required(row, "shotAttachmentModel"))
+                            require(sample["physicalModelErrorM"] <= NUMERICAL_TOLERANCE_M,
+                                    "fake physical ball differs from attachment model")
+                        require(sample["visualCorrectionResidualM"] <= NUMERICAL_TOLERANCE_M,
+                                "fake visible ball differs from holder correction")
+                        fake_attachment.append(sample)
+                    except (KeyError, ValueError, TypeError) as error:
+                        failures.append("invalid/missing fake attachment evidence: " + str(error))
+                if tail:
+                    last, first = recovery[-1], tail[0]
+                    expected = [b-a+d-c for a, b, c, d in zip(required(last, "liveBall"), required(first, "liveBall"),
+                                required(last, "shotVisualOffset"), required(first, "shotVisualOffset"))]
+                    observed = [b-a for a, b in zip(required(last, "ball"), required(first, "ball"))]
+                    fake_return = {"lastRecoverySourceTick": source_tick(last, False),
+                        "firstNeutralSourceTick": source_tick(first, False),
+                        "expectedVisibleDelta": expected, "observedVisibleDelta": observed,
+                        "handoffResidualM": distance(expected, observed)}
+                    require(first["pose"]["phase"] == "Inactive" and
+                            fake_return["handoffResidualM"] <= NUMERICAL_TOLERANCE_M,
+                            "fake neutral handoff differs from physical/holder correction delta")
     return {"case": manifest.get("case", ""), "role": role, "entry": manifest["entry"],
             "hand": manifest["hand"], "variant": manifest["variant"], "result": "failed" if failures else "passed",
             "failures": list(dict.fromkeys(failures)), "contactToleranceM": CONTACT_TOLERANCE_M,
             "radiusM": RADIUS_M, "numericalToleranceM": NUMERICAL_TOLERANCE_M,
             "duplicateHoldSamples": duplicates, "contactFrames": contact, "release": release, "firstFlightFrames": flight,
+            "fakeAttachmentFrames": fake_attachment, "fakeReturnBoundary": fake_return,
             "firstTwoPhaseFrames": phase_samples, "heldCorrectionStalls": stalls, "ballCorrections": corrections,
             "flightEvidenceBound": "contiguous evaluated shot plus eight neutral source ticks",
             "observerReleaseMechanics": "not joined to latest physical state" if remote else None}

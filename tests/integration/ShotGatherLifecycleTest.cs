@@ -102,12 +102,22 @@ public partial class ShotGatherLifecycleTest : Node3D
             _own = _players.GetNode<PlayerController>(_ownerId.ToString());
             _remote = _players.GetNode<PlayerController>("1");
             _ball = new BallController { Name = "Ball", Players = _players };
+            var ballMesh = new MeshInstance3D
+            {
+                Name = "MeshInstance3D", Position = new Vector3(.2f, .3f, .4f),
+                Mesh = new SphereMesh { Radius = .12f, Height = .24f, Material = new StandardMaterial3D() }
+            };
+            _ball.AddChild(ballMesh);
             AddChild(_ball);
             _ball.SetPhysicsProcess(false);
+            Require(_ball.RenderedWorldPosition.DistanceTo(_ball.GlobalPosition) > .1f,
+                "rendered-position premise must discriminate the real ball mesh from its live root");
+            Near(_ball.RenderedWorldPosition, ballMesh.GlobalPosition, "production Ready must resolve the actual ball mesh");
             Require(!_ball.LifecycleIsServer && _own.SimulationIsLocalPlayer && !_remote.SimulationIsLocalPlayer,
                 "ball/client/remote role premise");
 
             StaleDribbleAndFake();
+            FakeToNeutralPresentation();
             StaleDribbleAtRelease();
             ReleasedHeldCorrections();
             ActualLoss(BallState.Loose);
@@ -190,6 +200,65 @@ public partial class ShotGatherLifecycleTest : Node3D
         Require(_own.PhaseForHarness == MovePhase.Recovery && _own.FrameInPhaseForHarness == 2,
             "ball correction may not re-phase the committed machine");
         GD.Print("[shot-gather-lifecycle] release/stale-Held Active+Recovery absolute origin PASS");
+    }
+
+    private void FakeToNeutralPresentation()
+    {
+        BeginDribbleShot();
+        AdvanceTo(MovePhase.Startup, 11);
+        Vector3 raised = _ball.GlobalPosition;
+        int releases = _ball.SuccessfulShotReleasesForHarness;
+        Require(_own.FeintForHarness(), "last-legal fake must actually be accepted");
+        AdvanceTo(MovePhase.Recovery, 19);
+        Vector3 station = _ball.GlobalPosition, root = _own.GlobalPosition;
+        HandSide hand = _own.HandSide;
+        Vector3 holderOffset = _own.ReboundVisualOffset;
+        Require(raised.DistanceTo(station) > .25f && holderOffset.Length() < PositionTolerance,
+            "fake handoff premise needs a distinct stale raised center and an uncorrected holder");
+        Near(_ball.RenderedWorldPosition, station + holderOffset, "last fake-Recovery frame must share the holder correction");
+
+        // The delayed raised packet arrives exactly when the machine removes its
+        // JumpShot. Physical attachment is unchanged; only an independent stale
+        // ball-mesh offset could create a jump across this boundary.
+        _ball.LifecycleSnapshot(BallState.Held, _ownerId, raised, true);
+        _own.LifecycleAdvanceMachine();
+        Require(_own.PhaseForHarness == MovePhase.Inactive && _own.SimulationShot == null,
+            "neutral handoff must remove the shot context before Ball processes the packet");
+        TickBall();
+        Require(_ball.BallCorrectionForHarness.Received && _ball.BallCorrectionForHarness.State == "Held",
+            "neutral handoff must traverse actual stale Held reconciliation");
+        Near(_ball.GlobalPosition, station, "fake-to-neutral handoff must retain the physical Held station");
+        Near(_own.GlobalPosition, root, "fake-to-neutral handoff may not move the holder root");
+        Near(_own.ReboundVisualOffset, holderOffset, "fake-to-neutral handoff may not change holder correction");
+        Near(_ball.RenderedWorldPosition, station + holderOffset,
+            "first neutral Held frame must retain the holder presentation frame after fake context disappears");
+
+        Node3D holderMesh = _own.GetNode<Node3D>(_own.VisualRoot);
+        Vector3 meshPosition = holderMesh.GlobalPosition;
+        Vector3 correction = new(.18f, .04f, -.11f);
+        holderMesh.GlobalPosition += correction;
+        try
+        {
+            Near(_own.ReboundVisualOffset, holderOffset + correction,
+                "nonzero correction premise must come from the actual holder visual root");
+            for (int tick = 0; tick < 4; tick++)
+            {
+                _ball.LifecycleSnapshot(BallState.Held, _ownerId, raised + new Vector3(.1f * tick, 0, 0), true);
+                TickBall();
+                Require(_ball.BallCorrectionForHarness.Received && _ball.State == BallState.Held &&
+                    _ball.StateMachine.HolderPeerId == _ownerId && _own.PhaseForHarness == MovePhase.Inactive,
+                    "repeated neutral stale packets must retain live ownership and phase");
+                Near(_ball.GlobalPosition, station, "repeated neutral stale packets may not move physical attachment");
+                Near(_own.GlobalPosition, root, "repeated neutral stale packets may not move the holder root");
+                Near(_own.ReboundVisualOffset, holderOffset + correction, "holder correction must remain independent of ball reconciliation");
+                Near(_ball.RenderedWorldPosition, station + holderOffset + correction,
+                    "ordinary neutral Held ball must consistently share the actual holder correction");
+                Require(_own.HandSide == hand && _ball.SuccessfulShotReleasesForHarness == releases,
+                    "fake handoff presentation may not change hand identity or emit a shot");
+            }
+        }
+        finally { holderMesh.GlobalPosition = meshPosition; }
+        GD.Print("[shot-gather-lifecycle] fake-to-neutral Held presentation/no stale mesh offset PASS");
     }
 
     private void StaleDribbleAtRelease()

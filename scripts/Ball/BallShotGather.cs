@@ -56,13 +56,14 @@ public partial class BallController
         int peer = released ? _lastShooterPeerId : StateMachine.HolderPeerId;
         if (State != BallState.Held && !released) return;
         var holder = Players?.GetNodeOrNull<PlayerController>(peer.ToString());
-        if (!IsServer && holder?.SimulationIsLocalPlayer != true) return;
-        if (holder?.SimulationShot is not { Gather.Valid: true }) return;
-        // Share the holder's presentation frame, rather than independently
-        // carrying an offset from a falling ball or a stale snapshot.
+        if (holder == null || (!IsServer && !holder.SimulationIsLocalPlayer)) return;
+        if (released && holder.SimulationShot is not { Gather.Valid: true }) return;
+        // Every locally displayed Held ball shares its holder's frame, including
+        // neutral after a fake and rebound catches. Retire the independent ball
+        // correction too, so an expired shot cannot expose its stale offset.
         // https://docs.godotengine.org/en/4.7/classes/class_node3d.html#class-node3d-property-global-position
         _mesh.GlobalPosition = GlobalPosition + holder.ReboundVisualOffset;
-        if (released) _smoothOffset = holder.ReboundVisualOffset;
+        _smoothOffset = holder.ReboundVisualOffset;
     }
 
     internal bool TryShotDisplayTarget(PlayerController player, out Vector3 target)
