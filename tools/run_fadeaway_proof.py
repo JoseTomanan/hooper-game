@@ -29,6 +29,15 @@ def main():
     subprocess.run([*analyzer, str(output / "before"), "--measure-only", "--output", str(baseline)], cwd=ROOT, check=True)
     subprocess.run([*analyzer, str(output / "after"), "--baseline", str(baseline),
                     "--output", str(output / "proof.json")], cwd=ROOT, check=True)
+    # #439 must improve the already-authored #429 silhouette, not merely pass
+    # the older goalkeeper substitute. Freeze all other playback conditions.
+    subprocess.run([*capture, "--output", str(output / "before439"), "--variant", "fadeaway",
+                    "--fadeaway-substitute", "before439"], cwd=ROOT, check=True)
+    prior_form = output / "before439.json"
+    subprocess.run([*analyzer, str(output / "before439"), "--measure-only", "--output", str(prior_form)],
+                   cwd=ROOT, check=True)
+    subprocess.run([*analyzer, str(output / "after"), "--exaggeration-baseline", str(prior_form),
+                    "--output", str(output / "exaggeration.json")], cwd=ROOT, check=True)
     # The ordinary asset is substituted at FadeawayActive's actual production
     # selection seam. A missing phase or invalid release premise is not a pass.
     subprocess.run([*capture, "--output", str(output / "upright"), "--variant", "fadeaway",

@@ -78,6 +78,30 @@ class FadeawayProjectionTests(unittest.TestCase):
         self.assertIn("both legs must advance from hips at Active:2",
                       fadeaway.form(rows, False)["failures"])
 
+    def result(self):
+        return dict(variant="fadeaway", failures=[], fadeawayForm=fadeaway.form(self.rows(), False))
+
+    def test_exaggeration_rejects_unchanged_or_one_unimproved_joint(self):
+        old = self.result()
+        unchanged = copy.deepcopy(old)
+        fadeaway.compare_exaggeration(unchanged, old)
+        self.assertEqual(16, len(unchanged["failures"]))
+        improved = copy.deepcopy(old)
+        for sample in improved["fadeawayForm"]["samples"]:
+            for field in ("leadsM", "leadsFromHipsM"):
+                for bone in fadeaway.LEGS:
+                    sample[field][bone] += .2
+        fadeaway.compare_exaggeration(improved, old)
+        self.assertFalse(improved["failures"])
+        for frame in (2, 3):
+            for field in ("leadsM", "leadsFromHipsM"):
+                for bone in fadeaway.LEGS:
+                    with self.subTest(frame=frame, field=field, bone=bone):
+                        broken = copy.deepcopy(improved)
+                        broken["fadeawayForm"]["samples"][frame][field][bone] = old["fadeawayForm"]["samples"][frame][field][bone]
+                        fadeaway.compare_exaggeration(broken, old)
+                        self.assertEqual([f"fadeaway exaggeration missing: Active:{frame} {field} {bone}"], broken["failures"])
+
 
 if __name__ == "__main__":
     unittest.main()
