@@ -29,8 +29,8 @@ EXPECTED_SOURCE = "Goalkeeper Catch Stationary.fbx"
 
 # #439 explicitly asks for stronger exaggeration after the #429 visual review.
 # These are authored presentation targets, not accepted feel or gameplay tuning.
-HIP_BACK_M = 0.35
-TORSO_BACK_DEG = 80.0
+HIP_BACK_M = 0.50
+TORSO_BACK_DEG = 78.0
 ANKLE_FORWARD_M = 0.60
 ANKLE_DOWN_M = 0.50
 ENVELOPE = (0.0, 0.8, 1.0, 0.5, 0.0)
