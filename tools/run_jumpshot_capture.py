@@ -36,7 +36,7 @@ def start(args, output, role, hand, variant):
         cmd += ["--capture-legacy-shot=true"]
     if args.fadeaway_substitute:
         cmd += ["--capture-fadeaway-substitute=" + args.fadeaway_substitute]
-    if args.heading_angle is not None:
+    if getattr(args, "heading_angle", None) is not None:
         cmd += ["--capture-heading-angle=" + str(args.heading_angle),
                 "--capture-heading-rate=" + str(args.heading_rate),
                 "--capture-heading-entry=" + args.heading_entry]

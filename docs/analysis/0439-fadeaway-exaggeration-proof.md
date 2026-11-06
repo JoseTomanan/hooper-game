@@ -116,10 +116,17 @@ retained originals, every compressed source record and all six films' 50-frame,
 ## Validation and reproduction
 
 The game builds with zero warnings/errors. The unit suite has 1,322 passes
-and five intentional characterization skips. Repository checks run 128 tests
+and five intentional characterization skips. Repository checks run 130 tests
 with one platform skip; on Windows they require working Git Bash and writable
 temporary directories. The eleven JumpShot animation cases pass unchanged,
 as do the existing normal/fake form and classification controls.
+
+The first CI run exposed a shared capture-launcher compatibility regression:
+the transition matrix supplies a namespace without the newly added optional
+heading fields. The launcher now defaults a missing heading option to absent.
+Two command-construction regressions cover that legacy caller and an explicit
+zero-angle request. The real local transition matrix also passes all 36 cases
+and its six asset-only negative controls after the repair.
 
 Registered `fadeaway-form` and `net-fadeaway-form` compare the legacy and
 pre-439 controls, require the stronger final pose and preserve original
