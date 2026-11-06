@@ -277,9 +277,15 @@ def main():
              for key, old, new in selected_pairs(args.before_inventory, args.after)]
     output.mkdir(parents=True, exist_ok=False)
     records = [package_pair(pair, output, calibration) for pair in pairs]
+    # Git may normalize JSON line endings. Preserve the exact calibration bytes
+    # whose hash accompanies these captures, as we do for the source traces.
+    calibration_archive = output / "calibration.json.gz"
+    gzip_copy(ROOT / "assets/shot_gather_calibration.json", calibration_archive)
     index = {"schema": "hooper-shot-attachment-rendered-evidence/v1", "cases": records,
              "beforeInventory": {"source": source_path(args.before_inventory), "sha256": sha256(args.before_inventory)},
              "calibration": {"source": "assets/shot_gather_calibration.json", "sha256": sha256(ROOT / "assets/shot_gather_calibration.json"),
+                             "sourceArchive": calibration_archive.name, "archiveSha256": sha256(calibration_archive),
+                             "hashScope": "original uncompressed source bytes; use sourceArchive when Git normalizes repository JSON line endings",
                              "rightPalm": calibration["palms"]["Right"]},
              "imageTreatment": "comparison films/sheets retain complete 960x540 source frames resized to 480x270; labels outside source panels; no crop, pose edits or temporal interpolation",
              "overlayTreatment": "separate complete 960x540 diagnostic copies mark actual skin vertex cyan and visible ball center yellow; original source PNGs unchanged",
@@ -291,6 +297,7 @@ def main():
     lines = ["# #442 shot attachment rendered comparisons", "",
              "Complete source frames appear in two panels at 60Hz (17/17/16ms), with six-milestone contact sheets. No source frame is cropped or retouched. Appearance and feel remain unaccepted for #173.", "",
              "Front/side overlay PNGs are separate diagnostic copies: cyan marks actual calibrated pure-wrist skin vertex 11216, yellow marks the visible ball center. The index retains original PNG hashes, all recorded camera/source clocks, playback positions and unmodified compressed raw traces/manifests.", "",
+             "[Exact calibration source bytes](calibration.json.gz) preserve the indexed source hash even when Git normalizes JSON line endings. The index records both uncompressed-source and gzip-archive hashes.", "",
              "| Case | Normal-speed comparison | Six milestones | Contact overlays |", "|---|---|---|---|"]
     for record in records:
         overlays = ", ".join(f"[PNG{i+1}]({r['file']})" for i, r in enumerate(record["contactOverlays"])) or "not selected"

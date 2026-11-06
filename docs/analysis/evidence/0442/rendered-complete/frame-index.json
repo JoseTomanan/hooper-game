@@ -274267,7 +274267,10 @@
           "weight": 1.0
         }
       ]
-    }
+    },
+    "sourceArchive": "calibration.json.gz",
+    "archiveSha256": "898a1954eadc4696eae4eb63c703e9a6827cd831693820eb965307b0c2cd5ecd",
+    "hashScope": "original uncompressed source bytes; use sourceArchive when Git normalizes repository JSON line endings"
   },
   "imageTreatment": "comparison films/sheets retain complete 960x540 source frames resized to 480x270; labels outside source panels; no crop, pose edits or temporal interpolation",
   "overlayTreatment": "separate complete 960x540 diagnostic copies mark actual skin vertex cyan and visible ball center yellow; original source PNGs unchanged",

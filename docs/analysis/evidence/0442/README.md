@@ -4,6 +4,7 @@ The production ball now gathers from its actual incoming center and launches fro
 
 - [Method, measurements, limits and reproduction](../../0442-shot-attachment-proof.md)
 - [Whole-frame gameplay, front and side comparisons](rendered-complete/README.md): 30 normal-speed before/after films, six-milestone sheets and separate anatomical overlays. The original frame, camera, source-clock and SHA256 index accompanies them.
+- [Exact calibration JSON bytes](rendered-complete/calibration.json.gz) preserve its capture-time hash across Git's text line-ending normalization; the decompressed JSON is semantically identical to the repository asset.
 - [Raw archive index](raw-index.json): original-byte gzip traces/manifests, geometry, calibration reference, mutations and rejected attempts. Every entry records original and archive SHA256 hashes. `null` metadata is unknown, never inferred.
 - [Independent review](review.md)
 

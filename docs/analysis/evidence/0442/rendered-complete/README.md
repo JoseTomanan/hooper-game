@@ -4,6 +4,8 @@ Complete source frames appear in two panels at 60Hz (17/17/16ms), with six-miles
 
 Front/side overlay PNGs are separate diagnostic copies: cyan marks actual calibrated pure-wrist skin vertex 11216, yellow marks the visible ball center. The index retains original PNG hashes, all recorded camera/source clocks, playback positions and unmodified compressed raw traces/manifests.
 
+[Exact calibration source bytes](calibration.json.gz) preserve the indexed source hash even when Git normalizes JSON line endings. The index records both uncompressed-source and gzip-archive hashes.
+
 | Case | Normal-speed comparison | Six milestones | Contact overlays |
 |---|---|---|---|
 | local-front-left-dribble-normal-o0-1 | [WebP](local-front-left-dribble-normal-o0-1-normal.webp) | [PNG](local-front-left-dribble-normal-o0-1-contact.png) | [PNG1](local-front-left-dribble-normal-o0-1-before-startup8-overlay.png), [PNG2](local-front-left-dribble-normal-o0-1-before-startup17-overlay.png), [PNG3](local-front-left-dribble-normal-o0-1-before-active0-overlay.png), [PNG4](local-front-left-dribble-normal-o0-1-before-active1-overlay.png), [PNG5](local-front-left-dribble-normal-o0-1-after-startup8-overlay.png), [PNG6](local-front-left-dribble-normal-o0-1-after-startup17-overlay.png), [PNG7](local-front-left-dribble-normal-o0-1-after-active0-overlay.png), [PNG8](local-front-left-dribble-normal-o0-1-after-active1-overlay.png) |
