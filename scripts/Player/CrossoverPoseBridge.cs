@@ -57,13 +57,15 @@ public sealed class CrossoverPoseBridge
     }
 
     public Result Blend(ReadOnlySpan<Transform3D> anchor, ReadOnlySpan<Transform3D> animated, float animatedWeight,
-        float? supportWeight = null)
+        float? supportWeight = null, float? positionWeight = null)
     {
         if (anchor.Length != _parents.Length || animated.Length != _parents.Length)
             throw new ArgumentException("Pose and hierarchy sizes differ.");
         float weight = float.IsFinite(animatedWeight) ? Math.Clamp(animatedWeight, 0f, 1f) : 0f;
         float support = supportWeight.HasValue && float.IsFinite(supportWeight.Value)
             ? Math.Clamp(supportWeight.Value, 0f, 1f) : weight;
+        float position = positionWeight.HasValue && float.IsFinite(positionWeight.Value)
+            ? Math.Clamp(positionWeight.Value, 0f, 1f) : weight;
         var anchorGlobal = Forward(_parents, anchor);
         var animatedGlobal = Forward(_parents, animated);
         var desired = new Quaternion[anchor.Length];
@@ -97,15 +99,15 @@ public sealed class CrossoverPoseBridge
         _hasPrevious = true;
 
         // Exact endpoints also avoid Slerpni's near-parallel shortcut changing a pose.
-        if (weight <= 0f) return new Result(anchor.ToArray(), 0f, 0);
-        if (weight >= 1f) return new Result(animated.ToArray(), 0f, 0);
+        if (weight <= 0f && position <= 0f) return new Result(anchor.ToArray(), 0f, 0);
+        if (weight >= 1f && position >= 1f) return new Result(animated.ToArray(), 0f, 0);
         var output = new Transform3D[anchor.Length];
         for (int i = 0; i < output.Length; i++)
         {
             Quaternion local = _parents[i] >= 0 ? desired[_parents[i]].Inverse() * desired[i] : desired[i];
             Vector3 scale = anchor[i].Basis.Scale.Lerp(animated[i].Basis.Scale, weight);
             output[i] = new Transform3D(new Basis(local.Normalized()).Scaled(scale),
-                anchor[i].Origin.Lerp(animated[i].Origin, weight));
+                anchor[i].Origin.Lerp(animated[i].Origin, position));
         }
         float maxError = 0f;
         int clampCount = 0;

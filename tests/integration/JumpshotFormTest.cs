@@ -25,12 +25,15 @@ public partial class JumpshotFormTest : Node
     private int _recoveryTicks;
     private int _lastSampleTick = -1;
     private bool _feinted;
+    private bool _reshot;
+    private int _immediateReshotPoses;
     private bool _finished;
+    private double _maxShotHipTravel;
     private readonly List<Sample> _samples = new();
     private readonly List<object> _events = new();
     private readonly HashSet<int> _startup = new(), _active = new(), _recovery = new();
 
-    private sealed record Sample(int Tick, string Phase, int Frame, string Node,
+    private sealed record Sample(int Tick, string Phase, int Frame, string Node, double Playback,
         double Elbow, double GuideElbow, double WristHeight, double WristFlexion,
         double Asymmetry, double WristX, double WristY, double WristZ);
 
@@ -40,7 +43,7 @@ public partial class JumpshotFormTest : Node
         _scenario = HarnessArgs.ReadArg(args, "--harness-scenario", "normal-right");
         _trace = HarnessArgs.ReadArg(args, "--proof-trace", "");
         _mutation = HarnessArgs.ReadArg(args, "--proof-mutation", "");
-        if (!new[] { "normal-right", "normal-left", "feint-early", "feint-late", "fadeaway", "diagnose", "control-idle", "control-goalkeeper" }.Contains(_scenario))
+        if (!new[] { "normal-right", "normal-left", "feint-early", "feint-late", "feint-reshot", "fadeaway", "diagnose", "control-idle", "control-goalkeeper", "centered-body", "control-before440" }.Contains(_scenario))
             throw new ArgumentException($"unknown jumpshot form scenario {_scenario}");
         if (_scenario.StartsWith("control-")) _mutation = _scenario.Substring("control-".Length);
         var scene = GD.Load<PackedScene>("res://scenes/Player.tscn");
@@ -75,14 +78,28 @@ public partial class JumpshotFormTest : Node
     private void ApplyMutation()
     {
         if (_mutation == "") return;
-        if (_mutation != "idle" && _mutation != "goalkeeper") throw new ArgumentException($"unknown mutation {_mutation}");
+        if (_mutation == "reset-recovery-clock")
+        {
+            // Leave the real Recovery clip and gameplay intact, but bypass its
+            // seek child. This restores the named pre-fix playback defect at
+            // the actual state-machine seam without changing on-disk resources.
+            // https://docs.godotengine.org/en/4.7/classes/class_animationnodeblendtree.html
+            var machine = (AnimationNodeStateMachine)_actor.GetNode<AnimationTree>("AnimationTree").TreeRoot;
+            var recovery = (AnimationNodeBlendTree)machine.GetNode("JumpshotRecovery");
+            recovery.DisconnectNode("output", 0);
+            recovery.DisconnectNode("RecoverySeek", 0);
+            recovery.ConnectNode("output", 0, "ReturnBlend");
+            return;
+        }
+        if (_mutation != "idle" && _mutation != "goalkeeper" && _mutation != "before440") throw new ArgumentException($"unknown mutation {_mutation}");
         var player = _actor.GetNode<AnimationPlayer>("AnimationPlayer");
         // Duplicate the library so mutation does not change a shared/on-disk
         // resource. Official Resource.duplicate(true) duplicates subresources.
         // https://docs.godotengine.org/en/latest/classes/class_resource.html#class-resource-method-duplicate
         var library = (AnimationLibrary)player.GetAnimationLibrary("locomotion").Duplicate(true);
         Animation idle = library.GetAnimation("idle");
-        var baseline = _mutation == "goalkeeper" ? GD.Load<AnimationLibrary>("res://tests/fixtures/jumpshot_goalkeeper.res") : null;
+        var baseline = _mutation == "idle" ? null : GD.Load<AnimationLibrary>(_mutation == "before440"
+            ? "res://tests/fixtures/jumpshot_before_440.res" : "res://tests/fixtures/jumpshot_goalkeeper.res");
         foreach (string name in new[] { "jumpshotstartup", "jumpshotactive", "jumpshotrecovery" })
         { library.RemoveAnimation(name); library.AddAnimation(name, baseline == null ? idle : baseline.GetAnimation(name)); }
         player.RemoveAnimationLibrary("locomotion"); player.AddAnimationLibrary("locomotion", library);
@@ -102,8 +119,13 @@ public partial class JumpshotFormTest : Node
             _began = _tick;
         }
         if (_began == 0) return;
+        if (_scenario == "feint-reshot" && _feinted && !_reshot && _actor.PhaseForHarness == MovePhase.Inactive)
+        {
+            Require(_actor.BeginJumpShotForHarness(), "immediate follow-up shot rejected");
+            _reshot = true; _feinted = false;
+        }
         if (!_feinted && _scenario.StartsWith("feint-") && _actor.PhaseForHarness == MovePhase.Startup
-            && _actor.FrameInPhaseForHarness == (_scenario == "feint-early" ? 3 : 11))
+            && _actor.FrameInPhaseForHarness == (_scenario == "feint-late" ? 11 : 3))
         {
             _events.Add(new { tick = _tick, kind = "feint", frame = _actor.FrameInPhaseForHarness });
             Require(_actor.FeintForHarness(), "legal feint rejected"); _feinted = true;
@@ -147,6 +169,21 @@ public partial class JumpshotFormTest : Node
 
     private void CaptureGeometry()
     {
+        if (_reshot && _actor.PhaseForHarness == MovePhase.Startup && _actor.FrameInPhaseForHarness <= 1)
+        {
+            Require(_actor.ActiveAnimNodeForHarness == "JumpshotStartup", "outgoing fade delayed immediate follow-up shot");
+            _immediateReshotPoses++;
+        }
+        // A planted normal shot jumps vertically. Measure the final scaled hip
+        // relative to the production rig's standing center, after the bounded
+        // entry handoff; root/player translation is deliberately not counted.
+        // Jr. NBA: https://jr.nba.com/how-to-shoot-a-jump-shot/
+        if (_actor.PhaseForHarness is MovePhase.Active or MovePhase.Recovery ||
+            _actor.PhaseForHarness == MovePhase.Startup && _actor.FrameInPhaseForHarness >= 6)
+        {
+            Vector3 hip = Bone("Hips");
+            _maxShotHipTravel = Math.Max(_maxShotHipTravel, Math.Sqrt(hip.X * hip.X + hip.Z * hip.Z));
+        }
         Vector3 shoulder = Bone("RightArm"), elbow = Bone("RightForeArm"), wrist = Bone("RightHand");
         Vector3 guideShoulder = Bone("LeftArm"), guideElbow = Bone("LeftForeArm"), guideWrist = Bone("LeftHand");
         Vector3 up = (Bone("Neck") - Bone("Spine")).Normalized();
@@ -162,7 +199,7 @@ public partial class JumpshotFormTest : Node
         double flexion = Mathf.RadToDeg(Mathf.Wrap(Mathf.Atan2(hand.Dot(forward), hand.Dot(up))
             - Mathf.Atan2(forearm.Dot(forward), forearm.Dot(up)), -Mathf.Pi, Mathf.Pi));
         var sample = new Sample(_tick, _actor.PhaseForHarness.ToString(), _actor.FrameInPhaseForHarness,
-            _actor.ActiveAnimNodeForHarness, shootingAngle, guideAngle, (wrist-elbow).Dot(up),
+            _actor.ActiveAnimNodeForHarness, _actor.ContinuityPlaybackTime, shootingAngle, guideAngle, (wrist-elbow).Dot(up),
             flexion, shootingAngle-guideAngle, wrist.X, wrist.Y, wrist.Z);
         Require(new[] { sample.Elbow, sample.GuideElbow, sample.WristHeight, sample.WristFlexion, sample.Asymmetry,
             sample.WristX, sample.WristY, sample.WristZ }.All(double.IsFinite), "nonfinite final pose");
@@ -191,9 +228,32 @@ public partial class JumpshotFormTest : Node
                 new JsonSerializerOptions { WriteIndented = true }));
         bool feint = _scenario.StartsWith("feint-");
         Require(_samples.Count >= 20, "final-pose coverage missing");
+        if (_scenario == "centered-body")
+        {
+            GD.Print($"[jumpshot-form] final scaled horizontal hip excursion={_maxShotHipTravel:F6} m");
+            // Numerical floor, not a retuned motion bound: a stationary normal
+            // clip has zero authored horizontal root travel. This is > native
+            // coordinate resolution and far below the reproduced 0.69 m drift.
+            Require(double.IsFinite(_maxShotHipTravel) && _maxShotHipTravel <= 1e-4,
+                "normal shot carries goalkeeper horizontal hip travel");
+        }
+        if (_scenario == "control-before440")
+            Require(double.IsFinite(_maxShotHipTravel) && _maxShotHipTravel > 1e-4,
+                "pre-440 asset restoration escaped the horizontal hip travel detector");
         Require(_actor.PhaseForHarness == MovePhase.Inactive, "did not return neutral");
         Require(_releaseCount == (feint ? 0 : 1), "release count changed");
-        Require(_recoveryTicks == (feint ? 8 : 20), $"recovery duration {_recoveryTicks}");
+        Require(_recoveryTicks == (_scenario == "feint-reshot" ? 16 : feint ? 8 : 20), $"recovery duration {_recoveryTicks}");
+        if (_scenario == "feint-reshot") Require(_reshot && _immediateReshotPoses > 0, "immediate follow-up shot not observed");
+        if (feint)
+        {
+            var tail = _samples.Where(s => s.Phase == "Recovery" && s.Node == "JumpshotRecovery").ToList();
+            // The one evaluation of reporting lag is retained. Even with that
+            // lag the last displayed feint pose must reach key18 of20, not key6
+            // of a replayed airborne apex. This floor comes from the existing
+            // phase schedule, independently of the replacement clip geometry.
+            Require(tail.Count >= 6 && tail.Max(s => s.Playback) >= 18.0 / 60.0 - 1e-6,
+                "feint Recovery replayed the jump apex instead of its phase offset");
+        }
         Require(feint ? _feinted && _active.Count == 0 : _startup.Count == 18 && _active.Count == 4,
             $"phase coverage startup={_startup.Count} active={_active.Count}");
         if (!feint && _scenario != "fadeaway")

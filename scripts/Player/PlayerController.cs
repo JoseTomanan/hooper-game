@@ -1562,6 +1562,7 @@ public partial class PlayerController : CharacterBody3D
 			protectionSkeleton.AddChild(new ProtectionPose { Name = "ProtectionPose", Player = this });
 			protectionSkeleton.AddChild(new PostPose { Name = "PostPose", Player = this });
 			protectionSkeleton.AddChild(new DefensiveStancePose { Name = "DefensiveStancePose", Player = this });
+			protectionSkeleton.AddChild(new JumpshotPose { Name = "JumpshotPose", Player = this });
 			protectionSkeleton.AddChild(new CrossoverPose
 			{
 				Name = "CrossoverPose", Player = this,
@@ -3227,18 +3228,50 @@ public partial class PlayerController : CharacterBody3D
 		// safe — the resolver ignores it for every move outside
 		// TargetHandedMoves, exactly as it ignores HandSide outside HandedMoves.
 		string target = MoveAnimResolver.ResolveStateName(generic, DisplayMoveId(), DisplayHandSide, DisplayStealReachSide());
+		// A legal pump-fake enters Recovery at frame 12, leaving eight ticks.
+		// Replaying Recovery's apex at time zero invents a jump after the fake.
+		// Seek only this animation child, using the SAME displayed phase clock;
+		// advancing the whole tree by the offset would consume remote source ticks
+		// and skip crossfades. TimeSeek resets its request after evaluation, so a
+		// held presentation tick reissues the same pose without advancing it.
+		// https://docs.godotengine.org/en/4.7/classes/class_animationnodetimeseek.html
+		SeekJumpShotRecovery(target);
 		if (ApplyBufferedAnimation(target)) return;
 		if (target != _currentAnimStateName)
 		{
 			bool touchesCrossover = target.StartsWith("Crossover", System.StringComparison.Ordinal)
 				|| _currentAnimStateName.StartsWith("Crossover", System.StringComparison.Ordinal);
+			bool touchesShot = IsJumpShotAnimation(target) || IsJumpShotAnimation(_currentAnimStateName);
 			_animPlayback.Travel(target);
 			_currentAnimStateName = target;
 			// Evaluate the crossover boundary now, without advancing its clock.
 			// Otherwise Travel's destination remains one evaluation behind the display phase.
 			// https://docs.godotengine.org/en/4.7/classes/class_animationmixer.html#class-animationmixer-method-advance
-			if (touchesCrossover) _animTree.Advance(0);
+			if (touchesCrossover || touchesShot) _animTree.Advance(0);
+			// TimeSeek is a one-shot request. The zero-time boundary evaluation
+			// consumes it; reissue before the ordinary callback writes the final
+			// pose so it does not advance an extra Recovery key on this tick.
+			if (touchesShot) SeekJumpShotRecovery(target);
 		}
+	}
+
+	private static bool IsJumpShotAnimation(string state) => state is
+		"JumpshotStartup" or "JumpshotActive" or "JumpshotRecovery" or "FadeawayActive";
+
+	private void SeekJumpShotRecovery(string target)
+	{
+		if (target != "JumpshotRecovery") return;
+		int frame = AnimationDisplaySnapshot.FrameInPhase;
+		_animTree.Set("parameters/JumpshotRecovery/RecoverySeek/seek_request",
+			frame / (double)Engine.PhysicsTicksPerSecond);
+		// Finish the handoff inside Recovery, rather than an outgoing state
+		// crossfade: a fading state-machine transition can delay a new action.
+		// Match the actual neutral possession pose, including a retained fake.
+		// https://docs.godotengine.org/en/4.7/classes/class_animationnodeblend2.html
+		float settle = Mathf.Clamp((frame - 10) / 8f, 0f, 1f);
+		_animTree.Set("parameters/JumpshotRecovery/ReturnBlend/blend_amount", settle * settle * (3f - 2f * settle));
+		_animTree.Set("parameters/JumpshotRecovery/Neutral/blend_position",
+			DisplayHeld() ? (DisplayHandSide == HandSide.Left ? 1f : 2f) : 0f);
 	}
 
 	/// <summary>

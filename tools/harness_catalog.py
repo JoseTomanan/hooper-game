@@ -358,9 +358,15 @@ JumpshotFormTest.tscn|normal-right
 JumpshotFormTest.tscn|normal-left
 JumpshotFormTest.tscn|feint-early
 JumpshotFormTest.tscn|feint-late
+JumpshotFormTest.tscn|feint-reshot
 JumpshotFormTest.tscn|fadeaway
 JumpshotFormTest.tscn|control-idle
 JumpshotFormTest.tscn|control-goalkeeper
+JumpshotFormTest.tscn|centered-body
+JumpshotFormTest.tscn|control-before440
+JumpshotPoseResetTest.tscn|gap
+JumpshotPoseResetTest.tscn|backward
+JumpshotPoseResetTest.tscn|continuous-fake
 MovingCrossoverLateralTest.tscn|suite
 HeldPossessionTest.tscn|held
 AnimationHarnessPrimitivesTest.tscn|primitives-resources
@@ -465,6 +471,7 @@ _ADDITIONAL_MULTIPROCESS_ROWS: tuple[tuple[str, str, str, tuple[str, ...]], ...]
     ("net-fadeaway-form", "tests/integration/run-fadeaway-form.sh godot --remote", "JumpshotFormCapture.tscn",
      (".godot/418/429-proof-*/**/*",)),
     ("net-jumpshot-form", "tests/integration/run-net-jumpshot-form.sh godot", "JumpshotFormCapture.tscn", (".godot/418/catalog-net-*/**/*",)),
+    ("jumpshot-transitions", "tests/integration/run-jumpshot-transitions.sh godot", "JumpshotFormCapture.tscn", (".godot/440/catalog-*/**/*",)),
     ("net-rebound-presentation", "tests/integration/run-net-rebound-presentation.sh godot", "ReboundPresentationCapture.tscn", (".godot/427/catalog-*/**/*",)),
     ("net-moving-crossover-host", "tests/integration/run-net-moving-crossover.sh godot host", "MovingCrossoverLateralTest.tscn", (".godot/harness-logs/net-moving-crossover-host-*.log",)),
     ("net-moving-crossover-client", "tests/integration/run-net-moving-crossover.sh godot client", "MovingCrossoverLateralTest.tscn", (".godot/harness-logs/net-moving-crossover-client-*.log",)),
@@ -551,7 +558,7 @@ def _multiprocess_cases(rows: Iterable[tuple[str, str, str, tuple[str, ...]]]) -
             scenes=(SceneMetadata(f"res://tests/integration/{scene_name}"),),
             argv=tuple(shlex.split(command)),
             tags=tuple(tags),
-            timeout_seconds=600.0 if case_id == "moving-turn-poses" else 480.0 if case_id == "pivot-continuity" else 240.0,
+            timeout_seconds=600.0 if case_id in ("moving-turn-poses", "jumpshot-transitions") else 480.0 if case_id == "pivot-continuity" else 240.0,
             log_policy=LogPolicy("adapter-owned", ";".join(artifacts)),
             artifact_globs=artifacts,
         )
@@ -569,6 +576,8 @@ _CONTROL_COMPONENTS = (
     ("jump-shot-heading-test-bounded", "jump-shot-heading-test-contact-retarget", "jump-shot-heading-test-retarget"),
     ("jumpshot-form-test-normal-right", "jumpshot-form-test-normal-left", "jumpshot-form-test-control-idle", "jumpshot-form-test-control-goalkeeper"),
     ("jumpshot-form-test-normal-right", "jumpshot-form-test-feint-early", "jumpshot-form-test-feint-late"),
+    ("jumpshot-form-test-centered-body", "jumpshot-form-test-control-before440"),
+    ("jumpshot-pose-reset-test-gap", "jumpshot-pose-reset-test-backward", "jumpshot-pose-reset-test-continuous-fake"),
     ("post-play-test-accuracy", "post-play-test-accuracy-unsquared"),
     ("post-play-test-turnaround", "post-play-test-lost-payload", "post-play-test-turnaround-steal", "post-play-test-turnaround-oob"),
     ("post-play-test-contact-set", "post-play-test-contact-unset"),
@@ -758,6 +767,9 @@ _MULTIPROCESS_CASE_SECONDS = {
     # #416: eighteen repeated captures, two negative controls and four context captures.
     "pivot-continuity": 250.0,
     "moving-turn-poses": 300.0,
+    # #440: paced 36-case owner baseline measured 371.7s; reserve the
+    # remaining local/control captures and analysis in this shard weight.
+    "jumpshot-transitions": 400.0,
     "net-handshake": 6.0,
     "net-state-sync": 7.0,
     "net-node-replication": 6.0,
