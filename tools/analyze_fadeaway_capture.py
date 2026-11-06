@@ -4,7 +4,7 @@ import json
 import math
 from pathlib import Path
 
-from analyze_jumpshot_capture import analyze, clock, coordinate_resolution
+from analyze_jumpshot_capture import analyze, clock, coordinate_resolution, geometry
 
 TORSO = ("Spine2", "Neck")
 LEGS = ("RightLeg", "RightFoot", "LeftLeg", "LeftFoot")
@@ -72,6 +72,26 @@ def analyze_capture(directory, gate=True):
             result["failures"].append("actual fadeaway release-angle premise missing")
         if any(s["animation"] != "FadeawayActive" for s in result["fadeawayForm"]["samples"]):
             result["failures"].append("production FadeawayActive selection missing")
+        # Re-solving the arms after leaning the torso must still produce a
+        # shooting reach in the final blended pose, not only in Blender's IK
+        # target. Body +Y is world up after inverse yaw, independent of lean.
+        result["fadeawayArms"] = []
+        for row in rows:
+            pose = row.get("pose", {})
+            if (pose.get("physicsFrame") != row["physicsFrame"] or
+                    pose.get("move") != "jumpshot" or pose.get("phase") != "Active" or
+                    pose.get("frame") not in (2, 3) or
+                    (manifest["role"] == "client" and not (pose.get("presentationTick") ==
+                        row.get("selectedPresentationTick") == row.get("ballPresentationTick")))):
+                continue
+            bones = pose["bones"]
+            wrist_above = bones["mixamorig_RightHand"]["body"][1] - bones["mixamorig_RightForeArm"]["body"][1]
+            shape = geometry(pose)
+            sample = dict(frame=pose["frame"], elbow=shape["elbow"], guideElbow=shape["guideElbow"],
+                          wristAboveElbowM=wrist_above)
+            result["fadeawayArms"].append(sample)
+            if gate and (not math.isfinite(wrist_above) or wrist_above <= 0 or shape["asymmetry"] <= 0):
+                result["failures"].append("fadeaway shooting reach missing at Active:" + str(pose["frame"]))
         if gate:
             result["failures"].extend(result["fadeawayForm"]["failures"])
     result["result"] = "failed" if result["failures"] else "passed"
