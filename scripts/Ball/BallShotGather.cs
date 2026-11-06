@@ -28,7 +28,7 @@ public partial class BallController
         if (IsServer || !IsLocalHolder || State != BallState.Dribbling) return;
         var player = Players?.GetNodeOrNull<PlayerController>(StateMachine.HolderPeerId.ToString());
         if (player?.SimulationShot is { Gather.Valid: true } &&
-            player.SimulationMovePhase is MovePhase.Startup or MovePhase.Recovery)
+            player.SimulationMovePhase is MovePhase.Startup or MovePhase.Active or MovePhase.Recovery)
             CradleForShotStartup(player.SimulationPeerId);
     }
 

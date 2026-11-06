@@ -108,6 +108,7 @@ public partial class ShotGatherLifecycleTest : Node3D
                 "ball/client/remote role premise");
 
             StaleDribbleAndFake();
+            StaleDribbleAtRelease();
             ReleasedHeldCorrections();
             ActualLoss(BallState.Loose);
             ActualLoss(BallState.Held);
@@ -189,6 +190,55 @@ public partial class ShotGatherLifecycleTest : Node3D
         Require(_own.PhaseForHarness == MovePhase.Recovery && _own.FrameInPhaseForHarness == 2,
             "ball correction may not re-phase the committed machine");
         GD.Print("[shot-gather-lifecycle] release/stale-Held Active+Recovery absolute origin PASS");
+    }
+
+    private void StaleDribbleAtRelease()
+    {
+        BeginDribbleShot();
+        AdvanceTo(MovePhase.Startup, 17);
+        int before = _ball.SuccessfulShotReleasesForHarness;
+        Vector3 endpoint = _own.GlobalPosition + new Basis(Vector3.Up, _own.Heading) * ShotGatherProfile.Target(18);
+        // Advance the real machine without ticking Ball: the delayed pre-Begin
+        // packet must be reconciled BEFORE this first-Active release is processed.
+        _own.LifecycleAdvanceMachine();
+        Require(_own.PhaseForHarness == MovePhase.Active && _own.FrameInPhaseForHarness == 0,
+            "stale Dribbling release fixture must reach actual first Active0");
+        _ball.LifecycleSnapshot(BallState.Dribbling, _ownerId, _own.GlobalPosition + new Vector3(.4f, -.85f, .5f), false);
+        TickBall();
+        Require(_ball.BallCorrectionForHarness.Received && _ball.BallCorrectionForHarness.State == "Dribbling",
+            "first-Active stale Dribbling must traverse production reconciliation");
+        Require(_ball.State == BallState.InFlight && _own.LifecycleGather.Released &&
+            _ball.SuccessfulShotReleasesForHarness == before + 1, "first Active0 must release exactly once after stale Dribbling");
+        Near(_ball.LastReleasePositionForHarness, endpoint, "stale Dribbling release must use model endpoint, not bounce center");
+        Near(_ball.GlobalPosition, endpoint, "release callback must leave the arc at its endpoint origin");
+        Near(_own.LifecycleGather.ReleaseOrigin, endpoint, "released context must retain the endpoint origin");
+
+        for (int step = 1; step <= 2; step++)
+        {
+            Vector3 position = _ball.GlobalPosition, velocity = _ball.FlightVelocityForHarness;
+            Vector3 nextVelocity = velocity + Vector3.Down * _ball.Gravity * (float)Dt;
+            Vector3 nextPosition = position + .5f * (velocity + nextVelocity) * (float)Dt;
+            _own.LifecycleAdvanceMachine();
+            TickBall();
+            Require(_own.PhaseForHarness == MovePhase.Active && _own.FrameInPhaseForHarness == step &&
+                _ball.State == BallState.InFlight && _ball.FlightStepForHarness.Advanced,
+                $"post-correction flight step {step} must actually advance during the next Active frame");
+            Near(_ball.FlightStepForHarness.Position, position, $"flight step {step} must start on the existing arc");
+            Near(_ball.GlobalPosition, nextPosition, $"flight step {step} must integrate from the endpoint arc");
+            Near(_ball.FlightVelocityForHarness, nextVelocity, $"flight step {step} must retain gravity integration");
+            Require(_ball.SuccessfulShotReleasesForHarness == before + 1, "later Active frames may not release again");
+        }
+
+        _own.LifecycleAdvanceMachine(); // Active3, after the release pulse has ended
+        _own.GlobalPosition += new Vector3(1.25f, 0, -.75f);
+        _ball.LifecycleSnapshot(BallState.Dribbling, _ownerId, _own.GlobalPosition + new Vector3(-.4f, -.85f, .5f), false);
+        TickBall();
+        Require(_ball.BallCorrectionForHarness.State == "Dribbling" && _ball.State == BallState.Held &&
+            _own.LifecycleGather.Released && !_ball.FlightStepForHarness.Advanced,
+            "post-release stale Dribbling must replay cradle without advancing or reviving the release");
+        Near(_ball.GlobalPosition, endpoint, "post-release stale Dribbling must preserve absolute origin despite root motion");
+        Require(_ball.SuccessfulShotReleasesForHarness == before + 1, "post-release stale Dribbling may not release twice");
+        GD.Print("[shot-gather-lifecycle] stale Dribbling first-Active endpoint/flight/no-repeat PASS");
     }
 
     private void CorrectHeld(Vector3 origin, int before, string label)
