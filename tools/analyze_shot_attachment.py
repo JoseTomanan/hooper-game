@@ -20,6 +20,10 @@ CALIBRATION = ROOT / "assets/shot_gather_calibration.json"
 RADIUS_M = .12
 CONTACT_TOLERANCE_M = .02
 NUMERICAL_TOLERANCE_M = 1e-4
+# A held world target is recomposed through a moving float32 parent transform.
+# Permit one micrometre of numerical noise, far below contact/model tolerances;
+# a real changed duplicate still fails instead of being selected away.
+DUPLICATE_TOLERANCE_M = 1e-6
 DT = 1 / 60
 GRAVITY = (0, -9.8, 0)
 
@@ -101,7 +105,7 @@ def _window(rows, remote):
         if previous is not None and transitions.clock(previous, remote) == transitions.clock(row, remote):
             # Ball appearance is also part of the selected source pose. Do not
             # compare observer liveBall, which legitimately follows latest state.
-            if previous.get("ball") != row.get("ball"):
+            if distance(required(previous, "ball"), required(row, "ball")) > DUPLICATE_TOLERANCE_M:
                 failures.append("changed rendered ball on duplicate source tick")
         previous = row
     return unique, failures, duplicates

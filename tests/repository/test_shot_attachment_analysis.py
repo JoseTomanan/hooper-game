@@ -227,6 +227,15 @@ class ShotAttachmentAnalysisTests(unittest.TestCase):
         at["shotVisualOffset"][0] += .5
         self.assert_failure(self.analyze(rows), "anatomical right palm detached")
 
+    def test_duplicate_ball_allows_only_submicrometre_transform_roundoff(self):
+        rows = self.fixture()
+        at = next(i for i, r in enumerate(rows) if r["pose"]["phase"] == "Startup" and r["pose"]["frame"] == 8)
+        rows.insert(at + 1, copy.deepcopy(rows[at]))
+        rows[at + 1]["ball"][0] += .0000005
+        self.assertEqual([], self.analyze(rows)["failures"])
+        rows[at + 1]["ball"][0] += .0000015
+        self.assert_failure(self.analyze(rows), "changed rendered ball on duplicate source tick")
+
     def test_stale_pose_changed_duplicate_ball_and_reset_are_rejected(self):
         rows = self.fixture()
         at = next(i for i, r in enumerate(rows) if r["pose"]["phase"] == "Startup" and r["pose"]["frame"] == 8)
