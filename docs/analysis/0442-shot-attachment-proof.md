@@ -2,7 +2,7 @@
 
 - **Issue:** #442; related #440, #418, #428, #173.
 - **Architecture:** ADR-0002/0003/0004/0009/0010/0012/0027, unchanged.
-- **Date:** 2026-11-06.
+- **Date:** 2026-11-06; current-main integration checked 2026-11-07.
 - **Purpose:** record objective attachment and release evidence. The human owns appearance and feel acceptance in #173. This record does not accept either.
 
 ## Method
@@ -113,7 +113,13 @@ The [evidence index](evidence/0442/README.md) links normal-speed whole-frame gam
 
 ## Delivery gate
 
-The issue work is isolated on `fix/442-shot-attachment`, based on frozen #441 head `c5865e4`. At pickup and the 2026-11-06 delivery check, PR #441 remains open and unmerged. Issue #442 expressly forbids merging #441 as part of this task and requires waiting for that base before opening a main-targeting PR. Accordingly, #442 remains open until #441 merges, this branch is rebased onto current main, the final gates are rerun and its own PR passes exhaustive CI and review. Local green verification is not represented as GitHub CI or issue closure.
+The implementation is integrated on `fix/442-shot-ball-attachment`, based on current main `eaf15f7c1116445907bda519558924ba280c70b8`. Prerequisite PR #441 and the separate #443 fadeaway repair were already merged before this pickup. Merge commit `b5fd9e5` preserves the earlier unpublished #442 implementation and corrective-proof history without republishing #440 as new work.
+
+Fresh current-main pickup captures reproduce the defect for both hands and all three entries. Independent raw-skin calibration confirms the selected vertex belongs to the anatomical palm; the normal-shot clips are exactly unchanged from the frozen reference despite #443 changing other clips in the library. See the [pickup archive](evidence/0442/pickup-20261107/README.md).
+
+On the integrated implementation, ordinary and harness builds pass with no warnings/errors; full xUnit passes **1,327 tests with five intentional characterization skips**. Repository contracts pass **164 tests with one skip** outside the Windows filesystem sandbox; the rejected sandbox attempt is retained. Independent current-main correctness review reports no high-confidence introduced defects.
+
+The exhaustive local catalog was interrupted before completion; its completed cases are retained and remaining IDs are being rerun. The new main-targeting PR supplies independent exhaustive GitHub CI. Neither an interrupted run nor a pending CI result is an accepted exhaustive pass. Issue #442 remains open until its PR passes the required gates and merges; appearance and feel remain in #173.
 
 ## Rejected attempts and verification limits
 

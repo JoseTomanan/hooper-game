@@ -14,4 +14,6 @@ The raw `final-owner-report` includes its original failed numerical report. Exac
 
 The unfinished first packaging attempt is preserved locally under `.godot/442-interrupted-rendered`; it is superseded by the complete package linked above. Source images were not edited, and failed attempts were not relabeled as passing captures.
 
-Implementation is isolated on `fix/442-shot-attachment`. Issue #442 requires PR #441 to merge before this work receives its own main-targeting PR. #441 remains untouched by this task; #442 stays open until its required rebase, final CI and integration gates pass. No editor operation is required for the automated work.
+[Fresh current-main pickup and independent calibration audit](pickup-20261107/README.md) preserve the reproduced baseline at `eaf15f7`, clip equivalence and original-byte capture hashes.
+
+Implementation is integrated on `fix/442-shot-ball-attachment` at `b5fd9e5`, after prerequisite #441 and separate #443 merged. Fresh builds, unit/repository suites and independent review pass. The interrupted local catalog is incomplete; its remaining IDs and exhaustive PR CI are pending. Earlier rejected owner fake traces remain diagnostics until fresh captures pass the stricter return detector. No editor operation is required for the automated work.
