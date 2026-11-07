@@ -61,7 +61,10 @@ jobs:
   integration-shard:
     name: integration-shard-${{ matrix.shard }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # The expanded #442 catalog reached 14m32s including bootstrap in CI;
+    # leave artifact-upload headroom without changing individual case deadlines.
+    # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idtimeout-minutes
+    timeout-minutes: 20
     # Keep all four verdicts observable after one shard fails. GitHub otherwise
     # defaults matrix fail-fast to true:
     # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstrategyfail-fast
