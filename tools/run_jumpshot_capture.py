@@ -36,6 +36,10 @@ def start(args, output, role, hand, variant):
         cmd += ["--capture-legacy-shot=true"]
     if args.fadeaway_substitute:
         cmd += ["--capture-fadeaway-substitute=" + args.fadeaway_substitute]
+    if getattr(args, "heading_angle", None) is not None:
+        cmd += ["--capture-heading-angle=" + str(args.heading_angle),
+                "--capture-heading-rate=" + str(args.heading_rate),
+                "--capture-heading-entry=" + args.heading_entry]
     options = {}
     if os.name == "nt":
         info = subprocess.STARTUPINFO()
@@ -116,8 +120,13 @@ def main():
     parser.add_argument("--pacing-ms", type=int, choices=(80, 160), default=80,
                         help="producer delay for diagnostic readback coverage; requires --paced")
     parser.add_argument("--legacy-shot", action="store_true", help="supplemental before reproduction from the preserved three-clip fixture")
-    parser.add_argument("--fadeaway-substitute", choices=("before429", "normal"),
-                        help="isolated production fadeaway asset substitution for #429 proof")
+    parser.add_argument("--fadeaway-substitute", choices=("before429", "before439", "normal"),
+                        help="isolated production fadeaway asset substitution for diagnostic proof")
+    parser.add_argument("--heading-angle", type=float, help="initial rim-relative heading angle in degrees")
+    parser.add_argument("--heading-rate", type=float, default=900,
+                        help="heading-fixture turn rate in degrees per second; used with --heading-angle")
+    parser.add_argument("--heading-entry", choices=("stationary", "moving"), default="stationary",
+                        help="heading-fixture entry; used with --heading-angle")
     parser.add_argument("--compatibility", action="store_true")
     parser.add_argument("--resolution", default="960x540")
     parser.add_argument("--port", type=int, default=23468)

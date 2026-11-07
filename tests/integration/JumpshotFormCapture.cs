@@ -69,7 +69,7 @@ public partial class JumpshotFormCapture : Node
             throw new ArgumentException("invalid #440 entry fixture");
         if (_subjectRole == "owner") _subjectPeer = 0;
         _fadeawaySubstitute = Read("--capture-fadeaway-substitute", "");
-        if (_fadeawaySubstitute is not ("" or "before429" or "normal"))
+        if (_fadeawaySubstitute is not ("" or "before429" or "before439" or "normal"))
             throw new ArgumentException("unknown fadeaway substitute");
         _headingFixture = Read("--capture-heading-angle", "") != "";
         _headingAngle = float.Parse(Read("--capture-heading-angle", "0"), System.Globalization.CultureInfo.InvariantCulture);
@@ -333,8 +333,9 @@ public partial class JumpshotFormCapture : Node
             pacingMeaning = _paced ? $"{_pacingMs}ms producer wall-clock delay; fixed simulation steps; not real-time" : "unpaced",
             mutation = _legacyShot ? "legacy-normal-shot-three-clips" : "none", mutationApplied = _legacyApplied,
             fadeawaySubstitute = _fadeawaySubstitute, fadeawaySubstituteApplied = _fadeawaySubstituteApplied,
-            fadeawayFixtureSha256 = _fadeawaySubstitute == "before429" ? Convert.ToHexString(SHA256.HashData(
-                File.ReadAllBytes(ProjectSettings.GlobalizePath("res://tests/fixtures/fadeaway_before_429.res")))) : "",
+            fadeawayFixtureSha256 = _fadeawaySubstitute is "before429" or "before439" ? Convert.ToHexString(SHA256.HashData(
+                File.ReadAllBytes(ProjectSettings.GlobalizePath(_fadeawaySubstitute == "before429"
+                    ? "res://tests/fixtures/fadeaway_before_429.res" : "res://tests/fixtures/fadeaway_before_439.res")))) : "",
             legacyFixtureSha256 = _legacyShot ? Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(ProjectSettings.GlobalizePath("res://tests/fixtures/jumpshot_goalkeeper.res")))) : "",
             animationResourceSha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(ProjectSettings.GlobalizePath("res://assets/locomotion.res")))),
             playerSceneSha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(ProjectSettings.GlobalizePath("res://scenes/Player.tscn")))),
@@ -647,9 +648,12 @@ public partial class JumpshotFormCapture : Node
         // https://docs.godotengine.org/en/4.7/classes/class_resource.html#class-resource-method-duplicate
         var player = subject.GetNode<AnimationPlayer>("AnimationPlayer");
         var library = (AnimationLibrary)player.GetAnimationLibrary("locomotion").Duplicate(true);
-        var replacement = _fadeawaySubstitute == "before429"
-            ? GD.Load<AnimationLibrary>("res://tests/fixtures/fadeaway_before_429.res").GetAnimation("fadeawayactive")
-            : library.GetAnimation("jumpshotactive");
+        var replacement = _fadeawaySubstitute switch
+        {
+            "before429" => GD.Load<AnimationLibrary>("res://tests/fixtures/fadeaway_before_429.res").GetAnimation("fadeawayactive"),
+            "before439" => GD.Load<AnimationLibrary>("res://tests/fixtures/fadeaway_before_439.res").GetAnimation("fadeawayactive"),
+            _ => library.GetAnimation("jumpshotactive")
+        };
         library.RemoveAnimation("fadeawayactive");
         library.AddAnimation("fadeawayactive", replacement);
         player.RemoveAnimationLibrary("locomotion"); player.AddAnimationLibrary("locomotion", library);

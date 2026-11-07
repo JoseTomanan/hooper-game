@@ -1,4 +1,4 @@
-"""Package exact matched #429 rendered observations; this makes no taste verdict."""
+"""Package exact matched fadeaway rendered observations; this makes no taste verdict."""
 import argparse
 import json
 from pathlib import Path
@@ -10,7 +10,7 @@ from package_jumpshot_evidence import frame_reference, gzip_copy, read_capture
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def package(pair, output):
+def package(pair, output, issue=429):
     before_dir, after_dir = (ROOT / pair[k] for k in ("before", "after"))
     before_manifest, before = read_capture(before_dir, pair["remote"])
     after_manifest, after = read_capture(after_dir, pair["remote"])
@@ -22,7 +22,7 @@ def package(pair, output):
         draw = ImageDraw.Draw(canvas)
         draw.text((16, 7), pair["name"] + " | " + label + " | 2.4x slow motion", fill="white")
         draw.text((16, 25), "BEFORE: original shot presentation", fill="#b7d8ff")
-        draw.text((528, 25), "AFTER: #429 fadeaway / preserved controls", fill="#b7d8ff")
+        draw.text((528, 25), f"AFTER: #{issue} fadeaway / preserved controls", fill="#b7d8ff")
         for x, directory, row in ((16, before_dir, old), (528, after_dir, new)):
             with Image.open(directory / row["file"]) as image:
                 if image.size != (960, 540):
@@ -77,12 +77,14 @@ def package(pair, output):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--plan", type=Path, required=True)
-    parser.add_argument("--output", type=Path, default=ROOT / "docs/analysis/evidence/0429")
+    parser.add_argument("--issue", type=int, choices=(429, 439), default=429)
+    parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     pairs = json.loads(args.plan.read_text())
-    output = args.output.resolve()
-    if not output.is_relative_to(ROOT / "docs/analysis/evidence/0429"):
-        parser.error("output must be below docs/analysis/evidence/0429")
+    evidence_root = ROOT / f"docs/analysis/evidence/{args.issue:04d}"
+    output = (args.output or evidence_root).resolve()
+    if not output.is_relative_to(evidence_root):
+        parser.error(f"output must be below docs/analysis/evidence/{args.issue:04d}")
     for pair in pairs:
         manifests = [read_capture(ROOT / pair[key], pair["remote"])[0]
                      for key in ("before", "after")]
@@ -95,7 +97,7 @@ def main():
         if pacing[0] != pacing[1]:
             raise ValueError("before/after diagnostic pacing differs: " + pair["name"])
     output.mkdir(parents=True, exist_ok=True)
-    cases = [package(pair, output) for pair in pairs]
+    cases = [package(pair, output, args.issue) for pair in pairs]
     (output / "frame-index.json").write_text(json.dumps(dict(
         schema="hooper-fadeaway-evidence/v1", cases=cases, verdict="review only; #185/#173 remain open",
         sourcePixels="selected uncropped 960x540 core/control originals retained; complete review pairs resized to 480x270 with labels outside",

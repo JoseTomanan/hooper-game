@@ -4,7 +4,7 @@ import json
 import math
 from pathlib import Path
 
-from analyze_jumpshot_capture import analyze, clock, coordinate_resolution
+from analyze_jumpshot_capture import analyze, clock, coordinate_resolution, geometry
 
 TORSO = ("Spine2", "Neck")
 LEGS = ("RightLeg", "RightFoot", "LeftLeg", "LeftFoot")
@@ -67,10 +67,31 @@ def analyze_capture(directory, gate=True):
         authority = manifest if manifest["role"] != "client" else json.loads(
             (Path(str(directory) + "-server") / "manifest.json").read_text())
         releases = [e for e in authority.get("events", []) if e["kind"] == "release"]
+        result["authoritativeReleases"] = releases
         if not releases or any(not e.get("fadeaway") or e.get("residualAngle", 0) < math.pi / 2 for e in releases):
             result["failures"].append("actual fadeaway release-angle premise missing")
         if any(s["animation"] != "FadeawayActive" for s in result["fadeawayForm"]["samples"]):
             result["failures"].append("production FadeawayActive selection missing")
+        # Re-solving the arms after leaning the torso must still produce a
+        # shooting reach in the final blended pose, not only in Blender's IK
+        # target. Body +Y is world up after inverse yaw, independent of lean.
+        result["fadeawayArms"] = []
+        for row in rows:
+            pose = row.get("pose", {})
+            if (pose.get("physicsFrame") != row["physicsFrame"] or
+                    pose.get("move") != "jumpshot" or pose.get("phase") != "Active" or
+                    pose.get("frame") not in (2, 3) or
+                    (manifest["role"] == "client" and not (pose.get("presentationTick") ==
+                        row.get("selectedPresentationTick") == row.get("ballPresentationTick")))):
+                continue
+            bones = pose["bones"]
+            wrist_above = bones["mixamorig_RightHand"]["body"][1] - bones["mixamorig_RightForeArm"]["body"][1]
+            shape = geometry(pose)
+            sample = dict(frame=pose["frame"], elbow=shape["elbow"], guideElbow=shape["guideElbow"],
+                          wristAboveElbowM=wrist_above)
+            result["fadeawayArms"].append(sample)
+            if gate and (not math.isfinite(wrist_above) or wrist_above <= 0 or shape["asymmetry"] <= 0):
+                result["failures"].append("fadeaway shooting reach missing at Active:" + str(pose["frame"]))
         if gate:
             result["failures"].extend(result["fadeawayForm"]["failures"])
     result["result"] = "failed" if result["failures"] else "passed"
@@ -93,12 +114,35 @@ def compare(result, prior):
     result["result"] = "failed" if result["failures"] else "passed"
 
 
+def compare_exaggeration(result, prior):
+    """Compare every leg landmark; a stronger spine alone is insufficient."""
+    if result.get("variant") != "fadeaway":
+        return
+    if prior.get("failures"):
+        result["failures"].append("invalid exaggeration baseline")
+    old = {s["frame"]: s for s in prior.get("fadeawayForm", {}).get("samples", [])}
+    new = {s["frame"]: s for s in result.get("fadeawayForm", {}).get("samples", [])}
+    for frame in (2, 3):
+        if frame not in old or frame not in new:
+            result["failures"].append("missing paired exaggeration pose " + str(frame))
+            continue
+        margin = old[frame]["coordinateResolutionM"] + new[frame]["coordinateResolutionM"]
+        for field in ("leadsM", "leadsFromHipsM"):
+            for bone in LEGS:
+                delta = new[frame][field][bone] - old[frame][field][bone]
+                if not math.isfinite(delta) or delta <= margin:
+                    result["failures"].append(f"fadeaway exaggeration missing: Active:{frame} {field} {bone}")
+    result["result"] = "failed" if result["failures"] else "passed"
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("directory", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--measure-only", action="store_true")
     parser.add_argument("--baseline", type=Path)
+    parser.add_argument("--exaggeration-baseline", type=Path,
+                        help="require every core knee/ankle lead to exceed the frozen pre-439 pose")
     args = parser.parse_args()
     directories = [args.directory] if (args.directory / "manifest.json").exists() else sorted(
         p.parent for p in args.directory.glob("*/manifest.json") if not p.parent.name.endswith("-server"))
@@ -111,6 +155,17 @@ def main():
                 result["result"] = "failed"
             else:
                 compare(result, baseline[result["case"]])
+    if args.exaggeration_baseline:
+        baseline = {c["case"]: c for c in json.loads(args.exaggeration_baseline.read_text())["cases"]}
+        for result in results:
+            if result.get("variant") != "fadeaway":
+                continue
+            if result["case"] not in baseline:
+                result["failures"].append("exaggeration baseline case missing")
+                result["result"] = "failed"
+            else:
+                compare(result, baseline[result["case"]])
+                compare_exaggeration(result, baseline[result["case"]])
     passed = bool(results) and all(r["result"] == "passed" for r in results)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(dict(result="passed" if passed else "failed", cases=results), indent=2))
