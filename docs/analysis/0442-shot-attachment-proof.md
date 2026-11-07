@@ -98,6 +98,27 @@ Operator mutations additionally reject broken arc steps, unexplained Held stalls
 
 The existing positive form/heading/root/entry/fake/return thresholds remain intact. Attachment IK repairs one old goalkeeper loaded-elbow symptom; the old asset negative control now requires its still-independent asymmetry and wrist-flexion failures. It uses the complete production modifier stack rather than disabling IK only for that control. All ten form scenarios and the broader 136-case selected shared regression suite pass.
 
+## Final fake-return correction
+
+The exhaustive run exposed an additional real return-motion regression that the selected suite had missed. The unchanged eight-case `net-jumpshot-form` comparator rejected only Left/late: the Recovery18-to-19 maximum skin-joint displacement was **0.138319981 m**, versus **0.137954367 m** in its legacy comparison, with the unchanged **0.000001652 m** coordinate-resolution allowance. The actual Recovery19-to-Inactive edge and final neutral pose matched exactly. Every physical-ball return delta also matched. This was an intermediate arm-motion defect, not missing source ticks or a bad release event.
+
+For a fake returning to retained Left, the departing right-hand binding now uses the square of its remaining smoothstep weight. Its captured frame13 value and zero frame19 endpoint stay fixed; the scalar binding weight reaches zero with zero terminal acceleration. This statement concerns that scalar, not every skinned joint's acceleration. The left-hand binding, normal shot, right-retained fake, gameplay timing and simulation are unchanged. No detector threshold was increased.
+
+The unchanged full remote form gate now passes **all eight cases**, and its displaced-boundary negative control still fails. The focused final return edge is **0.108353277 m**, below the fresh legacy comparison's **0.108959817 m**. The all-edge audit also records the tradeoff: the earlier Left/late Recovery peak changed from **0.476763437 to 0.481523443 m**; the fresh legacy peak is **0.479568586 m**. No new whole-episode peak limit was invented or used to conceal that motion. Appearance and feel remain in #173. The [raw RED/GREEN package](evidence/0442/fake-return-20261107/README.md) preserves original commit labels, dirty-probe provenance, all source traces, builds and unchanged reports. The [final matched fake-return film](evidence/0442/rendered-fake-return-20261107/README.md) uses a clean `6dd8e4d` capture and the frozen production pickup.
+
+## Shared defensive consumers
+
+Two reciprocal `BlockTurnoverTest` cases distinguish the corrected real origin from the retired fixed station. They independently compose both positions from root, heading, profile and live attachment exports, then assert opposite XZ reach predicates. The defender's **last Active tick** coincides with the shot's actual first Active0 release, so a later flight step cannot hide a wrong release origin. All eight block scenarios pass.
+
+| Fixture | Corrected origin | Restored old station mutation |
+|---|---|---|
+| `corrected-origin-reach-hit` | In reach; actual ball becomes Loose; pass | Out of reach; actual release remains InFlight; fail |
+| `corrected-origin-reach-miss` | Out of reach; actual release remains InFlight; pass | In reach; actual ball becomes Loose; fail |
+
+The code-built fixture has root Y=0: its independently latched origins are `(-0.27775693, 1.1760362, 5.0062814)` corrected and `(-0.4429, 1, 5.5)` old. These fixture heights are not the production rig's root height. The block predicate intentionally uses XZ distance. The mutation omits only the real `TickHeld` gather call, then restores exact source bytes, rebuilds and reruns both cases green. The [mutation ledger and process logs](evidence/0442/fake-return-20261107/README.md) preserve all four reciprocal outcomes and source hashes. The unblocked counterfactual's flight-time bound now uses the corrected profile endpoint height.
+
+Production block reach, static Held-steal reach and defensive knock origins consume the real `GlobalPosition`. The pump-fake steal window remains timing-only under ADR-0018; its existing committed-move/turnover tests retain that rule. The broader catalog covers those consumers, neutral Held, dribble/sweeps, rebound, fadeaway, Turnaround and Layup without changing their release families or defensive rules.
+
 ## Reproduction and evidence
 
 Run from the repository root with `$env:GODOT` set to the pinned console executable. Every shipped runner supplies unique workspace-local Godot logs.
@@ -125,7 +146,11 @@ Fresh current-main pickup captures reproduce the defect for both hands and all t
 
 On the integrated implementation, ordinary and harness builds pass with no warnings/errors; full xUnit passes **1,327 tests with five intentional characterization skips**. Repository contracts pass **164 tests with one skip** outside the Windows filesystem sandbox; the rejected sandbox attempt is retained. Independent current-main correctness review reports no high-confidence introduced defects.
 
-The exhaustive local catalog was interrupted before completion; its completed cases are retained and remaining IDs are being rerun. The new main-targeting PR supplies independent exhaustive GitHub CI. Neither an interrupted run nor a pending CI result is an accepted exhaustive pass. Issue #442 remains open until its PR passes the required gates and merges; appearance and feel remain in #173.
+The local exhaustive attempt was intentionally stopped at 350/484 passing cases to reproduce the newly discovered network-form failure; it is nonexhaustive diagnostic evidence. Final local verification passes the corrected eight-case network form gate, all eight block cases, both reciprocal mutation/restoration controls and the 36-case attachment matrix. Temporary mutation bytes are restored exactly.
+
+PR [#444](https://github.com/JoseTomanan/hooper-game/pull/444) contains the integrated implementation, final hand-withdrawal correction `ba324a6` and CI budget change `6dd8e4d`. The expanded catalog contains **486 scenarios**. Hosted runs reached the former 15-minute job boundary including bootstrap and uploads; the shard budget is now 20 minutes while every per-scenario deadline and verdict remains unchanged. Exhaustive [source CI run 42381239530](https://github.com/JoseTomanan/hooper-game/actions/runs/42381239530) passes **all nine checks** at `6dd8e4d`: **486/486 catalog scenarios**, **1,327 unit tests with five intentional skips**, and **164 repository tests with zero skips on Linux CI**. The local Windows suite's separate one-skip result is retained above. The final attachment matrix passes **108/108 exact role cases**, 36 each local/owner/observer. Its maximum measured segment-length change is 0.000000895 m; all model, release and fake-handoff residuals remain within the original numerical gates.
+
+The [final completion archive](evidence/0442/completion-20261107/README.md) preserves original raw traces/manifests/reports, all four shard logs, source/check snapshots, source and archive hashes and actual GitHub checkout-merge provenance. The parent independently verified all 486 distinct expected exit-zero identities, all nine successful jobs, all 108 report/manifest identities and every CI archive hash. The longest shard completed in 16m32s, including bootstrap, confirming the expanded job budget is required. These are verified source-head results; subsequent evidence-only commits do not claim a future workflow verdict. Issue #442 remains open until its PR passes the required gates and merges; appearance and feel remain in #173.
 
 ## Rejected attempts and verification limits
 

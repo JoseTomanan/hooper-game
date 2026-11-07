@@ -1,5 +1,7 @@
 # #442 shot attachment rendered comparisons
 
+The normal-shot comparisons remain applicable: the final correction changes only the departing right-hand binding during Left-retained fake Recovery. The older fake films below preserve the pre-correction return and are historical. See the [final matched Left/late fake-return comparison](../rendered-fake-return-20261107/README.md) for the corrected return.
+
 Complete source frames appear in two panels at 60Hz (17/17/16ms), with six-milestone contact sheets. No source frame is cropped or retouched. Appearance and feel remain unaccepted for #173.
 
 Front/side overlay PNGs are separate diagnostic copies: cyan marks actual calibrated pure-wrist skin vertex 11216, yellow marks the visible ball center. The index retains original PNG hashes, all recorded camera/source clocks, playback positions and unmodified compressed raw traces/manifests.
