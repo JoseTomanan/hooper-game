@@ -115,6 +115,8 @@ class HarnessCatalogCliTests(unittest.TestCase):
             + ['post-presentation-test-presentation', 'committed-clip-hookup-audit']
             + ['pivot-plant-test-movement-matrix']
             + ['net-sprint-test-moving-turn']
+            + ['block-turnover-test-corrected-origin-reach-hit',
+               'block-turnover-test-corrected-origin-reach-miss']
             + [f'jump-shot-heading-test-matrix-{angle}-{entry}-{hand}'
                for angle in (0, 45, 89, 90, 91, 135, 180)
                for entry in ('stationary', 'moving')
@@ -197,7 +199,7 @@ class HarnessCatalogCliTests(unittest.TestCase):
             ('transit-steal-test-transit-steal', 'transit-steal-test-out-of-reach-recovery', 'transit-steal-test-normal-window-unchanged', 'transit-steal-test-transit-steal-behind-the-back', 'transit-steal-test-out-of-reach-recovery-behind-the-back', 'transit-steal-test-transit-steal-between-the-legs', 'transit-steal-test-out-of-reach-recovery-between-the-legs', 'transit-steal-test-transit-steal-spin', 'transit-steal-test-out-of-reach-recovery-spin'),
             ('steal-turnover-test-success', 'steal-turnover-test-whiff'),
             ('steal-facing-mapping-test-face-to-face', 'steal-facing-mapping-test-side-by-side'),
-            ('block-turnover-test-success', 'block-turnover-test-success-lastactive', 'block-turnover-test-whiff', 'block-turnover-test-out-of-range', 'block-turnover-test-control-make', 'block-turnover-test-control-make-default-geometry'),
+            ('block-turnover-test-success', 'block-turnover-test-success-lastactive', 'block-turnover-test-whiff', 'block-turnover-test-out-of-range', 'block-turnover-test-control-make', 'block-turnover-test-control-make-default-geometry', 'block-turnover-test-corrected-origin-reach-hit', 'block-turnover-test-corrected-origin-reach-miss'),
             ('contest-scatter-test-contest-active', 'contest-scatter-test-no-contest'),
             ('fadeaway-trigger-test-mid-pivot', 'fadeaway-trigger-test-squared-up'),
             ('cradle-race-test-out-of-order', 'cradle-race-test-in-order', 'cradle-race-test-later-legit-drive'),
@@ -372,8 +374,14 @@ class HarnessCatalogShardTests(unittest.TestCase):
         self.assertEqual(catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS, weights['net-rebound-presentation'])
         for case_id in ('fadeaway-form', 'net-fadeaway-form'):
             self.assertEqual(catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS, weights[case_id])
+        for case_id in ('block-turnover-test-corrected-origin-reach-hit',
+                        'block-turnover-test-corrected-origin-reach-miss'):
+            # New scenarios inherit their scene's measured eight-second family
+            # divided by its six frozen migration cases, not the fallback.
+            self.assertAlmostEqual(8.0 / 6.0, weights[case_id])
         self.assertAlmostEqual(
             1276.0 + 400.0 + 40.0 + 400.0 + 400.0 + 3.0 / 5 + 69 * catalog.DEFAULT_SINGLE_WEIGHT_SECONDS
+            + 2 * (8.0 / 6.0)
             + 8 * catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS,
             sum(weights.values()),
         )
