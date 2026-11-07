@@ -1,0 +1,31 @@
+{
+  "result": "passed",
+  "archivesVerified": 113,
+  "allOriginalBytesMatch": true,
+  "deterministicGzipRecompressionMatches": true,
+  "sourceBytes": 217463083,
+  "gzipBytes": 39250696,
+  "redCases": 8,
+  "redFailedCases": [
+    "left-late-1"
+  ],
+  "focusedGreenCases": 1,
+  "fullGreenCases": 8,
+  "fullGreenAuthorityObserverEpisodes": 32,
+  "independentRecomputedNetworkCases": 8,
+  "allBlockCasesPassed": 8,
+  "mutationCaseExitCodes": [
+    1,
+    1,
+    0,
+    0
+  ],
+  "mutationSourceHashReconstructedFromSingleCallOmission": true,
+  "exactTrackedSourceBytesCurrentlyRestored": true,
+  "restoredSourceSha256": "8be5e8d51c338af0c8c72265a2dfcd2317ac7288e4d3ef32c5af19505c37d26f",
+  "localAttachmentCasesPassed": 36,
+  "catalogRepositoryTestsPassed": 26,
+  "negativeControl": "intended Startup->Active displacement failure",
+  "errors": [],
+  "limits": "Archive integrity, exact mutation/restoration, and stated report/log shapes; no exhaustive CI, final108-role or feel claim."
+}

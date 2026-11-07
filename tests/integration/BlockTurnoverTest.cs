@@ -18,6 +18,8 @@ namespace HOOPERGAME.Tests.Integration;
 //
 //   godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=success
 //   godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=success-lastactive
+//   godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=corrected-origin-reach-hit
+//   godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=corrected-origin-reach-miss
 //   godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=whiff
 //   godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=out-of-range
 //   godot --headless --path . res://tests/integration/BlockTurnoverTest.tscn -- --harness-scenario=control-make
@@ -198,7 +200,16 @@ public partial class BlockTurnoverTest : Node
     // the vulnerable window (ComputeDefenderBeginFrame's "whiff" branch);
     // "out-of-range" times it perfectly (the SAME placement "success" uses)
     // but positions the defender outside BlockReachRadius (see Ready()).
-    private bool IsWhiffLikeScenario => _scenario == "whiff" || _scenario == "out-of-range";
+    private bool IsWhiffLikeScenario => _scenario == "whiff" || _scenario == "out-of-range"
+        || _scenario == "corrected-origin-reach-miss";
+
+    // #442: reciprocal spatial controls share success-lastactive's single
+    // release-tick overlap. A later flight step cannot conceal a wrong origin.
+    private bool IsCorrectedOriginReachScenario => _scenario == "corrected-origin-reach-hit"
+        || _scenario == "corrected-origin-reach-miss";
+    private bool IsLastActiveScenario => _scenario == "success-lastactive" || IsCorrectedOriginReachScenario;
+    private Vector3 _correctedOrigin, _legacyOrigin;
+    private bool _reachReleaseObserved;
 
     private BallController _ball;
     private GameManager _gameManager;
@@ -394,6 +405,7 @@ public partial class BlockTurnoverTest : Node
             // Active/release) is harmless — TickHeld/TickDribbling re-centres
             // the ball on the holder's position every tick regardless.
             _shooter.GlobalPosition = ShooterPosition;
+            if (IsCorrectedOriginReachScenario && !PositionCorrectedOriginDefender()) return;
 
             // Predicted release frame, from the SHOOTER's actual begin frame
             // plus the LIVE JumpShot frame data — not hardcoded, so it
@@ -449,6 +461,40 @@ public partial class BlockTurnoverTest : Node
                 return;
             }
             GD.Print($"[block-turnover] frame {_frame}: defender begun BlockMove.");
+        }
+
+        if (IsCorrectedOriginReachScenario && _frame == _predictedReleaseFrame)
+        {
+            // Parent observes the previous child tick. The NEXT player Tick
+            // must produce shooter Active0 and defender's final Active frame.
+            int blockActive = BlockMove.DefaultFrameData.ActiveFrames;
+            Vector3 endpoint = _shooter.GlobalPosition + new Basis(Vector3.Up, _shooter.Heading) * ShotGatherProfile.Target(18);
+            if (_shooter.PhaseForHarness != MovePhase.Startup
+                || _shooter.FrameInPhaseForHarness != JumpShot.DefaultFrameData.StartupFrames - 1
+                || _defender.PhaseForHarness != MovePhase.Active
+                || _defender.FrameInPhaseForHarness != blockActive - 2
+                || endpoint.DistanceTo(_correctedOrigin) > .0001f)
+            {
+                Fail($"scenario={_scenario} lost its fixed-origin/last-Active release premise: " +
+                     $"shooter={_shooter.PhaseForHarness}/{_shooter.FrameInPhaseForHarness}, " +
+                     $"defender={_defender.PhaseForHarness}/{_defender.FrameInPhaseForHarness}, endpoint={endpoint}.");
+                Finish();
+                return;
+            }
+        }
+        if (IsCorrectedOriginReachScenario && _frame == _predictedReleaseFrame + 1)
+        {
+            _reachReleaseObserved = _shooter.PhaseForHarness == MovePhase.Active
+                && _shooter.FrameInPhaseForHarness == 0 && _ball.SuccessfulShotReleasesForHarness == 1;
+            if (!_reachReleaseObserved)
+            {
+                Fail($"scenario={_scenario} did not observe exactly one actual Active0 release.");
+                Finish();
+                return;
+            }
+            GD.Print($"[block-turnover] scenario={_scenario}, actual release origin={_ball.LastReleasePositionForHarness}, " +
+                     $"corrected={_correctedOrigin}, legacy={_legacyOrigin}, state={_ball.State}, " +
+                     $"actualOriginWithinReach={DefensiveResolution.WithinBlockReach(_defender.GlobalPosition, _ball.LastReleasePositionForHarness, _ball.BlockReachRadius)}.");
         }
 
         // Observed-InFlight latch — logging/sanity ONLY, never frame math
@@ -534,7 +580,7 @@ public partial class BlockTurnoverTest : Node
             // a one-tick-past placement would silently absorb.
             return (releaseFrame + graceTicks) - (blockStartup - 1);
 
-        if (_scenario == "success-lastactive")
+        if (IsLastActiveScenario)
         {
             // Active entry lands so the defender's LAST Active tick (not the
             // first) coincides with the release tick T: defActiveStart =
@@ -558,6 +604,45 @@ public partial class BlockTurnoverTest : Node
         // (defActiveStart == vulnStart). "out-of-range" whiffs anyway, purely
         // because Ready() positions its defender outside BlockReachRadius.
         return releaseFrame - (blockStartup - 1);
+    }
+
+    private bool PositionCorrectedOriginDefender()
+    {
+        // Independent geometry oracle: the fixed profile and live simulation
+        // root/heading, never the ball position or a rendered hand. The old
+        // Held station uses the same heading and actual attachment exports.
+        _correctedOrigin = _shooter.GlobalPosition + new Basis(Vector3.Up, _shooter.Heading) * ShotGatherProfile.Target(18);
+        Vector3 forward = new(Mathf.Sin(_shooter.Heading), 0f, Mathf.Cos(_shooter.Heading));
+        Vector3 right = new(-forward.Z, 0f, forward.X);
+        float handSign = _shooter.HandSide == HandSide.Right ? 1f : -1f;
+        _legacyOrigin = _shooter.GlobalPosition + forward * _ball.DribbleForwardOffset + right * _ball.HandOffset * handSign;
+        _legacyOrigin = _legacyOrigin with { Y = _ball.DribbleHandHeight };
+        Vector3 axis = (_correctedOrigin - _legacyOrigin) with { Y = 0f };
+        const float boundaryMargin = .05f;
+        if (axis.LengthSquared() < .000001f || _ball.BlockReachRadius <= boundaryMargin)
+        {
+            Fail($"scenario={_scenario} cannot discriminate corrected/legacy origins with reach {_ball.BlockReachRadius}.");
+            Finish();
+            return false;
+        }
+        axis = axis.Normalized();
+        bool hit = _scenario == "corrected-origin-reach-hit";
+        Vector3 defender = hit ? _correctedOrigin + axis * (_ball.BlockReachRadius - boundaryMargin)
+            : _correctedOrigin - axis * (_ball.BlockReachRadius + boundaryMargin);
+        _defender.GlobalPosition = defender with { Y = 0f };
+        bool correctedReach = DefensiveResolution.WithinBlockReach(_defender.GlobalPosition, _correctedOrigin, _ball.BlockReachRadius);
+        bool legacyReach = DefensiveResolution.WithinBlockReach(_defender.GlobalPosition, _legacyOrigin, _ball.BlockReachRadius);
+        if (correctedReach != hit || legacyReach == hit)
+        {
+            Fail($"scenario={_scenario} has non-discriminating reach predicates: corrected={correctedReach}, " +
+                 $"legacy={legacyReach}, expected corrected={hit}, legacy={!hit}, radius={_ball.BlockReachRadius}.");
+            Finish();
+            return false;
+        }
+        GD.Print($"[block-turnover] scenario={_scenario}, defender={_defender.GlobalPosition}, " +
+                 $"corrected={_correctedOrigin}, legacy={_legacyOrigin}, radius={_ball.BlockReachRadius}, " +
+                 $"correctedReach={correctedReach}, legacyReach={legacyReach}.");
+        return true;
     }
 
     private void TickSuccess()
@@ -630,15 +715,16 @@ public partial class BlockTurnoverTest : Node
     // t_down math, which could silently drift from ShotArc's own solve on a
     // future change) rather than hardcoding a tick count — so a tuning
     // change to any of these exports doesn't silently stale this bound out.
-    // Release Y is DribbleHandHeight exactly: TickHeld sets the ball's
-    // world-Y to DribbleHandHeight minus the crossover sweep's mid-transit
-    // dip, and this shooter never dribbles or crosses over, so the dip term
-    // is always 0 here. Target Y is RimCenter.Y (ShotTarget == RimCenter
-    // with ShotScatterEnabled disabled, per this class's doc).
+    // Normal-shot release starts at the corrected deterministic endpoint,
+    // independently composed from the live shooter root/heading and authored
+    // profile. The old fixed Held height is no longer this arc's origin.
+    // Target Y is RimCenter.Y (ShotTarget == RimCenter with scatter disabled).
     private int ComputeUnblockedMakeTicks()
     {
+        Vector3 releaseOrigin = _shooter.GlobalPosition
+            + new Basis(Vector3.Up, _shooter.Heading) * ShotGatherProfile.Target(18);
         float tTotal = ShotArc.ComputeFlightTime(
-            releaseY:   _ball.DribbleHandHeight,
+            releaseY:   releaseOrigin.Y,
             targetY:    _ball.RimCenter.Y,
             apexHeight: _ball.ShotApexHeight,
             gravity:    _ball.Gravity);
@@ -744,7 +830,7 @@ public partial class BlockTurnoverTest : Node
             return;
         }
 
-        if (_scenario == "success-lastactive")
+        if (IsLastActiveScenario)
         {
             VerdictSuccessLastActive();
             return;
@@ -858,16 +944,17 @@ public partial class BlockTurnoverTest : Node
         // correct behaviour.
         bool defenderSpentOnceLatched = _defenderRecoveryAtBlock;
 
-        bool pass = turnoverCompleted && defenderSpentOnceLatched;
+        bool pass = turnoverCompleted && defenderSpentOnceLatched
+            && (!IsCorrectedOriginReachScenario || _reachReleaseObserved);
 
         if (pass)
         {
-            GD.Print($"[block-turnover] PASS — scenario=success-lastactive, finalState={_ball.State}, " +
+            GD.Print($"[block-turnover] PASS — scenario={_scenario}, finalState={_ball.State}, " +
                      $"holder={_ball.StateMachine.HolderPeerId}, defenderRecoveryAtBlock={_defenderRecoveryAtBlock}.");
         }
         else
         {
-            Fail($"scenario=success-lastactive expected a completed turnover and defender Recovery at block time, " +
+            Fail($"scenario={_scenario} expected a completed turnover and defender Recovery at block time, " +
                  $"but got turnoverCompleted={turnoverCompleted} (everLoose={_everLoose}, state={_ball.State}, " +
                  $"holder={_ball.StateMachine.HolderPeerId}), defenderRecoveryAtBlock={_defenderRecoveryAtBlock} " +
                  $"(livePhaseNow={_defender.PhaseForHarness} — informational only).");
@@ -895,7 +982,8 @@ public partial class BlockTurnoverTest : Node
         // at TickWhiff's verdict-frame computation).
         bool defenderPaysRecovery = _defender.PhaseForHarness == MovePhase.Recovery;
 
-        bool pass = shotProceeded && toucherUnchanged && defenderPaysRecovery;
+        bool pass = shotProceeded && toucherUnchanged && defenderPaysRecovery
+            && (!IsCorrectedOriginReachScenario || _reachReleaseObserved);
 
         if (pass)
         {

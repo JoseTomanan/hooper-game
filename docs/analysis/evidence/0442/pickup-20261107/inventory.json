@@ -1,0 +1,202 @@
+{
+  "schema": "hooper-shot-pickup-evidence/v1",
+  "issue": 442,
+  "pickupCommit": "eaf15f7c1116445907bda519558924ba280c70b8",
+  "date": "2026-11-07",
+  "compression": "gzip level 9; mtime=0; empty filename; original source bytes preserved",
+  "scope": "Six fresh local headless normal-shot captures at offset 0: both hands and Held/stationary-dribble/moving-dribble entries. Red production attachment baseline; no visual or feel acceptance.",
+  "files": [
+    {
+      "archive": "baseline/left-dribble-normal-o0-1/manifest.json.gz",
+      "sourcePath": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\440\\442-baseline-eaf15f7-20261107\\left-dribble-normal-o0-1\\manifest.json",
+      "sourceRepoRelative": ".godot/440/442-baseline-eaf15f7-20261107/left-dribble-normal-o0-1/manifest.json",
+      "sourceSha256": "50e588af5ba00bc14e03cab0bdd6c2eda432879a9a21f5096fad63138d9103cb",
+      "archiveSha256": "150db0187aec1574e4f812b3949c279eca32e9d51e69cb18218036e8a66131f5",
+      "sourceBytes": 3610,
+      "archiveBytes": 1223,
+      "captureCommit": "eaf15f7c1116445907bda519558924ba280c70b8",
+      "purpose": "red-production-baseline-diagnostics"
+    },
+    {
+      "archive": "baseline/left-dribble-normal-o0-1/trace.jsonl.gz",
+      "sourcePath": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\440\\442-baseline-eaf15f7-20261107\\left-dribble-normal-o0-1\\trace.jsonl",
+      "sourceRepoRelative": ".godot/440/442-baseline-eaf15f7-20261107/left-dribble-normal-o0-1/trace.jsonl",
+      "sourceSha256": "3628fa8a54da006a821e195a0812a54882114974051d41ed369d1163b6fcd62d",
+      "archiveSha256": "7f85cd178be974c81e1f74c72ed817632127885ba125a2fbf8547fe976661dfa",
+      "sourceBytes": 4830874,
+      "archiveBytes": 1350452,
+      "captureCommit": "eaf15f7c1116445907bda519558924ba280c70b8",
+      "purpose": "red-production-baseline-diagnostics"
+    },
+    {
+      "archive": "baseline/left-held-normal-o0-1/manifest.json.gz",
+      "sourcePath": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\440\\442-baseline-eaf15f7-20261107\\left-held-normal-o0-1\\manifest.json",
+      "sourceRepoRelative": ".godot/440/442-baseline-eaf15f7-20261107/left-held-normal-o0-1/manifest.json",
+      "sourceSha256": "66196b9839dec9f70ca0c4fd72a79fafd80facf6640136feebe4776670ea02b5",
+      "archiveSha256": "9794ad54a2063f5cc4b0714414fc5ace3f00df5b30e7bf6041a56149a40246e4",
+      "sourceBytes": 3949,
+      "archiveBytes": 1245,
+      "captureCommit": "eaf15f7c1116445907bda519558924ba280c70b8",
+      "purpose": "red-production-baseline-diagnostics"
+    },
+    {
+      "archive": "baseline/left-held-normal-o0-1/trace.jsonl.gz",
+      "sourcePath": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\440\\442-baseline-eaf15f7-20261107\\left-held-normal-o0-1\\trace.jsonl",
+      "sourceRepoRelative": ".godot/440/442-baseline-eaf15f7-20261107/left-held-normal-o0-1/trace.jsonl",
+      "sourceSha256": "83f030105b04545526661d0e0879c2011c2de3e0caaa3837fe2796004f5afec9",
+      "archiveSha256": "1a6a9ef3a0bbffda7b879b3bcd39a62ad4de8fb5a50a3d8317914513af61dd88",
+      "sourceBytes": 4852922,
+      "archiveBytes": 1319644,
+      "captureCommit": "eaf15f7c1116445907bda519558924ba280c70b8",
+      "purpose": "red-production-baseline-diagnostics"
+    },
+    {
+      "archive": "baseline/left-moving-normal-o0-1/manifest.json.gz",
+      "sourcePath": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\440\\442-baseline-eaf15f7-20261107\\left-moving-normal-o0-1\\manifest.json",
+      "sourceRepoRelative": ".godot/440/442-baseline-eaf15f7-20261107/left-moving-normal-o0-1/manifest.json",
+      "sourceSha256": "97d30ed0c4dced104e643039693407330f4c18fe282e0fc5e61df569e8c0753f",
+      "archiveSha256": "f512a43972fe4b94b86c4ccaa8ef75830a75e993d4d1e00b450d89493b007f7e",
+      "sourceBytes": 3633,
+      "archiveBytes": 1223,
+      "captureCommit": "eaf15f7c1116445907bda519558924ba280c70b8",
+      "purpose": "red-production-baseline-diagnostics"
+    },
+    {
+      "archive": "baseline/left-moving-normal-o0-1/trace.jsonl.gz",
+      "sourcePath": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\440\\442-baseline-eaf15f7-20261107\\left-moving-normal-o0-1\\trace.jsonl",
+      "sourceRepoRelative": ".godot/440/442-baseline-eaf15f7-20261107/left-moving-normal-o0-1/trace.jsonl",
+      "sourceSha256": "1cfb7ae3ebb6a145eee44467976e5ca91a9f4bee493aecfcafd38d49079edcc3",
+      "archiveSha256": "180f0be5737a7d3edc4ce30c3f5bf7250878b6deab7360b17c2802635ea8167f",
+      "sourceBytes": 4943519,
+      "archiveBytes": 1383266,
+      "captureCommit": "eaf15f7c1116445907bda519558924ba280c70b8",
+      "purpose": "red-production-baseline-diagnostics"
+    },
+    {
+      "archive": "baseline/right-dribble-normal-o0-1/manifest.json.gz",
+      "sourcePath": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\440\\442-baseline-eaf15f7-20261107\\right-dribble-normal-o0-1\\manifest.json",
+      "sourceRepoRelative": ".godot/440/442-baseline-eaf15f7-20261107/right-dribble-normal-o0-1/manifest.json",
+      "sourceSha256": "3487fa91ac8d7aa3209cd96a3776be3936612fe901cc4c6e12adc6e350b8a74d",
+      "archiveSha256": "b576988d705fde077a83b120d9820d5347ac83c56695f6773bc3d878b6217a88",
+      "sourceBytes": 3607,
+      "archiveBytes": 1217,
+      "captureCommit": "eaf15f7c1116445907bda519558924ba280c70b8",
+      "purpose": "red-production-baseline-diagnostics"
+    },
+    {
+      "archive": "baseline/right-dribble-normal-o0-1/trace.jsonl.gz",
+      "sourcePath": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\440\\442-baseline-eaf15f7-20261107\\right-dribble-normal-o0-1\\trace.jsonl",
+      "sourceRepoRelative": ".godot/440/442-baseline-eaf15f7-20261107/right-dribble-normal-o0-1/trace.jsonl",
+      "sourceSha256": "da1831278c88ada09e164c319bdaa9d04d2c1d4e729612371aa658decea61e4b",
+      "archiveSha256": "93bbcdafd974bd7b5d71d327f54f62af5e4496f900274daedb4fcf0e887fd283",
+      "sourceBytes": 3380828,
+      "archiveBytes": 894939,
+      "captureCommit": "eaf15f7c1116445907bda519558924ba280c70b8",
+      "purpose": "red-production-baseline-diagnostics"
+    },
+    {
+      "archive": "baseline/right-held-normal-o0-1/manifest.json.gz",
+      "sourcePath": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\440\\442-baseline-eaf15f7-20261107\\right-held-normal-o0-1\\manifest.json",
+      "sourceRepoRelative": ".godot/440/442-baseline-eaf15f7-20261107/right-held-normal-o0-1/manifest.json",
+      "sourceSha256": "f622fee481f7761125b3fee94808934288ae7b4469ceb29bcb41b64ae7ef75e9",
+      "archiveSha256": "d6074ccee13b61ced7b7bd5fcee943c5055b0c33abc69182ec909023825d9a36",
+      "sourceBytes": 3943,
+      "archiveBytes": 1236,
+      "captureCommit": "eaf15f7c1116445907bda519558924ba280c70b8",
+      "purpose": "red-production-baseline-diagnostics"
+    },
+    {
+      "archive": "baseline/right-held-normal-o0-1/trace.jsonl.gz",
+      "sourcePath": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\440\\442-baseline-eaf15f7-20261107\\right-held-normal-o0-1\\trace.jsonl",
+      "sourceRepoRelative": ".godot/440/442-baseline-eaf15f7-20261107/right-held-normal-o0-1/trace.jsonl",
+      "sourceSha256": "28f467c094902ba3c350d45de6250cec76105347e9b0541ed789c17f1e0495cf",
+      "archiveSha256": "ce77436f53a213d236527c04a3f6eeea326e2353bff1450863a7308903689639",
+      "sourceBytes": 3402700,
+      "archiveBytes": 864416,
+      "captureCommit": "eaf15f7c1116445907bda519558924ba280c70b8",
+      "purpose": "red-production-baseline-diagnostics"
+    },
+    {
+      "archive": "baseline/right-moving-normal-o0-1/manifest.json.gz",
+      "sourcePath": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\440\\442-baseline-eaf15f7-20261107\\right-moving-normal-o0-1\\manifest.json",
+      "sourceRepoRelative": ".godot/440/442-baseline-eaf15f7-20261107/right-moving-normal-o0-1/manifest.json",
+      "sourceSha256": "5cae08002256cfe8e1efdc5e122fa2856c54f7ead7552eff04a03d8ba1b047ca",
+      "archiveSha256": "45ff325bde21fe40768236f72d3b03add26210a5867af3666a62efc336668807",
+      "sourceBytes": 3632,
+      "archiveBytes": 1214,
+      "captureCommit": "eaf15f7c1116445907bda519558924ba280c70b8",
+      "purpose": "red-production-baseline-diagnostics"
+    },
+    {
+      "archive": "baseline/right-moving-normal-o0-1/trace.jsonl.gz",
+      "sourcePath": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\440\\442-baseline-eaf15f7-20261107\\right-moving-normal-o0-1\\trace.jsonl",
+      "sourceRepoRelative": ".godot/440/442-baseline-eaf15f7-20261107/right-moving-normal-o0-1/trace.jsonl",
+      "sourceSha256": "3e57bd8f865c205dfe1b0368f47a5c31cc462b48d0e51ebee07d0197d418edc8",
+      "archiveSha256": "2d33bda3170aa97a3d9c89ce533bea8cb498e67356d9e8281655319b3752fafc",
+      "sourceBytes": 3491880,
+      "archiveBytes": 927979,
+      "captureCommit": "eaf15f7c1116445907bda519558924ba280c70b8",
+      "purpose": "red-production-baseline-diagnostics"
+    },
+    {
+      "archive": "baseline/pickup-measurements.json.gz",
+      "sourcePath": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\440\\442-baseline-eaf15f7-20261107\\pickup-measurements.json",
+      "sourceRepoRelative": ".godot/440/442-baseline-eaf15f7-20261107/pickup-measurements.json",
+      "sourceSha256": "46be4e7ca16f832c5661087815dc19710716448b17f38b837278ab55c9661d37",
+      "archiveSha256": "3f6c4d5ff29872d22d0ff403d706e35973ea6ebbd59498574555ad42440a4a14",
+      "sourceBytes": 20656,
+      "archiveBytes": 1235,
+      "captureCommit": "eaf15f7c1116445907bda519558924ba280c70b8",
+      "purpose": "red-production-baseline-measurements"
+    },
+    {
+      "archive": "baseline/pickup-measurements-calibrated.json.gz",
+      "sourcePath": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\440\\442-baseline-eaf15f7-20261107\\pickup-measurements-calibrated.json",
+      "sourceRepoRelative": ".godot/440/442-baseline-eaf15f7-20261107/pickup-measurements-calibrated.json",
+      "sourceSha256": "6f62bc39f20f1de6ac8f88c77f8741786e7e570fd57d35fb18ddbdfbdb3c36df",
+      "archiveSha256": "b32e51e013b8d6b1c5974269459a3466407f842f71d4eb185384e4f9f53854e5",
+      "sourceBytes": 30193,
+      "archiveBytes": 2550,
+      "captureCommit": "eaf15f7c1116445907bda519558924ba280c70b8",
+      "purpose": "red-production-baseline-measurements"
+    },
+    {
+      "archive": "calibration-audit/442-calibration-clip-audit.gd.gz",
+      "sourcePath": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\442-calibration-clip-audit.gd",
+      "sourceRepoRelative": ".godot/442-calibration-clip-audit.gd",
+      "sourceSha256": "bc4186b7aa611b9819de35b212dee0ac024fac9fe4f648a5fb2cf0360dcba239",
+      "archiveSha256": "dff442157fe64df813a05788259cff0a519a2865dd19f7507082844565875eb9",
+      "sourceBytes": 1870,
+      "archiveBytes": 718,
+      "captureCommit": null,
+      "purpose": "read-only-calibration-audit"
+    },
+    {
+      "archive": "calibration-audit/442-calibration-clip-audit.json.gz",
+      "sourcePath": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\442-calibration-clip-audit.json",
+      "sourceRepoRelative": ".godot/442-calibration-clip-audit.json",
+      "sourceSha256": "7439c44132efb0d450a515c391921306769c81d1440f96f7f35c188d760636f8",
+      "archiveSha256": "18b28dd3ba664e350c01c8bd7de0f37086c2ed4e1aea5d29752066a00750b8ff",
+      "sourceBytes": 732283,
+      "archiveBytes": 115929,
+      "captureCommit": null,
+      "purpose": "read-only-calibration-audit"
+    },
+    {
+      "archive": "calibration-audit/442-calibration-independent-audit.json.gz",
+      "sourcePath": "C:\\Users\\The King\\Documents\\GitHub\\hooper-game\\.godot\\442-calibration-independent-audit.json",
+      "sourceRepoRelative": ".godot/442-calibration-independent-audit.json",
+      "sourceSha256": "85fcfe2968c4857df48cf0447229366f010c00efe2f2b07738a3ff8f1670cbdb",
+      "archiveSha256": "5d2cf0dc6d87af5b960a09b8f8ffb18c2db9bc2e6c0a4549747509217c73d00f",
+      "sourceBytes": 5984,
+      "archiveBytes": 1794,
+      "captureCommit": null,
+      "purpose": "read-only-calibration-audit"
+    }
+  ],
+  "totals": {
+    "files": 17,
+    "sourceBytes": 25716083,
+    "archiveBytes": 6870280
+  }
+}

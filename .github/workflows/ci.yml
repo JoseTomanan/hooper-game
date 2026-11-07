@@ -61,7 +61,10 @@ jobs:
   integration-shard:
     name: integration-shard-${{ matrix.shard }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # The expanded #442 catalog reached 14m32s including bootstrap in CI;
+    # leave artifact-upload headroom without changing individual case deadlines.
+    # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idtimeout-minutes
+    timeout-minutes: 20
     # Keep all four verdicts observable after one shard fails. GitHub otherwise
     # defaults matrix fail-fast to true:
     # https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idstrategyfail-fast
@@ -107,6 +110,19 @@ jobs:
           --shard ${{ matrix.shard }}
           --run-id "ci-${{ github.run_id }}-${{ github.run_attempt }}-shard-${{ matrix.shard }}"
           --godot godot
+
+      # #442's objective contact/origin proof remains reviewable on green too.
+      # Each offset partition owns a fresh directory and independent role traces.
+      - name: Upload shot attachment proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shot-attachment-proof-${{ github.run_id }}-${{ github.run_attempt }}-shard-${{ matrix.shard }}
+          path: |
+            .godot/440/442-catalog-*/**
+            .godot/harness-logs/shot-gather-lifecycle-*.log
+          include-hidden-files: true
+          if-no-files-found: ignore
 
       - name: Upload harness failure artifacts
         if: failure()

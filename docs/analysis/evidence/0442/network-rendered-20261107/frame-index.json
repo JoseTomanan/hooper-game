@@ -1,0 +1,6033 @@
+{
+  "schema": "hooper-442-network-rendered-evidence/v1",
+  "scope": "AFTER-ONLY single rendered ENet observer episode; not a before/after comparison or complete role matrix",
+  "acceptance": {
+    "observer": "passed analyzer and source-tick validation",
+    "renderedOwner": "rejected reset-spanning attachment/transition window; no passing owner frames selected",
+    "authority": "supplemental independent event clock",
+    "initialAttempt": "failed server timeout and interrupted clients; missing manifests explicitly inventoried"
+  },
+  "captureCommit": "e202f03a212c3f5bc84510b424e203fbf4c4c9a1",
+  "manifest": {
+    "schema": "hooper-jumpshot-form/v1",
+    "result": "captured",
+    "failure": "",
+    "role": "observer",
+    "variant": "normal",
+    "hand": "Right",
+    "commit": "e202f03a212c3f5bc84510b424e203fbf4c4c9a1",
+    "view": "gameplay",
+    "samples": 298,
+    "releases": 0,
+    "events": [
+      {
+        "tick": 136,
+        "physicsFrame": 136,
+        "kind": "accepted-begin-observed",
+        "role": "observer",
+        "phaseFrame": 0,
+        "heading": 3.1415927,
+        "initiationSpeed": 0,
+        "holder": 992353636,
+        "ballState": "Held",
+        "hasDribbled": false
+      }
+    ],
+    "entry": "held",
+    "entryOffset": 0,
+    "subjectPeer": 992353636,
+    "subjectRole": "owner",
+    "before440": false,
+    "before440Applied": false,
+    "resumeObserved": false,
+    "laterDribbleObserved": false,
+    "headingFixture": false,
+    "initialAngle": 0,
+    "headingEntry": "stationary",
+    "headingRate": 900,
+    "sawProductionShotStartup": true,
+    "feintRequested": false,
+    "sawAcceptedFeintRecovery": false,
+    "paced": true,
+    "pacingMs": 80,
+    "observerPacingMs": 16,
+    "pacingMeaning": "80ms producer wall-clock delay; fixed simulation steps; not real-time",
+    "authorityFakeStartupPacingMs": 0,
+    "mutation": "none",
+    "mutationApplied": false,
+    "fadeawaySubstitute": "",
+    "fadeawaySubstituteApplied": false,
+    "fadeawayFixtureSha256": "",
+    "legacyFixtureSha256": "",
+    "animationResourceSha256": "349FA8DBE342E83828FA5FFF8080C2CAD1DCDA471DF660E3939E622F42FF80A6",
+    "playerSceneSha256": "84309E1DCF537CB99EAC35ADBF6E63DCAFCA359828EFD8947993B5F058E7AD4C",
+    "captureToolSha256": "83DD7FBBCCBF67D7327D018E66F13C58804D5BDE3D12892D5C720AF195BF50ED",
+    "engine": "4.7.1-stable (official)",
+    "images": true,
+    "sampleTiming": "SkeletonUpdated modified pose / FramePostDraw image",
+    "verdict": "diagnostic only; no feel acceptance"
+  },
+  "eventClock": {
+    "kind": "authority physics/source tick",
+    "beginTick": 162,
+    "authorityReleaseEvents": [
+      {
+        "tick": 179,
+        "physicsFrame": 179,
+        "kind": "release",
+        "count": 1,
+        "phase": "Active",
+        "frame": 0,
+        "heading": 3.1415927,
+        "residualAngle": 0,
+        "facingFactor": 1,
+        "fadeaway": false,
+        "initiationSpeed": 0,
+        "position": [
+          0.2777569,
+          2.1743543,
+          4.855736
+        ],
+        "liveBall": [
+          0.2777569,
+          2.1743543,
+          4.855736
+        ]
+      }
+    ],
+    "releaseTick": 179
+  },
+  "observerDuplicateHolds": 15,
+  "changedDuplicateEdges": 0,
+  "imageTreatment": "complete 960x540 original frames resized to 800x450 with Lanczos; labels occupy separate pixels; no crop, pose edit or temporal interpolation",
+  "playback": "one existing read_capture observation per contiguous server source tick, eight neutral ticks each side; 60Hz using 17/17/16ms durations, 80ms paced producer/16ms observer; no performance claim",
+  "normalSpeedFilm": "observer-right-held-normal-o0-1-after-only.webp",
+  "filmSha256": "44079ca98e7ec46f357ea137a563a9f0cf669d944fcd8e054d6eb64727ee72f1",
+  "filmDimensions": [
+    820,
+    556
+  ],
+  "durationsMs": [
+    17,
+    17,
+    16,
+    17,
+    17,
+    16,
+    17,
+    17,
+    16,
+    17,
+    17,
+    16,
+    17,
+    17,
+    16,
+    17,
+    17,
+    16,
+    17,
+    17,
+    16,
+    17,
+    17,
+    16,
+    17,
+    17,
+    16,
+    17,
+    17,
+    16,
+    17,
+    17,
+    16,
+    17,
+    17,
+    16,
+    17,
+    17,
+    16,
+    17,
+    17,
+    16,
+    17,
+    17,
+    16,
+    17,
+    17,
+    16,
+    17,
+    17,
+    16,
+    17,
+    17,
+    16,
+    17,
+    17,
+    16
+  ],
+  "frameCount": 57,
+  "durationMs": 950,
+  "contactSheet": "observer-right-held-normal-o0-1-six-milestones.png",
+  "contactSheetSha256": "325580c106694043e6a508e84d3146f70c0bccc84e9a2d5cf4b7c1d06d652b6d",
+  "contactSheetFrameIndexes": [
+    8,
+    15,
+    24,
+    25,
+    26,
+    27
+  ],
+  "contactSheetMilestones": [
+    {
+      "phase": "Startup",
+      "frame": 1
+    },
+    {
+      "phase": "Startup",
+      "frame": 8
+    },
+    {
+      "phase": "Startup",
+      "frame": 17
+    },
+    {
+      "phase": "Active",
+      "frame": 0
+    },
+    {
+      "phase": "Active",
+      "frame": 1
+    },
+    {
+      "phase": "Active",
+      "frame": 2
+    }
+  ],
+  "frames": [
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00115.png",
+      "sha256": "def2513244b9d31f74ba4b36559852fae4d2a1eb89b501a21ea86316c64ab9a1",
+      "sample": 115,
+      "sourceTick": 154,
+      "relativeToFirstObservedStartupTick": -8,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": -8,
+      "relativeToAuthorityReleaseTick": -25,
+      "physicsFrame": 125,
+      "pose": {
+        "physicsFrame": 125,
+        "renderFrame": 124,
+        "move": "",
+        "phase": "Inactive",
+        "frame": 0,
+        "presentationTick": 154,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "HeldRight",
+        "animation": "HeldRight",
+        "clip": "<blend-space-or-multiple-leaves>",
+        "playbackTime": 0.18333333730697632,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.6833333373069763,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.9979194,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 154,
+      "ballPresentationTick": 154,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.44289997,
+        1,
+        4.362017
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 0,
+      "durationMs": 17,
+      "outputRgbSha256": "2ffdff9db32695a3d6fbd34d73ab77c3ca2a050ae32e06d0d902535ebb067fe2",
+      "panelRgbSha256": "c01077816eb1730ea99a533fba5eb4d71d96cad0e82d84e749c9463693b94187"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00116.png",
+      "sha256": "010c2b3c25ca5dc12eaf2af3fbdb093ab4502e759520e206cf9ef7b98f8af0ef",
+      "sample": 116,
+      "sourceTick": 155,
+      "relativeToFirstObservedStartupTick": -7,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": -7,
+      "relativeToAuthorityReleaseTick": -24,
+      "physicsFrame": 126,
+      "pose": {
+        "physicsFrame": 126,
+        "renderFrame": 125,
+        "move": "",
+        "phase": "Inactive",
+        "frame": 0,
+        "presentationTick": 155,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "HeldRight",
+        "animation": "HeldRight",
+        "clip": "<blend-space-or-multiple-leaves>",
+        "playbackTime": 0.20000000298023224,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.6833333373069763,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.9979194,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 155,
+      "ballPresentationTick": 155,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.44289997,
+        1,
+        4.362017
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 1,
+      "durationMs": 17,
+      "outputRgbSha256": "7b987e1e2165566dc4423ca32f9438a1c077fd0f809b0a29a393c924110df388",
+      "panelRgbSha256": "7c4dec801e88d038ea29ec4119814a29610c6718959e6948b0803a0cf1fbe5ad"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00117.png",
+      "sha256": "5a0307a4f1b9740e8252c639ab79dc00f095624198fabfe24cd4447c1f08cbdd",
+      "sample": 117,
+      "sourceTick": 156,
+      "relativeToFirstObservedStartupTick": -6,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": -6,
+      "relativeToAuthorityReleaseTick": -23,
+      "physicsFrame": 127,
+      "pose": {
+        "physicsFrame": 127,
+        "renderFrame": 126,
+        "move": "",
+        "phase": "Inactive",
+        "frame": 0,
+        "presentationTick": 156,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "HeldRight",
+        "animation": "HeldRight",
+        "clip": "<blend-space-or-multiple-leaves>",
+        "playbackTime": 0.21666666865348816,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.6833333373069763,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.9979194,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 156,
+      "ballPresentationTick": 156,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.44289997,
+        1,
+        4.362017
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 2,
+      "durationMs": 16,
+      "outputRgbSha256": "cb78826727fb4a1734094a98868052ba3577d2635dc45c50a29966fbb56a9116",
+      "panelRgbSha256": "a7ce56aa3c7f4ab046c6434cc48eb63009bf52f928a20daeffd614b6ece49033"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00118.png",
+      "sha256": "2758095336cfe9ba7e7fb0f9e23fd2ab4bdb6e80b01a2a717b8c0f24466b9da0",
+      "sample": 118,
+      "sourceTick": 157,
+      "relativeToFirstObservedStartupTick": -5,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": -5,
+      "relativeToAuthorityReleaseTick": -22,
+      "physicsFrame": 128,
+      "pose": {
+        "physicsFrame": 128,
+        "renderFrame": 127,
+        "move": "",
+        "phase": "Inactive",
+        "frame": 0,
+        "presentationTick": 157,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "HeldRight",
+        "animation": "HeldRight",
+        "clip": "<blend-space-or-multiple-leaves>",
+        "playbackTime": 0.23333333432674408,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.6833333373069763,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.9979194,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 157,
+      "ballPresentationTick": 157,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.44289997,
+        1,
+        4.362017
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 3,
+      "durationMs": 17,
+      "outputRgbSha256": "df9d5dfc651d4e0f61c6a5e24e0c5dc941b79dedbb7d15b40de8e93747008afb",
+      "panelRgbSha256": "4d6796258e39d31d5dadb8d3c2450aebf3713f837d67b792260fb7011ed07703"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00119.png",
+      "sha256": "abcd6c7c2e8bfa611aa3b18d505018658c9af25c31cafcd0dde5bd80c93e85c6",
+      "sample": 119,
+      "sourceTick": 158,
+      "relativeToFirstObservedStartupTick": -4,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": -4,
+      "relativeToAuthorityReleaseTick": -21,
+      "physicsFrame": 129,
+      "pose": {
+        "physicsFrame": 129,
+        "renderFrame": 128,
+        "move": "",
+        "phase": "Inactive",
+        "frame": 0,
+        "presentationTick": 158,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "HeldRight",
+        "animation": "HeldRight",
+        "clip": "<blend-space-or-multiple-leaves>",
+        "playbackTime": 0.25,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.6833333373069763,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.9979194,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 158,
+      "ballPresentationTick": 158,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.44289997,
+        1,
+        4.362017
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 4,
+      "durationMs": 17,
+      "outputRgbSha256": "1e76985fd34d3c7f511e51c12dde335b8178409388396d794e28b00ca79380af",
+      "panelRgbSha256": "6e2f963cc0776e97a8f4c6fb3807840e04cb224f6d3bf96e9e1e17c4787259f1"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00123.png",
+      "sha256": "53bf523a8cc4a906deaf946c94fee7e15d4cc10a1bf0d56aa84d3c6454013898",
+      "sample": 123,
+      "sourceTick": 159,
+      "relativeToFirstObservedStartupTick": -3,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": -3,
+      "relativeToAuthorityReleaseTick": -20,
+      "physicsFrame": 133,
+      "pose": {
+        "physicsFrame": 133,
+        "renderFrame": 132,
+        "move": "",
+        "phase": "Inactive",
+        "frame": 0,
+        "presentationTick": 159,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "HeldRight",
+        "animation": "HeldRight",
+        "clip": "<blend-space-or-multiple-leaves>",
+        "playbackTime": 0.2666666805744171,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.6833333373069763,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.9979194,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 159,
+      "ballPresentationTick": 159,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.44289997,
+        1,
+        4.362017
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 5,
+      "durationMs": 16,
+      "outputRgbSha256": "add4daf837839f51ea1e5f584858e14400e960340ff0e9ed4ff9d8681fbaee02",
+      "panelRgbSha256": "3f86cc547822861af011c79ed0c721f56d5076c807af040430aaaf5986264516"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00124.png",
+      "sha256": "1beff3c0a658f35a33121187ca8e5c6a38fd6d2a0f1d18c19cf3a85855c8cfcb",
+      "sample": 124,
+      "sourceTick": 160,
+      "relativeToFirstObservedStartupTick": -2,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": -2,
+      "relativeToAuthorityReleaseTick": -19,
+      "physicsFrame": 134,
+      "pose": {
+        "physicsFrame": 134,
+        "renderFrame": 133,
+        "move": "",
+        "phase": "Inactive",
+        "frame": 0,
+        "presentationTick": 160,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "HeldRight",
+        "animation": "HeldRight",
+        "clip": "<blend-space-or-multiple-leaves>",
+        "playbackTime": 0.28333333134651184,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.6833333373069763,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.9979194,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 160,
+      "ballPresentationTick": 160,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.44289997,
+        1,
+        4.362017
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 6,
+      "durationMs": 17,
+      "outputRgbSha256": "765b1654494ba1e029998970363daae569e7f1f9dffd731fe4c4b5a3e9d09c16",
+      "panelRgbSha256": "5ff807e056ec28084e1ed2144b63066e0fc33511d04c02a7c69e8495bdd33df9"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00125.png",
+      "sha256": "2a0be284cef565977acdd4b78ccc4cdd72d255d859f61042edd9b7b07e6e87f4",
+      "sample": 125,
+      "sourceTick": 161,
+      "relativeToFirstObservedStartupTick": -1,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": -1,
+      "relativeToAuthorityReleaseTick": -18,
+      "physicsFrame": 135,
+      "pose": {
+        "physicsFrame": 135,
+        "renderFrame": 134,
+        "move": "",
+        "phase": "Inactive",
+        "frame": 0,
+        "presentationTick": 161,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "HeldRight",
+        "animation": "HeldRight",
+        "clip": "<blend-space-or-multiple-leaves>",
+        "playbackTime": 0.30000001192092896,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.6833333373069763,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.9979194,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 161,
+      "ballPresentationTick": 161,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.44289997,
+        1,
+        4.362017
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 7,
+      "durationMs": 17,
+      "outputRgbSha256": "7fac2ba95b3ad54445c2be2177cca09faa02cef3cca8a994ecf8514c941a5c4e",
+      "panelRgbSha256": "a57d49c7588255a1a3dc825ab687a1ac9c21f6ff79db3d09214c57457f8dfffd"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00126.png",
+      "sha256": "329e6c0edcd829c607bbd45cadc26151b71bad2e955d12ce993a91c63e46272b",
+      "sample": 126,
+      "sourceTick": 162,
+      "relativeToFirstObservedStartupTick": 0,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 0,
+      "relativeToAuthorityReleaseTick": -17,
+      "physicsFrame": 136,
+      "pose": {
+        "physicsFrame": 136,
+        "renderFrame": 135,
+        "move": "jumpshot",
+        "phase": "Startup",
+        "frame": 1,
+        "presentationTick": 162,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotStartup",
+        "animation": "JumpshotStartup",
+        "clip": "locomotion/jumpshotstartup",
+        "playbackTime": 0,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.30000001192092896,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.9979194,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 162,
+      "ballPresentationTick": 162,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.44289997,
+        1,
+        4.362017
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 8,
+      "durationMs": 16,
+      "outputRgbSha256": "498c7e5d8d59fe081a099d15cc41f69feea4d50fa71ff1d583169cbfd68a1da4",
+      "panelRgbSha256": "3c0548707a3650e92a7166d12d0dfd5b414a31a7d8b2a138457307655731b04b"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00127.png",
+      "sha256": "c77bec5b207848e21a56c693948b556c3cd8ce218460a4fd64b4485843db1e79",
+      "sample": 127,
+      "sourceTick": 163,
+      "relativeToFirstObservedStartupTick": 1,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 1,
+      "relativeToAuthorityReleaseTick": -16,
+      "physicsFrame": 137,
+      "pose": {
+        "physicsFrame": 137,
+        "renderFrame": 136,
+        "move": "jumpshot",
+        "phase": "Startup",
+        "frame": 2,
+        "presentationTick": 163,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotStartup",
+        "animation": "JumpshotStartup",
+        "clip": "locomotion/jumpshotstartup",
+        "playbackTime": 0.01666666753590107,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.30000001192092896,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.9615764,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 163,
+      "ballPresentationTick": 163,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.43995616,
+        0.9952634,
+        4.3648562
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 9,
+      "durationMs": 17,
+      "outputRgbSha256": "45be76f0b67e209af6ba506ab2db20a11556e930e302880c712467c74576fffb",
+      "panelRgbSha256": "551183325272c1fdb176d834e429d307d953e5c1d08e8a9e28521268594d58cd"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00128.png",
+      "sha256": "8bb2877f12cb43ce3b72599f1441ea75b479557c24f4ebee2a6e1023b4a423f4",
+      "sample": 128,
+      "sourceTick": 164,
+      "relativeToFirstObservedStartupTick": 2,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 2,
+      "relativeToAuthorityReleaseTick": -15,
+      "physicsFrame": 138,
+      "pose": {
+        "physicsFrame": 138,
+        "renderFrame": 137,
+        "move": "jumpshot",
+        "phase": "Startup",
+        "frame": 3,
+        "presentationTick": 164,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotStartup",
+        "animation": "JumpshotStartup",
+        "clip": "locomotion/jumpshotstartup",
+        "playbackTime": 0.03333333507180214,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.30000001192092896,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.88644075,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 164,
+      "ballPresentationTick": 164,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.43133202,
+        0.9869005,
+        4.362679
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 10,
+      "durationMs": 17,
+      "outputRgbSha256": "814579cc499f469efb526f56294c7ca24057a98bdff24f3fd6109ef5c42abdbe",
+      "panelRgbSha256": "8d4af0e914993a05497021b4afcfa69d057a8221d764ed287df3630c5172b180"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00129.png",
+      "sha256": "1962fb2c84fef2b8ecaadbbd5b29779fca58fec85630c143c3b0aeb116e4736d",
+      "sample": 129,
+      "sourceTick": 165,
+      "relativeToFirstObservedStartupTick": 3,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 3,
+      "relativeToAuthorityReleaseTick": -14,
+      "physicsFrame": 139,
+      "pose": {
+        "physicsFrame": 139,
+        "renderFrame": 138,
+        "move": "jumpshot",
+        "phase": "Startup",
+        "frame": 4,
+        "presentationTick": 165,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotStartup",
+        "animation": "JumpshotStartup",
+        "clip": "locomotion/jumpshotstartup",
+        "playbackTime": 0.05000000074505806,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.30000001192092896,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.8235139,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 165,
+      "ballPresentationTick": 165,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.40841886,
+        1.0214174,
+        4.3535347
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 11,
+      "durationMs": 16,
+      "outputRgbSha256": "68e7377eada8537e267de5d376b2591af914ba17dc2a9b6ee939d93526a76189",
+      "panelRgbSha256": "ca7f42fa6d5f01c52f0ba43c74f0e30b8a0fe5a6bdbc2a04965287d783e17c13"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00130.png",
+      "sha256": "54c6d338e55d4e734e628156bb79d0c74d5080f249dc189ae023edc75b3e9b03",
+      "sample": 130,
+      "sourceTick": 166,
+      "relativeToFirstObservedStartupTick": 4,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 4,
+      "relativeToAuthorityReleaseTick": -13,
+      "physicsFrame": 140,
+      "pose": {
+        "physicsFrame": 140,
+        "renderFrame": 139,
+        "move": "jumpshot",
+        "phase": "Startup",
+        "frame": 5,
+        "presentationTick": 166,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotStartup",
+        "animation": "JumpshotStartup",
+        "clip": "locomotion/jumpshotstartup",
+        "playbackTime": 0.06666667014360428,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.30000001192092896,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.81433433,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 166,
+      "ballPresentationTick": 166,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.3635498,
+        1.1129799,
+        4.358007
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 12,
+      "durationMs": 17,
+      "outputRgbSha256": "0d43d127896b0e70fe3374b22d8d68f9bf4338251549886729b963ed63364bb2",
+      "panelRgbSha256": "b6d565299f34c6043a774a3a0b3c10a90d9fcfdae6cb613e16aada7f5189ce12"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00131.png",
+      "sha256": "462f7bba16c6e789c201cb6ec9dd6238a9ac7ecaf3a91600c06169fb9efe9563",
+      "sample": 131,
+      "sourceTick": 167,
+      "relativeToFirstObservedStartupTick": 5,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 5,
+      "relativeToAuthorityReleaseTick": -12,
+      "physicsFrame": 141,
+      "pose": {
+        "physicsFrame": 141,
+        "renderFrame": 140,
+        "move": "jumpshot",
+        "phase": "Startup",
+        "frame": 6,
+        "presentationTick": 167,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotStartup",
+        "animation": "JumpshotStartup",
+        "clip": "locomotion/jumpshotstartup",
+        "playbackTime": 0.0833333358168602,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.30000001192092896,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.8431648,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 167,
+      "ballPresentationTick": 167,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.30386853,
+        1.2553247,
+        4.365845
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 13,
+      "durationMs": 17,
+      "outputRgbSha256": "1ba8d951bb101c06c76c10350bf09ac04899c4cd3642c48dbe0a031d3f93a9d2",
+      "panelRgbSha256": "ec760877676b32c387272bd96178c279c488cbd8ba9784c9cb195a27e66f7fc0"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00132.png",
+      "sha256": "941f8e92f4675028f34f695496b3a2da40d527df581c666a5aa6898c0df9f130",
+      "sample": 132,
+      "sourceTick": 168,
+      "relativeToFirstObservedStartupTick": 6,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 6,
+      "relativeToAuthorityReleaseTick": -11,
+      "physicsFrame": 142,
+      "pose": {
+        "physicsFrame": 142,
+        "renderFrame": 141,
+        "move": "jumpshot",
+        "phase": "Startup",
+        "frame": 7,
+        "presentationTick": 168,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotStartup",
+        "animation": "JumpshotStartup",
+        "clip": "locomotion/jumpshotstartup",
+        "playbackTime": 0.10000000149011612,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.30000001192092896,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.8824658,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 168,
+      "ballPresentationTick": 168,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.23785302,
+        1.4464201,
+        4.401753
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 14,
+      "durationMs": 16,
+      "outputRgbSha256": "f9272a6a93735f64e0292d0e49acd446c2717666b9735106a0576d88172134b7",
+      "panelRgbSha256": "86eb79f323c293b6b618a55b8fc35f07d7f43a24b46a3d32107edcf235503875"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00136.png",
+      "sha256": "89b80e47e57622d9120468f4bb180bac55c57e58816b9ab5ad5a6a2502f7d9a5",
+      "sample": 136,
+      "sourceTick": 169,
+      "relativeToFirstObservedStartupTick": 7,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 7,
+      "relativeToAuthorityReleaseTick": -10,
+      "physicsFrame": 146,
+      "pose": {
+        "physicsFrame": 146,
+        "renderFrame": 145,
+        "move": "jumpshot",
+        "phase": "Startup",
+        "frame": 8,
+        "presentationTick": 169,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotStartup",
+        "animation": "JumpshotStartup",
+        "clip": "locomotion/jumpshotstartup",
+        "playbackTime": 0.11666666716337204,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.30000001192092896,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.9348889,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 169,
+      "ballPresentationTick": 169,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.19145188,
+        1.6346686,
+        4.4618263
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 15,
+      "durationMs": 17,
+      "outputRgbSha256": "8b43c892aa6e10c2f92d01fa530953dd777bb4e94a5180029fe7e0c5d8f210d3",
+      "panelRgbSha256": "cc1a7a2ca34773c4ba5ff4bd25d0fb8d7e78dd8812ac219b375e369fbd994416"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00137.png",
+      "sha256": "1d8d924fd5dff883c2e5540f4a76934f4988aa25d0138f221efa8b9f15ca0469",
+      "sample": 137,
+      "sourceTick": 170,
+      "relativeToFirstObservedStartupTick": 8,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 8,
+      "relativeToAuthorityReleaseTick": -9,
+      "physicsFrame": 147,
+      "pose": {
+        "physicsFrame": 147,
+        "renderFrame": 146,
+        "move": "jumpshot",
+        "phase": "Startup",
+        "frame": 9,
+        "presentationTick": 170,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotStartup",
+        "animation": "JumpshotStartup",
+        "clip": "locomotion/jumpshotstartup",
+        "playbackTime": 0.13333334028720856,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.30000001192092896,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.9997496,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 170,
+      "ballPresentationTick": 170,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.18370908,
+        1.7670557,
+        4.517729
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 16,
+      "durationMs": 17,
+      "outputRgbSha256": "503dede233c20821ab6dfba93903812f08d812fa768dae893d727d9bad1e554f",
+      "panelRgbSha256": "dcc86b3db4e17a90117ea64cab1e8a8ff05cbe483198ad0c94cff8bde15008bd"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00138.png",
+      "sha256": "d89fadf08037e3a92f2c95326372207fad30bcd2c5876b47b9abb6142e1f3eb3",
+      "sample": 138,
+      "sourceTick": 171,
+      "relativeToFirstObservedStartupTick": 9,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 9,
+      "relativeToAuthorityReleaseTick": -8,
+      "physicsFrame": 148,
+      "pose": {
+        "physicsFrame": 148,
+        "renderFrame": 147,
+        "move": "jumpshot",
+        "phase": "Startup",
+        "frame": 10,
+        "presentationTick": 171,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotStartup",
+        "animation": "JumpshotStartup",
+        "clip": "locomotion/jumpshotstartup",
+        "playbackTime": 0.15000000596046448,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.30000001192092896,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          1.0725166,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 171,
+      "ballPresentationTick": 171,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.19376051,
+        1.8654691,
+        4.5529485
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 17,
+      "durationMs": 16,
+      "outputRgbSha256": "6bab08e6bcd909b4bf390f50d707cbe5d7219e387e543457d668c91548ab95b0",
+      "panelRgbSha256": "7b31d0e0685df085dfc123452bf5a40e6bb979f8c002f326b2f756ea8b8fece0"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00139.png",
+      "sha256": "bc90a2b2ed92a51ce121654b98d1066e59850e6da62feba736a4ca940c95cf84",
+      "sample": 139,
+      "sourceTick": 172,
+      "relativeToFirstObservedStartupTick": 10,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 10,
+      "relativeToAuthorityReleaseTick": -7,
+      "physicsFrame": 149,
+      "pose": {
+        "physicsFrame": 149,
+        "renderFrame": 148,
+        "move": "jumpshot",
+        "phase": "Startup",
+        "frame": 11,
+        "presentationTick": 172,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotStartup",
+        "animation": "JumpshotStartup",
+        "clip": "locomotion/jumpshotstartup",
+        "playbackTime": 0.1666666716337204,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.30000001192092896,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          1.1425945,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 172,
+      "ballPresentationTick": 172,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.20813096,
+        1.9384074,
+        4.5748377
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 18,
+      "durationMs": 17,
+      "outputRgbSha256": "8bd0bc0372d083cddf3f8d96898c79bf727d2af1ae96159732252a800006516c",
+      "panelRgbSha256": "ce1d534fe962ea1e6177f3c99f4f1205aba9cf6d5eec2e4cb5f7356ce07f5ca9"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00140.png",
+      "sha256": "9f58ff261d86cae19bb5a4818672910e909188b62242690457b0a17abb699840",
+      "sample": 140,
+      "sourceTick": 173,
+      "relativeToFirstObservedStartupTick": 11,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 11,
+      "relativeToAuthorityReleaseTick": -6,
+      "physicsFrame": 150,
+      "pose": {
+        "physicsFrame": 150,
+        "renderFrame": 149,
+        "move": "jumpshot",
+        "phase": "Startup",
+        "frame": 12,
+        "presentationTick": 173,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotStartup",
+        "animation": "JumpshotStartup",
+        "clip": "locomotion/jumpshotstartup",
+        "playbackTime": 0.18333333730697632,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.30000001192092896,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          1.207508,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 173,
+      "ballPresentationTick": 173,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.22306749,
+        1.9912803,
+        4.5969214
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 19,
+      "durationMs": 17,
+      "outputRgbSha256": "891d841ca3812bba57869d5a9b3c389d8617865041b1ec07d54e4c443c196697",
+      "panelRgbSha256": "4946979d0a981efb9270b4511294ef9c40ca2eadddf8df18c288ffd261a0cf08"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00141.png",
+      "sha256": "e57f3bbae1735877b2e0d7fc9a472aa13c005bbad5e275e37e7a0f272cfa41fd",
+      "sample": 141,
+      "sourceTick": 174,
+      "relativeToFirstObservedStartupTick": 12,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 12,
+      "relativeToAuthorityReleaseTick": -5,
+      "physicsFrame": 151,
+      "pose": {
+        "physicsFrame": 151,
+        "renderFrame": 150,
+        "move": "jumpshot",
+        "phase": "Startup",
+        "frame": 13,
+        "presentationTick": 174,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotStartup",
+        "animation": "JumpshotStartup",
+        "clip": "locomotion/jumpshotstartup",
+        "playbackTime": 0.20000000298023224,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.30000001192092896,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          1.2595931,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 174,
+      "ballPresentationTick": 174,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.23794885,
+        2.0208516,
+        4.6296625
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 20,
+      "durationMs": 16,
+      "outputRgbSha256": "866995f6d076ac8f0a76f5352c6069e9a694d8412de551c9007a65daa45bd321",
+      "panelRgbSha256": "4bc1802c97b3a5c7d2ed3cc47eaf3c4b4d54e27338e9ea9b11dea592721ecda4"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00142.png",
+      "sha256": "1ff0d081eda0cf2b255dfac548491242d2beaaf2166764c94674a94bed273f40",
+      "sample": 142,
+      "sourceTick": 175,
+      "relativeToFirstObservedStartupTick": 13,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 13,
+      "relativeToAuthorityReleaseTick": -4,
+      "physicsFrame": 152,
+      "pose": {
+        "physicsFrame": 152,
+        "renderFrame": 151,
+        "move": "jumpshot",
+        "phase": "Startup",
+        "frame": 14,
+        "presentationTick": 175,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotStartup",
+        "animation": "JumpshotStartup",
+        "clip": "locomotion/jumpshotstartup",
+        "playbackTime": 0.21666666865348816,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.30000001192092896,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          1.3017337,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 175,
+      "ballPresentationTick": 175,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.25215727,
+        2.044288,
+        4.6784525
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 21,
+      "durationMs": 17,
+      "outputRgbSha256": "b222a13f822186f5bbba0c53b6aa9d21f2600c16ec0f10fda05acfb8a372578f",
+      "panelRgbSha256": "3c61af4e7a655adaf5dc5ca1f07c490e5ba09553319f89362cc2bec7b06bae0a"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00143.png",
+      "sha256": "711b1c4dca12913eb87a523bf5911d63f0124b01e68ffe1238ccdc7dba5fc29b",
+      "sample": 143,
+      "sourceTick": 176,
+      "relativeToFirstObservedStartupTick": 14,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 14,
+      "relativeToAuthorityReleaseTick": -3,
+      "physicsFrame": 153,
+      "pose": {
+        "physicsFrame": 153,
+        "renderFrame": 152,
+        "move": "jumpshot",
+        "phase": "Startup",
+        "frame": 15,
+        "presentationTick": 176,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotStartup",
+        "animation": "JumpshotStartup",
+        "clip": "locomotion/jumpshotstartup",
+        "playbackTime": 0.23333333432674408,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.30000001192092896,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          1.3386114,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 176,
+      "ballPresentationTick": 176,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.26263744,
+        2.078268,
+        4.7397456
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 22,
+      "durationMs": 17,
+      "outputRgbSha256": "5fafd02c3cd2b19af3873e933d6b9865afcad973a7ea825e67e1bc169c7bb5ec",
+      "panelRgbSha256": "cfb2ecc8bf28124e37d89461e0bac59a7d555b8f2d7ee92ceb395b132a741cf5"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00144.png",
+      "sha256": "f7e897f684f25a7004852581f95851f7c8257da0994b9ae834dbc7557d29b59d",
+      "sample": 144,
+      "sourceTick": 177,
+      "relativeToFirstObservedStartupTick": 15,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 15,
+      "relativeToAuthorityReleaseTick": -2,
+      "physicsFrame": 154,
+      "pose": {
+        "physicsFrame": 154,
+        "renderFrame": 153,
+        "move": "jumpshot",
+        "phase": "Startup",
+        "frame": 16,
+        "presentationTick": 177,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotStartup",
+        "animation": "JumpshotStartup",
+        "clip": "locomotion/jumpshotstartup",
+        "playbackTime": 0.25,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.30000001192092896,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          1.3715945,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 177,
+      "ballPresentationTick": 177,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.27146375,
+        2.1243062,
+        4.8034062
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 23,
+      "durationMs": 16,
+      "outputRgbSha256": "9db5ff99d5ee44b09ff3d25a50e59bd7de2f3fb2103164017841db557988fb01",
+      "panelRgbSha256": "920d6f981fbef90928b55cd9c42ebc40de65b53907ba82cf4ad0a1e91fecfe87"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00148.png",
+      "sha256": "313fb1e1b9bb92b391c5f439670e0d61d736e126fb0308ec8afcef57ba00f5ed",
+      "sample": 148,
+      "sourceTick": 178,
+      "relativeToFirstObservedStartupTick": 16,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 16,
+      "relativeToAuthorityReleaseTick": -1,
+      "physicsFrame": 158,
+      "pose": {
+        "physicsFrame": 158,
+        "renderFrame": 157,
+        "move": "jumpshot",
+        "phase": "Startup",
+        "frame": 17,
+        "presentationTick": 178,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotStartup",
+        "animation": "JumpshotStartup",
+        "clip": "locomotion/jumpshotstartup",
+        "playbackTime": 0.2666666805744171,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.30000001192092896,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          1.3967242,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 178,
+      "ballPresentationTick": 178,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.2777569,
+        2.1743543,
+        4.855736
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 24,
+      "durationMs": 17,
+      "outputRgbSha256": "ad68750ab66f5b90787c81a2b3f85be70e9aac8f54ddaef506e814273d27eb77",
+      "panelRgbSha256": "e4207824de727d4a7145c5908f0ca5a396d6f848fd19d3ee0ac6a4698a005d1f"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00149.png",
+      "sha256": "fa8f3064bb7d1b5ae3243ddfc5e0c5caf01d08d54b60473228fab7fe55f48da1",
+      "sample": 149,
+      "sourceTick": 179,
+      "relativeToFirstObservedStartupTick": 17,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 17,
+      "relativeToAuthorityReleaseTick": 0,
+      "physicsFrame": 159,
+      "pose": {
+        "physicsFrame": 159,
+        "renderFrame": 158,
+        "move": "jumpshot",
+        "phase": "Active",
+        "frame": 0,
+        "presentationTick": 179,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotActive",
+        "animation": "JumpshotActive",
+        "clip": "locomotion/jumpshotactive",
+        "playbackTime": 0,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.2666666805744171,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          1.4250151,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 179,
+      "ballPresentationTick": 179,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.2777569,
+        2.1743543,
+        4.855736
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 25,
+      "durationMs": 17,
+      "outputRgbSha256": "be031be306dd2c487a721ad7c2a9fdd676806b6b3eddc71bad3a363eb57e8860",
+      "panelRgbSha256": "a2c27657b5479ee50c334377311ca00274b1a79770fca8fcf512db425a28e5af"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00150.png",
+      "sha256": "04cf737fb4fea12374d6d5f670992dc9ee59b670da68917bc3992335ef8c2ae7",
+      "sample": 150,
+      "sourceTick": 180,
+      "relativeToFirstObservedStartupTick": 18,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 18,
+      "relativeToAuthorityReleaseTick": 1,
+      "physicsFrame": 160,
+      "pose": {
+        "physicsFrame": 160,
+        "renderFrame": 159,
+        "move": "jumpshot",
+        "phase": "Active",
+        "frame": 1,
+        "presentationTick": 180,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotActive",
+        "animation": "JumpshotActive",
+        "clip": "locomotion/jumpshotactive",
+        "playbackTime": 0.01666666753590107,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.2666666805744171,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          1.4291525,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 180,
+      "ballPresentationTick": 180,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.27380642,
+        2.2726908,
+        4.7836742
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 26,
+      "durationMs": 16,
+      "outputRgbSha256": "939c34606853de9911447d1bea3369eabf01b94ebd4de8376942a5946a8bb484",
+      "panelRgbSha256": "3e0dac6b8b126ae28788e3d63159e915ee23c6d4e00d49a9e3218702e3e1babe"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00151.png",
+      "sha256": "e37bdc8f525e616e3f5f935af71a527d5a2834fb36c1f5bf29ec751f1e579f3f",
+      "sample": 151,
+      "sourceTick": 181,
+      "relativeToFirstObservedStartupTick": 19,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 19,
+      "relativeToAuthorityReleaseTick": 2,
+      "physicsFrame": 161,
+      "pose": {
+        "physicsFrame": 161,
+        "renderFrame": 160,
+        "move": "jumpshot",
+        "phase": "Active",
+        "frame": 2,
+        "presentationTick": 181,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotActive",
+        "animation": "JumpshotActive",
+        "clip": "locomotion/jumpshotactive",
+        "playbackTime": 0.03333333507180214,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.2666666805744171,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          1.427316,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 181,
+      "ballPresentationTick": 181,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.26985595,
+        2.3683052,
+        4.7116127
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 27,
+      "durationMs": 17,
+      "outputRgbSha256": "f963da069b30a48e33126e67d5b7e2d8585c0fac8d92345ceccd9f980fd1d63d",
+      "panelRgbSha256": "6328da2d4170248bbcbb6cd81b7932b47b11b5dbe3106b8224692796ddb84d26"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00152.png",
+      "sha256": "2bc21568d0ea2e6eee8e23f02ae251ea2fd311f5f8ee8ba7d78a19183a4b6da0",
+      "sample": 152,
+      "sourceTick": 182,
+      "relativeToFirstObservedStartupTick": 20,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 20,
+      "relativeToAuthorityReleaseTick": 3,
+      "physicsFrame": 162,
+      "pose": {
+        "physicsFrame": 162,
+        "renderFrame": 161,
+        "move": "jumpshot",
+        "phase": "Active",
+        "frame": 3,
+        "presentationTick": 182,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotActive",
+        "animation": "JumpshotActive",
+        "clip": "locomotion/jumpshotactive",
+        "playbackTime": 0.05000000074505806,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.2666666805744171,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          1.4198852,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 182,
+      "ballPresentationTick": 182,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.26590547,
+        2.4611974,
+        4.639551
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 28,
+      "durationMs": 17,
+      "outputRgbSha256": "ea50fb4dbed6864757bf5bcf20b269a2c871187efdc8b62bfaad0461f1f309a8",
+      "panelRgbSha256": "b036c79dd85306c842b144ce66ccbf479906c27d28c29a444eeeb404771044ba"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00153.png",
+      "sha256": "7fcc7cbb9486afb96bcdeff578f4ce241c7a0e4951b03e84317ac271997c4ccb",
+      "sample": 153,
+      "sourceTick": 183,
+      "relativeToFirstObservedStartupTick": 21,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 21,
+      "relativeToAuthorityReleaseTick": 4,
+      "physicsFrame": 163,
+      "pose": {
+        "physicsFrame": 163,
+        "renderFrame": 162,
+        "move": "jumpshot",
+        "phase": "Recovery",
+        "frame": 0,
+        "presentationTick": 183,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotRecovery",
+        "animation": "JumpshotRecovery",
+        "clip": "locomotion/jumpshotrecovery",
+        "playbackTime": 0,
+        "recoveryBlend": {
+          "neutralPosition": 0,
+          "neutralClip": "locomotion/idle",
+          "amount": 0
+        },
+        "fadingFrom": "",
+        "fadingTime": 0.05000000074505806,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          1.4042742,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 183,
+      "ballPresentationTick": 183,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.261955,
+        2.5513673,
+        4.5674896
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 29,
+      "durationMs": 16,
+      "outputRgbSha256": "732b10da33f4d127a44810e66eb689806775c0ea8accab483825f14b4d6201ab",
+      "panelRgbSha256": "fcea8758a43005cfb349a374b2697f794933014b1eab07b8f6512538b215f59c"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00154.png",
+      "sha256": "906e35a799f36f37365a4f2e3fb38bbd50c851ef1eab4ba44623e6904b00d70f",
+      "sample": 154,
+      "sourceTick": 184,
+      "relativeToFirstObservedStartupTick": 22,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 22,
+      "relativeToAuthorityReleaseTick": 5,
+      "physicsFrame": 164,
+      "pose": {
+        "physicsFrame": 164,
+        "renderFrame": 163,
+        "move": "jumpshot",
+        "phase": "Recovery",
+        "frame": 1,
+        "presentationTick": 184,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotRecovery",
+        "animation": "JumpshotRecovery",
+        "clip": "locomotion/jumpshotrecovery",
+        "playbackTime": 0.01666666753590107,
+        "recoveryBlend": {
+          "neutralPosition": 0,
+          "neutralClip": "locomotion/idle",
+          "amount": 0
+        },
+        "fadingFrom": "",
+        "fadingTime": 0.05000000074505806,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          1.3884779,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 184,
+      "ballPresentationTick": 184,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.25800452,
+        2.638815,
+        4.495428
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 30,
+      "durationMs": 17,
+      "outputRgbSha256": "99b7611591900ba241c617604e40f9e01a9aa669186e43411606a324ede88d0a",
+      "panelRgbSha256": "b7e2d36ab4d1e8181ab75a4782f1f077400272bb18f5b8921bde9e71c1bb8c4d"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00155.png",
+      "sha256": "6da8a5a5618e6ddef60dcb982f0ffc99c48e7d315de8eedb8a09f819753c233f",
+      "sample": 155,
+      "sourceTick": 185,
+      "relativeToFirstObservedStartupTick": 23,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 23,
+      "relativeToAuthorityReleaseTick": 6,
+      "physicsFrame": 165,
+      "pose": {
+        "physicsFrame": 165,
+        "renderFrame": 164,
+        "move": "jumpshot",
+        "phase": "Recovery",
+        "frame": 2,
+        "presentationTick": 185,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotRecovery",
+        "animation": "JumpshotRecovery",
+        "clip": "locomotion/jumpshotrecovery",
+        "playbackTime": 0.03333333507180214,
+        "recoveryBlend": {
+          "neutralPosition": 0,
+          "neutralClip": "locomotion/idle",
+          "amount": 0
+        },
+        "fadingFrom": "",
+        "fadingTime": 0.05000000074505806,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          1.3707181,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 185,
+      "ballPresentationTick": 185,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.25405404,
+        2.7235403,
+        4.4233665
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 31,
+      "durationMs": 17,
+      "outputRgbSha256": "24576b1cfc7b4dda96c065030cb1fd3df99cb67632a5c627365bb6a5d4bd9a6d",
+      "panelRgbSha256": "74a30e5e2938b9355f636db3fe385c2f8acc376a321511c1f88b3bf151535f6b"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00156.png",
+      "sha256": "40b66a03e71db386d04d5652b01fc977bace8bb95ffa57300750dde54be20040",
+      "sample": 156,
+      "sourceTick": 186,
+      "relativeToFirstObservedStartupTick": 24,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 24,
+      "relativeToAuthorityReleaseTick": 7,
+      "physicsFrame": 166,
+      "pose": {
+        "physicsFrame": 166,
+        "renderFrame": 165,
+        "move": "jumpshot",
+        "phase": "Recovery",
+        "frame": 3,
+        "presentationTick": 186,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotRecovery",
+        "animation": "JumpshotRecovery",
+        "clip": "locomotion/jumpshotrecovery",
+        "playbackTime": 0.05000000074505806,
+        "recoveryBlend": {
+          "neutralPosition": 0,
+          "neutralClip": "locomotion/idle",
+          "amount": 0
+        },
+        "fadingFrom": "",
+        "fadingTime": 0.05000000074505806,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          1.3494197,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 186,
+      "ballPresentationTick": 186,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.25010356,
+        2.8055434,
+        4.351305
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 32,
+      "durationMs": 16,
+      "outputRgbSha256": "f8e51bc3f594bc48c6b166fc61c0a1d71d0b9f48375a532f31f8e7f712e7462c",
+      "panelRgbSha256": "0a66aab2d423ddcbccf2fd8515119240aa4c89a3cc4a727a9edb20f35729fb96"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00157.png",
+      "sha256": "2e967414585623843e7727a9911b62fc49bb9ea3003c116b088deb49c995c03f",
+      "sample": 157,
+      "sourceTick": 187,
+      "relativeToFirstObservedStartupTick": 25,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 25,
+      "relativeToAuthorityReleaseTick": 8,
+      "physicsFrame": 167,
+      "pose": {
+        "physicsFrame": 167,
+        "renderFrame": 166,
+        "move": "jumpshot",
+        "phase": "Recovery",
+        "frame": 4,
+        "presentationTick": 187,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotRecovery",
+        "animation": "JumpshotRecovery",
+        "clip": "locomotion/jumpshotrecovery",
+        "playbackTime": 0.06666667014360428,
+        "recoveryBlend": {
+          "neutralPosition": 0,
+          "neutralClip": "locomotion/idle",
+          "amount": 0
+        },
+        "fadingFrom": "",
+        "fadingTime": 0.05000000074505806,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          1.3241876,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 187,
+      "ballPresentationTick": 187,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.24615309,
+        2.8848245,
+        4.2792435
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 33,
+      "durationMs": 17,
+      "outputRgbSha256": "a60ceb8715e2ebb164d0246693aa702389213a5afdda302fb17e5fda1ffd59e9",
+      "panelRgbSha256": "c76da5c7052e1887b4a90bb4c6ffc578ae097b67f7884852f299ff1225502d4e"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00158.png",
+      "sha256": "22b0a6e6b53dcefb8ef7206e75627c364005fb6f0bb6540b5c1fbbf89c95471d",
+      "sample": 158,
+      "sourceTick": 188,
+      "relativeToFirstObservedStartupTick": 26,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 26,
+      "relativeToAuthorityReleaseTick": 9,
+      "physicsFrame": 168,
+      "pose": {
+        "physicsFrame": 168,
+        "renderFrame": 167,
+        "move": "jumpshot",
+        "phase": "Recovery",
+        "frame": 5,
+        "presentationTick": 188,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotRecovery",
+        "animation": "JumpshotRecovery",
+        "clip": "locomotion/jumpshotrecovery",
+        "playbackTime": 0.0833333358168602,
+        "recoveryBlend": {
+          "neutralPosition": 0,
+          "neutralClip": "locomotion/idle",
+          "amount": 0
+        },
+        "fadingFrom": "",
+        "fadingTime": 0.05000000074505806,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          1.2964319,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 188,
+      "ballPresentationTick": 188,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.24220261,
+        2.9613833,
+        4.207182
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 34,
+      "durationMs": 17,
+      "outputRgbSha256": "436fc3852e2b7dc403e479b2f645d8b36528d2ea1185ac9c279ad5eeafaf36df",
+      "panelRgbSha256": "d375a4707c37356d6e57b1ec4431623398ef3bf66b276e4eefa2212c2c8965f5"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00159.png",
+      "sha256": "6c5c4661c4c0971f664bf354d2d73d3e2cf82037be13f172dc160de662115145",
+      "sample": 159,
+      "sourceTick": 189,
+      "relativeToFirstObservedStartupTick": 27,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 27,
+      "relativeToAuthorityReleaseTick": 10,
+      "physicsFrame": 169,
+      "pose": {
+        "physicsFrame": 169,
+        "renderFrame": 168,
+        "move": "jumpshot",
+        "phase": "Recovery",
+        "frame": 6,
+        "presentationTick": 189,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotRecovery",
+        "animation": "JumpshotRecovery",
+        "clip": "locomotion/jumpshotrecovery",
+        "playbackTime": 0.10000000149011612,
+        "recoveryBlend": {
+          "neutralPosition": 0,
+          "neutralClip": "locomotion/idle",
+          "amount": 0
+        },
+        "fadingFrom": "",
+        "fadingTime": 0.05000000074505806,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          1.2633125,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 189,
+      "ballPresentationTick": 189,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.23825213,
+        3.03522,
+        4.1351204
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 35,
+      "durationMs": 16,
+      "outputRgbSha256": "cbd40b2eac8e3de9b80e3eaf4f69453f276e6915cde3515529995ab71c187383",
+      "panelRgbSha256": "2c75f5284a98cf8ca7290c5769fe044d3af37fb46628f91126c02da23779b5b3"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00160.png",
+      "sha256": "fe0d101a6e1c0759631dceeeee607b03d80b6ba5915b8dc5fae1aa70fda677fa",
+      "sample": 160,
+      "sourceTick": 190,
+      "relativeToFirstObservedStartupTick": 28,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 28,
+      "relativeToAuthorityReleaseTick": 11,
+      "physicsFrame": 170,
+      "pose": {
+        "physicsFrame": 170,
+        "renderFrame": 169,
+        "move": "jumpshot",
+        "phase": "Recovery",
+        "frame": 7,
+        "presentationTick": 190,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotRecovery",
+        "animation": "JumpshotRecovery",
+        "clip": "locomotion/jumpshotrecovery",
+        "playbackTime": 0.11666666716337204,
+        "recoveryBlend": {
+          "neutralPosition": 0,
+          "neutralClip": "locomotion/idle",
+          "amount": 0
+        },
+        "fadingFrom": "",
+        "fadingTime": 0.05000000074505806,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          1.2264308,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 190,
+      "ballPresentationTick": 190,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.23430166,
+        3.1063342,
+        4.063059
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 36,
+      "durationMs": 17,
+      "outputRgbSha256": "7d876f3e7ddb6acd26dde57bf4301114770adcbd07bb0c3471ef7b8338e6c9cb",
+      "panelRgbSha256": "59d5a575fa77000b9771edf67aeedab591015ae5f133c635595dcc27b1857ad7"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00164.png",
+      "sha256": "9e93a750ce4eb1fde6481abd670ae124d962892e686bbaaf3aff20b6f0c03ed0",
+      "sample": 164,
+      "sourceTick": 191,
+      "relativeToFirstObservedStartupTick": 29,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 29,
+      "relativeToAuthorityReleaseTick": 12,
+      "physicsFrame": 174,
+      "pose": {
+        "physicsFrame": 174,
+        "renderFrame": 173,
+        "move": "jumpshot",
+        "phase": "Recovery",
+        "frame": 8,
+        "presentationTick": 191,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotRecovery",
+        "animation": "JumpshotRecovery",
+        "clip": "locomotion/jumpshotrecovery",
+        "playbackTime": 0.13333334028720856,
+        "recoveryBlend": {
+          "neutralPosition": 0,
+          "neutralClip": "locomotion/idle",
+          "amount": 0
+        },
+        "fadingFrom": "",
+        "fadingTime": 0.05000000074505806,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          1.1860331,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 191,
+      "ballPresentationTick": 191,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.23035118,
+        3.1747262,
+        3.9909973
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 37,
+      "durationMs": 17,
+      "outputRgbSha256": "0998f051b792a6db39ad4e49f83e4ff4bee52eaf0eb68f8c3345debac8349eaa",
+      "panelRgbSha256": "f5280d0ebd0b0bea2efadc621a4d8aed26f729ec78c9bc89448d9f32235f9cf9"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00165.png",
+      "sha256": "3180e082b9b5078077a4cd5962cc8d299c4b44a8a024c114fec757ebfb5cca3d",
+      "sample": 165,
+      "sourceTick": 192,
+      "relativeToFirstObservedStartupTick": 30,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 30,
+      "relativeToAuthorityReleaseTick": 13,
+      "physicsFrame": 175,
+      "pose": {
+        "physicsFrame": 175,
+        "renderFrame": 174,
+        "move": "jumpshot",
+        "phase": "Recovery",
+        "frame": 9,
+        "presentationTick": 192,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotRecovery",
+        "animation": "JumpshotRecovery",
+        "clip": "locomotion/jumpshotrecovery",
+        "playbackTime": 0.15000000596046448,
+        "recoveryBlend": {
+          "neutralPosition": 0,
+          "neutralClip": "locomotion/idle",
+          "amount": 0
+        },
+        "fadingFrom": "",
+        "fadingTime": 0.05000000074505806,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          1.1350461,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 192,
+      "ballPresentationTick": 192,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.2264007,
+        3.240396,
+        3.9189358
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 38,
+      "durationMs": 16,
+      "outputRgbSha256": "f53b6ec72284c2e71add55e9649fd204794edf03f8ed4d331a1615d7f97f9e5a",
+      "panelRgbSha256": "d784b2a7aed60926c289d88cd98a7bc5523fb809de48982ecba3d06d3171d54f"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00166.png",
+      "sha256": "680baa05667d10d1735f201d3a603e194cbe414502e3910eba190a82de1ba3c0",
+      "sample": 166,
+      "sourceTick": 193,
+      "relativeToFirstObservedStartupTick": 31,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 31,
+      "relativeToAuthorityReleaseTick": 14,
+      "physicsFrame": 176,
+      "pose": {
+        "physicsFrame": 176,
+        "renderFrame": 175,
+        "move": "jumpshot",
+        "phase": "Recovery",
+        "frame": 10,
+        "presentationTick": 193,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotRecovery",
+        "animation": "JumpshotRecovery",
+        "clip": "locomotion/jumpshotrecovery",
+        "playbackTime": 0.1666666716337204,
+        "recoveryBlend": {
+          "neutralPosition": 0,
+          "neutralClip": "locomotion/idle",
+          "amount": 0
+        },
+        "fadingFrom": "",
+        "fadingTime": 0.05000000074505806,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          1.0806878,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 193,
+      "ballPresentationTick": 193,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.22245023,
+        3.3033438,
+        3.8468742
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 39,
+      "durationMs": 17,
+      "outputRgbSha256": "74d798fc8db3d509d235abb2b168556ee7a47db356fc5d123173ce057c37e5ed",
+      "panelRgbSha256": "933d04561be470778df1dde85f0f7b3185ce70ce6d87b4e9f3ac38e71bc7377f"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00167.png",
+      "sha256": "a549ad0d1a938cdce6422ab6c31588f0b547090982af96e49fe2e833b40ffe97",
+      "sample": 167,
+      "sourceTick": 194,
+      "relativeToFirstObservedStartupTick": 32,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 32,
+      "relativeToAuthorityReleaseTick": 15,
+      "physicsFrame": 177,
+      "pose": {
+        "physicsFrame": 177,
+        "renderFrame": 176,
+        "move": "jumpshot",
+        "phase": "Recovery",
+        "frame": 11,
+        "presentationTick": 194,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotRecovery",
+        "animation": "JumpshotRecovery",
+        "clip": "locomotion/jumpshotrecovery",
+        "playbackTime": 0.18333333730697632,
+        "recoveryBlend": {
+          "neutralPosition": 0,
+          "neutralClip": "locomotion/idle",
+          "amount": 0.04296875
+        },
+        "fadingFrom": "",
+        "fadingTime": 0.05000000074505806,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          1.0196704,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 194,
+      "ballPresentationTick": 194,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.21849975,
+        3.3635693,
+        3.7748127
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 40,
+      "durationMs": 17,
+      "outputRgbSha256": "931f95642b2e8aae45ee06ae4a42069a2345e2a414feff5836b4a7196da6377d",
+      "panelRgbSha256": "d4c786888794efeff6f94d132bae26a73f39a886257f6abd41863c17986bd9af"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00168.png",
+      "sha256": "746e5ebf80e429fb8de48033667cca7145698a487f6e683d26c18a39bfdb1183",
+      "sample": 168,
+      "sourceTick": 195,
+      "relativeToFirstObservedStartupTick": 33,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 33,
+      "relativeToAuthorityReleaseTick": 16,
+      "physicsFrame": 178,
+      "pose": {
+        "physicsFrame": 178,
+        "renderFrame": 177,
+        "move": "jumpshot",
+        "phase": "Recovery",
+        "frame": 12,
+        "presentationTick": 195,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotRecovery",
+        "animation": "JumpshotRecovery",
+        "clip": "locomotion/jumpshotrecovery",
+        "playbackTime": 0.20000000298023224,
+        "recoveryBlend": {
+          "neutralPosition": 0,
+          "neutralClip": "locomotion/idle",
+          "amount": 0.15625
+        },
+        "fadingFrom": "",
+        "fadingTime": 0.05000000074505806,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.9718607,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 195,
+      "ballPresentationTick": 195,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.21454927,
+        3.4210725,
+        3.7027512
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 41,
+      "durationMs": 16,
+      "outputRgbSha256": "bb043c10c74b2d8a628410190c3f4b2e49d8121de5514ce1cda161156c95f37c",
+      "panelRgbSha256": "809aa1af8839ca06bd3cb9038c7e79f532a3fc3c4e49b5af8917e9909f7361c7"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00169.png",
+      "sha256": "41c0b14bae4f137be640d0d79a15313b903fa95a95794cf09f5daf560f84cf8a",
+      "sample": 169,
+      "sourceTick": 196,
+      "relativeToFirstObservedStartupTick": 34,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 34,
+      "relativeToAuthorityReleaseTick": 17,
+      "physicsFrame": 179,
+      "pose": {
+        "physicsFrame": 179,
+        "renderFrame": 178,
+        "move": "jumpshot",
+        "phase": "Recovery",
+        "frame": 13,
+        "presentationTick": 196,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotRecovery",
+        "animation": "JumpshotRecovery",
+        "clip": "locomotion/jumpshotrecovery",
+        "playbackTime": 0.21666666865348816,
+        "recoveryBlend": {
+          "neutralPosition": 0,
+          "neutralClip": "locomotion/idle",
+          "amount": 0.31640625
+        },
+        "fadingFrom": "",
+        "fadingTime": 0.05000000074505806,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.9535572,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 196,
+      "ballPresentationTick": 196,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.2105988,
+        3.4758534,
+        3.6306896
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 42,
+      "durationMs": 17,
+      "outputRgbSha256": "999169a56ccabf62cfe50ab221b13edf2c9f4947a07dec5cb5e388a24eb97255",
+      "panelRgbSha256": "f5326b0f3a85306ae53d7ccf8a91b9e5ee8a16fec58a5ffcb4444d9c09fd4c1e"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00170.png",
+      "sha256": "6482069ee8644c80a4f53e731d9fcbd656b88b48546c6a5ea62a5dd7b39ceda7",
+      "sample": 170,
+      "sourceTick": 197,
+      "relativeToFirstObservedStartupTick": 35,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 35,
+      "relativeToAuthorityReleaseTick": 18,
+      "physicsFrame": 180,
+      "pose": {
+        "physicsFrame": 180,
+        "renderFrame": 179,
+        "move": "jumpshot",
+        "phase": "Recovery",
+        "frame": 14,
+        "presentationTick": 197,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotRecovery",
+        "animation": "JumpshotRecovery",
+        "clip": "locomotion/jumpshotrecovery",
+        "playbackTime": 0.23333333432674408,
+        "recoveryBlend": {
+          "neutralPosition": 0,
+          "neutralClip": "locomotion/idle",
+          "amount": 0.5
+        },
+        "fadingFrom": "",
+        "fadingTime": 0.05000000074505806,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.9616662,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 197,
+      "ballPresentationTick": 197,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.20664832,
+        3.5279121,
+        3.558628
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 43,
+      "durationMs": 17,
+      "outputRgbSha256": "01c97c3833acb72905a94e1d3402fdd2a77b4fa5f69469df86cc45cfe1aee41e",
+      "panelRgbSha256": "f468b0b6898beb988a7b10fd00c775c600b02109db1401afbe720f4b0b31c75b"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00171.png",
+      "sha256": "2c0be67bddaff315ae0b4ced60a86d550eab471f0e836c6b9ce7a0b382a68191",
+      "sample": 171,
+      "sourceTick": 198,
+      "relativeToFirstObservedStartupTick": 36,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 36,
+      "relativeToAuthorityReleaseTick": 19,
+      "physicsFrame": 181,
+      "pose": {
+        "physicsFrame": 181,
+        "renderFrame": 180,
+        "move": "jumpshot",
+        "phase": "Recovery",
+        "frame": 15,
+        "presentationTick": 198,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotRecovery",
+        "animation": "JumpshotRecovery",
+        "clip": "locomotion/jumpshotrecovery",
+        "playbackTime": 0.25,
+        "recoveryBlend": {
+          "neutralPosition": 0,
+          "neutralClip": "locomotion/idle",
+          "amount": 0.68359375
+        },
+        "fadingFrom": "",
+        "fadingTime": 0.05000000074505806,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.97939324,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 198,
+      "ballPresentationTick": 198,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.20269784,
+        3.5772486,
+        3.4865665
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 44,
+      "durationMs": 16,
+      "outputRgbSha256": "2b477ebe46e04cc14eccdd31c256e69bfa34942345371105838ec5bc2133d5b7",
+      "panelRgbSha256": "ce9175e1194385b1cdb9c194fcbae6771d265a591382db907f243c89c2dad128"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00172.png",
+      "sha256": "1c2c6ef14402ff06d8c1493cd3c6db304db4a7546bc626eaed3adac1bccb16fa",
+      "sample": 172,
+      "sourceTick": 199,
+      "relativeToFirstObservedStartupTick": 37,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 37,
+      "relativeToAuthorityReleaseTick": 20,
+      "physicsFrame": 182,
+      "pose": {
+        "physicsFrame": 182,
+        "renderFrame": 181,
+        "move": "jumpshot",
+        "phase": "Recovery",
+        "frame": 16,
+        "presentationTick": 199,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotRecovery",
+        "animation": "JumpshotRecovery",
+        "clip": "locomotion/jumpshotrecovery",
+        "playbackTime": 0.2666666805744171,
+        "recoveryBlend": {
+          "neutralPosition": 0,
+          "neutralClip": "locomotion/idle",
+          "amount": 0.84375
+        },
+        "fadingFrom": "",
+        "fadingTime": 0.05000000074505806,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.99257755,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 199,
+      "ballPresentationTick": 199,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.19874737,
+        3.623863,
+        3.414505
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 45,
+      "durationMs": 17,
+      "outputRgbSha256": "43b15d10ee36c36f8d53c7ca20593ea26e08613e23c43cbb660940faeaed37bd",
+      "panelRgbSha256": "be10e4ad0679dd0fac80b47cde838ca8abdecf5da5de79d5b1668bf60dbc665a"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00173.png",
+      "sha256": "76bc5f799cd123bf4ff6b8178696e89b0f78a9d7040630b3aabde243c62269e3",
+      "sample": 173,
+      "sourceTick": 200,
+      "relativeToFirstObservedStartupTick": 38,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 38,
+      "relativeToAuthorityReleaseTick": 21,
+      "physicsFrame": 183,
+      "pose": {
+        "physicsFrame": 183,
+        "renderFrame": 182,
+        "move": "jumpshot",
+        "phase": "Recovery",
+        "frame": 17,
+        "presentationTick": 200,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotRecovery",
+        "animation": "JumpshotRecovery",
+        "clip": "locomotion/jumpshotrecovery",
+        "playbackTime": 0.28333333134651184,
+        "recoveryBlend": {
+          "neutralPosition": 0,
+          "neutralClip": "locomotion/idle",
+          "amount": 0.95703125
+        },
+        "fadingFrom": "",
+        "fadingTime": 0.05000000074505806,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.9974726,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 200,
+      "ballPresentationTick": 200,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.19479689,
+        3.6677551,
+        3.3424435
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 46,
+      "durationMs": 17,
+      "outputRgbSha256": "ae04743e4b79e95ea8452d9b378e40720028c6bbb4a476188384c120e1030772",
+      "panelRgbSha256": "cc19ce4728d0eba9fa2059039ff57dba4ce970ba98d8b1645498e0acb18fd495"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00174.png",
+      "sha256": "88007b214895cbb0a94fcca62c70f889f0392208e604123406e8dbcbdb034789",
+      "sample": 174,
+      "sourceTick": 201,
+      "relativeToFirstObservedStartupTick": 39,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 39,
+      "relativeToAuthorityReleaseTick": 22,
+      "physicsFrame": 184,
+      "pose": {
+        "physicsFrame": 184,
+        "renderFrame": 183,
+        "move": "jumpshot",
+        "phase": "Recovery",
+        "frame": 18,
+        "presentationTick": 201,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotRecovery",
+        "animation": "JumpshotRecovery",
+        "clip": "locomotion/jumpshotrecovery",
+        "playbackTime": 0.30000001192092896,
+        "recoveryBlend": {
+          "neutralPosition": 0,
+          "neutralClip": "locomotion/idle",
+          "amount": 1
+        },
+        "fadingFrom": "",
+        "fadingTime": 0.05000000074505806,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.9979194,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 201,
+      "ballPresentationTick": 201,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.19084641,
+        3.708925,
+        3.270382
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 47,
+      "durationMs": 16,
+      "outputRgbSha256": "6878275808cb7992911c19f8e48b03d897fd69a55d23246327411bebc9406a2e",
+      "panelRgbSha256": "fa0a975f4d1214ccabe27cc15e9e34b677e33fc59a217db751f2cb68b5d24696"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00175.png",
+      "sha256": "5b021d62acf91ed0a94bd20196c8e958d3db06c07800923a1a8af13a00a5d447",
+      "sample": 175,
+      "sourceTick": 202,
+      "relativeToFirstObservedStartupTick": 40,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 40,
+      "relativeToAuthorityReleaseTick": 23,
+      "physicsFrame": 185,
+      "pose": {
+        "physicsFrame": 185,
+        "renderFrame": 184,
+        "move": "jumpshot",
+        "phase": "Recovery",
+        "frame": 19,
+        "presentationTick": 202,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "JumpshotRecovery",
+        "animation": "JumpshotRecovery",
+        "clip": "locomotion/jumpshotrecovery",
+        "playbackTime": 0.3166666626930237,
+        "recoveryBlend": {
+          "neutralPosition": 0,
+          "neutralClip": "locomotion/idle",
+          "amount": 1
+        },
+        "fadingFrom": "",
+        "fadingTime": 0.05000000074505806,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.9979194,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 202,
+      "ballPresentationTick": 202,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.18689594,
+        3.7473726,
+        3.1983204
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 48,
+      "durationMs": 17,
+      "outputRgbSha256": "40bd13ad192124beeeedb4fbfe2cf5704bbd78487e7366b5245365f5bbae7ce0",
+      "panelRgbSha256": "5feff7e051aaabaa8a6b435293beb23a621677f106c6babe19b779a0c7737ce4"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00179.png",
+      "sha256": "b520578259b3d1b806dbe432ebb295be10e2a6b7509e002f13e287bbbb2c3cce",
+      "sample": 179,
+      "sourceTick": 203,
+      "relativeToFirstObservedStartupTick": 41,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 41,
+      "relativeToAuthorityReleaseTick": 24,
+      "physicsFrame": 189,
+      "pose": {
+        "physicsFrame": 189,
+        "renderFrame": 188,
+        "move": "",
+        "phase": "Inactive",
+        "frame": 0,
+        "presentationTick": 203,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "Locomotion",
+        "animation": "Locomotion",
+        "clip": "<blend-space-or-multiple-leaves>",
+        "playbackTime": 0,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.3166666626930237,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.9979194,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 203,
+      "ballPresentationTick": 203,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.18294546,
+        3.783098,
+        3.1262589
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 49,
+      "durationMs": 17,
+      "outputRgbSha256": "8897490d3435bf5134a6dfe03add0b0c73770eb5253e6c33a75fa9a94e4b393b",
+      "panelRgbSha256": "abedbc4c8395a7985c83be881bdef0744200c4918a5930ef410733f278e56dae"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00180.png",
+      "sha256": "d2ee6dd1b01d02e5ba18e23f0e86e21090df2bd8ff9c77bc47bedf08950a814a",
+      "sample": 180,
+      "sourceTick": 204,
+      "relativeToFirstObservedStartupTick": 42,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 42,
+      "relativeToAuthorityReleaseTick": 25,
+      "physicsFrame": 190,
+      "pose": {
+        "physicsFrame": 190,
+        "renderFrame": 189,
+        "move": "",
+        "phase": "Inactive",
+        "frame": 0,
+        "presentationTick": 204,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "Locomotion",
+        "animation": "Locomotion",
+        "clip": "<blend-space-or-multiple-leaves>",
+        "playbackTime": 0.01666666753590107,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.3166666626930237,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.9979194,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 204,
+      "ballPresentationTick": 204,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.17899498,
+        3.816101,
+        3.0541973
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 50,
+      "durationMs": 16,
+      "outputRgbSha256": "369c9360f943fcb2c176fd14e528335ef5a3b5b5b3a7dddff0e6c10331c29cf8",
+      "panelRgbSha256": "fa46d9423e092673096b3235f886c4c37bb66ee8acc21bbe55d647f6e1459f25"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00181.png",
+      "sha256": "7ea65188613ac70c44bbfe10e3f0b83e48029ba29b0a042ef80be83db431116b",
+      "sample": 181,
+      "sourceTick": 205,
+      "relativeToFirstObservedStartupTick": 43,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 43,
+      "relativeToAuthorityReleaseTick": 26,
+      "physicsFrame": 191,
+      "pose": {
+        "physicsFrame": 191,
+        "renderFrame": 190,
+        "move": "",
+        "phase": "Inactive",
+        "frame": 0,
+        "presentationTick": 205,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "Locomotion",
+        "animation": "Locomotion",
+        "clip": "<blend-space-or-multiple-leaves>",
+        "playbackTime": 0.03333333507180214,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.3166666626930237,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.9979194,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 205,
+      "ballPresentationTick": 205,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.1750445,
+        3.8463821,
+        2.9821358
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 51,
+      "durationMs": 17,
+      "outputRgbSha256": "52b1a57d294b008ab53def1f979b75e80c07f45289c8228ef38224c6be211620",
+      "panelRgbSha256": "c818aba53fd78af7d73a98b6f42e11b6ac705ad72e0646b3403b8d12f10857d6"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00182.png",
+      "sha256": "5e8e08279b469e9c07e0594f38d633e8027baec098923b57e5ce4709297e1219",
+      "sample": 182,
+      "sourceTick": 206,
+      "relativeToFirstObservedStartupTick": 44,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 44,
+      "relativeToAuthorityReleaseTick": 27,
+      "physicsFrame": 192,
+      "pose": {
+        "physicsFrame": 192,
+        "renderFrame": 191,
+        "move": "",
+        "phase": "Inactive",
+        "frame": 0,
+        "presentationTick": 206,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "Locomotion",
+        "animation": "Locomotion",
+        "clip": "<blend-space-or-multiple-leaves>",
+        "playbackTime": 0.05000000074505806,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.3166666626930237,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.9979194,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 206,
+      "ballPresentationTick": 206,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.17109403,
+        3.873941,
+        2.9100742
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 52,
+      "durationMs": 17,
+      "outputRgbSha256": "a269b9cf5084254848b3aa18b7f33363dd8bd20986910f29dc8ac38209f5fd60",
+      "panelRgbSha256": "029ca9fd96e62a7c13bfae612b1817de1620ca3c2a2eaeb682857fafd2b0c06c"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00183.png",
+      "sha256": "8c27ea4ea8eec3406057c75c961942ecf41994894b4a38dd8082d309853d2cff",
+      "sample": 183,
+      "sourceTick": 207,
+      "relativeToFirstObservedStartupTick": 45,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 45,
+      "relativeToAuthorityReleaseTick": 28,
+      "physicsFrame": 193,
+      "pose": {
+        "physicsFrame": 193,
+        "renderFrame": 192,
+        "move": "",
+        "phase": "Inactive",
+        "frame": 0,
+        "presentationTick": 207,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "Locomotion",
+        "animation": "Locomotion",
+        "clip": "<blend-space-or-multiple-leaves>",
+        "playbackTime": 0.06666667014360428,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.3166666626930237,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.9979194,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 207,
+      "ballPresentationTick": 207,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.16714355,
+        3.8987775,
+        2.8380127
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 53,
+      "durationMs": 16,
+      "outputRgbSha256": "4df2cae274b3e90c488ee04e3bcbbf9178e921bd39f66641bd5d41f10e1b3efb",
+      "panelRgbSha256": "06a0873667c1f08aa354f938b855769ddf98328b12ac97a021c09468947e191d"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00184.png",
+      "sha256": "493084cb0fd0e3f70418a1956b04f6b7c338441b870fac7f08434df548a3fe63",
+      "sample": 184,
+      "sourceTick": 208,
+      "relativeToFirstObservedStartupTick": 46,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 46,
+      "relativeToAuthorityReleaseTick": 29,
+      "physicsFrame": 194,
+      "pose": {
+        "physicsFrame": 194,
+        "renderFrame": 193,
+        "move": "",
+        "phase": "Inactive",
+        "frame": 0,
+        "presentationTick": 208,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "Locomotion",
+        "animation": "Locomotion",
+        "clip": "<blend-space-or-multiple-leaves>",
+        "playbackTime": 0.0833333358168602,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.3166666626930237,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.9979194,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 208,
+      "ballPresentationTick": 208,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.16319308,
+        3.9208918,
+        2.7659512
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 54,
+      "durationMs": 17,
+      "outputRgbSha256": "ccf9532f1bd8f2ade280f5845c77e666c4bb23c7b8f0af710c5a903627099f83",
+      "panelRgbSha256": "ceece2618f184c49e42e6d80d645c2b4b0496491f5b731507b3c4eca84658f87"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00185.png",
+      "sha256": "33e65ddc2fa40381adeb8b32bc2ceb76f94c64cdff9fc0c31cbd3e43101a6a2e",
+      "sample": 185,
+      "sourceTick": 209,
+      "relativeToFirstObservedStartupTick": 47,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 47,
+      "relativeToAuthorityReleaseTick": 30,
+      "physicsFrame": 195,
+      "pose": {
+        "physicsFrame": 195,
+        "renderFrame": 194,
+        "move": "",
+        "phase": "Inactive",
+        "frame": 0,
+        "presentationTick": 209,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "Locomotion",
+        "animation": "Locomotion",
+        "clip": "<blend-space-or-multiple-leaves>",
+        "playbackTime": 0.10000000149011612,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.3166666626930237,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.9979194,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 209,
+      "ballPresentationTick": 209,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.1592426,
+        3.9402838,
+        2.6938896
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 55,
+      "durationMs": 17,
+      "outputRgbSha256": "29f4323b394f99fe794842aa733fc99aa5be28513b0ad19a6b93f893734799af",
+      "panelRgbSha256": "bf40cf6758749ee31aa5974135a4f8849824cc809be600a81047409a30171506"
+    },
+    {
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/frame-00186.png",
+      "sha256": "9625ce0e8b34ab4ec17e96b5de97c996a9e52595391fb4bd51320bceea47e000",
+      "sample": 186,
+      "sourceTick": 210,
+      "relativeToFirstObservedStartupTick": 48,
+      "eventClock": "authority physics/source tick",
+      "relativeToObservedBeginTick": 48,
+      "relativeToAuthorityReleaseTick": 31,
+      "physicsFrame": 196,
+      "pose": {
+        "physicsFrame": 196,
+        "renderFrame": 195,
+        "move": "",
+        "phase": "Inactive",
+        "frame": 0,
+        "presentationTick": 210,
+        "hand": "Right",
+        "root": [
+          0,
+          0.9983181,
+          4.862017
+        ],
+        "heading": 3.1415927,
+        "requestedState": "Locomotion",
+        "animation": "Locomotion",
+        "clip": "<blend-space-or-multiple-leaves>",
+        "playbackTime": 0.11666666716337204,
+        "recoveryBlend": null,
+        "fadingFrom": "",
+        "fadingTime": 0.3166666626930237,
+        "callback": "Manual",
+        "hipInSkeleton": [
+          -6.757012e-08,
+          0.9979194,
+          4.84474e-07
+        ],
+        "skeletonTransform": [
+          0,
+          -0.0016819239,
+          4.862017,
+          -1,
+          0,
+          8.742278e-08,
+          0,
+          1,
+          0,
+          -8.742278e-08,
+          0,
+          -1
+        ]
+      },
+      "selectedPresentationTick": 210,
+      "ballPresentationTick": 210,
+      "releaseCount": 0,
+      "visibleBall": [
+        0.15529212,
+        3.9569535,
+        2.621828
+      ],
+      "camera": {
+        "camera": [
+          0,
+          8,
+          9.705208,
+          1,
+          0,
+          0,
+          0,
+          0.7071068,
+          -0.7071068,
+          0,
+          0.7071068,
+          0.7071068
+        ],
+        "cameraProvenance": "observed before post-draw diagnostic camera update",
+        "viewportSize": [
+          960,
+          540
+        ],
+        "cameraFov": 75,
+        "cameraProjection": "Perspective",
+        "cameraSize": 1,
+        "cameraNear": 0.05,
+        "cameraFar": 4000
+      },
+      "outputFrame": 56,
+      "durationMs": 16,
+      "outputRgbSha256": "600c8068e727fea8982e9430da55db89bf1f7844889c677ac8de899ff557d63f",
+      "panelRgbSha256": "89c4bb2f04cfd937b17f20c688ea66de2a73c1fd60728870766abfa69c9d8126"
+    }
+  ],
+  "rawImageIndex": {
+    "file": "raw-image-index.json",
+    "sha256": "24d6051e9531f998172e11673b6792d47edd257d18fd3e6d44ab3c78a8b3ab84",
+    "images": 448
+  },
+  "archives": [
+    {
+      "attempt": "resume",
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/manifest.json",
+      "sourceBytes": 1854,
+      "sourceSha256": "ef257b7e631ddbd1da4b81dd008fa6da893dfcaa5d5ed9520c05320661830685",
+      "archive": "raw/resume/right-held-normal-o0-1/manifest.json.gz",
+      "archiveBytes": 916,
+      "archiveSha256": "62211f09e8389a2cec822ff9ad24ef55bc149edd138bd307b53b99dc4f2af290",
+      "classification": "observer accepted; owner rejected; authority supplemental"
+    },
+    {
+      "attempt": "resume",
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1/trace.jsonl",
+      "sourceBytes": 6750631,
+      "sourceSha256": "cbe1cbb33cd0b9d464bdd9f901e68fa6970818f5ac45ac554ef8e14e8fe455c7",
+      "archive": "raw/resume/right-held-normal-o0-1/trace.jsonl.gz",
+      "archiveBytes": 1230503,
+      "archiveSha256": "bf04d803f50bf1fc5031aac996dfb6f6818acee82706f9860a0df86589476e99",
+      "classification": "observer accepted; owner rejected; authority supplemental"
+    },
+    {
+      "attempt": "resume",
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1-owner/manifest.json",
+      "sourceBytes": 3047,
+      "sourceSha256": "0320dbccc4c07c268fc49d628cc642d25fdcde77e2b8183fd50ec9268e509efc",
+      "archive": "raw/resume/right-held-normal-o0-1-owner/manifest.json.gz",
+      "archiveBytes": 1136,
+      "archiveSha256": "577cf0f5e1faa074ce6312785e7c35a23933f638ce186255594630e75cffac7c",
+      "classification": "observer accepted; owner rejected; authority supplemental"
+    },
+    {
+      "attempt": "resume",
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1-owner/trace.jsonl",
+      "sourceBytes": 3386446,
+      "sourceSha256": "848523278e026ddbef4421d13f3eb7db6c8c032ff2e46f02189f700cf758fc2f",
+      "archive": "raw/resume/right-held-normal-o0-1-owner/trace.jsonl.gz",
+      "archiveBytes": 838114,
+      "archiveSha256": "15fe5586ddeecd005f16c1b4bb552d91fc8adc791eab3c7cbf63d872ffe779d4",
+      "classification": "observer accepted; owner rejected; authority supplemental"
+    },
+    {
+      "attempt": "resume",
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1-owner.godot.log",
+      "sourceBytes": 620,
+      "sourceSha256": "7e3f9183daf32330c7877d57ca1fa3adeff7b722976eea055686fda6d2e44a61",
+      "archive": "raw/resume/right-held-normal-o0-1-owner.godot.log.gz",
+      "archiveBytes": 410,
+      "archiveSha256": "d5a9df936df37587fb8af3aa327812371b881debd57c3e257e98490cb307c063",
+      "classification": "observer accepted; owner rejected; authority supplemental"
+    },
+    {
+      "attempt": "resume",
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1-owner.stdout.log",
+      "sourceBytes": 630,
+      "sourceSha256": "e970c0d33f329a98b2c1d09238a9626d705e31880735f01524ddf3a4e44b5e13",
+      "archive": "raw/resume/right-held-normal-o0-1-owner.stdout.log.gz",
+      "archiveBytes": 414,
+      "archiveSha256": "7bec04ffc4424e90631d816769d8c09889fc6b2e1d111093270de828daa9830e",
+      "classification": "observer accepted; owner rejected; authority supplemental"
+    },
+    {
+      "attempt": "resume",
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1-server/manifest.json",
+      "sourceBytes": 3117,
+      "sourceSha256": "8efe44f067227ddcee46199c08b88f5df027d83d62f990cbc33f3a07898f68a9",
+      "archive": "raw/resume/right-held-normal-o0-1-server/manifest.json.gz",
+      "archiveBytes": 1161,
+      "archiveSha256": "bca30dc93836eb4da6c6b3912b2ffeeffe45dec0ed58056d19c5c4b1d92badc8",
+      "classification": "observer accepted; owner rejected; authority supplemental"
+    },
+    {
+      "attempt": "resume",
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1-server/trace.jsonl",
+      "sourceBytes": 6178648,
+      "sourceSha256": "9b6dc85cdbd2a6b173eb18648755111c52e3b4d8beb1c150cfce693c00cdc0e9",
+      "archive": "raw/resume/right-held-normal-o0-1-server/trace.jsonl.gz",
+      "archiveBytes": 1267126,
+      "archiveSha256": "33147983fa6702f4918e46590af1859138bdcc31283a07a1e9e522a0746ebd4b",
+      "classification": "observer accepted; owner rejected; authority supplemental"
+    },
+    {
+      "attempt": "resume",
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1-server.godot.log",
+      "sourceBytes": 1013,
+      "sourceSha256": "c2e96b091e76b353c8fe3602abedea9bb34e44d82169a70bb4f95daa49df0f04",
+      "archive": "raw/resume/right-held-normal-o0-1-server.godot.log.gz",
+      "archiveBytes": 431,
+      "archiveSha256": "fb0821f4cb7af4b8f1a38d52e5e7c9616baf7fa84ebe650946aae64b570e78d3",
+      "classification": "observer accepted; owner rejected; authority supplemental"
+    },
+    {
+      "attempt": "resume",
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1-server.stdout.log",
+      "sourceBytes": 1031,
+      "sourceSha256": "2b9f0ddffb110d916c2fec498e41fe52052c95a9c4b2dcd5090b3667718ee3c6",
+      "archive": "raw/resume/right-held-normal-o0-1-server.stdout.log.gz",
+      "archiveBytes": 432,
+      "archiveSha256": "9d34a2c77208a59b6f14eb695de27ed92bec74b21793aadd7f664dc52b321076",
+      "classification": "observer accepted; owner rejected; authority supplemental"
+    },
+    {
+      "attempt": "resume",
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1.godot.log",
+      "sourceBytes": 621,
+      "sourceSha256": "8d98029cf0d3bb748f58fabd64ed5f3625ac6f02db7037d28cd950346a6ba4ca",
+      "archive": "raw/resume/right-held-normal-o0-1.godot.log.gz",
+      "archiveBytes": 411,
+      "archiveSha256": "bcab510dbfeb74ce3a7ad8927f1739b10d6d9790dfc011f17e273b48182b6b13",
+      "classification": "observer accepted; owner rejected; authority supplemental"
+    },
+    {
+      "attempt": "resume",
+      "source": ".godot/440/442-current-rendered-observer-resume-20261107/right-held-normal-o0-1.stdout.log",
+      "sourceBytes": 631,
+      "sourceSha256": "9997867a591b4da63273c1638c78317842d05eecdc076d2ef368be82d5b10020",
+      "archive": "raw/resume/right-held-normal-o0-1.stdout.log.gz",
+      "archiveBytes": 416,
+      "archiveSha256": "cf9673de6b04b01a1b3d2b2c3718de4a46fe13f2e1cfef69b9e438683a2cefea",
+      "classification": "observer accepted; owner rejected; authority supplemental"
+    },
+    {
+      "attempt": "rejected-initial",
+      "source": ".godot/440/442-current-rendered-observer-20261107/right-held-normal-o0-1/trace.jsonl",
+      "sourceBytes": 0,
+      "sourceSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "archive": "raw/rejected-initial/right-held-normal-o0-1/trace.jsonl.gz",
+      "archiveBytes": 20,
+      "archiveSha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "classification": "failed timeout/interrupted attempt, diagnostic only"
+    },
+    {
+      "attempt": "rejected-initial",
+      "source": ".godot/440/442-current-rendered-observer-20261107/right-held-normal-o0-1-owner/trace.jsonl",
+      "sourceBytes": 0,
+      "sourceSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "archive": "raw/rejected-initial/right-held-normal-o0-1-owner/trace.jsonl.gz",
+      "archiveBytes": 20,
+      "archiveSha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64",
+      "classification": "failed timeout/interrupted attempt, diagnostic only"
+    },
+    {
+      "attempt": "rejected-initial",
+      "source": ".godot/440/442-current-rendered-observer-20261107/right-held-normal-o0-1-owner.godot.log",
+      "sourceBytes": 492,
+      "sourceSha256": "47c070de7e8d0cd64d455c0047b40642936bebedec89dc98acaaadad2670c2d8",
+      "archive": "raw/rejected-initial/right-held-normal-o0-1-owner.godot.log.gz",
+      "archiveBytes": 376,
+      "archiveSha256": "6a58c31f34d6d1f40e5f55071180d760a3dce8246d4cd551b6cc266604c1304d",
+      "classification": "failed timeout/interrupted attempt, diagnostic only"
+    },
+    {
+      "attempt": "rejected-initial",
+      "source": ".godot/440/442-current-rendered-observer-20261107/right-held-normal-o0-1-owner.stdout.log",
+      "sourceBytes": 500,
+      "sourceSha256": "d20ec047d809cec73599737265de5a70b693fc3ac14c1bad0e6ecd2bf967c73c",
+      "archive": "raw/rejected-initial/right-held-normal-o0-1-owner.stdout.log.gz",
+      "archiveBytes": 381,
+      "archiveSha256": "a1ec8c6d5abbcdcc7535b0f142402af2d8c023f14adc1ce2abf10cdb4c8d38bb",
+      "classification": "failed timeout/interrupted attempt, diagnostic only"
+    },
+    {
+      "attempt": "rejected-initial",
+      "source": ".godot/440/442-current-rendered-observer-20261107/right-held-normal-o0-1-server/manifest.json",
+      "sourceBytes": 1536,
+      "sourceSha256": "2ef94a5dabcbf1d851b370027bb38f54104520a74411ed96f228224012bd5f5a",
+      "archive": "raw/rejected-initial/right-held-normal-o0-1-server/manifest.json.gz",
+      "archiveBytes": 793,
+      "archiveSha256": "0a8ed38da73ff82c00718030b4b06da45fd338a5bb3cbab785f44b3476b97c19",
+      "classification": "failed timeout/interrupted attempt, diagnostic only"
+    },
+    {
+      "attempt": "rejected-initial",
+      "source": ".godot/440/442-current-rendered-observer-20261107/right-held-normal-o0-1-server/trace.jsonl",
+      "sourceBytes": 1931883,
+      "sourceSha256": "1779b83d46292b276536db9159ae8e158d84d87fe1d23a6d573e014316cf5ddd",
+      "archive": "raw/rejected-initial/right-held-normal-o0-1-server/trace.jsonl.gz",
+      "archiveBytes": 76738,
+      "archiveSha256": "478dc448687e033d2c074e4a598052e299538736680ddd901e3c7847d31bbca0",
+      "classification": "failed timeout/interrupted attempt, diagnostic only"
+    },
+    {
+      "attempt": "rejected-initial",
+      "source": ".godot/440/442-current-rendered-observer-20261107/right-held-normal-o0-1-server.godot.log",
+      "sourceBytes": 735,
+      "sourceSha256": "0410ddc4d886d3d04c057110bd74b9648d7b30210ebc9ededba851453276b998",
+      "archive": "raw/rejected-initial/right-held-normal-o0-1-server.godot.log.gz",
+      "archiveBytes": 405,
+      "archiveSha256": "6e2c1d03c705b55f4080ce0bb59b437ff29ca5f4f84d2f2723e6944036994ace",
+      "classification": "failed timeout/interrupted attempt, diagnostic only"
+    },
+    {
+      "attempt": "rejected-initial",
+      "source": ".godot/440/442-current-rendered-observer-20261107/right-held-normal-o0-1-server.stdout.log",
+      "sourceBytes": 748,
+      "sourceSha256": "72d6bb33e987032a13976565af5709003e147de01efa49b9c8d2578ba2f7c716",
+      "archive": "raw/rejected-initial/right-held-normal-o0-1-server.stdout.log.gz",
+      "archiveBytes": 409,
+      "archiveSha256": "72f13b3d81abbd0f560916296f99492515688e1e6b4178c3a65d3c109f171db5",
+      "classification": "failed timeout/interrupted attempt, diagnostic only"
+    },
+    {
+      "attempt": "rejected-initial",
+      "source": ".godot/440/442-current-rendered-observer-20261107/right-held-normal-o0-1.godot.log",
+      "sourceBytes": 310,
+      "sourceSha256": "978e7b8cc5c5f5e3d0a0d7b2f40272e7863445ad35fb5f9cbff9a34c62f2c827",
+      "archive": "raw/rejected-initial/right-held-normal-o0-1.godot.log.gz",
+      "archiveBytes": 259,
+      "archiveSha256": "d0e37a3eb5cbd05d18172c55096287aea691ed4d0daa82c86a5d3df873109f56",
+      "classification": "failed timeout/interrupted attempt, diagnostic only"
+    },
+    {
+      "attempt": "rejected-initial",
+      "source": ".godot/440/442-current-rendered-observer-20261107/right-held-normal-o0-1.stdout.log",
+      "sourceBytes": 315,
+      "sourceSha256": "5f251ab97aebc67ca8c77f20e3992834a9889c84dee307323c92046f5a31c491",
+      "archive": "raw/rejected-initial/right-held-normal-o0-1.stdout.log.gz",
+      "archiveBytes": 263,
+      "archiveSha256": "64419ef20b86d3e51e2d3668535640b224f2342f4957744523e0a0b9cf2ec37b",
+      "classification": "failed timeout/interrupted attempt, diagnostic only"
+    },
+    {
+      "attempt": "analysis",
+      "source": ".godot/442-current-20261107/rendered-observer-proof.json",
+      "sourceBytes": 47342,
+      "sourceSha256": "0188a95f8e79154976fd8d3396fc60dbb8a73bbb2030ccce2880c65363f8343e",
+      "archive": "rendered-observer-proof.json.gz",
+      "archiveBytes": 6075,
+      "archiveSha256": "5775e995654361a659b07b1439a0dad8f1d9271714d64b46c07158b2b3fb3909",
+      "classification": "overall FAIL; observer PASS; owner FAIL retained unchanged"
+    }
+  ],
+  "missingFiles": [
+    {
+      "attempt": "rejected-initial",
+      "role": "observer",
+      "source": ".godot/440/442-current-rendered-observer-20261107/right-held-normal-o0-1/manifest.json",
+      "reason": "not produced by failed/interrupted process; no replacement fabricated"
+    },
+    {
+      "attempt": "rejected-initial",
+      "role": "owner",
+      "source": ".godot/440/442-current-rendered-observer-20261107/right-held-normal-o0-1-owner/manifest.json",
+      "reason": "not produced by failed/interrupted process; no replacement fabricated"
+    }
+  ],
+  "decoderVerification": {
+    "decodedFrames": 57,
+    "allFramePixelsMatch": true,
+    "allSourcePanelsMatch": true,
+    "durationsMatch": true,
+    "sheetMilestonesMatch": true,
+    "frames": [
+      {
+        "frame": 0,
+        "durationMs": 17,
+        "decodedRgbSha256": "2ffdff9db32695a3d6fbd34d73ab77c3ca2a050ae32e06d0d902535ebb067fe2"
+      },
+      {
+        "frame": 1,
+        "durationMs": 17,
+        "decodedRgbSha256": "7b987e1e2165566dc4423ca32f9438a1c077fd0f809b0a29a393c924110df388"
+      },
+      {
+        "frame": 2,
+        "durationMs": 16,
+        "decodedRgbSha256": "cb78826727fb4a1734094a98868052ba3577d2635dc45c50a29966fbb56a9116"
+      },
+      {
+        "frame": 3,
+        "durationMs": 17,
+        "decodedRgbSha256": "df9d5dfc651d4e0f61c6a5e24e0c5dc941b79dedbb7d15b40de8e93747008afb"
+      },
+      {
+        "frame": 4,
+        "durationMs": 17,
+        "decodedRgbSha256": "1e76985fd34d3c7f511e51c12dde335b8178409388396d794e28b00ca79380af"
+      },
+      {
+        "frame": 5,
+        "durationMs": 16,
+        "decodedRgbSha256": "add4daf837839f51ea1e5f584858e14400e960340ff0e9ed4ff9d8681fbaee02"
+      },
+      {
+        "frame": 6,
+        "durationMs": 17,
+        "decodedRgbSha256": "765b1654494ba1e029998970363daae569e7f1f9dffd731fe4c4b5a3e9d09c16"
+      },
+      {
+        "frame": 7,
+        "durationMs": 17,
+        "decodedRgbSha256": "7fac2ba95b3ad54445c2be2177cca09faa02cef3cca8a994ecf8514c941a5c4e"
+      },
+      {
+        "frame": 8,
+        "durationMs": 16,
+        "decodedRgbSha256": "498c7e5d8d59fe081a099d15cc41f69feea4d50fa71ff1d583169cbfd68a1da4"
+      },
+      {
+        "frame": 9,
+        "durationMs": 17,
+        "decodedRgbSha256": "45be76f0b67e209af6ba506ab2db20a11556e930e302880c712467c74576fffb"
+      },
+      {
+        "frame": 10,
+        "durationMs": 17,
+        "decodedRgbSha256": "814579cc499f469efb526f56294c7ca24057a98bdff24f3fd6109ef5c42abdbe"
+      },
+      {
+        "frame": 11,
+        "durationMs": 16,
+        "decodedRgbSha256": "68e7377eada8537e267de5d376b2591af914ba17dc2a9b6ee939d93526a76189"
+      },
+      {
+        "frame": 12,
+        "durationMs": 17,
+        "decodedRgbSha256": "0d43d127896b0e70fe3374b22d8d68f9bf4338251549886729b963ed63364bb2"
+      },
+      {
+        "frame": 13,
+        "durationMs": 17,
+        "decodedRgbSha256": "1ba8d951bb101c06c76c10350bf09ac04899c4cd3642c48dbe0a031d3f93a9d2"
+      },
+      {
+        "frame": 14,
+        "durationMs": 16,
+        "decodedRgbSha256": "f9272a6a93735f64e0292d0e49acd446c2717666b9735106a0576d88172134b7"
+      },
+      {
+        "frame": 15,
+        "durationMs": 17,
+        "decodedRgbSha256": "8b43c892aa6e10c2f92d01fa530953dd777bb4e94a5180029fe7e0c5d8f210d3"
+      },
+      {
+        "frame": 16,
+        "durationMs": 17,
+        "decodedRgbSha256": "503dede233c20821ab6dfba93903812f08d812fa768dae893d727d9bad1e554f"
+      },
+      {
+        "frame": 17,
+        "durationMs": 16,
+        "decodedRgbSha256": "6bab08e6bcd909b4bf390f50d707cbe5d7219e387e543457d668c91548ab95b0"
+      },
+      {
+        "frame": 18,
+        "durationMs": 17,
+        "decodedRgbSha256": "8bd0bc0372d083cddf3f8d96898c79bf727d2af1ae96159732252a800006516c"
+      },
+      {
+        "frame": 19,
+        "durationMs": 17,
+        "decodedRgbSha256": "891d841ca3812bba57869d5a9b3c389d8617865041b1ec07d54e4c443c196697"
+      },
+      {
+        "frame": 20,
+        "durationMs": 16,
+        "decodedRgbSha256": "866995f6d076ac8f0a76f5352c6069e9a694d8412de551c9007a65daa45bd321"
+      },
+      {
+        "frame": 21,
+        "durationMs": 17,
+        "decodedRgbSha256": "b222a13f822186f5bbba0c53b6aa9d21f2600c16ec0f10fda05acfb8a372578f"
+      },
+      {
+        "frame": 22,
+        "durationMs": 17,
+        "decodedRgbSha256": "5fafd02c3cd2b19af3873e933d6b9865afcad973a7ea825e67e1bc169c7bb5ec"
+      },
+      {
+        "frame": 23,
+        "durationMs": 16,
+        "decodedRgbSha256": "9db5ff99d5ee44b09ff3d25a50e59bd7de2f3fb2103164017841db557988fb01"
+      },
+      {
+        "frame": 24,
+        "durationMs": 17,
+        "decodedRgbSha256": "ad68750ab66f5b90787c81a2b3f85be70e9aac8f54ddaef506e814273d27eb77"
+      },
+      {
+        "frame": 25,
+        "durationMs": 17,
+        "decodedRgbSha256": "be031be306dd2c487a721ad7c2a9fdd676806b6b3eddc71bad3a363eb57e8860"
+      },
+      {
+        "frame": 26,
+        "durationMs": 16,
+        "decodedRgbSha256": "939c34606853de9911447d1bea3369eabf01b94ebd4de8376942a5946a8bb484"
+      },
+      {
+        "frame": 27,
+        "durationMs": 17,
+        "decodedRgbSha256": "f963da069b30a48e33126e67d5b7e2d8585c0fac8d92345ceccd9f980fd1d63d"
+      },
+      {
+        "frame": 28,
+        "durationMs": 17,
+        "decodedRgbSha256": "ea50fb4dbed6864757bf5bcf20b269a2c871187efdc8b62bfaad0461f1f309a8"
+      },
+      {
+        "frame": 29,
+        "durationMs": 16,
+        "decodedRgbSha256": "732b10da33f4d127a44810e66eb689806775c0ea8accab483825f14b4d6201ab"
+      },
+      {
+        "frame": 30,
+        "durationMs": 17,
+        "decodedRgbSha256": "99b7611591900ba241c617604e40f9e01a9aa669186e43411606a324ede88d0a"
+      },
+      {
+        "frame": 31,
+        "durationMs": 17,
+        "decodedRgbSha256": "24576b1cfc7b4dda96c065030cb1fd3df99cb67632a5c627365bb6a5d4bd9a6d"
+      },
+      {
+        "frame": 32,
+        "durationMs": 16,
+        "decodedRgbSha256": "f8e51bc3f594bc48c6b166fc61c0a1d71d0b9f48375a532f31f8e7f712e7462c"
+      },
+      {
+        "frame": 33,
+        "durationMs": 17,
+        "decodedRgbSha256": "a60ceb8715e2ebb164d0246693aa702389213a5afdda302fb17e5fda1ffd59e9"
+      },
+      {
+        "frame": 34,
+        "durationMs": 17,
+        "decodedRgbSha256": "436fc3852e2b7dc403e479b2f645d8b36528d2ea1185ac9c279ad5eeafaf36df"
+      },
+      {
+        "frame": 35,
+        "durationMs": 16,
+        "decodedRgbSha256": "cbd40b2eac8e3de9b80e3eaf4f69453f276e6915cde3515529995ab71c187383"
+      },
+      {
+        "frame": 36,
+        "durationMs": 17,
+        "decodedRgbSha256": "7d876f3e7ddb6acd26dde57bf4301114770adcbd07bb0c3471ef7b8338e6c9cb"
+      },
+      {
+        "frame": 37,
+        "durationMs": 17,
+        "decodedRgbSha256": "0998f051b792a6db39ad4e49f83e4ff4bee52eaf0eb68f8c3345debac8349eaa"
+      },
+      {
+        "frame": 38,
+        "durationMs": 16,
+        "decodedRgbSha256": "f53b6ec72284c2e71add55e9649fd204794edf03f8ed4d331a1615d7f97f9e5a"
+      },
+      {
+        "frame": 39,
+        "durationMs": 17,
+        "decodedRgbSha256": "74d798fc8db3d509d235abb2b168556ee7a47db356fc5d123173ce057c37e5ed"
+      },
+      {
+        "frame": 40,
+        "durationMs": 17,
+        "decodedRgbSha256": "931f95642b2e8aae45ee06ae4a42069a2345e2a414feff5836b4a7196da6377d"
+      },
+      {
+        "frame": 41,
+        "durationMs": 16,
+        "decodedRgbSha256": "bb043c10c74b2d8a628410190c3f4b2e49d8121de5514ce1cda161156c95f37c"
+      },
+      {
+        "frame": 42,
+        "durationMs": 17,
+        "decodedRgbSha256": "999169a56ccabf62cfe50ab221b13edf2c9f4947a07dec5cb5e388a24eb97255"
+      },
+      {
+        "frame": 43,
+        "durationMs": 17,
+        "decodedRgbSha256": "01c97c3833acb72905a94e1d3402fdd2a77b4fa5f69469df86cc45cfe1aee41e"
+      },
+      {
+        "frame": 44,
+        "durationMs": 16,
+        "decodedRgbSha256": "2b477ebe46e04cc14eccdd31c256e69bfa34942345371105838ec5bc2133d5b7"
+      },
+      {
+        "frame": 45,
+        "durationMs": 17,
+        "decodedRgbSha256": "43b15d10ee36c36f8d53c7ca20593ea26e08613e23c43cbb660940faeaed37bd"
+      },
+      {
+        "frame": 46,
+        "durationMs": 17,
+        "decodedRgbSha256": "ae04743e4b79e95ea8452d9b378e40720028c6bbb4a476188384c120e1030772"
+      },
+      {
+        "frame": 47,
+        "durationMs": 16,
+        "decodedRgbSha256": "6878275808cb7992911c19f8e48b03d897fd69a55d23246327411bebc9406a2e"
+      },
+      {
+        "frame": 48,
+        "durationMs": 17,
+        "decodedRgbSha256": "40bd13ad192124beeeedb4fbfe2cf5704bbd78487e7366b5245365f5bbae7ce0"
+      },
+      {
+        "frame": 49,
+        "durationMs": 17,
+        "decodedRgbSha256": "8897490d3435bf5134a6dfe03add0b0c73770eb5253e6c33a75fa9a94e4b393b"
+      },
+      {
+        "frame": 50,
+        "durationMs": 16,
+        "decodedRgbSha256": "369c9360f943fcb2c176fd14e528335ef5a3b5b5b3a7dddff0e6c10331c29cf8"
+      },
+      {
+        "frame": 51,
+        "durationMs": 17,
+        "decodedRgbSha256": "52b1a57d294b008ab53def1f979b75e80c07f45289c8228ef38224c6be211620"
+      },
+      {
+        "frame": 52,
+        "durationMs": 17,
+        "decodedRgbSha256": "a269b9cf5084254848b3aa18b7f33363dd8bd20986910f29dc8ac38209f5fd60"
+      },
+      {
+        "frame": 53,
+        "durationMs": 16,
+        "decodedRgbSha256": "4df2cae274b3e90c488ee04e3bcbbf9178e921bd39f66641bd5d41f10e1b3efb"
+      },
+      {
+        "frame": 54,
+        "durationMs": 17,
+        "decodedRgbSha256": "ccf9532f1bd8f2ade280f5845c77e666c4bb23c7b8f0af710c5a903627099f83"
+      },
+      {
+        "frame": 55,
+        "durationMs": 17,
+        "decodedRgbSha256": "29f4323b394f99fe794842aa733fc99aa5be28513b0ad19a6b93f893734799af"
+      },
+      {
+        "frame": 56,
+        "durationMs": 16,
+        "decodedRgbSha256": "600c8068e727fea8982e9430da55db89bf1f7844889c677ac8de899ff557d63f"
+      }
+    ]
+  },
+  "helpers": [
+    {
+      "source": "tools/package_jumpshot_transition_evidence.py",
+      "sha256": "0a2a6f5bde5d82cad83e2f0c56571ea3ed178ab426e0f17ff88c6a0409163301"
+    },
+    {
+      "source": "tools/analyze_shot_attachment.py",
+      "sha256": "6d499d0207afbde0e8aec362707de6989f064e7f6f8e310294961a498003477f"
+    }
+  ],
+  "feelVerdict": "unaccepted; appearance/feel remain #173; no network latency/throughput/performance acceptance",
+  "independence": "mechanical packaging only; separate from earlier independent production correctness review"
+}

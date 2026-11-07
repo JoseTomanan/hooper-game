@@ -1,0 +1,16 @@
+# #442 rendered ENet observer evidence - 2026-11-07
+
+Only the **observer** episode is accepted here. This is an **after-only** Right/Held/normal/offset-0 recording, not a matched before/after comparison or the complete role matrix. The source was captured at commit `e202f03a212c3f5bc84510b424e203fbf4c4c9a1`.
+
+- [Normal-speed observer film](observer-right-held-normal-o0-1-after-only.webp): 57 contiguous selected server source ticks, with eight neutral ticks on each side, at 60 Hz (17/17/16 ms; 950 ms total).
+- [Six milestones](observer-right-held-normal-o0-1-six-milestones.png): Startup/1, Startup/8, Startup/17, Active/0 release and Active/1 and Active/2 first-flight poses. The film retains the full follow-through, Recovery and neutral return.
+- [Unchanged analyzer report](rendered-observer-proof.json.gz): **overall FAIL, observer PASS, rendered owner FAIL**. Owner failures include presentation resets spanning the attachment/transition window and the accompanying contact/release failures. **No rendered owner frames are selected as passing evidence.**
+- [Frame, source-clock, camera and archive index](frame-index.json); [all original rendered PNG hashes and camera/clock references](raw-image-index.json).
+
+The existing `read_capture` selector validates every adjacent source tick and both neutral seams; the film uses one existing evaluated observation per source tick. Fifteen duplicate holds have unchanged final poses; no changed duplicate edge was accepted. Whole 960x540 source images are resized to 800x450, with labels outside the source pixels. No body/ball/court crop, pose edit or temporal interpolation is used. Original PNGs remain local and unchanged; their hashes are preserved as in the existing rendered evidence packages. Decoder verification checks all 57 output frames, source panels, durations and six sheet panels against the indexed pixel hashes.
+
+Capture used an **80 ms wall-clock producer delay per simulation tick** and a **16 ms observer delay**. The film retimes simulation source ticks to 60 Hz. This deliberate pacing is not a latency, throughput or real-time performance result. Owner physics clocks remain separate from authority events; the observer uses the selected shared server tick. Authority release is independently recorded at server tick 179; it is not the observer's local physics-frame number.
+
+`raw/resume/` preserves the original manifests and traces for observer, rendered owner and authority, plus stdout/Godot logs. The owner remains rejected diagnostic evidence. `raw/rejected-initial/` preserves the earlier failed attempt: the server manifest records `result=failed`, `failure=timeout`; observer/owner traces are empty and their manifests were not produced before interruption. Available logs/traces are archived unchanged. Missing manifests are explicitly listed in the index, and no replacement metadata or passing frames were fabricated.
+
+Every archive uses deterministic gzip (empty embedded filename and `mtime=0`), with separate original-byte and gzip SHA256 hashes. Decompressed archive bytes and deterministic regeneration were verified. Appearance, grip quality and feel remain unaccepted for #173. Mechanical packaging does not change the prior independent code-review verdict and is not independent acceptance of this artifact.

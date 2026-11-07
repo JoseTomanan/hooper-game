@@ -1,0 +1,11 @@
+# #442 final left-hand late-fake return comparison - 2026-11-07
+
+[Normal-speed matched comparison](local-gameplay-left-held-late-o0-1-normal.webp) and [six milestones](local-gameplay-left-held-late-o0-1-contact.png) compare final `6dd8e4de521cdd3cf0536648ffbb52c665ee8c42` against the frozen actual pickup `c5865e4`. This is one local left-hand/Held/late-fake/offset-0 case after the C2 withdrawing-right-hand repair.
+
+The unchanged existing `validate_pair` and `package_pair` functions validate matching metadata, independently observed Begin clocks and all contiguous source ticks, then package the original full frames. Both timelines contain 34 selected frames with eight neutral ticks on either side and no duplicate holds or changed duplicate edges. Playback uses the existing 60 Hz 17/17/16 ms durations. Complete 960x540 sources appear as 480x270 panels, with labels outside the source pixels; no cropping, pose edits or temporal interpolation are used. The six milestones retain the last incoming neutral pose, last Startup/11, Recovery/13, Recovery/16, Recovery/19 and neutral return.
+
+[Frame/hash/clock index](frame-index.json) retains every selected original PNG hash, phase/frame, camera, playback position, independent Begin clock and source tick. All 34 decoded output frames and durations, 68 original PNG hashes and six sheet panels were verified against the existing drawing function. Original before/after manifests and traces are archived byte-for-byte with separate source/archive SHA256 hashes. Source PNGs stay local and unchanged as in the existing film packages.
+
+The [unchanged objective analyzer report](c2-rendered-fake-proof.json.gz) passes this one local case with no failures; its exact source and gzip hashes are indexed. All gzip archives use zero mtime and an empty embedded filename, and their decompressed bytes match the originals.
+
+The normal-shot films in the existing 30-comparison package remain applicable: normal clips/paths are unchanged. Older fake comparison films precede this C2 withdrawal repair and remain historical evidence, not the final fake-return comparison. This package makes no overall CI-pass claim. Appearance, grip quality and feel remain unaccepted for #173.
