@@ -62,7 +62,12 @@ public partial class ShotHandPose : SkeletonModifier3D
             if (_previousPhase == MovePhase.Startup)
             { _fakeRight = _rightWeight; _fakeLeft = _leftWeight; }
             float returnWeight = Smooth((display.FrameInPhase - 13) / 6f);
-            right = Mathf.Lerp(_fakeRight, display.Hand == HandSide.Right ? 1f : 0f, returnWeight);
+            // As the retained left hand takes the ball, relinquish the right
+            // shooting-hand binding weight with zero terminal acceleration. Squaring
+            // the remaining weight removes its tail correction before unbinding.
+            float remaining = 1f - returnWeight;
+            right = display.Hand == HandSide.Left ? _fakeRight * remaining * remaining
+                : Mathf.Lerp(_fakeRight, 1f, returnWeight);
             left = Mathf.Lerp(_fakeLeft, display.Hand == HandSide.Left ? 1f : 0f, returnWeight);
         }
         _previousPhase = display.Phase; _rightWeight = right; _leftWeight = left;
