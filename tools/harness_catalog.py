@@ -453,6 +453,8 @@ CommittedClipHookupAudit.tscn|
 """
 _ADDITIONAL_SINGLE_ROWS += "PivotPlantTest.tscn|movement-matrix\n"
 _ADDITIONAL_SINGLE_ROWS += "NetSprintTest.tscn|moving-turn\n"
+_ADDITIONAL_SINGLE_ROWS += "BlockTurnoverTest.tscn|corrected-origin-reach-hit\n"
+_ADDITIONAL_SINGLE_ROWS += "BlockTurnoverTest.tscn|corrected-origin-reach-miss\n"
 
 _ADDITIONAL_SINGLE_ROWS += "".join(
     f"JumpShotHeadingTest.tscn|matrix-{angle}-{entry}-{hand}\n"
@@ -645,6 +647,8 @@ _CONTROL_COMPONENTS = (
         "block-turnover-test-out-of-range",
         "block-turnover-test-control-make",
         "block-turnover-test-control-make-default-geometry",
+        "block-turnover-test-corrected-origin-reach-hit",
+        "block-turnover-test-corrected-origin-reach-miss",
     ),
     ("blow-by-window-test-suppressed", "blow-by-window-test-control"),
     ("pivot-anim-test-pivot-enters-exits", "pivot-anim-test-control-locomotion"),
