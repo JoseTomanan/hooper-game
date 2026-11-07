@@ -33,6 +33,9 @@ public partial class ReboundPresentationCapture : Node
     private int _lastConfirmedReceipt;
     private bool _resetNeutral, _resetPerformed, _actionAccepted, _feintRequested, _feintAccepted, _suppressGrab, _actionSawActive;
     private int _seedOrdinal, _actionSeedOrdinal, _actionRequests, _acceptedActions, _feintRequests, _acceptedFeints;
+    private int _authoritativeActionSeedOrdinal, _authoritativeAcceptedFeints;
+    private bool _authoritativeSawStartup, _authoritativeSawActive, _authoritativeFeintAccepted;
+    private MovePhase _authoritativePreviousPhase;
     private int _actionTick = -1, _shootReleaseTick = -1, _feintReleaseTick = -1, _actionReceipt;
     private string _controlFailure = "";
     private ulong _posePhysics;
@@ -283,6 +286,35 @@ public partial class ReboundPresentationCapture : Node
 
     private void TickActionControl(PlayerController subject)
     {
+        // A predicted Recovery may be a server correction after a real release.
+        // Prove each fake on authority by observing its actual Startup -> Recovery edge.
+        if (!IsClient && _action == "feint" && _seedOrdinal > 0)
+        {
+            if (_authoritativeActionSeedOrdinal != _seedOrdinal)
+            {
+                _authoritativeActionSeedOrdinal = _seedOrdinal;
+                _authoritativeSawStartup = _authoritativeSawActive = _authoritativeFeintAccepted = false;
+                _authoritativePreviousPhase = MovePhase.Inactive;
+            }
+            bool authoritativeJumpShot = subject.CurrentMoveIdForHarness == "jumpshot";
+            var authoritativePhase = authoritativeJumpShot ? subject.PhaseForHarness : MovePhase.Inactive;
+            if (!_authoritativeSawStartup && authoritativePhase == MovePhase.Startup)
+            {
+                _authoritativeSawStartup = true;
+                Event("authoritative-action-startup", new { ordinal = _authoritativeActionSeedOrdinal,
+                    frame = subject.FrameInPhaseForHarness });
+            }
+            if (authoritativePhase == MovePhase.Active) _authoritativeSawActive = true;
+            if (!_authoritativeFeintAccepted && _authoritativeSawStartup && !_authoritativeSawActive &&
+                _authoritativePreviousPhase == MovePhase.Startup && authoritativePhase == MovePhase.Recovery)
+            {
+                _authoritativeFeintAccepted = true;
+                _authoritativeAcceptedFeints++;
+                Event("authoritative-accepted-feint", new { ordinal = _authoritativeActionSeedOrdinal,
+                    count = _authoritativeAcceptedFeints, frame = subject.FrameInPhaseForHarness });
+            }
+            _authoritativePreviousPhase = authoritativePhase;
+        }
         if (_action == "none" || !subject.ContinuityIsLocalPlayer) return;
         if (_tick == _shootReleaseTick) Input.ActionRelease("ball_shoot");
         if (_tick == _feintReleaseTick) Input.ActionRelease("move_feint");
@@ -296,8 +328,11 @@ public partial class ReboundPresentationCapture : Node
             Event("accepted-action-startup", new { ordinal = _actionSeedOrdinal, count = _acceptedActions,
                 frame = subject.FrameInPhaseForHarness, actionInputTick = _actionTick });
         }
+        // Use the interior of the legal [3,12) window: reliable Begin/Feint requests
+        // preserve order, not their spacing in server physics ticks.
+        // https://docs.godotengine.org/en/4.7/tutorials/networking/high_level_multiplayer.html#remote-procedure-calls
         if (_action == "feint" && _actionAccepted && !_feintRequested && jumpShot &&
-            subject.PhaseForHarness == MovePhase.Startup && subject.FrameInPhaseForHarness >= 3)
+            subject.PhaseForHarness == MovePhase.Startup && subject.FrameInPhaseForHarness >= 7)
         {
             Input.ActionPress("move_feint");
             _feintReleaseTick = _tick + 1;
@@ -430,6 +465,8 @@ public partial class ReboundPresentationCapture : Node
     {
         if (_finished) return;
         if (failure.Length == 0 && _controlFailure.Length != 0) failure = _controlFailure;
+        if (failure.Length == 0 && _action == "feint" && !IsClient && _authoritativeAcceptedFeints != 2)
+            failure = "control did not witness two authoritative accepted feints";
         bool owningActionRole = !IsClient && _actor == "host" || IsClient && _actor == "client";
         if (failure.Length == 0 && _action != "none" && owningActionRole)
         {
@@ -455,6 +492,7 @@ public partial class ReboundPresentationCapture : Node
             seedDelay = _seedDelay,
             action = _action, actionRequests = _actionRequests, acceptedActions = _acceptedActions,
             feintRequests = _feintRequests, acceptedFeints = _acceptedFeints,
+            authoritativeAcceptedFeints = _authoritativeAcceptedFeints,
             successfulShotReleases = _ball.SuccessfulShotReleasesForHarness, controlFailure = _controlFailure,
             resetNeutral = _resetNeutral, resetPerformed = _resetPerformed,
             paced = _paced, pacingMeaning = _paced ? "80ms producer wall-clock delay; diagnostic fixed-step coverage only" : "unpaced",

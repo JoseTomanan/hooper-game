@@ -164,3 +164,41 @@ and [Blender PoseBone matrices](https://docs.blender.org/api/current/bpy.types.P
 Blender's web reference was unavailable during this run; the installed 5.2
 RNA/API documentation verified armature-space matrices, immediate frame
 evaluation, key insertion and quaternion interpolation directly.
+
+## CI follow-up 2026-11-07
+
+[Run 42222242696](https://github.com/JoseTomanan/hooper-game/actions/runs/42222242696)
+failed only `net-rebound-presentation` on shard 3; `integration-test` propagated
+that failure. The retained `feint-owner` manifests report two predicted owning
+actions and two predicted feints, but one authoritative shot release. The first
+server shot traversed Startup, Active and Recovery; the second went directly
+from Startup to Recovery. Five unchanged local owner captures passed, confirming
+that a single local green run does not exclude this timing-sensitive failure.
+
+The rebound interruption fixture requested its fake at client Startup frame 3,
+the lower edge of the server's independent `[3,12)` legal window. Begin and
+Feint use reliable RPCs: delivery preserves order, without preserving their
+spacing in server physics ticks. The trace is consistent with an early server
+rejection; it does not record the exact frame at RPC receipt. This fixture now
+requests frame 7, inside the window, as the existing shot-network fixture does.
+The production move, window, transport and release rules are unchanged.
+
+The fixture also counts each authoritative Startup-to-Recovery transition,
+requiring a witnessed Startup, no intervening Active and at most one count per
+seed ordinal. Both authority feints must be observed in addition to the existing
+predicted-owner checks and zero-release assertion. Manifests retain those
+authority events and their count. This separates predicted acceptance from
+server acceptance and keeps a late or rejected fake red.
+
+Fresh local and ENet owner controls both recorded two authoritative feints
+and zero releases. Temporarily suppressing only the second fixture feint made
+the local capture exit 1 with `control did not witness two authoritative
+accepted feints`, count 1 and one release. The mutation was removed. Ordinary
+and harness-enabled builds passed, as did all 1,322 unit tests (five intentional
+skips) and 130 repository tests (one platform skip). Repository subprocess/temp
+tests required an unsandboxed Windows run with Git Bash on PATH.
+
+Source: [Godot 4.7 RPC transfer modes](https://docs.godotengine.org/en/4.7/tutorials/networking/high_level_multiplayer.html#remote-procedure-calls).
+The interior frame is a fixture timing choice, not an engine guarantee or a
+change to the legal gameplay window. No editor steps or renewed visual sign-off
+are required by this CI repair.
