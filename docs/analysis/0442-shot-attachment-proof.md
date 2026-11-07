@@ -71,6 +71,12 @@ The final 36-case local headless matrix passes. These are state/final-pose measu
 
 Settled wrist-to-center distance remains approximately **0.176180 m**. Zero wrist distance would bury the sphere in the wrist and is not the contact criterion. The sub-micrometre residuals describe the chosen skin vertex and floating-point calculation; they do not establish a complete finger/grip fit.
 
+## Fresh rendered observer
+
+The [2026-11-07 network package](evidence/0442/network-rendered-20261107/README.md) records one fresh Right/Held/normal/offset-0 ENet observer episode at `e202f03`. All 57 adjacent selected server ticks pass contact, release and transition analysis, including eight neutral ticks on both sides. The after-only film and six-milestone sheet retain the complete body/ball; the index preserves original image hashes, camera transforms, source clocks and raw traces for all three processes.
+
+The same batch's rendered owner crosses a presentation reset and fails its attachment/transition detector. The unchanged combined report remains **failed**; only its separate observer case is accepted. No selected owner frames are used as passing evidence. Headless owner proof is a separate full-matrix gate. The interrupted earlier capture remains a failed timeout diagnostic with missing manifests explicitly inventoried. Both recordings use the producer pacing described above and establish no performance or feel result.
+
 ## Lifecycle and mutations
 
 `ShotGatherLifecycleTest` connects real ENet peers, verifies actual owner/client roles, then injects explicitly synthetic packet orderings through production snapshot/reconciliation callbacks. **250 assertions pass.** A real sphere mesh is resolved through production `_Ready`; its initial offset proves that the rendered-position accessor reads the mesh rather than the root. The fixture checks Startup, first-Active and fake-Recovery stale Dribbling re-cradles, released-origin retention through stale Held into Recovery despite root movement, fake-to-neutral mesh handoff with repeated stale Held packets and an independently displaced holder mesh, loss to Loose/another holder without timeline cancellation, matching versus old-token invalidation, no resurrection from late valid state, same-holder award/fresh dribble, matching rejection, disconnect-reset callbacks and same-envelope shooter identity. This fixture does not claim to reproduce network latency or an actual socket disconnect; the reset callback is invoked explicitly.

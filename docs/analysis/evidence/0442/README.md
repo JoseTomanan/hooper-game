@@ -7,6 +7,7 @@ The production ball now gathers from its actual incoming center and launches fro
 - [Exact calibration JSON bytes](rendered-complete/calibration.json.gz) preserve its capture-time hash across Git's text line-ending normalization; the decompressed JSON is semantically identical to the repository asset.
 - [Raw archive index](raw-index.json): original-byte gzip traces/manifests, geometry, calibration reference, mutations and rejected attempts. Every entry records original and archive SHA256 hashes. `null` metadata is unknown, never inferred.
 - [Independent review](review.md)
+- [Fresh rendered ENet observer](network-rendered-20261107/README.md): accepted after-only observer film with coherent server ticks; rendered-owner and interrupted attempts remain rejected diagnostics.
 
 The objective matrix covers 36 local cases, 36 owning-client cases and 36 separate-observer cases: both entering hands, Held/stationary-dribble/moving-dribble entries, normal/early/late episodes and continuous offsets 0/7. Headless records establish state and final-pose measurements; they do not establish rendered appearance. Network producers are deliberately paced; projected 60 Hz film playback is not a performance or latency measurement.
 
