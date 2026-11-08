@@ -33,6 +33,7 @@ public partial class BallController
     }
     private void ResetRemotePresentation()
     {
+        ResetShotGathers();
         _presentationBuffer.Reset(); PresentationEpoch++; RenderedPresentationTick = -1; LatestPresentationReceivedTick = -1;
     }
     public WorldPresentationFrame? GetPresentationFrame()
@@ -60,7 +61,7 @@ public partial class BallController
         }
         if (players.Count is < 1 or > 2) return;
         var ball = new GArray { GlobalPosition, (int)State, StateMachine.HolderPeerId, IsCleared,
-            _dribble.Phase, _sweepActive, _sweepTicks, _sweepDurationTicks };
+            _dribble.Phase, _sweepActive, _sweepTicks, _sweepDurationTicks, ShotAttached, _lastShooterPeerId };
         long tick = unchecked((long)Engine.GetPhysicsFrames());
         PresentationEnvelopeBytes = GD.VarToBytes(new GArray { tick, players, ball }).Length;
         // Separate channel: reliable visual head-of-line holds cannot block channel-zero gameplay RPCs.
@@ -73,7 +74,7 @@ public partial class BallController
     private void ReceivePresentationFrame(long tick, GArray players, GArray ball)
     {
         if (IsServer || Multiplayer.GetRemoteSenderId() != 1 || tick < 0 || players.Count is < 1 or > 2
-            || ball.Count != 8) return;
+            || ball.Count != 10) return;
         var decoded = new List<PlayerPresentationFrame>(2);
         foreach (Variant value in players)
         {
@@ -96,13 +97,13 @@ public partial class BallController
                 p[15].AsBool(), animation, time));
         }
         if (!Types(ball, new[] { Variant.Type.Vector3, Variant.Type.Int, Variant.Type.Int, Variant.Type.Bool,
-            Variant.Type.Float, Variant.Type.Bool, Variant.Type.Int, Variant.Type.Int })) return;
+            Variant.Type.Float, Variant.Type.Bool, Variant.Type.Int, Variant.Type.Int, Variant.Type.Bool, Variant.Type.Int })) return;
         Vector3 ballPosition = ball[0].AsVector3(); int state = ball[1].AsInt32(); int holder = ball[2].AsInt32();
         float dribble = ball[4].AsSingle(); int sweepTicks = ball[6].AsInt32(); int duration = ball[7].AsInt32();
         if (!ballPosition.IsFinite() || !Enum.IsDefined(typeof(BallState), state) || holder < 0
             || !float.IsFinite(dribble) || dribble < 0 || sweepTicks < 0 || duration < 0) return;
         var frame = new WorldPresentationFrame(tick, decoded.ToArray(), new BallPresentationFrame(ballPosition,
-            (BallState)state, holder, ball[3].AsBool(), dribble, ball[5].AsBool(), sweepTicks, duration));
+            (BallState)state, holder, ball[3].AsBool(), dribble, ball[5].AsBool(), sweepTicks, duration, ball[8].AsBool(), ball[9].AsInt32()));
         LatestPresentationReceivedTick = Math.Max(LatestPresentationReceivedTick, tick);
         bool defer = false;
         DeferRemotePresentationForHarness(frame, ref defer);

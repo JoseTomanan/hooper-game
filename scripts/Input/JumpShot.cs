@@ -45,6 +45,11 @@ public sealed class JumpShot : CommittedMove
     public float TargetHeading { get; internal set; }
     public int BeginToken { get; internal set; }
 
+    // Simulation anchors belong to this Begin instance, so replacing/rejecting
+    // the move cannot leave a private ball socket alive. They are confirmed by
+    // the same token as heading; sampling is closed-form, never accumulated.
+    public Hooper.Ball.ShotGatherState Gather { get; internal set; }
+
     /// <summary>Default jump-shot frame data. Tunable per instance if needed.</summary>
     public static readonly MoveFrameData DefaultFrameData =
         new(startupFrames: 18, activeFrames: 4, recoveryFrames: 20,

@@ -36,7 +36,7 @@ public partial class PlayerController
     /// would otherwise trigger. Exposed here because headless has no hardware
     /// to press that modifier with.
     /// </summary>
-    internal bool FeintForHarness() => _machine.Feint();
+    internal bool FeintForHarness() => FeintWithGather();
 
     /// <summary>
     /// Test-only (#193 code-review fix): attempts a Crossover through the SAME

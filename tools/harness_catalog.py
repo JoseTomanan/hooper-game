@@ -453,6 +453,8 @@ CommittedClipHookupAudit.tscn|
 """
 _ADDITIONAL_SINGLE_ROWS += "PivotPlantTest.tscn|movement-matrix\n"
 _ADDITIONAL_SINGLE_ROWS += "NetSprintTest.tscn|moving-turn\n"
+_ADDITIONAL_SINGLE_ROWS += "BlockTurnoverTest.tscn|corrected-origin-reach-hit\n"
+_ADDITIONAL_SINGLE_ROWS += "BlockTurnoverTest.tscn|corrected-origin-reach-miss\n"
 
 _ADDITIONAL_SINGLE_ROWS += "".join(
     f"JumpShotHeadingTest.tscn|matrix-{angle}-{entry}-{hand}\n"
@@ -472,6 +474,10 @@ _ADDITIONAL_MULTIPROCESS_ROWS: tuple[tuple[str, str, str, tuple[str, ...]], ...]
      (".godot/418/429-proof-*/**/*",)),
     ("net-jumpshot-form", "tests/integration/run-net-jumpshot-form.sh godot", "JumpshotFormCapture.tscn", (".godot/418/catalog-net-*/**/*",)),
     ("jumpshot-transitions", "tests/integration/run-jumpshot-transitions.sh godot", "JumpshotFormCapture.tscn", (".godot/440/catalog-*/**/*",)),
+    ("shot-attachment-local", "tests/integration/run-shot-attachment.sh godot --topology local", "JumpshotFormCapture.tscn", (".godot/440/442-catalog-*/**/*",)),
+    ("shot-attachment-owner-o0", "tests/integration/run-shot-attachment.sh godot --topology owner --offsets 0", "JumpshotFormCapture.tscn", (".godot/440/442-catalog-*/**/*",)),
+    ("shot-attachment-owner-o7", "tests/integration/run-shot-attachment.sh godot --topology owner --offsets 7", "JumpshotFormCapture.tscn", (".godot/440/442-catalog-*/**/*",)),
+    ("shot-gather-lifecycle", "tests/integration/run-shot-gather-lifecycle.sh godot", "ShotGatherLifecycleTest.tscn", (".godot/harness-logs/shot-gather-lifecycle-*.log",)),
     ("net-rebound-presentation", "tests/integration/run-net-rebound-presentation.sh godot", "ReboundPresentationCapture.tscn", (".godot/427/catalog-*/**/*",)),
     ("net-moving-crossover-host", "tests/integration/run-net-moving-crossover.sh godot host", "MovingCrossoverLateralTest.tscn", (".godot/harness-logs/net-moving-crossover-host-*.log",)),
     ("net-moving-crossover-client", "tests/integration/run-net-moving-crossover.sh godot client", "MovingCrossoverLateralTest.tscn", (".godot/harness-logs/net-moving-crossover-client-*.log",)),
@@ -558,7 +564,7 @@ def _multiprocess_cases(rows: Iterable[tuple[str, str, str, tuple[str, ...]]]) -
             scenes=(SceneMetadata(f"res://tests/integration/{scene_name}"),),
             argv=tuple(shlex.split(command)),
             tags=tuple(tags),
-            timeout_seconds=600.0 if case_id in ("moving-turn-poses", "jumpshot-transitions") else 480.0 if case_id == "pivot-continuity" else 240.0,
+            timeout_seconds=600.0 if case_id in ("moving-turn-poses", "jumpshot-transitions") or case_id.startswith("shot-attachment-") else 480.0 if case_id == "pivot-continuity" else 240.0,
             log_policy=LogPolicy("adapter-owned", ";".join(artifacts)),
             artifact_globs=artifacts,
         )
@@ -641,6 +647,8 @@ _CONTROL_COMPONENTS = (
         "block-turnover-test-out-of-range",
         "block-turnover-test-control-make",
         "block-turnover-test-control-make-default-geometry",
+        "block-turnover-test-corrected-origin-reach-hit",
+        "block-turnover-test-corrected-origin-reach-miss",
     ),
     ("blow-by-window-test-suppressed", "blow-by-window-test-control"),
     ("pivot-anim-test-pivot-enters-exits", "pivot-anim-test-control-locomotion"),
@@ -770,6 +778,11 @@ _MULTIPROCESS_CASE_SECONDS = {
     # #440: paced 36-case owner baseline measured 371.7s; reserve the
     # remaining local/control captures and analysis in this shard weight.
     "jumpshot-transitions": 400.0,
+    # #442 retains all 108 role reports, splitting sequential owner captures
+    # by offset so each adapter stays inside its 600-second deadline.
+    "shot-attachment-local": 40.0,
+    "shot-attachment-owner-o0": 400.0,
+    "shot-attachment-owner-o7": 400.0,
     "net-handshake": 6.0,
     "net-state-sync": 7.0,
     "net-node-replication": 6.0,
