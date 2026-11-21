@@ -110,12 +110,14 @@ public partial class OffensiveFollowUpTest : Node
             return;
         }
 
-        if (_starts.Count == 1 && move != null)
+        if (!_terminal && _starts.Count == 1 && move != null)
         {
-            if (_scenario != "boundary" || phase != MovePhase.Recovery) Input.ActionRelease("move_drive");
-            Input.ActionRelease("move_jab");
-            if (phase == MovePhase.Startup && frame == 1 && !UsesShortRecovery && _scenario != "context")
-                Aim(false);
+            if (phase == MovePhase.Startup && frame == 1)
+            {
+                Input.ActionRelease("move_drive");
+                Input.ActionRelease("move_jab");
+                if (!UsesShortRecovery && _scenario != "context") Aim(false);
+            }
 
             if (_scenario == "outside" && (phase, frame) is (MovePhase.Startup, 2) or (MovePhase.Active, 1))
                 Input.ActionPress("ball_shoot");
@@ -215,13 +217,16 @@ public partial class OffensiveFollowUpTest : Node
         if (_scenario is "loss-regain" or "terminal")
         {
             if (remaining == 7) Input.ActionPress("ball_shoot");
-            if (remaining == 6) Input.ActionRelease("ball_shoot");
-            if (remaining == 5) Input.ActionPress("move_jab");
+            if (remaining == 5)
+            {
+                Input.ActionRelease("ball_shoot");
+                Input.ActionPress("move_jab");
+            }
             if (remaining != 1) return;
 
             if (_player.PendingOffensiveInputsForHarness != 2)
             {
-                Finish(false, "fixture did not fill both slots before the final Recovery tick");
+                Finish(false, $"fixture had {_player.PendingOffensiveInputsForHarness} pending before the final Recovery tick");
                 return;
             }
 
