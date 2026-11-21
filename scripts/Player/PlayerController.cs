@@ -4408,6 +4408,25 @@ public partial class PlayerController : CharacterBody3D
 		Heading = step.NewYaw;
 		_pivot  = step.Pivot;
 
+		// Input is world-space on the XZ plane, with -Z forward.
+		Vector3 neutralWish = new Vector3(inputDir.X, 0f, inputDir.Y);
+		if (translationLocked)
+		{
+			neutralWish = Vector3.Zero;
+			if (_ball is { } ball)
+			{
+				// A voided OOB shot can leave a spent hold with nobody to receive
+				// the turnover. Only intent toward the court on a violated axis
+				// can move that holder. Replay uses the same geometry from its
+				// corrected world position and the buffered possession lock.
+				// https://docs.godotengine.org/en/4.7/classes/class_node3d.html#class-node3d-property-global-position
+				Vector3 position = GlobalPosition;
+				Vector3 inward = CourtBounds.Clamp(position, ball.CourtMin, ball.CourtMax) - position;
+				neutralWish = new Vector3(inputDir.X * inward.X > 0f ? inputDir.X : 0f, 0f,
+					inputDir.Y * inward.Z > 0f ? inputDir.Y : 0f);
+			}
+		}
+
 		if (stance && !_effectiveStance)
 		{
 			// Stance still waits out an owed ordinary latch, including its completion
@@ -4416,22 +4435,17 @@ public partial class PlayerController : CharacterBody3D
 		}
 		else if (step.IsPivotingInPlace)
 		{
-			Vector3 wish = translationLocked ? Vector3.Zero : new Vector3(inputDir.X, 0f, inputDir.Y);
 			float remaining = Mathf.AngleDifference(Heading, _pivot.LatchedYaw);
-			Velocity = MovementMath.ComputeTurnVelocity(Velocity, wish, delta,
+			Velocity = MovementMath.ComputeTurnVelocity(Velocity, neutralWish, delta,
 				protect ? ProtectSpeed : sprint ? SprintSpeed : MoveSpeed, Accel, Decel, remaining);
 		}
 		else
 		{
-			// Map 2D intent onto the ground plane. -Z is "forward" in Godot.
-			// World-space, not camera-relative — so the server can replay it
-			// without knowing each client's camera orientation (ADR-0002).
-			Vector3 wishDir = translationLocked ? Vector3.Zero : new Vector3(inputDir.X, 0.0f, inputDir.Y);
 			// The Accel/Decel asymmetry ("change of pace", ADR-0003) lives in
 			// MovementMath now (issue #37) so it's unit-testable without a
 			// running Godot instance — this call is behavior-identical to the
 			// inline ComputeVelocity it replaced.
-			Velocity = MovementMath.ComputeVelocity(Velocity, wishDir, delta,
+			Velocity = MovementMath.ComputeVelocity(Velocity, neutralWish, delta,
 				_effectiveStance ? StanceSpeed : protect ? ProtectSpeed : sprint ? SprintSpeed : MoveSpeed,
 				_effectiveStance ? StanceAccel : Accel, _effectiveStance ? StanceDecel : Decel);
 		}

@@ -630,3 +630,16 @@ ball requiring planted footwork. Rejected: a StepBack-only latch, which would
 need separate possession-reset/reconciliation machinery for the same gathered
 state. Rejected: globally freezing input or committed movement at gather, which
 would remove pivoting or cancel StepBack's own separation. Feel stays #173.
+
+### Clarification 2026-11-21 — Court re-entry with a spent hold (#445)
+
+When an out-of-bounds holder retains a spent hold because nobody can receive
+the turnover, neutral movement may approach the court along each axis where
+the holder is outside the line. This lets the holder return after a voided
+shot and its full committed recovery. The existing translation restriction
+applies again at the line, with ordinary deceleration. The dribble remains spent.
+
+Authority, prediction, and replay apply the same court rectangle to the body
+position for the current movement step. Replay still uses the buffered
+possession lock. Turnover eligibility and release validation remain in the
+existing ball simulation.
