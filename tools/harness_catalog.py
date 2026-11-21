@@ -125,6 +125,12 @@ OobTurnoverTest.tscn|held-turnover
 OobTurnoverTest.tscn|defender-exempt
 OobTurnoverTest.tscn|both-oob
 OobTurnoverTest.tscn|wall-placement
+OobShotRecoveryTest.tscn|solo
+OobShotRecoveryTest.tscn|both-outside
+OobShotRecoveryTest.tscn|turnover
+OobShotRecoveryTest.tscn|legal-shot
+OobShotRecoveryTest.tscn|pump-fake
+NetOobShotRecoveryTest.tscn|loopback
 TripleThreatTest.tscn|dead-dribble
 TripleThreatTest.tscn|production-drive
 AwardFreshnessTest.tscn|stale-blocked-fresh-works
