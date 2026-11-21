@@ -1041,6 +1041,17 @@ public partial class BallController : Node3D
 	private Vector3 _serverPos;
 	private Vector3 _serverVel;
 	private int _serverHolderPeerId;
+	private int _serverPossessionRevision;
+	// A rejected predicted gather can leave the local ball Held until its
+	// authority correction is applied. Stamp snapshots so FIFO drain can wait
+	// for the rejecting server's ball state even if packets arrive out of order.
+	private long _sentBallSnapshot;
+	private long _receivedBallSnapshot;
+	internal long AppliedBallSnapshot { get; private set; }
+	internal long NextBallSnapshot => _sentBallSnapshot + 1;
+	internal int ConfirmedHolderForFollowUps => _serverHolderPeerId;
+	internal int AuthoritativePossessionRevision => IsServer
+		? StateMachine.PossessionRevision : _serverPossessionRevision;
 	private bool _serverCleared;
 	private bool _serverHasDribbled;
 
@@ -1566,7 +1577,8 @@ public partial class BallController : Node3D
 			AuthoritativeSnapshotBroadcastCountForHarness++;
 			Rpc(MethodName.ReceiveState,
 				(int)StateMachine.Current, GlobalPosition, CurrentVelocity(), StateMachine.HolderPeerId, IsCleared, HasDribbled,
-				_recoveryReceipt, _recoveryRecipient, RecoveryReceiptAge, _recoveryInputSequence);
+				_recoveryReceipt, _recoveryRecipient, RecoveryReceiptAge, _recoveryInputSequence,
+				StateMachine.PossessionRevision, ++_sentBallSnapshot);
 		}
 
 		PublishRemotePresentation();
@@ -3337,6 +3349,7 @@ public partial class BallController : Node3D
 
 		int holderAtShootTime = StateMachine.HolderPeerId;
 		if (!StateMachine.Shoot()) return false;
+		holder.InvalidateFollowUpsForShotRelease();
 
 		// Record the tick the ball entered InFlight so block resolution can
 		// compute the shot's vulnerable window [_inFlightStartTick, _inFlightStartTick +
@@ -3553,12 +3566,15 @@ public partial class BallController : Node3D
 		 CallLocal = false,
 		 TransferMode = MultiplayerPeer.TransferModeEnum.UnreliableOrdered)]
 	private void ReceiveState(int state, Vector3 pos, Vector3 vel, int holderPeerId, bool cleared, bool hasDribbled,
-		int recoveryReceipt = 0, int recoveryRecipient = 0, int recoveryAge = 0, int recoveryInputSequence = 0)
+		int recoveryReceipt = 0, int recoveryRecipient = 0, int recoveryAge = 0, int recoveryInputSequence = 0,
+		int possessionRevision = 0, long ballSnapshot = 0)
 	{
 		_serverState         = (BallState)state;
 		_serverPos           = pos;
 		_serverVel           = vel;
 		_serverHolderPeerId  = holderPeerId;
+		_serverPossessionRevision = possessionRevision;
+		_receivedBallSnapshot = ballSnapshot;
 		_serverCleared       = cleared;
 		_serverHasDribbled   = hasDribbled;
 		_pendingConfirmedRecovery = (recoveryReceipt, recoveryRecipient, recoveryAge, recoveryInputSequence);
@@ -3592,6 +3608,7 @@ public partial class BallController : Node3D
 	/// </summary>
 	private void ReconcileFromServer()
 	{
+		AppliedBallSnapshot = _receivedBallSnapshot;
 		BallCorrectionForHarness = (true, GlobalPosition, _serverPos, _serverVel, State.ToString(), _serverState.ToString());
 		if (StateMachine.Current != _serverState || StateMachine.HolderPeerId != _serverHolderPeerId)
 			StateMachine.ForceState(_serverState, _serverHolderPeerId);
