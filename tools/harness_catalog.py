@@ -125,12 +125,6 @@ OobTurnoverTest.tscn|held-turnover
 OobTurnoverTest.tscn|defender-exempt
 OobTurnoverTest.tscn|both-oob
 OobTurnoverTest.tscn|wall-placement
-OobShotRecoveryTest.tscn|solo
-OobShotRecoveryTest.tscn|both-outside
-OobShotRecoveryTest.tscn|turnover
-OobShotRecoveryTest.tscn|legal-shot
-OobShotRecoveryTest.tscn|pump-fake
-NetOobShotRecoveryTest.tscn|loopback
 TripleThreatTest.tscn|dead-dribble
 TripleThreatTest.tscn|production-drive
 AwardFreshnessTest.tscn|stale-blocked-fresh-works
@@ -456,6 +450,12 @@ PostPlayTest.tscn|contact-set
 PostPlayTest.tscn|contact-unset
 PostPresentationTest.tscn|presentation
 CommittedClipHookupAudit.tscn|
+OobShotRecoveryTest.tscn|solo
+OobShotRecoveryTest.tscn|both-outside
+OobShotRecoveryTest.tscn|turnover
+OobShotRecoveryTest.tscn|legal-shot
+OobShotRecoveryTest.tscn|pump-fake
+NetOobShotRecoveryTest.tscn|loopback
 """
 _ADDITIONAL_SINGLE_ROWS += "PivotPlantTest.tscn|movement-matrix\n"
 _ADDITIONAL_SINGLE_ROWS += "NetSprintTest.tscn|moving-turn\n"

@@ -333,7 +333,13 @@ class HarnessCatalogShardTests(unittest.TestCase):
                         'rig-scale-harness-test-capsule-contract',
                         'held-possession-test-held',
                         'contact-fixture-test-contact',
-                        'contact-fixture-test-no-contact'):
+                        'contact-fixture-test-no-contact',
+                        'oob-shot-recovery-test-solo',
+                        'oob-shot-recovery-test-both-outside',
+                        'oob-shot-recovery-test-turnover',
+                        'oob-shot-recovery-test-legal-shot',
+                        'oob-shot-recovery-test-pump-fake',
+                        'net-oob-shot-recovery-test-loopback'):
             self.assertEqual(catalog.DEFAULT_SINGLE_WEIGHT_SECONDS, weights[case_id])
         for case_id in ('crossover-continuity', 'remote-presentation-lifecycle', 'net-rig-presentation-left', 'net-rig-presentation-right',
                         'net-held-possession-host', 'net-held-possession-client'):
@@ -380,7 +386,7 @@ class HarnessCatalogShardTests(unittest.TestCase):
             # divided by its six frozen migration cases, not the fallback.
             self.assertAlmostEqual(8.0 / 6.0, weights[case_id])
         self.assertAlmostEqual(
-            1276.0 + 400.0 + 40.0 + 400.0 + 400.0 + 3.0 / 5 + 69 * catalog.DEFAULT_SINGLE_WEIGHT_SECONDS
+            1276.0 + 400.0 + 40.0 + 400.0 + 400.0 + 3.0 / 5 + 75 * catalog.DEFAULT_SINGLE_WEIGHT_SECONDS
             + 2 * (8.0 / 6.0)
             + 8 * catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS,
             sum(weights.values()),
