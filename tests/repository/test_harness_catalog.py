@@ -113,6 +113,9 @@ class HarnessCatalogCliTests(unittest.TestCase):
                 'lost-payload', 'turnaround-steal', 'turnaround-oob', 'replay',
                 'turnaround-replay', 'turnaround-rejected', 'contact-set', 'contact-unset')]
             + ['post-presentation-test-presentation', 'committed-clip-hookup-audit']
+            + [f'oob-shot-recovery-test-{scenario}'
+               for scenario in ('solo', 'both-outside', 'turnover', 'legal-shot', 'pump-fake')]
+            + ['net-oob-shot-recovery-test-loopback']
             + ['pivot-plant-test-movement-matrix']
             + ['net-sprint-test-moving-turn']
             + ['block-turnover-test-corrected-origin-reach-hit',
