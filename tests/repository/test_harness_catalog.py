@@ -125,6 +125,9 @@ class HarnessCatalogCliTests(unittest.TestCase):
                 'bounded', 'opposite', 'unfinished', 'feint-early', 'feint-late',
                 'illegal-early', 'illegal-late', 'loss', 'oob', 'missing', 'degenerate',
                 'retarget', 'contact-retarget', 'release-below', 'release-at', 'release-above')]
+            + [f'offensive-follow-up-test-{scenario}' for scenario in (
+                'fifo', 'outside', 'boundary', 'held', 'held-outside', 'loss-regain',
+                'terminal', 'context', 'shot', 'pump-fake')]
             + ['fadeaway-form', 'net-fadeaway-form', 'net-jumpshot-form', 'jumpshot-transitions',
                'shot-attachment-local', 'shot-attachment-owner-o0', 'shot-attachment-owner-o7', 'shot-gather-lifecycle',
                'net-rebound-presentation',
@@ -142,6 +145,7 @@ class HarnessCatalogCliTests(unittest.TestCase):
                for contact in ('contact', 'no-contact')
                for delay in (0, 30)]
             + [f'defensive-stance-{delay}ms' for delay in (0, 30)]
+            + [f'net-offensive-follow-up-{scenario}' for scenario in ('delayed', 'reset', 'reject-head')]
             + [f'normal-shot-heading-{delay}ms' for delay in (0, 30)]
             + [f'dedicated-post-play-{delay}ms' for delay in (0, 30)],
             [line.split('\t')[0] for line in lines[baseline_tail + 1:]],
@@ -382,7 +386,9 @@ class HarnessCatalogShardTests(unittest.TestCase):
         self.assertAlmostEqual(
             1276.0 + 400.0 + 40.0 + 400.0 + 400.0 + 3.0 / 5 + 69 * catalog.DEFAULT_SINGLE_WEIGHT_SECONDS
             + 2 * (8.0 / 6.0)
-            + 8 * catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS,
+            + 8 * catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS
+            + 10 * catalog.DEFAULT_SINGLE_WEIGHT_SECONDS
+            + 3 * catalog.DEFAULT_MULTIPROCESS_WEIGHT_SECONDS,
             sum(weights.values()),
         )
 
