@@ -52,9 +52,9 @@ public static class MoveAnimResolver
     /// (Issue #243) True when the CURRENT (or, per DisplayFadeaway's own
     /// per-role reconstruction, the DISPLAYED) move is a JumpShot classified
     /// fadeaway/off-balance by FadeawayTriggerResolver. Only changes the
-    /// result during <see cref="MovePhase.Active"/> — every other phase
-    /// ignores it, since the fadeaway distinction is specifically about the
-    /// release-frame clip, not the wind-up or landing. Defaults to false so
+    /// result during <see cref="MovePhase.Active"/> and Recovery, so the
+    /// classified release and its landing share the same displayed outcome.
+    /// Startup and Inactive ignore it. Defaults to false so
     /// every pre-#243 call site is unaffected.
     /// </param>
     /// <param name="isPivotingInPlace">
@@ -68,8 +68,8 @@ public static class MoveAnimResolver
     /// yield to it, but the resolver enforces that precedence itself rather
     /// than trusting the caller never to pass the combination. Mutually
     /// exclusive with <paramref name="isFadeaway"/> by phase (see
-    /// <see cref="MoveAnimState"/>'s doc comment) — Active is what isFadeaway
-    /// governs, Inactive is what this governs, so they never compete for the
+    /// <see cref="MoveAnimState"/>'s doc comment) — Active and Recovery are
+    /// what isFadeaway governs, Inactive is what this governs, so they never compete for the
     /// same call.
     /// </param>
     /// <param name="isDribbling">
@@ -124,7 +124,7 @@ public static class MoveAnimResolver
             case MovePhase.Active:
                 return isFadeaway ? MoveAnimState.FadeawayActive : MoveAnimState.Active;
             case MovePhase.Recovery:
-                return MoveAnimState.Recovery;
+                return isFadeaway ? MoveAnimState.FadeawayRecovery : MoveAnimState.Recovery;
 
             // Unrecognized phase → graceful fallback to neutral stance. MovePhase
             // is a closed enum today, so this is only reachable via a corrupt cast

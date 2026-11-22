@@ -500,3 +500,20 @@ because it removes the requested slow interval; globally faster yaw, because
 it changes the preserved timing; applying this relaxation to stance/post gates
 or the separate committed Turnaround, because those are outside the request.
 Status remains Accepted.
+
+
+## Amendment 2026-11-22 ? JumpShot Startup turn rate
+
+Normal JumpShot Startup uses 30% of the configured `MaxTurnRateDeg`
+(nominally 270 degrees/s at the production 900 degrees/s default). The
+shared heading step retains the fixed rim target, nonlinear back-turn factor
+and positive half-turn tie. Server simulation, owner prediction and replay
+use the same step. Other movement and post turnaround rates are unchanged.
+
+This provisional rate follows the maintainer's request for a slower, more
+readable turn and an off-balance release. The ordinary rate was rejected
+because the recorded near-back-facing shots squared before release and
+selected the ordinary shot. Actual release angle still governs the 90-degree
+fadeaway classifier and facing scatter; turned shots can therefore incur more
+scatter. Timeline, plant and pump-fake window remain unchanged. Readability
+and feel remain for human review in #185 and #173.

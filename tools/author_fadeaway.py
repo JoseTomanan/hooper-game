@@ -5,9 +5,8 @@ Run:
         --python tools/author_fadeaway.py -- \
         "assets/Goalkeeper Catch Stationary.fbx" "assets/fadeaway_authored.fbx"
 
-The shared JumpShot family owns the gather and landing. The Active-only envelope
-starts and ends on #418's normal release, with bent legs in front of the leaned
-torso at its peak. These dimensions interpret the maintainer's #429 direction;
+The shared JumpShot family owns the gather. The authored action carries the
+off-balance release into an asymmetric catch and returns to the neutral landing. These dimensions interpret the maintainer's #429 direction;
 they are authored pose values, not measured basketball or feel acceptance.
 All bones remain keyed to avoid full-weight AnimationTree rest-pose fallbacks.
 """
@@ -24,6 +23,8 @@ import author_jumpshot as normal  # noqa: E402
 
 FPS = 60
 ACTIVE_TICKS = 4
+RECOVERY_TICKS = 20
+TOTAL_TICKS = ACTIVE_TICKS + RECOVERY_TICKS
 ACTION_NAME = "fadeaway"
 EXPECTED_SOURCE = "Goalkeeper Catch Stationary.fbx"
 
@@ -33,7 +34,7 @@ HIP_BACK_M = 0.50
 TORSO_BACK_DEG = 78.0
 ANKLE_FORWARD_M = 0.60
 ANKLE_DOWN_M = 0.50
-ENVELOPE = (0.0, 0.8, 1.0, 0.5, 0.0)
+ENVELOPE = (0.0, 0.8, 1.0, 0.86, 0.72, 0.68, 0.64, 0.60, 0.56, 0.50, 0.43, 0.35, 0.27, 0.20, 0.14, 0.09, 0.05, 0.02, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 MIN_TORSO_TRAVEL_M = 0.12
 MIN_HIP_BACK_M = 0.25
 
@@ -71,7 +72,7 @@ def main():
     # https://docs.blender.org/api/current/bpy.types.Scene.html#bpy.types.Scene.frame_set
     # https://docs.blender.org/api/current/bpy.types.PoseBone.html#bpy.types.PoseBone.matrix_basis
     source = []
-    for frame in range(ACTIVE_TICKS + 1):
+    for frame in range(TOTAL_TICKS + 1):
         sample = source_start + normal.source_time(normal.STARTUP_TICKS + frame) * source_fps
         integer = int(sample)
         scene.frame_set(integer, subframe=sample - integer)
@@ -80,13 +81,22 @@ def main():
     arm.animation_data.action = bpy.data.actions.new(ACTION_NAME)
     lib.enter_pose_mode(arm)
     peak = None
+    previous_rotations = {}
     for frame, matrices in enumerate(source):
         scene.frame_set(frame)
         for pb in arm.pose.bones:
             pb.rotation_mode = "QUATERNION"
             pb.matrix_basis = matrices[pb.name]
         bpy.context.view_layer.update()
+        # Match the normal action's gradual return to source arms by tick 28.
+        arm_names = [name for chain in lib.ARM_CHAIN.values() for name in chain]
+        source_arms = {name: arm.pose.bones[name].rotation_quaternion.copy() for name in arm_names}
+        arm_weight = 1.0 - normal.smoothstep((frame - 7.0) / 3.0)
         normal.author_arms(arm, geom, normal.STARTUP_TICKS + frame)
+        for name in arm_names:
+            bone = arm.pose.bones[name]
+            bone.rotation_quaternion = source_arms[name].slerp(bone.rotation_quaternion, arm_weight)
+        bpy.context.view_layer.update()
         base_rotations = {pb.name: pb.rotation_quaternion.copy() for pb in arm.pose.bones}
         hips = arm.pose.bones[lib.HIPS]
         base_hip_location = hips.location.copy()
@@ -109,9 +119,14 @@ def main():
         for side in ("L", "R"):
             upper = arm.pose.bones[lib.LEG_CHAIN[side][0]]
             lateral = (upper.head - hip_head).dot(geom.body_right)
+            # The leading foot reaches lower during the catch; the
+            # opposite knee stays lifted briefly before both return to neutral.
+            catch = normal.smoothstep((frame - 3.0) / 4.0) * (1.0 - normal.smoothstep((frame - 11.0) / 6.0))
+            reach = ANKLE_FORWARD_M + (-0.05 if side == "L" else -0.12) * catch
+            down = ANKLE_DOWN_M + (0.08 if side == "L" else -0.08) * catch
             target = (hip_head + geom.body_right * lateral
-                      + geom.forward * geom.m(ANKLE_FORWARD_M)
-                      - geom.up * geom.m(ANKLE_DOWN_M))
+                      + geom.forward * geom.m(reach)
+                      - geom.up * geom.m(down))
             lib.plant_foot(arm, side, target, geom.forward, geom)
 
         # Keep the shooting reach above/in front of the leaned shoulders.
@@ -120,11 +135,25 @@ def main():
         # requested torso-versus-legs contrast. Reuse the normal arm solver
         # in the target pose before blending, with no new shot timing.
         normal.author_arms(arm, geom, normal.STARTUP_TICKS + frame)
+        for name in arm_names:
+            bone = arm.pose.bones[name]
+            bone.rotation_quaternion = base_rotations[name].slerp(bone.rotation_quaternion, arm_weight)
         target_hip_location = hips.location.copy()
         weight = ENVELOPE[frame]
         for pb in arm.pose.bones:
             pb.rotation_quaternion = base_rotations[pb.name].slerp(pb.rotation_quaternion, weight)
         hips.location = base_hip_location.lerp(target_hip_location, weight)
+        # The IK limb solution can lie across a 180-degree quaternion branch
+        # from the source. Bound each authored tick so interpolation cannot
+        # flip a knee or elbow by a half turn in one frame.
+        for pb in arm.pose.bones:
+            if pb.name in previous_rotations:
+                prev = previous_rotations[pb.name]
+                current = pb.rotation_quaternion.copy()
+                angle = prev.rotation_difference(current).angle
+                if angle > math.radians(70.0):
+                    pb.rotation_quaternion = prev.slerp(current, math.radians(70.0) / angle)
+            previous_rotations[pb.name] = pb.rotation_quaternion.copy()
         bpy.context.view_layer.update()
         if frame == 2:
             peak = (_torso_forward_m(arm, geom) - base_torso,
@@ -140,12 +169,12 @@ def main():
         hips.keyframe_insert("location", frame=frame)
 
     lib.leave_pose_mode()
-    scene.frame_start, scene.frame_end = 0, ACTIVE_TICKS
+    scene.frame_start, scene.frame_end = 0, TOTAL_TICKS
 
-    # The five authored release keys include both endpoints and all leaves;
+    # The authored release and recovery include both endpoints and all leaves;
     # that is intentionally stricter than the source's 52 non-terminal tracks.
     lib.verify_all_bones_keyed(arm, expected_count=65, allow_leaf_ends=False)
-    lib.verify_pose_unscaled(arm, range(ACTIVE_TICKS + 1))
+    lib.verify_pose_unscaled(arm, range(TOTAL_TICKS + 1))
 
     torso_back, hip_back = peak
     # These Blender-side gates protect the authored source; the paired

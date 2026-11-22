@@ -3349,6 +3349,7 @@ public partial class BallController : Node3D
 
 		int holderAtShootTime = StateMachine.HolderPeerId;
 		if (!StateMachine.Shoot()) return false;
+		holder.MarkJumpShotReleased();
 		holder.InvalidateFollowUpsForShotRelease();
 
 		// Record the tick the ball entered InFlight so block resolution can

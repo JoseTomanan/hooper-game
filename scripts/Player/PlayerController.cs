@@ -2930,7 +2930,13 @@ public partial class PlayerController : CharacterBody3D
 		ConfirmShotGather(_serverShotToken, _serverShotGather);
 		if (_machine.CurrentMove is JumpShot releaseShot && releaseShot.BeginToken == _serverShotToken
 			&& _serverMoveId == "jumpshot" && _serverMovePhase is MovePhase.Active or MovePhase.Recovery)
+			{
 			releaseShot.IsFadeaway = _serverMoveParam != 0f;
+			// Active/0 is sent before the ball resolves the release; later
+			// snapshots settle a predicted success or rejection for this token.
+			if (_serverMovePhase == MovePhase.Recovery || _serverMoveFrameInPhase > 0 || _serverMoveParam >= 2f)
+				releaseShot.ReleaseSucceeded = _serverMoveParam >= 2f;
+		}
 		if (_serverMoveId == "turnaround" && _serverTurnaroundToken != 0)
 		{
 			_buffer.ConfirmTurnaroundTarget(_serverTurnaroundToken, _serverMoveParam);
@@ -3219,9 +3225,7 @@ public partial class PlayerController : CharacterBody3D
 		AnimationDisplaySnapshot = new AnimationDisplayFrame(DisplayMoveId(), displayPhase,
 			_remotePresentation?.FrameInPhase ?? (displaySimulatedLocally ? _machine.FrameInPhase : _serverMoveFrameInPhase),
 			DisplayHandSide, displaySimulatedLocally, PlayerPresentationTick);
-		// (#243) isFadeaway only ever changes MoveAnimResolver's answer during
-		// Active (a squared-up JumpShot, every other move, and every non-Active
-		// phase ignore it) — see MoveAnimResolver.Resolve's own doc.
+		// The displayed release result selects both fadeaway Active and Recovery.
 		//
 		// IsPivotingInPlace is already correct for EITHER role without going
 		// through DisplayMove(): the own player's Move() sets _pivot locally
@@ -3229,8 +3233,8 @@ public partial class PlayerController : CharacterBody3D
 		// directly for the opponent's copy (see that method's #172 comment) —
 		// exactly the same "already-resolved for display" property DisplayMove
 		// itself exists to provide for MovePhase (issue #242). The two flags
-		// never both matter for the same call: isFadeaway only bites on
-		// Active, isPivotingInPlace only bites on Inactive.
+		// never both matter for the same call: isFadeaway applies to Active
+		// and Recovery, isPivotingInPlace only to Inactive.
 		// isPlayingReboundGrab (#284): the rebound-grab flourish latch, maintained
 		// by TickReboundGrabLatch just above this call. Like isPivotingInPlace it
 		// only ever bites during Inactive (the resolver ranks it above Pivot but
@@ -3242,7 +3246,7 @@ public partial class PlayerController : CharacterBody3D
 		// a pivot or a fresh rebound grab still wins). It reads the single
 		// replicated ball rather than this node's machine, so it needs no
 		// per-role branch at all; see DisplayDribbling's own doc.
-		MoveAnimState generic = MoveAnimResolver.Resolve(displayPhase, DisplayFadeaway(), DisplayPivoting, _remotePresentation?.ReboundGrab ?? IsPlayingReboundGrab, DisplayDribbling(), DisplayHeld());
+		MoveAnimState generic = MoveAnimResolver.Resolve(displayPhase, displayPhase == MovePhase.Recovery ? DisplayFadeawayRecovery() : DisplayFadeaway(), DisplayPivoting, _remotePresentation?.ReboundGrab ?? IsPlayingReboundGrab, DisplayDribbling(), DisplayHeld());
 		// (#280) HandSide needs no per-role branch the way DisplayMove/
 		// DisplayMoveId do: it is server-authoritative, predicted on the owning
 		// client, and broadcast on ReceiveState (ADR-0012), so this node's copy
@@ -3285,21 +3289,21 @@ public partial class PlayerController : CharacterBody3D
 	}
 
 	private static bool IsJumpShotAnimation(string state) => state is
-		"JumpshotStartup" or "JumpshotActive" or "JumpshotRecovery" or "FadeawayActive";
+		"JumpshotStartup" or "JumpshotActive" or "JumpshotRecovery" or "FadeawayActive" or "FadeawayRecovery";
 
 	private void SeekJumpShotRecovery(string target)
 	{
-		if (target != "JumpshotRecovery") return;
+		if (target is not ("JumpshotRecovery" or "FadeawayRecovery")) return;
 		int frame = AnimationDisplaySnapshot.FrameInPhase;
-		_animTree.Set("parameters/JumpshotRecovery/RecoverySeek/seek_request",
+		_animTree.Set($"parameters/{target}/RecoverySeek/seek_request",
 			frame / (double)Engine.PhysicsTicksPerSecond);
 		// Finish the handoff inside Recovery, rather than an outgoing state
 		// crossfade: a fading state-machine transition can delay a new action.
 		// Match the actual neutral possession pose, including a retained fake.
 		// https://docs.godotengine.org/en/4.7/classes/class_animationnodeblend2.html
 		float settle = Mathf.Clamp((frame - 10) / 8f, 0f, 1f);
-		_animTree.Set("parameters/JumpshotRecovery/ReturnBlend/blend_amount", settle * settle * (3f - 2f * settle));
-		_animTree.Set("parameters/JumpshotRecovery/Neutral/blend_position",
+		_animTree.Set($"parameters/{target}/ReturnBlend/blend_amount", settle * settle * (3f - 2f * settle));
+		_animTree.Set($"parameters/{target}/Neutral/blend_position",
 			DisplayHeld() ? (DisplayHandSide == HandSide.Left ? 1f : 2f) : 0f);
 	}
 
@@ -3383,7 +3387,8 @@ public partial class PlayerController : CharacterBody3D
 	/// the opponent's node), so it falls back to the broadcast
 	/// <c>_serverMoveId</c>/<c>_serverMoveParam</c> pair, exactly like
 	/// DisplayMove's burstDir reconstruction — <see cref="MoveParamOf"/>
-	/// repurposes that same payload slot to carry IsFadeaway (1f/0f) for a
+	/// repurposes that same payload slot for the fadeaway result (0 = ordinary,
+	/// 1 = fadeaway before release confirmation, 2 = released fadeaway) for a
 	/// JumpShot specifically.
 	/// </summary>
 	public bool DisplayFadeaway() =>
@@ -3391,6 +3396,18 @@ public partial class PlayerController : CharacterBody3D
 		DisplayPhaseResolver.LocalMachineDrivesDisplay(IsServer, IsLocalPlayer)
 			? _machine.CurrentMove is JumpShot jumpShot && jumpShot.IsFadeaway
 			: _serverMoveId == "jumpshot" && _serverMoveParam != 0f;
+
+	// Recovery is permitted only after this move's payload was released.
+	private bool DisplayFadeawayRecovery() =>
+		_remotePresentation is { } p ? p.MoveId == "jumpshot" && p.MoveParam >= 2f :
+		DisplayPhaseResolver.LocalMachineDrivesDisplay(IsServer, IsLocalPlayer)
+			? _machine.CurrentMove is JumpShot shot && shot.IsFadeaway && shot.ReleaseSucceeded
+			: _serverMoveId == "jumpshot" && _serverMoveParam >= 2f;
+
+	internal void MarkJumpShotReleased()
+	{
+		if (_machine.CurrentMove is JumpShot shot) shot.ReleaseSucceeded = true;
+	}
 
 	/// <summary>
 	/// (Issue #282) Which side of its OWN body this node should DISPLAY a steal
@@ -4071,7 +4088,7 @@ public partial class PlayerController : CharacterBody3D
 	/// <summary>
 	/// The move's reconstruction payload to broadcast — Crossover's and
 	/// BehindTheBack's shared BurstDirection shape, StealMove's AimSign, or
-	/// (#243) JumpShot's IsFadeaway classification (1f/0f). 0 when there is no
+	/// (#243) JumpShot's fadeaway and release result (0/1/2). 0 when there is no
 	/// current move or the move type carries no extra payload.
 	///
 	/// (#282) A StealMove used to pack its resolved TargetHand here as 0f/1f.
@@ -4110,7 +4127,7 @@ public partial class PlayerController : CharacterBody3D
 		move is BetweenTheLegs betweenLegs  ? betweenLegs.BurstDirection :
 		move is InAndOut inAndOut           ? inAndOut.BurstDirection :
 		move is StealMove steal             ? steal.AimSign :
-		move is JumpShot jumpShot           ? (jumpShot.IsFadeaway ? 1f : 0f) :
+		move is JumpShot jumpShot           ? (jumpShot.IsFadeaway ? (jumpShot.ReleaseSucceeded ? 2f : 1f) : 0f) :
 		// BlockMove, Hesitation, and all future no-payload moves → 0f.
 		0f;
 

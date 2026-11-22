@@ -57,7 +57,7 @@ public partial class PlayerController
                     float target = frame.ShotToken == _serverShotToken && _serverShotToken != 0
                         ? _serverShotTarget : frame.ShotTarget;
                     expected = ShotNetReferenceStep(expected, target, 1.0 / Engine.PhysicsTicksPerSecond,
-                        MaxTurnRateDeg, BackTurnSlowFactor);
+                        MaxTurnRateDeg * .30f, BackTurnSlowFactor);
                     samples++;
                 }
             }
@@ -114,8 +114,8 @@ public partial class PlayerController
         if (mutation == "wrong-instance") current.BeginToken = older;
         int releases = GetBall().SuccessfulShotReleasesForHarness;
         ReconcileFromServer(GlobalPosition, Vector3.Zero, ack, 0f, dt);
-        float expected = ShotNetReferenceStep(ShotNetReferenceStep(0f, .7f, dt, MaxTurnRateDeg, BackTurnSlowFactor),
-            -1f, dt, MaxTurnRateDeg, BackTurnSlowFactor);
+        float expected = ShotNetReferenceStep(ShotNetReferenceStep(0f, .7f, dt, MaxTurnRateDeg * .30f, BackTurnSlowFactor),
+            -1f, dt, MaxTurnRateDeg * .30f, BackTurnSlowFactor);
         var frames = _buffer.ReplayInputs().ToArray();
         if (MathF.Abs(ShotNetWrap(Heading - expected)) > 1e-5f || current.TargetHeading != -1f
             || frames[0].ShotTarget != .7f || frames[1].ShotTarget != -1f || _machine.FrameInPhase != 2)
@@ -149,6 +149,25 @@ public partial class PlayerController
         ReconcileFromServer(GlobalPosition, Vector3.Zero, releaseAck, .3f, dt);
         if (current.IsFadeaway || releases != GetBall().SuccessfulShotReleasesForHarness)
             throw new InvalidOperationException("synthetic ordinary-release correction failed or emitted a payload");
+        // Active/0 precedes the ball's release attempt on the server. It must
+        // not erase a predicted success; later matching snapshots settle it.
+        current.IsFadeaway = true; current.ReleaseSucceeded = true;
+        ReceiveState(releaseAck, GlobalPosition, Vector3.Zero, (int)MovePhase.Active, 0, "jumpshot", 1f,
+            .3f, (int)HandSide, false, false, 0f, false, shotToken: newer, shotTarget: -.8f);
+        ReconcileFromServer(GlobalPosition, Vector3.Zero, releaseAck, .3f, dt);
+        if (!current.ReleaseSucceeded) throw new InvalidOperationException("unresolved Active/0 erased predicted release");
+        ReceiveState(releaseAck, GlobalPosition, Vector3.Zero, (int)MovePhase.Active, 1, "jumpshot", 1f,
+            .3f, (int)HandSide, false, false, 0f, false, shotToken: newer, shotTarget: -.8f);
+        ReconcileFromServer(GlobalPosition, Vector3.Zero, releaseAck, .3f, dt);
+        if (current.ReleaseSucceeded) throw new InvalidOperationException("confirmed rejection retained predicted release");
+        ReceiveState(releaseAck, GlobalPosition, Vector3.Zero, (int)MovePhase.Recovery, 1, "jumpshot", 2f,
+            .3f, (int)HandSide, false, false, 0f, false, shotToken: older, shotTarget: .7f);
+        ReconcileFromServer(GlobalPosition, Vector3.Zero, releaseAck, .3f, dt);
+        if (current.ReleaseSucceeded) throw new InvalidOperationException("older token confirmed a newer release");
+        ReceiveState(releaseAck, GlobalPosition, Vector3.Zero, (int)MovePhase.Recovery, 1, "jumpshot", 2f,
+            .3f, (int)HandSide, false, false, 0f, false, shotToken: newer, shotTarget: -.8f);
+        ReconcileFromServer(GlobalPosition, Vector3.Zero, releaseAck, .3f, dt);
+        if (!current.IsFadeaway || !current.ReleaseSucceeded) throw new InvalidOperationException("confirmed release failed to repair prediction");
         GD.Print("[shot-net] synthetic-release matching flag correction + older/unrelated flag exclusion PASS; no phase/payload replay");
         _machine.ForceState(MovePhase.Inactive, 0, null);
         _buffer.Acknowledge(_buffer.LastSequence); _hasNewState = false;

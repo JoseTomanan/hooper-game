@@ -34,12 +34,15 @@ def start(args, output, role, hand, variant):
         cmd += ["--capture-before440=true"]
     if args.legacy_shot:
         cmd += ["--capture-legacy-shot=true"]
+    if getattr(args, "fadeaway_recovery_normal", False):
+        cmd += ["--capture-fadeaway-recovery-normal=true"]
     if args.fadeaway_substitute:
         cmd += ["--capture-fadeaway-substitute=" + args.fadeaway_substitute]
     if getattr(args, "heading_angle", None) is not None:
-        cmd += ["--capture-heading-angle=" + str(args.heading_angle),
-                "--capture-heading-rate=" + str(args.heading_rate),
-                "--capture-heading-entry=" + args.heading_entry]
+        cmd += ["--capture-heading-angle=" + str(args.heading_angle)]
+        if args.heading_rate is not None:
+            cmd += ["--capture-heading-rate=" + str(args.heading_rate)]
+        cmd += ["--capture-heading-entry=" + args.heading_entry]
     options = {}
     if os.name == "nt":
         info = subprocess.STARTUPINFO()
@@ -122,8 +125,9 @@ def main():
     parser.add_argument("--legacy-shot", action="store_true", help="supplemental before reproduction from the preserved three-clip fixture")
     parser.add_argument("--fadeaway-substitute", choices=("before429", "before439", "normal"),
                         help="isolated production fadeaway asset substitution for diagnostic proof")
+    parser.add_argument("--fadeaway-recovery-normal", action="store_true", help="substitute normal landing as a negative control")
     parser.add_argument("--heading-angle", type=float, help="initial rim-relative heading angle in degrees")
-    parser.add_argument("--heading-rate", type=float, default=900,
+    parser.add_argument("--heading-rate", type=float, default=None,
                         help="heading-fixture turn rate in degrees per second; used with --heading-angle")
     parser.add_argument("--heading-entry", choices=("stationary", "moving"), default="stationary",
                         help="heading-fixture entry; used with --heading-angle")

@@ -53,7 +53,7 @@ public partial class PlayerController
     {
         if (phase == MovePhase.Startup)
         {
-            Heading = HeadingMath.RotateTowardFixedYaw(Heading, target, delta, MaxTurnRateDeg, BackTurnSlowFactor);
+            Heading = HeadingMath.RotateTowardFixedYaw(Heading, target, delta, MaxTurnRateDeg * 0.30f, BackTurnSlowFactor);
             Velocity = Vector3.Zero;
         }
         else if (phase == MovePhase.Recovery)

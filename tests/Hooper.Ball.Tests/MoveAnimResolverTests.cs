@@ -110,16 +110,24 @@ public class MoveAnimResolverTests
     [Theory]
     [InlineData(MovePhase.Inactive)]
     [InlineData(MovePhase.Startup)]
-    [InlineData(MovePhase.Recovery)]
     public void Resolve_NonActiveWithFadeawayTrue_IgnoresFlag(MovePhase phase)
     {
-        // isFadeaway only matters during Active — a fadeaway classification
-        // stamped at release must not leak into Startup/Recovery/Locomotion
-        // display, which stay on their normal generic clips.
+        // A classification stamped at release must not affect Startup or the
+        // neutral Inactive display.
         MoveAnimState withFlag    = MoveAnimResolver.Resolve(phase, isFadeaway: true);
         MoveAnimState withoutFlag = MoveAnimResolver.Resolve(phase, isFadeaway: false);
 
         Assert.Equal(withoutFlag, withFlag);
+    }
+
+    [Fact]
+    public void Resolve_RecoveryWithFadeaway_ReturnsFadeawayRecovery()
+    {
+        Assert.Equal(MoveAnimState.FadeawayRecovery,
+            MoveAnimResolver.Resolve(MovePhase.Recovery, isFadeaway: true));
+        Assert.Equal("FadeawayRecovery", MoveAnimResolver.ResolveStateName(
+            MoveAnimState.FadeawayRecovery, "jumpshot", HandSide.Left, HandSide.Right));
+        Assert.Equal(MoveAnimState.Recovery, MoveAnimResolver.Resolve(MovePhase.Recovery));
     }
 
     [Fact]

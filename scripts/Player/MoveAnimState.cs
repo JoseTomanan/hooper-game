@@ -37,6 +37,8 @@ namespace Hooper.Player;
 ///                already penalizes its accuracy; this is the visual half.
 ///                Every other committed move (and a squared-up JumpShot)
 ///                keeps using plain Active.
+///   FadeawayRecovery — the same shot's distinct off-balance landing, selected
+///                from the release result through the whole Recovery phase.
 ///
 ///   Pivot      — the planted-feet in-place turn (issue #172's
 ///                IsPivotingInPlace, animated for issue #242/#184). Orthogonal
@@ -46,8 +48,8 @@ namespace Hooper.Player;
 ///                committed move clears any in-progress pivot latch (see
 ///                PivotPlantTest's committed-cancel scenario), so Pivot never
 ///                needs to out-rank Startup/Active/Recovery. It is also
-///                mutually exclusive with FadeawayActive by phase: Fadeaway
-///                only ever applies during Active, Pivot only during
+///                mutually exclusive with Fadeaway states by phase: Fadeaway
+///                applies during Active and Recovery, Pivot only during
 ///                Inactive, so the two states never compete for one frame.
 ///
 ///   ReboundGrab — (issue #284) the cosmetic reach-and-secure one-shot the mesh
@@ -97,6 +99,8 @@ public enum MoveAnimState
     Active,
     Recovery,
     FadeawayActive,
+    /// <summary>Landing following a classified fadeaway release.</summary>
+    FadeawayRecovery,
     Pivot,
     ReboundGrab,
     Dribble,
