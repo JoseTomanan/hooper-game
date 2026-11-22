@@ -615,3 +615,41 @@ move approach, the withdrawn 2/3-duration retune, and instant full-speed reversa
 This is a scoped human decision under ADR-0014; no reference-game claim approves
 its magnitude. Final appearance/speed acceptance stays #184/#173, tuning #238.
 Status remains Accepted.
+
+## Amendment 2026-11-21 — Late-Recovery offensive follow-ups (#446)
+
+An offensive button edge or completed aim gesture can enter a two-slot FIFO
+while the ball holder has one through six physics ticks left in Recovery.
+Recovery shorter than six ticks is eligible throughout. The recognizer keeps
+its existing hold and neutral-rearm rules. A full queue keeps its first two
+entries, and releasing controls or pressing a different action leaves those
+entries in place. The six-tick starting value is tracked with #238 and the
+human feel pass remains in #173.
+
+On the first normal tick after a move completes, the oldest intent uses the
+current hand, heading, range, posture and ball state with its captured input
+direction and modifiers. An illegal intent is consumed and the remaining
+intents get their own legality checks. This preserves the full committed
+phase timeline and the direct pump fake. The maintainer selected the FIFO
+over replacing earlier inputs or canceling the running move. [Maintainer
+brief](https://github.com/JoseTomanan/hooper-game/issues/446#issuecomment-6723222687)
+
+The owner predicts the concrete move at execution and sends that identity to
+the server. Authority may wait for its predecessor to finish, then applies
+the existing legality gates and either starts the requested move or rejects
+it under ADR-0023. A reliable result names the move instance. This keeps older
+phase snapshots and discrete exit or feint messages from acting on a newer
+instance. During a correction, a pending tail may wait for a delayed result
+or for the rejecting server's ball snapshot before testing its own legality.
+
+A possession revision changes on ball release, loss or award and rides the
+authoritative ball snapshot. A loss and same-player regain therefore
+invalidate the old inputs even if the client only sees the final holder.
+A locally predicted release whose Begin is still unconfirmed suspends the
+pending tail until authority accepts it or restores the original possession.
+Match termination and session teardown discard pending input. Possession
+invalidation leaves the current committed move's completion rules intact.
+
+Godot's physics-tick action edges and reliable ordered RPC delivery are the
+engine interfaces for these rules. [Input action edges](https://docs.godotengine.org/en/4.7/classes/class_input.html#class-input-method-is-action-just-pressed)
+and [high-level multiplayer RPCs](https://docs.godotengine.org/en/4.7/tutorials/networking/high_level_multiplayer.html#remote-procedure-calls).

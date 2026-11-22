@@ -1598,6 +1598,11 @@ public partial class PlayerController : CharacterBody3D
 
 	public override void _ExitTree()
 	{
+		_offensiveFollowUps.InvalidatePossession();
+		_deferredOffensiveBegins.Clear();
+		_pendingOffensiveFeint = 0;
+		_unconfirmedShotRelease = 0;
+		_waitingForRejectedShotCorrection = false;
 		// #224 fix: drop the PossessionChanged subscription so Godot doesn't
 		// hold a dangling reference to a freed player node — same lifecycle
 		// hygiene as PossessionHud's own PossessionChanged unsubscribe.
@@ -1645,6 +1650,8 @@ public partial class PlayerController : CharacterBody3D
 		// freeze is the only correct choice here, not just the simplest one.
 		if (GetGameManager()?.IsGameOver == true)
 		{
+			_offensiveFollowUps.InvalidatePossession();
+			_deferredOffensiveBegins.Clear();
 			// Gameplay freezes immediately; delayed remote visuals drain to the final pose.
 			if (!IsServer && !IsLocalPlayer) ApplyContactTickPresentation();
 			return;
@@ -1739,6 +1746,7 @@ public partial class PlayerController : CharacterBody3D
 	private void TickServerRemotePlayer(double delta)
 	{
 		_requestedPost = _pendingPostRequest;
+		DrainOffensiveBegins();
 		_machine.Tick();
 		_requestedSprint = _pendingSprintRequest;
 		_requestedProtect = _pendingProtectRequest;
@@ -1866,7 +1874,7 @@ public partial class PlayerController : CharacterBody3D
 			// anyway, but there's no reason to send it at all.
 			if (_machine.JustEnteredActive && _machine.CurrentMove is Crossover or BehindTheBack
 				or BetweenTheLegs or InAndOut or StepBack or Spin)
-				RpcId(1, MethodName.RequestExitVector, rawStick.X, rawStick.Y);
+				RpcId(1, MethodName.RequestExitVector, rawStick.X, rawStick.Y, CurrentOffensiveRequest);
 
 			// Local zero-lag prediction: rawStick, not moveInput (moveInput is
 			// deliberately zeroed above for Move()/replay purposes — see the
@@ -2048,7 +2056,7 @@ public partial class PlayerController : CharacterBody3D
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer,
 		 CallLocal = false,
 		 TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void RequestExitVector(float x, float y)
+	private void RequestExitVector(float x, float y, int offensiveRequest)
 	{
 		int senderId = Multiplayer.GetRemoteSenderId();
 		if (senderId.ToString() != Name)
@@ -2057,12 +2065,23 @@ public partial class PlayerController : CharacterBody3D
 			return;
 		}
 
+		if (offensiveRequest != CurrentOffensiveRequest)
+		{
+			if (offensiveRequest != 0 && FindDeferredOffensiveBegin(offensiveRequest) is { } request)
+				request.Exit = new Vector2(x, y);
+			return;
+		}
+		SetAuthoritativeExitVector(new Vector2(x, y));
+	}
+
+	private void SetAuthoritativeExitVector(Vector2 exit)
+	{
 		bool inQualifyingPhase = _machine.Phase is MovePhase.Startup or MovePhase.Active;
 		bool isQualifyingMove = _machine.CurrentMove is Crossover or BehindTheBack or BetweenTheLegs
 			or InAndOut or StepBack or Spin;
 		if (!inQualifyingPhase || !isQualifyingMove) return;
 
-		_authoritativeExitVector = new Vector2(x, y);
+		_authoritativeExitVector = exit;
 	}
 
 	/// <summary>
@@ -2620,7 +2639,7 @@ public partial class PlayerController : CharacterBody3D
 	[Rpc(MultiplayerApi.RpcMode.AnyPeer,
 		 CallLocal = false,
 		 TransferMode = MultiplayerPeer.TransferModeEnum.Reliable)]
-	private void RequestFeint()
+	private void RequestFeint(int offensiveRequest)
 	{
 		int senderId = Multiplayer.GetRemoteSenderId();
 		if (senderId.ToString() != Name)
@@ -2629,7 +2648,13 @@ public partial class PlayerController : CharacterBody3D
 			return;
 		}
 
-		FeintWithGather();
+		if (offensiveRequest != CurrentOffensiveRequest)
+		{
+			if (offensiveRequest != 0 && FindDeferredOffensiveBegin(offensiveRequest) is { } request)
+				request.Feint = true;
+			return;
+		}
+		ApplyRequestedFeint(offensiveRequest);
 	}
 
 	// ── Client RPC: receive server state ─────────────────────────────────────
@@ -2850,7 +2875,7 @@ public partial class PlayerController : CharacterBody3D
 		// milestone calls for; documented here as an accepted trade-off.
 		// #428 normal shots have explicit instance-scoped request results.
 		// Inactive for a previous shot cannot reject a newer speculative Begin.
-		if (_machine.CurrentMove is not JumpShot && CommittedMoveMachine.ShouldForceInactive(_machine.Phase, _machine.IsActive, _serverMovePhase))
+		if (CurrentOffensiveRequest == 0 && _machine.CurrentMove is not JumpShot && CommittedMoveMachine.ShouldForceInactive(_machine.Phase, _machine.IsActive, _serverMovePhase))
 		{
 			if (_machine.CurrentMove is TurnaroundShot) _buffer.RejectTurnaround(_turnaroundToken);
 			_machine.ForceState(MovePhase.Inactive, frameInPhase: 0, move: null);
@@ -2885,7 +2910,7 @@ public partial class PlayerController : CharacterBody3D
 		// Only reachable when Step 0 above did NOT already force Inactive
 		// (mutually exclusive: Step 0 fires on serverSaysInactive, this one
 		// requires serverPhase == Recovery).
-		else if (_machine.CurrentMove is not JumpShot && CommittedMoveMachine.ShouldForceRecovery(
+		else if (CurrentOffensiveRequest == 0 && _machine.CurrentMove is not JumpShot && CommittedMoveMachine.ShouldForceRecovery(
 			_machine.Phase, _serverMovePhase, _serverEndedActiveEarly,
 			MoveIdOf(_machine.CurrentMove), _serverMoveId))
 		{
@@ -3570,286 +3595,28 @@ public partial class PlayerController : CharacterBody3D
 		Vector2 aim = Input.GetVector("aim_left", "aim_right", "aim_up", "aim_down");
 		GestureResult gesture = _recognizer.Sample(aim);
 
-		// One right-stick flick, disambiguated by which hand holds the ball
-		// (M9, ADR-0012): a flick TOWARD the empty hand is a crossover (ball
-		// swaps to that hand + a lateral burst that way); a flick TOWARD the
-		// ball hand is a hesitation (freeze/bait — no swap, no scripted burst;
-		// the player drives the exit with the left stick after the move
-		// resolves). Keyboard reaches this through the same recognizer via the
-		// IJKL bindings on the aim_* actions (#191) — there is no separate
-		// keyboard path, so the flick sign is always real and signed and
-		// IsCrossover alternates correctly on either input device.
-		if (gesture.Kind == GestureKind.Crossover)
+		RefreshFollowUpPossession();
+		if (!_machine.IsActive && CanResolveFollowUp(isServer))
 		{
-			int flickSign = System.Math.Sign(gesture.Direction);
-			if (HandStateResolver.IsCrossover(HandSide, flickSign))
+			while (_offensiveFollowUps.TryDequeue(out var followUp))
 			{
-				// Crossover carries the BODY-RELATIVE flick sign (M9, #85): the
-				// world burst direction is derived from Heading at apply time
-				// (TickCommittedMoveBehavior), so the burst follows the body's
-				// facing rather than a fixed screen axis. The wire param is the
-				// same single float RequestBeginMove already speaks.
-				//
-				// BehindTheBack (#194) reuses this SAME flick-toward-the-empty-
-				// hand gesture — it is a size-up VARIANT of the crossover read,
-				// not a separate gesture grammar (real ball has no dedicated
-				// analog input for "which crossover variant"; a player decides
-				// by choice, not by a different stick motion). The "move_size_up"
-				// modifier held DURING the flick selects it, mirroring 2K's
-				// modifier-gated advanced-dribble convention (ADR-0014 tier 3 —
-				// neither real ball nor Undisputed 3 specify a literal control
-				// mapping here, so the lowest-ranked but still valid reference
-				// resolves it). Held, not a separate discrete press: the flick
-				// itself is still what commits the move; the modifier only
-				// selects WHICH move the flick becomes.
-				//
-				// BetweenTheLegs (#199) is a THIRD size-up variant of the same
-				// crossover read, selected by a second modifier ("move_finesse")
-				// rather than overloading move_size_up — real ball has no
-				// dedicated analog input for "which crossover variant" either,
-				// so which key selects which variant is itself an ADR-0014
-				// tier-3 self-resolved call (neither real ball nor
-				// Undisputed 3 specify a literal control mapping here). Checked
-				// AFTER move_size_up so a player holding both defaults to the
-				// existing BehindTheBack behavior rather than silently
-				// reassigning it.
-				//
-				// Spin (#201) is a FOURTH variant of the same crossover read,
-				// selected by holding BOTH existing modifiers together
-				// ("move_size_up" + "move_finesse") rather than adding a new
-				// input action or a new gesture-recognition primitive. This is
-				// a deliberate circuit-breaker call: a real spin is a
-				// rotational input (2K models it as a right-stick roll/circle
-				// gesture), but the right-stick vocabulary here is already
-				// full (Crossover/QuickReturn/StepBack/RetreatDribble), and
-				// building a new stick-rotation recognizer to match 2K's
-				// literal control feel would be a large, netcode-sensitive
-				// addition out of scope for this issue. Combining the two
-				// modifiers ALREADY used to select BehindTheBack/BetweenTheLegs
-				// is the lowest-complexity trigger that still fits the
-				// existing input model: same ADR-0014 tier-3 self-resolution
-				// those two variants already use (neither real ball nor
-				// Undisputed 3 specify a literal control mapping for "which
-				// crossover variant" — 2K's modifier-gated advanced-dribble
-				// convention is the lowest-ranked but still valid reference
-				// that resolves it), extended to a THIRD modifier combination
-				// rather than a new input primitive. Checked BEFORE the
-				// single-modifier checks so a player holding both gets Spin,
-				// not BehindTheBack (move_size_up alone still resolves to
-				// BehindTheBack exactly as before).
-				if (Input.IsActionPressed("move_size_up") && Input.IsActionPressed("move_finesse"))
-				{
-					if (BeginCommittedMove(new Spin(spinDirection: flickSign)) && !isServer)
-						RpcId(1, MethodName.RequestBeginMove, "spin", flickSign, false, 0); // #225: not a cradle-family move
-				}
-				else if (Input.IsActionPressed("move_size_up"))
-				{
-					if (BeginCommittedMove(new BehindTheBack(flickSign)) && !isServer)
-						RpcId(1, MethodName.RequestBeginMove, "behindtheback", flickSign, false, 0); // #225: not a cradle-family move
-				}
-				else if (Input.IsActionPressed("move_finesse"))
-				{
-					if (BeginCommittedMove(new BetweenTheLegs(flickSign)) && !isServer)
-						RpcId(1, MethodName.RequestBeginMove, "betweenthelegs", flickSign, false, 0); // #225: not a cradle-family move
-				}
-				else if (BeginCommittedMove(new Crossover(flickSign)) && !isServer)
-				{
-					RpcId(1, MethodName.RequestBeginMove, "crossover", flickSign, false, 0); // #225: not a cradle-family move
-				}
-			}
-			else if (BeginCommittedMove(new Hesitation()) && !isServer)
-			{
-				RpcId(1, MethodName.RequestBeginMove, "hesitation", 0f, false, 0); // #225: not a cradle-family move
-			}
-		}
-		else if (gesture.Kind == GestureKind.QuickReturn)
-		{
-			// In-and-out (M9, issue #202) — the quick-return retarget. The
-			// SAME hand-state disambiguation as the held Crossover branch
-			// above: flick toward the empty hand -> in-and-out (the fast,
-			// safe, small twin of the crossover — same telegraph, no hand
-			// swap); flick toward the ball hand -> hesitation, IDENTICAL to
-			// the held gesture (AC-8) — the flick DIRECTION picks the move
-			// family, hold-vs-quick-return only disambiguates WITHIN the
-			// empty-hand column. This gesture used to unconditionally feint
-			// whatever move was in Startup (GestureKind was named "Feint");
-			// #202 retargets it to BEGIN a move instead — see GestureKind's
-			// own doc for the rename, and the ADR-0003 amendment (docs/adr/
-			// 0003-input-model-hybrid.md) for why the old recall model is
-			// closed rather than kept alongside this.
-			int flickSign = System.Math.Sign(gesture.Direction);
-			if (HandStateResolver.IsCrossover(HandSide, flickSign))
-			{
-				if (BeginCommittedMove(new InAndOut(flickSign)) && !isServer)
-					RpcId(1, MethodName.RequestBeginMove, "inandout", flickSign, false, 0); // #225: not a cradle-family move
-			}
-			else if (BeginCommittedMove(new Hesitation()) && !isServer)
-			{
-				RpcId(1, MethodName.RequestBeginMove, "hesitation", 0f, false, 0); // #225: not a cradle-family move
-			}
-		}
-		else if (gesture.Kind == GestureKind.StepBack)
-		{
-			// Step-back (M9, issue #197): the "hold" half of the new vertical
-			// gesture pair. Gated to the ball holder (an off-ball defender
-			// retreating has no ball to gather). BeginCommittedMove requires
-			// a live dribble, allowing only #253's fresh-Held packet race.
-			//
-			// #253 cradle-race fix: capture whether OUR OWN ball copy was already
-			// Dribbling at Begin and carry it on the StepBack instance AND the
-			// RPC. Unlike JumpShot (#225), StepBack cradles at ACTIVE-entry, so
-			// this boolean can't be consumed synchronously — it rides the move
-			// instance across the Begin→Active-entry gap (see StepBack.
-			// ClientWasAlreadyDribbling). Captured BEFORE BeginCommittedMove for
-			// symmetry with the "shoot" site below, though StepBack's Begin fires
-			// no cradle side effect that would flip our ball state here.
-			//
-			// Deliberately passed on the client's OWN local instance too (not
-			// left default-false the way #225's JumpShot client-Begin is): unlike
-			// a Begin-time cradle, StepBack's Active-entry gather can observe a
-			// ball this client force-corrected Dribbling→Held mid-Startup off a
-			// server broadcast, and reporting the true value there keeps our own
-			// predicted HasDribbled converged with the server through that
-			// correction instead of flickering. Inert in the common case (our own
-			// ball is still Dribbling at our Active-entry, so the gather's normal
-			// branch fires and the boolean is never read).
-			bool wasAlreadyDribbling = GetBall()?.State == BallState.Dribbling;
-			if (IsBallHolder && BeginCommittedMove(new StepBack(clientWasAlreadyDribbling: wasAlreadyDribbling)) && !isServer)
-				RpcId(1, MethodName.RequestBeginMove, "stepback", 0f, wasAlreadyDribbling, 0); // #253: carried to StepBack's Active-entry gather — see CradleForShotStartup's doc
-		}
-		else if (gesture.Kind == GestureKind.RetreatDribble)
-		{
-			// User-approved downward tap grammar (#417): no directional payload
-			// is needed to choose the empty hand. Q retains retreat-dribble access.
-			if (Input.IsActionPressed("move_size_up"))
-			{
-				if (IsBallHolder && BeginCommittedMove(new RetreatDribble()) && !isServer)
-					RpcId(1, MethodName.RequestBeginMove, "retreatdribble", 0f, false, 0);
-			}
-			else
-			{
-				float direction = HandSide == HandSide.Left ? 1f : -1f;
-				if (IsBallHolder && BeginCommittedMove(new BehindTheBack(direction)) && !isServer)
-					RpcId(1, MethodName.RequestBeginMove, "behindtheback", direction, false, 0);
+				if (HasFollowUpPossession && TryBeginOffensiveInput(followUp, isServer, queued: true))
+					break;
 			}
 		}
 
-		// Drive-gather (M9, issue #230, ADR-0022): a discrete button, not a
-		// right-stick gesture — the gather commits toward the rim, so it
-		// needs its own dedicated input rather than overloading the
-		// gesture-driven crossover/step-back grammar. Gated to the ball
-		// holder (an off-ball defender has no dribble to gather from), same
-		// discipline StepBack/RetreatDribble already use. BeginCommittedMove's
-		// dead-dribble gate DOES include DriveGather (code-review fix) — the
-		// gather IS the act of picking up a live dribble (ADR-0014 tier 1
-		// real-ball fact), so it cannot legally begin from a dead Held
-		// possession; see that method's comment for the full reasoning.
-		//
-		// Euro-step (#231, ADR-0022) shares this SAME button: the left stick's
-		// lateral tilt at press decides which move begins. A lateral push
-		// promotes the drive into a euro-step and picks the step side
-		// (EuroStepReadResolver, decomposing the movement stick against the
-		// body-right axis exactly as the crossover family reads its exit
-		// vector); a forward/neutral push stays a straight drive-gather. The read
-		// sign rides the RequestBeginMove RPC param the same way
-		// Crossover.BurstDirection does — the server reconstructs the move from
-		// the payload (ApplyRequestedMove), it does not re-derive the read. Both
-		// branches funnel through the SAME dead-dribble gate in BeginCommittedMove
-		// (EuroStep joins it alongside DriveGather).
+		if (gesture.Kind != GestureKind.None)
+			OfferOffensiveInput(new(OffensiveAction.Gesture, gesture,
+				Input.IsActionPressed("move_size_up"), Input.IsActionPressed("move_finesse")), isServer);
+
 		if (Input.IsActionJustPressed("move_drive") && IsBallHolder)
-		{
-			int lateralSign = EuroStepReadResolver.ResolveLateralSign(
-				ReadInput(), HandStateResolver.BurstWorldDir(Heading, +1), ExitDeadzone);
-			bool wasAlreadyDribblingForGather = GetBall()?.State == BallState.Dribbling;
-			if (lateralSign != 0)
-			{
-				if (BeginCommittedMove(new EuroStep(lateralDirection: lateralSign)) && !isServer)
-					RpcId(1, MethodName.RequestBeginMove, "eurostep", (float)lateralSign, wasAlreadyDribblingForGather, 0); // #225: cradle-family move
-			}
-			else if (BeginCommittedMove(new DriveGather()) && !isServer)
-				RpcId(1, MethodName.RequestBeginMove, "drivegather", 0f, wasAlreadyDribblingForGather, 0); // #225: cradle-family move
-		}
+			OfferOffensiveInput(new(OffensiveAction.Drive, DriveStick: ReadInput()), isServer);
 
-		// Jab step (M9, issue #200): triple threat's stance bait. Its own
-		// dedicated button, not a gesture — the jab has no directional
-		// payload and no exit-vector to read, so overloading the crossover
-		// gesture grammar would add nothing. Gated to the ball holder, same
-		// discipline every other Held/Dribbling-sensitive move already uses;
-		// BeginCommittedMove's JabStepLegalityResolver gate is the real
-		// authority (legal from Held, dead or live; illegal from Dribbling).
 		if (Input.IsActionJustPressed("move_jab") && IsBallHolder)
-		{
-			if (BeginCommittedMove(new JabStep()) && !isServer)
-				RpcId(1, MethodName.RequestBeginMove, "jab", 0f, false, 0); // #225: not a cradle-family move
-		}
+			OfferOffensiveInput(new(OffensiveAction.Jab), isServer);
 
-		// Shoot: begin a JumpShot or a Layup (M7b #74; layup added #229,
-		// ADR-0022) — this REPLACES the old instant "ball leaves hand on
-		// press" trigger that used to live in BallController.TryShoot.
-		// Holder-gated the same way that old trigger was (IsBallHolder mirrors
-		// its IsLocalHolder check); Begin() itself enforces Inactive-only
-		// legality, so a shot attempt mid-crossover (or mid-shot) silently
-		// no-ops exactly like a second crossover attempt would. The actual
-		// ball release is NOT requested here — it fires several ticks later,
-		// on this machine's own JustEnteredActive, which BallController.
-		// CheckJumpShotRelease reads via JustReleasedJumpShot.
-		//
-		// Which move begins is decided HERE, at press time, by
-		// LayupRangeResolver reading this player's live distance to the rim
-		// (#229): reusing the SAME shoot input rather than adding a second
-		// button or a drive mechanic (explicitly out of #229's scope; #230's
-		// job). The chosen move's id rides the RequestBeginMove RPC exactly
-		// like every other move already does — the server does not
-		// re-derive the choice, but DOES re-assert the range gate for
-		// "layup" specifically (see RequestBeginMove's "layup" branch) since
-		// a client's choice of WHICH move to request is not itself
-		// authoritative.
-		BallController ball = GetBall();
-		if (ball != null && Input.IsActionJustPressed(ball.ShootAction) && IsBallHolder)
-		{
-			if (IsPosting)
-			{
-				// Reject an early post shoot edge; there is no ordinary-shot fallback.
-				if (CanBeginTurnaround() && BeginCommittedMove(new TurnaroundShot(SnapshotTurnaroundTarget())))
-				{
-					_turnaroundToken = isServer ? 0 : _buffer.LastSequence + 1;
-					if (!isServer) RpcId(1, MethodName.RequestBeginMove, "turnaround", 0f, true, _turnaroundToken);
-				}
-			}
-			else
-			{
-			// Shares DefensiveResolution.DistanceXZSquared with the server's
-			// re-assertion in RequestBeginMove (issue #236) so the two ends of
-			// the same gate cannot drift apart in their arithmetic. NOT shared
-			// with ApplyShootLocally's shot-distance calc, which measures a
-			// different pair of points entirely — see LayupRangeResolver's doc.
-			float distanceToRim = Mathf.Sqrt(DefensiveResolution.DistanceXZSquared(
-				GlobalPosition, ball.RimCenter));
-			bool isLayup = LayupRangeResolver.IsLayupRange(distanceToRim, ball.LayupRange);
-
-			CommittedMove shot = isLayup ? new Layup() : new JumpShot();
-			// #225 fix: captured BEFORE BeginCommittedMove, whose own LOCAL
-			// cradle side effect (CradleForShotStartup, for our own
-			// zero-latency prediction) would otherwise already flip
-			// Dribbling -> Held by the time it's read below. See
-			// RequestBeginMove's doc for how the SERVER uses this value to
-			// resolve the cradle race for a REMOTE client's copy of this
-			// same request.
-			bool wasAlreadyDribblingForShot = ball.State == BallState.Dribbling;
-			if (BeginCommittedMove(shot))
-			{
-				// Capture the pre-plant locomotion speed NOW — Startup zeroes
-				// Velocity, so the movement scatter penalty must read speed at
-				// shot initiation, not at release (#137). Only the server's
-				// value feeds the outcome. Applies identically to both shot
-				// types (ADR-0022: the layup feeds the same accuracy model).
-				CaptureShotInitiationSpeed();
-				if (!isServer)
-					RpcId(1, MethodName.RequestBeginMove, isLayup ? "layup" : "jumpshot", 0f, wasAlreadyDribblingForShot,
-						shot is JumpShot requestedShot ? requestedShot.BeginToken : 0);
-			}
-			}
-		}
+		if (GetBall() is { } ball && Input.IsActionJustPressed(ball.ShootAction) && IsBallHolder)
+			OfferOffensiveInput(new(OffensiveAction.Shoot), isServer);
 
 		// Steal: defensive committed move (M10, issue #96, ADR-0018).
 		//
@@ -3943,8 +3710,9 @@ public partial class PlayerController : CharacterBody3D
 		// JumpShot — is now structurally moot: there is no other gesture-
 		// sourced Feint() call left to withhold it from. FeintGateResolver
 		// was removed (doubt-driven pass, #202) rather than kept as dead code.
+		int feintRequest = CurrentOffensiveRequest;
 		if (Input.IsActionJustPressed("move_feint") && FeintWithGather() && !isServer)
-			RpcId(1, MethodName.RequestFeint);
+			RpcId(1, MethodName.RequestFeint, feintRequest);
 
 		_machine.Tick(); // advance one frame — always called, including Inactive (no-op)
 	}

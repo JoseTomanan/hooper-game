@@ -473,6 +473,11 @@ _ADDITIONAL_SINGLE_ROWS += "".join(
                      "illegal-early", "illegal-late", "loss", "oob", "missing", "degenerate",
                      "retarget", "contact-retarget", "release-below", "release-at", "release-above")
 )
+_ADDITIONAL_SINGLE_ROWS += "".join(
+    f"OffensiveFollowUpTest.tscn|{scenario}\n"
+    for scenario in ("fifo", "outside", "boundary", "held", "held-outside", "loss-regain", "terminal", "context", "shot", "pump-fake")
+)
+
 _ADDITIONAL_MULTIPROCESS_ROWS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
     ("fadeaway-form", "tests/integration/run-fadeaway-form.sh godot", "JumpshotFormCapture.tscn",
      (".godot/418/429-proof-*/**/*",)),
@@ -516,6 +521,13 @@ _ADDITIONAL_MULTIPROCESS_ROWS: tuple[tuple[str, str, str, tuple[str, ...]], ...]
      f"tests/integration/run-net-defensive-stance.sh godot {delay}",
      "NetDefensiveStanceTest.tscn", (f".godot/stance-net/catalog-{delay}-none-*/**/*",))
     for delay in (0, 30)
+)
+
+_ADDITIONAL_MULTIPROCESS_ROWS += tuple(
+    (f"net-offensive-follow-up-{scenario}",
+     f"tests/integration/run-net-offensive-follow-up.sh godot {scenario}",
+     "NetOffensiveFollowUpTest.tscn", (f".godot/harness-logs/net-offensive-follow-up-{scenario}-*.log",))
+    for scenario in ("delayed", "reset", "reject-head")
 )
 
 _ADDITIONAL_MULTIPROCESS_ROWS += tuple(
@@ -577,6 +589,12 @@ def _multiprocess_cases(rows: Iterable[tuple[str, str, str, tuple[str, ...]]]) -
 
 
 _CONTROL_COMPONENTS = (
+    ("offensive-follow-up-test-fifo", "offensive-follow-up-test-outside",
+     "offensive-follow-up-test-loss-regain", "offensive-follow-up-test-terminal"),
+    ("offensive-follow-up-test-boundary", "offensive-follow-up-test-outside"),
+    ("offensive-follow-up-test-held", "offensive-follow-up-test-held-outside"),
+    ("offensive-follow-up-test-shot", "offensive-follow-up-test-pump-fake"),
+    ("net-offensive-follow-up-delayed", "net-offensive-follow-up-reset", "net-offensive-follow-up-reject-head"),
     ("four-move-active-entry-test-inout-neutral", "four-move-active-entry-test-between-neutral"),
     ("four-move-active-entry-test-inout-right-neutral", "four-move-active-entry-test-crossover-neutral"),
     ("four-move-active-entry-test-inout-forward", "four-move-active-entry-test-crossover-forward"),

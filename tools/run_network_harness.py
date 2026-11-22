@@ -1,4 +1,4 @@
-"""Scenario policy for the seven legacy two-peer network harness entry points."""
+"""Scenario policy for the shared two-peer network harness runner."""
 
 import argparse
 from dataclasses import dataclass
@@ -24,6 +24,9 @@ class Scenario:
 
 
 SCENARIOS = {
+    'offensive-follow-up': Scenario('NetOffensiveFollowUpTest', 'net-offensive-follow-up', 23479,
+                                    required=('server', 'client'), default='delayed',
+                                    variants=('delayed', 'reset', 'reject-head'), proof_timeout=30),
     'handshake': Scenario('NetHandshakeTest', 'net-harness', 23456, proof_timeout=25),
     'state-sync': Scenario('NetStateSyncTest', 'net-statesync', 23457),
     'node-replication': Scenario('NetNodeReplicationTest', 'net-noderepl', 23458),

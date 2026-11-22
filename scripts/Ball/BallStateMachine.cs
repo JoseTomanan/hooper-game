@@ -74,6 +74,9 @@ public sealed class BallStateMachine
 
     // ── Constructor ───────────────────────────────────────────────────────
 
+    /// <summary>Changes on possession boundaries even if the next holder is the same player.</summary>
+    internal int PossessionRevision { get; private set; }
+
     /// <summary>
     /// Creates the state machine.  The ball always starts Held by the
     /// specified peer (tipoff / game-start handoff).
@@ -124,6 +127,7 @@ public sealed class BallStateMachine
     {
         if (Current != BallState.Held && Current != BallState.Dribbling) return false;
 
+        PossessionRevision++;
         Current      = BallState.InFlight;
         HolderPeerId = 0;
         return true;
@@ -143,6 +147,7 @@ public sealed class BallStateMachine
     {
         if (Current != BallState.InFlight && Current != BallState.Loose) return false;
 
+        PossessionRevision++;
         Current      = BallState.Held;
         HolderPeerId = newHolderPeerId;
         return true;
@@ -172,6 +177,7 @@ public sealed class BallStateMachine
         if (Current != BallState.Dribbling && Current != BallState.InFlight && Current != BallState.Held)
             return false;
 
+        PossessionRevision++;
         Current      = BallState.Loose;
         HolderPeerId = 0;
         return true;
@@ -201,6 +207,7 @@ public sealed class BallStateMachine
     {
         if (Current != BallState.Held && Current != BallState.Dribbling) return false;
 
+        PossessionRevision++;
         Current      = BallState.Held;
         HolderPeerId = newHolderPeerId;
         return true;
@@ -229,6 +236,7 @@ public sealed class BallStateMachine
     /// <param name="holderPeerId">Authoritative holder peer ID from the server broadcast.</param>
     public void ForceState(BallState state, int holderPeerId)
     {
+        if (HolderPeerId != holderPeerId) PossessionRevision++;
         Current      = state;
         HolderPeerId = holderPeerId;
     }

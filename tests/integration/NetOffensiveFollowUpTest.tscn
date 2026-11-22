@@ -1,0 +1,23 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://tests/integration/NetOffensiveFollowUpTest.cs" id="1_test"]
+[ext_resource type="Script" path="res://scripts/Networking/NetworkManager.cs" id="2_network"]
+[ext_resource type="Script" path="res://scripts/Ball/BallController.cs" id="3_ball"]
+
+[node name="NetOffensiveFollowUpTest" type="Node3D"]
+script = ExtResource("1_test")
+
+[node name="Players" type="Node3D" parent="."]
+
+[node name="MultiplayerSpawner" type="MultiplayerSpawner" parent="."]
+_spawnable_scenes = PackedStringArray("res://tests/integration/HarnessNetPlayer.tscn")
+spawn_path = NodePath("../Players")
+spawn_limit = 2
+
+[node name="NetworkManager" type="Node" parent="." node_paths=PackedStringArray("Players")]
+script = ExtResource("2_network")
+Players = NodePath("../Players")
+
+[node name="Ball" type="Node3D" parent="." node_paths=PackedStringArray("Players")]
+script = ExtResource("3_ball")
+Players = NodePath("../Players")
