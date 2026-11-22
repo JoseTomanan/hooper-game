@@ -133,9 +133,9 @@ public partial class JumpShotHeadingTest : Node
                 Require(step <= _actor.MaxTurnRateDeg / Engine.PhysicsTicksPerSecond * MathF.PI / 180f + 1e-6f,
                     "Startup step exceeds ordinary bound");
                 Require(angle <= previousAngle + 1e-6f, "Startup angle grows/overshoots");
-                float rate = _actor.MaxTurnRateDeg * (1f - (1f - _actor.BackTurnSlowFactor) * previousAngle / MathF.PI);
+                float rate = (_actor.MaxTurnRateDeg * .30f) * (1f - (1f - _actor.BackTurnSlowFactor) * previousAngle / MathF.PI);
                 float expectedStep = MathF.Min(previousAngle, rate / Engine.PhysicsTicksPerSecond * MathF.PI / 180f);
-                Require(MathF.Abs(expectedStep - step) < 1e-6f, "Startup must use ordinary nonlinear rate exactly once");
+                Require(MathF.Abs(expectedStep - step) < 1e-6f, "Startup must use shot-specific nonlinear rate exactly once");
                 if (_tick == _beginTick + 1 && MathF.Abs(previousAngle - MathF.PI) < 1e-6f && _actor.MaxTurnRateDeg > 0f)
                     Require(Wrap(_actor.Heading - _previousHeading) > 0, "exact half-turn convention must be positive");
                 Require(MathF.Abs(Wrap(_actor.ShotHeadingTargetForHarness - _target)) < 1e-6f,
@@ -166,6 +166,8 @@ public partial class JumpShotHeadingTest : Node
                     fixedTarget = _actor.ShotHeadingTargetForHarness,
                     actualRimDirection = MathF.Atan2(-_actor.Position.X, -_actor.Position.Z) });
             }
+            if (_scenario is "loss" or "oob" && _actor.PhaseForHarness == MovePhase.Recovery)
+                Require(_actor.ActiveAnimNodeForHarness != "FadeawayRecovery", "voided payload selected fadeaway landing");
             if (_actor.PhaseForHarness == MovePhase.Inactive && _inactiveTick == 0) _inactiveTick = _tick;
             if (_ball.SuccessfulShotReleasesForHarness > _releaseCount)
             {
@@ -267,7 +269,13 @@ public partial class JumpShotHeadingTest : Node
                 Check(_startupSteps == 17, "Startup integration count changed");
             }
             if (_scenario is "matrix" or "bounded" or "opposite" or "illegal-early" or "illegal-late")
-            { Check(_releaseAngle < 1e-5f && !_releaseFadeaway, "default-rate shot must square up and release ordinary"); }
+            {
+                float expected = MathF.Abs(_angle) * MathF.PI / 180f;
+                for (int i = 0; i < 17; i++)
+                    expected = MathF.Max(0, expected - _actor.MaxTurnRateDeg * .30f * (1f - (1f - _actor.BackTurnSlowFactor) * expected / MathF.PI) / Engine.PhysicsTicksPerSecond * MathF.PI / 180f);
+                Check(MathF.Abs(_releaseAngle - expected) < 1e-5f, "release angle must match 17 shot-specific heading steps");
+                Check(_releaseFadeaway == (expected >= MathF.PI / 2), "release classification differs from actual heading");
+            }
             if (_scenario == "unfinished")
                 Check(_releaseAngle > MathF.PI / 2 && _releaseFadeaway, "lower-rate fixture did not prove unfinished fadeaway");
             if (_scenario.StartsWith("release-"))
@@ -280,11 +288,11 @@ public partial class JumpShotHeadingTest : Node
             if (_scenario is "feint-early" or "feint-late") Check(_feinted, "legal-feint intervention never reached");
             if (_scenario is "loss" or "oob")
             { Check(_ball.StateMachine.HolderPeerId == 2, "payload-loss fixture did not transfer ownership");
-              Check(MathF.Abs(Wrap(_actor.Heading - _target)) < 1e-5f, "loss interrupted remaining Startup turn"); }
+              Check(MathF.Abs(MathF.Abs(Wrap(_actor.Heading - _target)) - ExpectedResidual()) < 1e-5f, "loss interrupted remaining Startup turn"); }
             if (_scenario == "contact-retarget")
             {
                 Check(_contactDisplaced, "contact displacement premise was not observed");
-                Check(MathF.Abs(Wrap(_releaseHeading - _target)) < 1e-5f,
+                Check(MathF.Abs(MathF.Abs(Wrap(_releaseHeading - _target)) - ExpectedResidual()) < 1e-5f,
                     "contact displacement retargeted release heading");
             }
         }
@@ -303,6 +311,13 @@ public partial class JumpShotHeadingTest : Node
         Input.ActionRelease("move_right");
         if (_scenario == "missing") _ball.Free();
         GetTree().Quit(_failures.Count == 0 ? 0 : 1);
+    }
+    private float ExpectedResidual()
+    {
+        float angle = MathF.Abs(_angle) * MathF.PI / 180f;
+        for (int i = 0; i < 17; i++)
+            angle = MathF.Max(0, angle - _actor.MaxTurnRateDeg * .30f * (1f - (1f - _actor.BackTurnSlowFactor) * angle / MathF.PI) / Engine.PhysicsTicksPerSecond * MathF.PI / 180f);
+        return angle;
     }
     private void Check(bool value, string why) { if (!value) _failures.Add(why); }
     private void Require(bool value, string why) { if (!value) throw new Exception(why); }

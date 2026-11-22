@@ -60,6 +60,11 @@ def main():
     failures = [f for c in json.loads(boundary.read_text())["cases"] for f in c["failures"]]
     if status != 1 or not any(f.startswith("boundary displacement exceeds baseline:") for f in failures):
         raise RuntimeError("mismatched boundary escaped its detector")
+    if not args.remote:
+        # Production-default inputs and a matched ordinary-recovery substitute
+        # separately prove the newly authored landing and its controls.
+        subprocess.run([sys.executable, str(ROOT / "tools/run_fadeaway_recovery_proof.py"),
+                        "--godot", args.godot], cwd=ROOT, check=True)
     print(f"[harness] PASS {'net-' if args.remote else ''}fadeaway-form report={output / 'proof.json'}")
 
 

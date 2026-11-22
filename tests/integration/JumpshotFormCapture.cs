@@ -30,6 +30,8 @@ public partial class JumpshotFormCapture : Node
     private bool _fadeawaySubstituteApplied;
     private int _observedFeints;
     private float _headingAngle, _headingRate, _fixedHeadingTarget;
+    private bool _headingRateOverride;
+    private bool _fadeawayRecoveryNormal, _fadeawayRecoveryNormalApplied;
     private string _headingEntry;
     private int _headingMoveStart = -1;
     private NetworkManager _network;
@@ -74,7 +76,9 @@ public partial class JumpshotFormCapture : Node
             throw new ArgumentException("unknown fadeaway substitute");
         _headingFixture = Read("--capture-heading-angle", "") != "";
         _headingAngle = float.Parse(Read("--capture-heading-angle", "0"), System.Globalization.CultureInfo.InvariantCulture);
-        _headingRate = float.Parse(Read("--capture-heading-rate", "900"), System.Globalization.CultureInfo.InvariantCulture);
+        _fadeawayRecoveryNormal = Read("--capture-fadeaway-recovery-normal", "false") == "true";
+        _headingRateOverride = Read("--capture-heading-rate", "") != "";
+        _headingRate = float.Parse(Read("--capture-heading-rate", "0"), System.Globalization.CultureInfo.InvariantCulture);
         _headingEntry = Read("--capture-heading-entry", "stationary");
         _output = ProjectSettings.GlobalizePath(Read("--capture-output", ""));
         if (!new[] { "normal", "early", "late", "fadeaway" }.Contains(_variant) || !new[] { "Right", "Left" }.Contains(_hand) ||
@@ -125,9 +129,11 @@ public partial class JumpshotFormCapture : Node
         // #428's production rate finishes the ordinary turn. This retained
         // comparison explicitly exercises an unfinished turn at a fixture rate.
         if (_variant == "fadeaway") p.MaxTurnRateDeg = 90f;
-        if (_headingFixture) p.MaxTurnRateDeg = _headingRate;
+        if (_headingFixture && _headingRateOverride) p.MaxTurnRateDeg = _headingRate;
+        if (_headingFixture) _headingRate = p.MaxTurnRateDeg;
         if (_legacyShot && !_legacyApplied) ApplyLegacyShot(p);
         if (_fadeawaySubstitute != "" && !_fadeawaySubstituteApplied) ApplyFadeawaySubstitute(p);
+        if (_fadeawayRecoveryNormal && !_fadeawayRecoveryNormalApplied) ApplyNormalFadeawayRecovery(p);
         ObserveRelease(p);
         if (p.DisplayMoveId() == "jumpshot" && p.DisplayMove().phase == MovePhase.Startup)
         {
@@ -357,7 +363,7 @@ public partial class JumpshotFormCapture : Node
             entry = _entry, entryOffset = _entryOffset, subjectPeer = _subjectPeer, subjectRole = _subjectRole,
             before440 = _before440, before440Applied = _before440Applied,
             resumeObserved = _resumeObserved, laterDribbleObserved = _laterDribbleObserved,
-            headingFixture = _headingFixture, initialAngle = _headingAngle, headingEntry = _headingEntry, headingRate = _headingRate,
+            headingFixture = _headingFixture, initialAngle = _headingAngle, headingEntry = _headingEntry, headingRate = _headingRate, headingRateOverride = _headingRateOverride,
             sawProductionShotStartup = _sawShot, feintRequested = _feinted, sawAcceptedFeintRecovery = _sawFeintRecovery,
             paced = _paced, pacingMs = _paced ? _pacingMs : 0,
             observerPacingMs = _matrix && _paced && _role == "observer" ? 16 : 0,
@@ -366,6 +372,7 @@ public partial class JumpshotFormCapture : Node
                 && _variant is "early" or "late" ? _pacingMs * 2 : 0,
             mutation = _legacyShot ? "legacy-normal-shot-three-clips" : "none", mutationApplied = _legacyApplied,
             fadeawaySubstitute = _fadeawaySubstitute, fadeawaySubstituteApplied = _fadeawaySubstituteApplied,
+            fadeawayRecoveryNormal = _fadeawayRecoveryNormal, fadeawayRecoveryNormalApplied = _fadeawayRecoveryNormalApplied,
             fadeawayFixtureSha256 = _fadeawaySubstitute is "before429" or "before439" ? Convert.ToHexString(SHA256.HashData(
                 File.ReadAllBytes(ProjectSettings.GlobalizePath(_fadeawaySubstitute == "before429"
                     ? "res://tests/fixtures/fadeaway_before_429.res" : "res://tests/fixtures/fadeaway_before_439.res")))) : "",
@@ -692,6 +699,18 @@ public partial class JumpshotFormCapture : Node
         player.RemoveAnimationLibrary("locomotion"); player.AddAnimationLibrary("locomotion", library);
         _fadeawaySubstituteApplied = true;
         _events.Add(new { tick = _tick, kind = "fadeaway-substitute", detail = _fadeawaySubstitute });
+    }
+    private void ApplyNormalFadeawayRecovery(PlayerController subject)
+    {
+        var player = subject.GetNode<AnimationPlayer>("AnimationPlayer");
+        var library = (AnimationLibrary)player.GetAnimationLibrary("locomotion").Duplicate(true);
+        var replacement = library.GetAnimation("jumpshotrecovery");
+        library.RemoveAnimation("fadeawayrecovery");
+        library.AddAnimation("fadeawayrecovery", replacement);
+        player.RemoveAnimationLibrary("locomotion");
+        player.AddAnimationLibrary("locomotion", library);
+        _fadeawayRecoveryNormalApplied = true;
+        _events.Add(new { tick = _tick, kind = "fadeaway-recovery-normal" });
     }
     private void ObserveRelease(PlayerController p)
     {

@@ -73,4 +73,7 @@ public sealed class JumpShot : CommittedMove
     /// than an init-only property for exactly that reason.
     /// </summary>
     public bool IsFadeaway { get; set; }
+
+    /// <summary>Set only when this instance actually releases its payload.</summary>
+    public bool ReleaseSucceeded { get; set; }
 }

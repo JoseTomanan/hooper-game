@@ -17,6 +17,7 @@ const AUTHORED_FADEAWAY_FBX := "res://assets/fadeaway_authored.fbx"
 const AUTHORED_FADEAWAY_CLIP := "fadeaway"
 const USE_AUTHORED_FADEAWAY := true
 const AUTHORED_FADEAWAY_END_S := 4.0 / 60.0
+const AUTHORED_FADEAWAY_TOTAL_S := 24.0 / 60.0
 const ARMATURE_PREFIX := "Armature/"
 
 # Physics ticks per second (project.godot physics/common/physics_ticks_per_second).
@@ -36,6 +37,7 @@ const STARTUP_NAME := &"jumpshotstartup"
 const ACTIVE_NAME := &"jumpshotactive"
 const RECOVERY_NAME := &"jumpshotrecovery"
 const FADEAWAY_NAME := &"fadeawayactive"
+const FADEAWAY_RECOVERY_NAME := &"fadeawayrecovery"
 
 # How far the fadeaway tips the torso back off the release. Large enough to read
 # as a distinct silhouette from the squared-up release at a glance (ADR-0003
@@ -196,6 +198,7 @@ func _initialize() -> void:
 	# POSITIVE rotation tips the torso FORWARD (rebuild_dribble_clips.gd's drive
 	# lean uses it that way). A fadeaway is the opposite sign of the same axis.
 	var fadeaway := active.duplicate(true)
+	var fadeaway_recovery := recovery.duplicate(true)
 	var fadeaway_expected_rot := _rotation_track_count(src)
 	if USE_AUTHORED_FADEAWAY:
 		var authored_packed = load(AUTHORED_FADEAWAY_FBX)
@@ -209,7 +212,7 @@ func _initialize() -> void:
 			quit(1)
 			return
 		var authored: Animation = authored_ap.get_animation(AUTHORED_FADEAWAY_CLIP)
-		if authored.length < AUTHORED_FADEAWAY_END_S:
+		if authored.length < AUTHORED_FADEAWAY_TOTAL_S:
 			push_error("[rebuild-jumpshot] authored fadeaway length %.4f is shorter than its 4-tick source window %.4f"
 				% [authored.length, AUTHORED_FADEAWAY_END_S])
 			quit(1)
@@ -218,7 +221,9 @@ func _initialize() -> void:
 		# Preserve #429's authored DELTA over its original normal base. Only the
 		# normal root centering is shared here; the interior fadeaway lean/legs
 		# remain authored, rather than jumping to the former sideways root at key1.
-		_center_fadeaway_root(fadeaway, active)
+		_center_fadeaway_root(fadeaway, active, legacy_active)
+		fadeaway_recovery = _slice(authored, AUTHORED_FADEAWAY_END_S, AUTHORED_FADEAWAY_TOTAL_S, RECOVERY_TICKS)
+		_center_fadeaway_root(fadeaway_recovery, recovery, legacy_recovery)
 		# Blender may omit an unchanged, rest-valued rotation channel on export.
 		# A single Godot AnimationTree state then resets that non-authored limb to
 		# the T-pose. The squared-up active is the shared base pose for this one
@@ -226,10 +231,12 @@ func _initialize() -> void:
 		# always win and retain the lean, hips and leg pose. #429 is authored
 		# over the current normal release, so its omissions inherit that base.
 		_fill_missing_rotation_tracks(fadeaway, active)
+		_fill_missing_rotation_tracks(fadeaway_recovery, recovery)
+		_settle_shot_body(fadeaway_recovery, standing)
 		# Import basis conversion can perturb a numerically equal Blender
 		# endpoint. Use the exact normal keys so the variant rejoins its family
 		# without spending a gameplay tick on an unrelated correction pose.
-		if not _restore_fadeaway_endpoints(fadeaway, active):
+		if not _match_boundary(active, fadeaway, true) or not _match_boundary(fadeaway, fadeaway_recovery):
 			quit(1)
 			return
 		fadeaway_expected_rot = _rotation_track_count(fadeaway)
@@ -277,10 +284,11 @@ func _initialize() -> void:
 		ACTIVE_NAME: active,
 		RECOVERY_NAME: recovery,
 		FADEAWAY_NAME: fadeaway,
+		FADEAWAY_RECOVERY_NAME: fadeaway_recovery,
 	}
 	var src_rot := _rotation_track_count(normal)
 	for name in built:
-		var expected_rot := fadeaway_expected_rot if name == FADEAWAY_NAME else src_rot
+		var expected_rot := fadeaway_expected_rot if name in [FADEAWAY_NAME, FADEAWAY_RECOVERY_NAME] else src_rot
 		if not _assert_complete(built[name], name, expected_rot):
 			quit(1)
 			return
@@ -494,8 +502,7 @@ func _standing_value(standing: Animation, path: NodePath, type: int) -> Variant:
 	return rest.origin if type == Animation.TYPE_POSITION_3D else rest.basis.get_rotation_quaternion()
 
 
-func _center_fadeaway_root(fadeaway: Animation, normal: Animation) -> void:
-	var base: Animation = load("res://tests/fixtures/jumpshot_before_440.res").get_animation(&"jumpshotactive")
+func _center_fadeaway_root(fadeaway: Animation, normal: Animation, base: Animation) -> void:
 	for track in fadeaway.get_track_count():
 		if fadeaway.track_get_type(track) != Animation.TYPE_POSITION_3D or bone_of(fadeaway.track_get_path(track)) != "mixamorig_Hips":
 			continue
@@ -596,27 +603,22 @@ func _fill_missing_rotation_tracks(authored: Animation, fallback: Animation) -> 
 			authored.rotation_track_insert_key(out, fallback.track_get_key_time(i, k), fallback.track_get_key_value(i, k))
 
 
-func _restore_fadeaway_endpoints(fadeaway: Animation, normal: Animation) -> bool:
-	# Match complete paths and types: a bone-name-only match could copy from a
-	# different skeleton node. Copy actual keys, never interpolate/renormalize
-	# an endpoint that must remain byte-identical to its normal counterpart.
-	for track in fadeaway.get_track_count():
-		var type := fadeaway.track_get_type(track)
+func _match_boundary(before: Animation, after: Animation, use_first: bool = false) -> bool:
+	# A phase transition must carry the same complete pose on both sides.
+	for track in after.get_track_count():
+		var type := after.track_get_type(track)
 		if type not in [Animation.TYPE_POSITION_3D, Animation.TYPE_ROTATION_3D]:
 			continue
-		var path := fadeaway.track_get_path(track)
-		var base := normal.find_track(path, type)
-		if base < 0 or normal.track_get_key_count(base) < 2 or fadeaway.track_get_key_count(track) < 2:
-			push_error("[rebuild-jumpshot] fadeaway endpoint has no complete normal counterpart: %s type=%d" % [path, type])
+		var path := after.track_get_path(track)
+		var source := before.find_track(path, type)
+		if source < 0 or before.track_get_key_count(source) < 2 or after.track_get_key_count(track) < 2:
+			push_error("[rebuild-jumpshot] missing phase boundary track: %s type=%d" % [path, type])
 			return false
-		var last := fadeaway.track_get_key_count(track) - 1
-		var base_last := normal.track_get_key_count(base) - 1
-		if fadeaway.track_get_key_time(track, 0) != 0.0 or normal.track_get_key_time(base, 0) != 0.0 \
-			or fadeaway.track_get_key_time(track, last) != fadeaway.length or normal.track_get_key_time(base, base_last) != normal.length:
-			push_error("[rebuild-jumpshot] incomplete fadeaway/normal endpoint times: %s" % path)
+		var last := before.track_get_key_count(source) - 1
+		if before.track_get_key_time(source, last) != before.length or after.track_get_key_time(track, 0) != 0.0:
+			push_error("[rebuild-jumpshot] missing endpoint key: %s" % path)
 			return false
-		fadeaway.track_set_key_value(track, 0, normal.track_get_key_value(base, 0))
-		fadeaway.track_set_key_value(track, last, normal.track_get_key_value(base, base_last))
+		after.track_set_key_value(track, 0, before.track_get_key_value(source, 0 if use_first else last))
 	return true
 
 

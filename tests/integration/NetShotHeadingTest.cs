@@ -21,6 +21,7 @@ public partial class NetShotHeadingTest : Node3D
     private int _driverId, _observerId, _stage, _tick, _stageBaseline, _corrections, _replaySamples;
     private int _turnSamples, _startup, _active, _recovery, _holds, _resets;
     private int _lastReset, _normalReleases;
+    private int _ownerFadeRecovery, _ownerFakeRecovery, _observerFadeRecovery, _observerFakeRecovery;
     private long _lastPresentation = -1;
     private float _initialTarget, _largestCorrection, _largestReplayError;
     private float _lastDisplayHeading;
@@ -143,13 +144,19 @@ public partial class NetShotHeadingTest : Node3D
                 _rejectObserved = true;
             if (_feinted && _own.ShotNetPhase == MovePhase.Recovery)
                 Require(Math.Abs(PlayerController.ShotNetWrap(_own.Heading - _own.ShotNetBeforePredictionHeading)) < 1e-6f
-                    && Math.Abs(_own.Heading) > .04f
+                    && Math.Abs(_own.Heading) > .005f
                     && Math.Abs(PlayerController.ShotNetWrap(_own.Heading - _own.ShotNetTarget)) > 1f,
                     "fake Recovery retains this tick's corrected partial heading, not target/Begin yaw");
         }
         else _own.ShotNetTickOwner(Dt, _ => { });
         _other.ShotNetTickRemote();
         _ball._PhysicsProcess(Dt);
+        if (owner && _own.ShotNetPhase == MovePhase.Recovery)
+        {
+            string node = _own.ActiveAnimNodeForHarness;
+            if (_stage == 0) { Require(node == "FadeawayRecovery", $"owner successful fadeaway Recovery got {node}"); _ownerFadeRecovery++; }
+            if (_stage is 1 or 2) { Require(node == "JumpshotRecovery", $"owner fake Recovery got {node}"); _ownerFakeRecovery++; }
+        }
         if (!owner) ObservePresentation();
     }
 
@@ -166,12 +173,18 @@ public partial class NetShotHeadingTest : Node3D
         Require(animation.Phase == player.Phase && animation.FrameInPhase == player.FrameInPhase,
             "remote pose phase/counter must match heading envelope");
         string expected = player.Phase == MovePhase.Active && player.MoveParam != 0 ? "FadeawayActive"
+            : player.Phase == MovePhase.Recovery && player.MoveParam >= 2 ? "FadeawayRecovery"
             : player.Phase == MovePhase.Inactive ? "" : "Jumpshot" + player.Phase;
         Require(player.Phase == MovePhase.Inactive || _other.ActiveAnimNodeForHarness == expected,
             $"actual remote AnimationTree expected {expected}, got {_other.ActiveAnimNodeForHarness}");
         if (player.Phase == MovePhase.Startup) _startup++;
         if (player.Phase == MovePhase.Active) _active++;
-        if (player.Phase == MovePhase.Recovery) _recovery++;
+        if (player.Phase == MovePhase.Recovery)
+        {
+            _recovery++;
+            if (player.MoveParam >= 2) _observerFadeRecovery++;
+            else _observerFakeRecovery++;
+        }
         if (_lastPresentation == _other.PlayerPresentationTick)
         {
             _holds++;
@@ -256,14 +269,14 @@ public partial class NetShotHeadingTest : Node3D
             if (_role == "driver")
             {
                 Require(_corrections > 30 && _replaySamples > 5 && _largestCorrection > .01f
-                    && _targetRepair && _rejectObserved,
+                    && _targetRepair && _rejectObserved && _ownerFadeRecovery > 0 && _ownerFakeRecovery > 0,
                     $"genuine prediction proof corrections={_corrections} replaySteps={_replaySamples} headingCorrection={_largestCorrection} targetRepair={_targetRepair} reject={_rejectObserved}");
                 _own.ShotNetVerifyInstanceOrdering(_mutation, Dt);
                 GD.Print($"[shot-net] owner genuineCorrections={_corrections} startupReplaySteps={_replaySamples} maxError={_largestReplayError} headingCorrection={_largestCorrection} targetRepair={_targetRepair} rejected={_rejectObserved}; positional/contact replay limitations retained");
             }
             else
             {
-                Require(_startup > 20 && _active > 0 && _recovery > 10 && _holds > 0,
+                Require(_startup > 20 && _active > 0 && _recovery > 10 && _holds > 0 && _observerFadeRecovery > 0 && _observerFakeRecovery > 0,
                     $"coherent observer samples startup={_startup} active={_active} recovery={_recovery} held={_holds}");
                 GD.Print($"[shot-net] observer startup={_startup} active={_active} recovery={_recovery} holds={_holds} resets={_resets}; phase/heading/actual AnimationTree/ball same server tick");
             }
